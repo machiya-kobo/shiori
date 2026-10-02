@@ -1,6 +1,6 @@
 # Shiori 栞
 
-Shiori (栞, "bookmark") is [Hister](https://github.com/asciimoo/hister) for Safari on iPhone, iPad, and Mac: a native app to search your Hister server, plus the Safari extension that feeds it.
+Shiori (栞, "bookmark") is [Hister](https://github.com/asciimoo/hister) for Safari on iPhone, iPad, and Mac: a native app to search your Hister server, plus the Safari extension that feeds it. The same extension is built for Firefox too ([docs/firefox.md](docs/firefox.md)).
 
 Hister is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server, so you can search your history later. Upstream ships extensions for Firefox and Chrome only and has declined Safari support in-tree ([issue #49](https://github.com/asciimoo/hister/issues/49)). iOS only loads extensions that ship inside a signed app, so Shiori is that app.
 
@@ -273,9 +273,9 @@ The app talks only to the servers you configure: your Hister server and, if you 
 Shiori wraps the **official upstream extension** without forking it:
 
 - `vendor/hister/` pins upstream as a git submodule (currently **v0.20.0**, extension 0.31.0). It is never modified.
-- `scripts/build-extension.sh` builds upstream's extension with npm, then patches the built bundle for Safari:
-  - `patches/manifest.safari.json`: Safari manifest overrides (icons, name, drops the `cookies` permission).
-  - `patches/safari-shims.js`, prepended to `background.js`: prebuilt toolbar icons in place of `OffscreenCanvas`, ignores Safari's internal pages, and adds an **offline queue** (below).
+- `scripts/build-extension.sh` builds upstream's extension with npm, then patches the built bundle for Safari (or, with `--target firefox`, for Firefox):
+  - `patches/manifest.shiori.json`, then `patches/manifest.safari.json`: manifest overrides (icons, name, Shiori's shortcuts, drops the `cookies` permission).
+  - Prepended to `background.js`: `patches/safari-shims.js` (prebuilt toolbar icons in place of `OffscreenCanvas`, ignores Safari's internal pages), `patches/ext/host-native.js` (settings from the app) and `patches/ext/core.js`, Shiori's own part for every browser: the **offline queue** (below), tagged captures and combined search.
   - `patches/safari-content-shim.js`, prepended to `content.js`: a **size cap** on captured pages.
   - `patches/safari-popup.css`, linked into `popup.html`: lets the popup fill the sheet on touch screens.
 - `project.yml` ([XcodeGen](https://github.com/yonaskolb/XcodeGen)) generates one Xcode project with an iOS/iPadOS app, a macOS app, and a Safari Web Extension for each.
@@ -334,6 +334,15 @@ Never edit `Shiori.xcodeproj` (it is generated and gitignored) or `ShioriExtensi
 **iPhone / iPad:** Settings → Apps → Safari → Extensions → Shiori. Turn it on, set **All Websites** to **Allow**, and leave **Allow in Private Browsing** off. Then in Safari, tap the Page Menu button at the left of the address bar → Shiori to check the server address.
 
 **Mac:** open Shiori, click **Open Safari Extensions Settings…**, turn on Shiori, and allow it on every website. A build signed with your team stays enabled. An ad-hoc build needs Develop → Allow Unsigned Extensions after every Safari restart.
+
+## Firefox
+
+The same extension, built for Firefox 153 and later (the current ESR) on every system Firefox runs on, including LibreWolf, Zen, Floorp and Firefox for Android. It has no app behind it, so its own settings page sets the server and the rest, and the address bar gains a keyword: `sh` and your words suggest your pages. Signed builds, kept up to date by Firefox, come with each [release](https://github.com/machiya-kobo/shiori/releases); [docs/firefox.md](docs/firefox.md) covers installing, building and releasing.
+
+```bash
+git submodule update --init
+scripts/build-extension.sh --target firefox    # build/firefox/ and an unsigned build/shiori-firefox-<version>.zip
+```
 
 ## Linux
 

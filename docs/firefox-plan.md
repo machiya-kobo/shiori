@@ -1,6 +1,6 @@
 # Plan: Shiori for Firefox
 
-Status: phases 0 to 4 done (spike, split, Firefox build, settings page, search with the address-bar keyword); phase 5 is next.
+Status: phases 0 to 6 done; the release workflow waits for the AMO keys and a first tag. Then the hand checks and phase 7's features.
 
 ## Decisions
 
@@ -470,53 +470,75 @@ Proof:
     `search.html?q=paper%20lanterns`.
 - **Lint:** unchanged, 0 errors and upstream's 3 warnings.
 
-### 5. Release on GitHub
+### 5. Release on GitHub (built; waiting on the first tag)
 
-A GitHub Actions workflow on a version tag:
+`.github/workflows/firefox-release.yml`, on a `v*` tag:
 
-1. Build on Linux.
-2. `web-ext lint`.
-3. `web-ext sign --channel=unlisted`, with the AMO API keys from the
-   repository's Actions secrets. The keys never go in a file.
-4. Write `updates.json`: the add-on ID, this version, and the release
-   asset's `.xpi` URL as `update_link`.
-5. Attach both files to the release.
+1. checks the tag is `v` + `MARKETING_VERSION` (the apps and the extension
+   share the version);
+2. runs `node --test scripts/*.test.mjs`;
+3. builds with `SHIORI_SOURCE_URL` set to this repository (AGPL section
+   13), which lints (0 errors or stop) and packs;
+4. packs the source of this repository and the Hister submodule at the
+   tag, since the built code is bundled and Mozilla's review wants it
+   readable;
+5. `web-ext sign --channel unlisted`, the keys from the Actions secrets
+   `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` (as environment variables, never
+   on a command line or in a file);
+6. `scripts/firefox-updates.mjs` writes `updates.json` from the built
+   manifest: ID, version, download link, the signed file's SHA-256, the
+   floor;
+7. attaches the `.xpi` and `updates.json` to the tag's GitHub Release,
+   creating it or adding to it.
 
-Firefox then finds updates through
-`releases/latest/download/updates.json`. CI never commits to `main`.
+Run by hand, it stops after the build and keeps the unsigned package as
+the run's artifact. CI never commits.
 
-The rest of phase 5:
+Checked here:
 
-- **`CLAUDE.md`**: the network rule names the new endpoint. Firefox fetches
-  `updates.json` from GitHub on its own schedule; the extension's code never
-  contacts GitHub. Add a Firefox block of traps.
-- **`docs/firefox.md`**:
-  - install on desktop, the forks, Android and Haiku;
-  - granting site access;
-  - building;
-  - the BSD build note.
-- **README**: a Firefox section.
-- **Version**: the manifest takes `MARKETING_VERSION`, as Safari's does.
+- `actionlint` (with shellcheck) on the workflow;
+- `firefox-updates.mjs` and its tests;
+- a rehearsal of every step but signing and the release itself: CI-style
+  build with no `local.yml`, the Source link stamped, the source archive,
+  `updates.json`.
 
-### 6. Tests
+shellcheck also caught a real bug in the spike's `run.sh`: an `export` read
+`WORK` before setting it. Fixed.
 
-- `node --test scripts/` covers:
-  - the Firefox manifest merge and its checks (no `cookies`, incognito,
-    floor, ID, update URL);
-  - the settings seam and whitelist;
-  - the Firefox URL filter;
-  - the `updates.json` writer;
-  - each feature's pure logic.
-- Writes only against stubs; `linux/fake-hister.py` for manual runs.
-- In browser: `tools/firefox-spike/run.sh` (headless Firefox, geckodriver,
-  a fake Hister). It grows with each phase and becomes the Firefox check.
-- On Node 22, `node --test scripts/` fails before running anything (it
-  treats the folder as a module). `node --test scripts/*.test.mjs` works.
-- Hand-check before the first release:
-  - Windows, macOS, Linux;
-  - the BSD VMs, and Haiku x86_64 (Firefox, plus LibreWolf or Floorp there);
-  - Android;
-  - LibreWolf, Zen, Floorp.
+Not checkable here:
+
+- the signing itself (it needs the keys);
+- the first release;
+- an update from one signed release to the next.
+
+The first tag will show them. Actions are pinned to major versions, since
+their commit hashes couldn't be looked up from here.
+
+Docs:
+
+- `docs/firefox.md`: install, first run, use, what it talks to, building,
+  releasing, the hand checks, and when something's wrong;
+- a README section, with the extension's description brought up to date
+  after the split;
+- `CLAUDE.md`: `updates.json` in the network rule, and the release rules.
+
+### 6. Tests (done as each phase went)
+
+- `node --test scripts/*.test.mjs`: 167 tests, among them:
+  - the manifests and their checks (`check-extension`, `patch-manifest`);
+  - the host and its twin rules (`host-local`);
+  - the settings page's messages;
+  - the keyword (`omnibox`);
+  - the update manifest (`firefox-updates`).
+
+  On Node 22 the folder form, `node --test scripts/`, fails before running
+  anything (it treats the folder as a module).
+- `tools/firefox-spike/run.sh`: the real Firefox build in headless Firefox
+  against a fake Hister, 34 checks on ESR 153.
+- The Firefox tab-URL filter planned in phase 1 wasn't needed. Upstream
+  already skips `moz-extension://`, and content scripts never run on
+  Firefox's `about:` pages. No spike check showed a problem.
+- The hand checks before a release are listed in `docs/firefox.md`.
 
 ### 7. Features
 

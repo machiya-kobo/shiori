@@ -22,7 +22,9 @@ holds the rules and the traps the code can't tell you.
   services, not in this repository: the feed service `/shiori/feed` and the
   AI endpoint `/shiori/ai/*`, hosted pages only), Kura (notes), the
   small-web gateway, SearXNG, the visited site's favicon and PDFs (upstream
-  behaviour). NewsBlur and status pages are only ever opened as links.
+  behaviour). Firefox itself fetches the add-on's `updates.json` from this
+  repository's GitHub Releases (its `update_url`); the extension's code
+  never does. NewsBlur and status pages are only ever opened as links.
   `gemini://`/`gopher://` links are handed to the system, never fetched. No
   analytics. AI providers only when the user switches AI on, and only from
   the app.
@@ -113,6 +115,11 @@ holds the rules and the traps the code can't tell you.
   the server (`set-server`: from its own address, where
   `shioriHost.ownsServer`); everything else goes through `set-settings`, the
   gear's whitelist.
+- **Firefox releases** (`.github/workflows/firefox-release.yml`, on a `v*`
+  tag matching `MARKETING_VERSION`): Mozilla signs them unlisted; the
+  add-on ID `shiori@machiya-kobo.github.io` and the AMO account are fixed
+  for good. Every latest release must carry `updates.json`, or Firefox's
+  updates break (docs/firefox.md).
 - Firefox's address-bar keyword (`sh`, `patches/ext/omnibox.js`) searches
   through `search-core.js` (`histerText`), drops notes and non-web pages,
   and records an opened suggestion in `api/history` only while Remember What
