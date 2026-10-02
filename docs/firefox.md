@@ -96,6 +96,11 @@ Settings stay on this device; nothing syncs them.
 ## What it talks to
 
 - **Your Hister server**, and the neighbours you set, to save and search.
+- **Signed in to Machiya** (settings page → Sign in to Machiya, when your
+  rooms use Machiya's identity file): Kura's `api/pair` once with the code,
+  then the token on requests to your Kura and Konbini only, never Hister
+  or SearXNG. It stays in `storage.local`, never synced and never in a
+  settings file; Sign Out deletes it (docs/signing-in.md).
 - **Visited sites**: their favicons and PDFs (upstream's behaviour).
 - **A link you save** with Save Link to Hister: that page is downloaded
   (without cookies), or, for `gemini://` and `gopher://`, handed to your

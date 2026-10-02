@@ -242,6 +242,8 @@ Lantern festival kit
 
 The Mac and iOS apps take the same addresses in `local.yml` (`SHIORI_SEARXNG_URL`, `SHIORI_NIWA_URL`, `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`) or in their Settings.
 
+**Signing in.** When the rooms run with Machiya's identity file, Kura and Konbini want to know who is calling. Each Shiori signs in on its own, with a one-time code from `identity pair` or a token from `identity token mint`: the apps in Settings → Notes → Sign in to Machiya (the Keychain; Safari's extension asks the app), Firefox in Shiori's settings page (`storage.local`, never synced), Linux with `"machiyaToken"` in `config.json` (0600; `shiori pair <code>` prints it), and the hosted pages through the browser's `machiya_session` cookie from Kura's own sign-in. The token goes only to the configured Kura and Konbini, never to Hister or SearXNG. Sign Out deletes it from the device; revoke it with `identity device revoke` or `identity token revoke`. [docs/signing-in.md](docs/signing-in.md) has the details.
+
 ## The app
 
 - **Library**: everything Hister has, newest first (by when you last saw it), scrolling back to the start: All, Pages (without your notes) or Notes.
