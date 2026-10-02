@@ -13,6 +13,11 @@
 //                       Settings → Waiting to Send
 //   ownsServer          whether the extension's own settings page may set
 //                       the Hister server (here no: the app sets it)
+//   machiya()           the Machiya sign-in, {token, principal}, from the
+//                       app's Keychain; {} when signed out or unreachable.
+//                       Never stored here: asked again when needed.
+//   ownsMachiya         whether the extension's pages may sign in and out
+//                       (here no: the app's Settings → Notes does)
 const shioriHost = (() => {
   const APP_ID = '__SHIORI_APP_ID__';
   const canSend = () =>
@@ -31,5 +36,14 @@ const shioriHost = (() => {
     canReportQueue: canSend,
     reportQueue: (count, oldest) => send({ type: 'queue', count, oldest }),
     ownsServer: false,
+    async machiya() {
+      try {
+        const reply = await send({ type: 'machiya' });
+        return reply && typeof reply === 'object' ? reply : {};
+      } catch (_) {
+        return {};
+      }
+    },
+    ownsMachiya: false,
   };
 })();

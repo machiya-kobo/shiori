@@ -431,7 +431,10 @@
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
     try {
-      const r = await originalFetch(base.replace(/\/?$/, '/') + 'api/vaults', { signal: controller.signal, credentials: 'omit' });
+      const url = base.replace(/\/?$/, '/') + 'api/vaults';
+      // Kura with Machiya's identity file wants the sign-in (the host rule decides).
+      const init = { signal: controller.signal, credentials: 'omit' };
+      const r = await originalFetch(url, shioriMachiya ? await shioriMachiya.fetchOptions(url, init) : init);
       if (!r.ok) return [];
       return ((await r.json()) || {}).vaults || [];
     } finally {
@@ -571,6 +574,124 @@
       return false;
     });
   }
+})();
+
+// Machiya sign-in (docs/signing-in.md). With Machiya's identity file the
+// rooms (Kura, Konbini, Niwa) want a proof: a token, `mch_…` pasted or
+// `mcd_…` from pairing with a code, sent as `Authorization: Bearer …`.
+// The host keeps it (Safari: the app's Keychain, asked over native
+// messaging and never stored here; Firefox: storage.local under its own
+// key, never synced, never logged). It goes only where search-core's host
+// rule allows (S.machiyaFetchOptions): the configured Kura and Konbini by
+// origin, never Hister or SearXNG, never across a redirect. Hister's
+// requests never carry it, and the capture queue strips `authorization`
+// before anything is stored.
+//
+// Its messages are answered before section 2's wrapper (which would hide
+// them): extension pages only, never a content script.
+const shioriMachiya = (() => {
+  if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return null;
+  const KURA_DEFAULT = '__SHIORI_NIWA_URL__';
+  const KONBINI_DEFAULT = '__SHIORI_KONBINI_URL__';
+  const SEARXNG_DEFAULT = '__SHIORI_SEARXNG_URL__';
+  const FRESH_MS = 60_000;
+  let cached = { at: 0, value: {} };
+  const S = () => globalThis.ShioriSearch;
+
+  /** {token, principal} from the host, checked; {} when signed out. Kept in memory a minute at most. */
+  async function signIn({ fresh = false } = {}) {
+    if (!fresh && Date.now() - cached.at < FRESH_MS) return cached.value;
+    let reply = {};
+    try {
+      reply = (typeof shioriHost.machiya === 'function' && (await shioriHost.machiya())) || {};
+    } catch (_) {}
+    const token = S() ? S().machiyaToken(reply.token) : '';
+    const value = token ? { token, principal: typeof reply.principal === 'string' ? reply.principal.slice(0, 64) : '' } : {};
+    cached = { at: Date.now(), value };
+    return value;
+  }
+
+  /** The configured Kura and Konbini (the build's until the settings say), less Hister's and SearXNG's origins. */
+  async function rooms() {
+    const stored = await chrome.storage.local.get(['shioriSettings', 'histerURL']);
+    const settings = { niwaURL: KURA_DEFAULT, konbiniURL: KONBINI_DEFAULT, searxngURL: SEARXNG_DEFAULT, ...(stored.shioriSettings || {}) };
+    if (!S()) return [];
+    return S().machiyaRooms([settings.niwaURL, settings.konbiniURL], [stored.histerURL, settings.searxngURL]);
+  }
+
+  /** A fetch's options for url: the token's header where the host rule allows, else init unchanged. */
+  async function fetchOptions(url, init = {}) {
+    const { token } = await signIn();
+    if (!token || !S()) return init;
+    return S().machiyaFetchOptions(url, token, await rooms(), init);
+  }
+
+  const isExtensionPage = (sender) =>
+    !!sender && typeof sender.url === 'string' && typeof chrome.runtime.getURL === 'function' &&
+    sender.url.startsWith(chrome.runtime.getURL('')) && (!sender.id || sender.id === chrome.runtime.id);
+  const isSettingsPage = (sender) =>
+    isExtensionPage(sender) && sender.url.split(/[?#]/)[0] === chrome.runtime.getURL('shiori-settings.html');
+
+  /** Firefox's settings page signs in: `entry` is a pasted token, or a code paired against Kura. */
+  async function signInWith(request) {
+    const Sx = S();
+    if (!Sx) return { ok: false, error: 'Sign-in is unavailable.' };
+    const entry = Sx.machiyaEntry(request.entry);
+    if (!entry) return { ok: false, error: 'Type the pairing code from identity pair, or paste a token (mch_… or mcd_…).' };
+    let signedIn;
+    if (entry.token) {
+      signedIn = { token: entry.token, principal: '' };
+    } else {
+      const stored = await chrome.storage.local.get(['shioriSettings']);
+      const kura = String({ niwaURL: KURA_DEFAULT, ...(stored.shioriSettings || {}) }.niwaURL || '');
+      try {
+        // Through the page's fetch (section 1's wrapper passes anything but Hister's API through).
+        signedIn = await Sx.machiyaPair(kura, entry.code, request.device, (url, init) => globalThis.fetch(url, init));
+      } catch (error) {
+        return { ok: false, error: error.message, kind: error.kind };
+      }
+    }
+    await shioriHost.setMachiya(signedIn.token, signedIn.principal);
+    cached = { at: 0, value: {} };
+    return { ok: true, text: Sx.machiyaStatusText(signedIn) };
+  }
+
+  if (chrome.runtime && chrome.runtime.onMessage && chrome.runtime.onMessage.addListener) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (!request || typeof request.shiori !== 'string' || !request.shiori.startsWith('machiya')) return false;
+      if (!isExtensionPage(sender)) {
+        sendResponse({ ok: false });
+        return false;
+      }
+      const owns = !!shioriHost.ownsMachiya;
+      const answer = (promise) => {
+        promise.then(sendResponse, () => sendResponse({ ok: false }));
+        return true;
+      };
+      switch (request.shiori) {
+        case 'machiya':
+          // The token itself, for the results page's own fetches (it applies the host rule).
+          return answer(signIn().then((v) => ({ ok: true, token: v.token || '', principal: v.principal || '' })));
+        case 'machiya-status':
+          return answer(signIn({ fresh: true }).then((v) => ({
+            ok: true, signedIn: !!v.token, principal: v.principal || '', owns, text: S() ? S().machiyaStatusText(v) : '',
+          })));
+        case 'machiya-sign-in':
+          if (!owns || !isSettingsPage(sender)) break;
+          return answer(signInWith(request));
+        case 'machiya-sign-out':
+          if (!owns || !isSettingsPage(sender)) break;
+          return answer(Promise.resolve(shioriHost.clearMachiya()).then(() => {
+            cached = { at: 0, value: {} };
+            return { ok: true };
+          }));
+      }
+      sendResponse({ ok: false });
+      return false;
+    });
+  }
+
+  return { signIn, rooms, fetchOptions };
 })();
 
 // 2. Combined search. The duckduckgo.com content script (shiori/redirect.js)

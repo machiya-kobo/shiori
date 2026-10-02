@@ -2,9 +2,10 @@ import SafariServices
 
 /// The native half of the web extension, talking to the app through the
 /// shared App Group: it answers with the app's combined-search settings,
-/// records how many captures the offline queue holds, and adds searches
-/// made from Safari to the recent searches. Page data never crosses into
-/// native code.
+/// records how many captures the offline queue holds, adds searches
+/// made from Safari to the recent searches, and hands the extension the
+/// Machiya sign-in from the Keychain (`machiya`). Page data never crosses
+/// into native code.
 ///
 /// `nonisolated`: the project defaults to MainActor, and Safari creates
 /// and calls this class off the main thread. A MainActor-isolated handler
@@ -30,6 +31,14 @@ nonisolated final class SafariWebExtensionHandler: NSObject, NSExtensionRequestH
             if let values = message?["values"] as? [String: Any] {
                 SharedSettings.applyFromPage(values)
                 reply = SharedSettings.extensionPayload()
+            }
+        case "machiya":
+            // The Machiya sign-in (Settings → Notes), for Kura and Konbini:
+            // the background applies the host rule and never stores it.
+            // Signing in and out happens only in the app.
+            let token = MachiyaKeychain.token
+            if !token.isEmpty {
+                reply = ["token": token, "principal": MachiyaKeychain.principal]
             }
         case "recent":
             if let query = message?["q"] as? String { SharedSettings.recordSearch(query) }

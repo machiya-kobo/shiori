@@ -81,6 +81,24 @@
         <p class="note">All optional. Shiori Search shows what each one has beside your pages.</p>
       </section>
 
+      <section class="group" aria-labelledby="h-machiya">
+        <h2 id="h-machiya">Sign in to Machiya</h2>
+        <div class="row"><span>Kura and Konbini</span><span id="machiya-status" class="value" aria-live="polite">…</span></div>
+        <form id="machiya-form" novalidate>
+          <div class="field">
+            <label for="machiya-entry">Pairing Code or Token</label>
+            <input id="machiya-entry" type="password" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH, or mch_…" />
+          </div>
+          <div class="field">
+            <label for="machiya-device">This Device</label>
+            <input id="machiya-device" type="text" autocomplete="off" spellcheck="false" maxlength="64" value="Firefox" />
+          </div>
+          <p id="machiya-error" class="error" role="alert" hidden></p>
+          <p class="buttons"><button type="submit">Sign In</button> <button id="machiya-sign-out" type="button" class="secondary" hidden>Sign Out</button></p>
+        </form>
+        <p class="note">Only when your rooms run with Machiya's identity file. Make a code with <kbd>identity pair &lt;you&gt; --label "Firefox"</kbd> (it pairs with Kura, above) or paste a token from <kbd>identity token mint</kbd>. The token stays in this browser, never synced, and goes only to your Kura and Konbini, never to Hister or SearXNG. Signing out deletes it here; revoke it on the server with <kbd>identity device revoke</kbd> or <kbd>identity token revoke</kbd>.</p>
+      </section>
+
       <section class="group" aria-labelledby="h-containers">
         <h2 id="h-containers">Containers</h2>
         <p class="note">Pages in the containers you choose here are never saved on their own. Saving one by hand still works.</p>

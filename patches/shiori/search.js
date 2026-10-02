@@ -158,9 +158,49 @@
   // its API on the page's own host for the hosted page (/kura/), else on
   // the Kura reader's. Hister's queries leave the notes out (S.histerText).
   const kuraBase = withSlash(settings.kuraAPIURL || '') || niwaBase;
+  // Machiya sign-in (docs/signing-in.md). In the extension: its token,
+  // which the background hands to its own pages only, sent to Kura and
+  // Konbini through search-core's host rule (never Hister or SearXNG,
+  // never across a redirect; credentials stay 'omit'). The hosted page has
+  // no token: its /kura/ and /konbini/ are on its own host, and the
+  // browser's machiya_session cookie goes with them.
+  const machiyaRooms = S.machiyaRooms([niwaBase, konbiniBase, kuraBase, konbiniAPIBase], [histerBase, searxBase]);
+  const machiyaTokenReady = Promise.race([
+    new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ shiori: 'machiya' }, (reply) => {
+          void chrome.runtime.lastError;
+          resolve((reply && reply.ok && reply.token) || '');
+        });
+      } catch (_) {
+        resolve('');
+      }
+    }),
+    new Promise((resolve) => setTimeout(() => resolve(''), 500)),
+  ]);
+  /** Whether url is on this page's own host (the hosted page's /kura/, /konbini/). */
+  function sameOrigin(url) {
+    try {
+      return /^https?:$/.test(location.protocol) && new URL(url, location.href).origin === location.origin;
+    } catch (_) {
+      return false;
+    }
+  }
+  /** A room's fetch options: the hosted page's cookie, or the extension's token where the rule allows. */
+  async function roomInit(url, init) {
+    if (sameOrigin(url)) return { ...init, credentials: 'same-origin' };
+    return S.machiyaFetchOptions(url, await machiyaTokenReady, machiyaRooms, init);
+  }
+  /** What to say when a room answers 401: sign in (the room's own page here, Settings in the extension). */
+  function signInNote(room) {
+    const where = sameOrigin(kuraBase) ? S.machiyaSignInURL(niwaBase) : '';
+    return where
+      ? [`${room} asks you to sign in. `, el('a', { href: where }, 'Sign In')]
+      : [`${room} asks you to sign in: Settings → Sign in to Machiya.`];
+  }
   /** Notes from Kura, in Hister's shape ({documents, total}). */
   async function kuraNotes(text, options) {
-    return S.kuraDocuments(await fetchJSON(S.kuraURL(kuraBase, text, options), { timeout: 8000 }));
+    return S.kuraDocuments(await fetchJSON(S.kuraURL(kuraBase, text, options), { timeout: 8000, room: true }));
   }
   // Kura's vaults (/api/vaults), for a work note's title and Obsidian vault,
   // the Notes tab's filter, and which vaults are shared (S.useVaults; until
@@ -170,7 +210,7 @@
   // Read afresh each time (no copy kept here); also before another vault's
   // note goes to Hister (S.isPrivateNoteNow). A failure throws: none shared.
   const readVaultsNow = () =>
-    kuraBase ? fetchJSON(`${kuraBase}api/vaults`, { timeout: 4000 }).then((r) => r && r.vaults) : Promise.resolve([]);
+    kuraBase ? fetchJSON(`${kuraBase}api/vaults`, { timeout: 4000, room: true }).then((r) => r && r.vaults) : Promise.resolve([]);
   const vaultsReady = () => S.loadVaults(readVaultsNow).then((list) => (list.length ? (kuraVaults = list) : list));
 
   // Every source can be switched off on its own (the app's Settings): Hister
@@ -604,7 +644,7 @@
         // A work vault's note: Kura's sanitized HTML (Hister never has it).
         const other = S.noteVault(url);
         const p = other
-          ? { title: card?.querySelector('.title')?.textContent || url, content: ((await fetchJSON(`${kuraBase}api/note?${new URLSearchParams({ path: S.notePath(url, []) || '', vault: other })}`, { timeout: 10000 })) || {}).html }
+          ? { title: card?.querySelector('.title')?.textContent || url, content: ((await fetchJSON(`${kuraBase}api/note?${new URLSearchParams({ path: S.notePath(url, []) || '', vault: other })}`, { timeout: 10000, room: true })) || {}).html }
           : await fetchJSON(`${histerBase}api/preview?url=${encodeURIComponent(url)}`, { timeout: 10000 });
         if (current !== url) return;
         let host = url;
@@ -1218,11 +1258,13 @@
     });
   }
 
-  async function fetchJSON(url, { timeout = 8000, headers = {} } = {}) {
+  // `room`: Kura or Konbini, which may want the Machiya sign-in (roomInit).
+  async function fetchJSON(url, { timeout = 8000, headers = {}, room = false } = {}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-      const r = await fetch(url, { headers, signal: controller.signal, credentials: 'omit' });
+      const init = { headers, signal: controller.signal, credentials: 'omit' };
+      const r = await fetch(url, room ? await roomInit(url, init) : init);
       if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status });
       // Hister can leave raw control characters in text; blank them.
       return JSON.parse((await r.text()).replace(/[\u0000-\u001f]/g, ' '));
@@ -1587,7 +1629,7 @@
       const cachedCards = (await chrome.storage.local.get([CARDS_KEY]))[CARDS_KEY];
       if (cachedCards && Date.now() - cachedCards.at < 60 * 60_000) return cachedCards.cards;
       try {
-        const data = await fetchJSON(`${konbiniAPIBase}api/cards`, { timeout: 5000 });
+        const data = await fetchJSON(`${konbiniAPIBase}api/cards`, { timeout: 5000, room: true });
         const cards = (Array.isArray(data) ? data : data.cards || [])
           .filter((c) => c && c.slug && c.path)
           .map((c) => ({ slug: c.slug, path: c.path }));
@@ -1745,10 +1787,10 @@
     return section;
   }
 
-  function showStatus(text) {
+  function showStatus(...parts) {
     reveal();
     $('web').hidden = false;
-    $('web-status').textContent = text;
+    $('web-status').replaceChildren(...parts.filter((p) => p != null));
   }
 
   // --- Did you mean …? ---------------------------------------------------------------
@@ -1877,7 +1919,8 @@
         result.page_key = offset + result.documents.length < result.total ? 'kura' : '';
         pageState[category] = result;
         saveState();
-      } catch (_) {
+      } catch (error) {
+        if (error && error.status === 401) return showStatus(...signInNote('Kura'));
         return showStatus('Kura could not be reached.');
       }
     }
@@ -2120,7 +2163,13 @@
       $('vault-more').parentElement.hidden = !settings.vaultTab || (result.total || 0) <= vaultDocs.length;
       fold($('vault'));
       $('vault').hidden = false;
-    } catch (_) {}
+    } catch (error) {
+      // Kura wants the sign-in: said where the notes would be.
+      if (error && error.status === 401) {
+        emptySection($('vault'), $('vault-count'), '');
+        $('vault-count').replaceChildren(...signInNote('Kura'));
+      }
+    }
   })();
 
   // --- web block -------------------------------------------------------------------
