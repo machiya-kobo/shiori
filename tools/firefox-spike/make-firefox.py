@@ -5,8 +5,8 @@ the packaging. Phase 2 of docs/firefox-plan.md replaces this.
 
     make-firefox.py SRC DST [MIN_VERSION]
 
-MIN_VERSION lowers the floor (140, where data_collection_permissions
-begins) only to run on an older stand-in Firefox.
+MIN_VERSION lowers the floor (153, the current ESR) only to run on an
+older Firefox.
 """
 import json
 import os
@@ -14,7 +14,7 @@ import shutil
 import sys
 
 src, dst = sys.argv[1:3]
-floor = sys.argv[3] if len(sys.argv) > 3 else "140.0"
+floor = sys.argv[3] if len(sys.argv) > 3 else "153.0"
 shutil.rmtree(dst, ignore_errors=True)
 shutil.copytree(src, dst)
 path = os.path.join(dst, "manifest.json")
@@ -26,7 +26,7 @@ m["browser_specific_settings"] = {
         "strict_min_version": floor,
         "data_collection_permissions": {"required": ["browsingActivity", "websiteContent"]},
     },
-    "gecko_android": {"strict_min_version": "142.0"},
+    "gecko_android": {"strict_min_version": floor},
 }
 m["content_security_policy"] = {"extension_pages": "script-src 'self'"}
 m["incognito"] = "not_allowed"

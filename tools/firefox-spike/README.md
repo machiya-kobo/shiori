@@ -47,5 +47,5 @@ server's address (the build and install scripts restage it). Ports 8775
   `--allow-system-access`; `run.mjs` adds it from 140.
 - **Offline means stopped.** A fake that drops the socket mid-request makes
   Firefox retry idempotent GETs dozens of times on its own.
-- An older Firefox than the floor (140) still runs: `run.sh` lowers the
+- An older Firefox than the floor (153) still runs: `run.sh` lowers the
   bundle's floor to match, with a warning.

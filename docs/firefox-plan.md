@@ -13,10 +13,11 @@ Status: phase 0 (the spike) done; results below. Phase 1 is next.
 | Updates | Automatic, through `update_url` (an update manifest on GitHub Releases) |
 | Android | In scope (Firefox for Android) |
 | Private windows | Not loaded at all: `"incognito": "not_allowed"` |
-| Floor | The latest Firefox ESR; must work on LibreWolf, Zen and Floorp |
+| Floor | **Firefox 153** (the current ESR) on desktop and Android; must work on LibreWolf, Zen and Floorp |
 | Platforms | Every OS and architecture Firefox runs on, Haiku included |
 | Release builds | On Linux in CI. Building natively on the BSDs is a separate task (see "Building on the BSDs") |
 | Features | All six suggestions, in the order of phase 7 |
+| Container permission | Optional: `contextualIdentities` is requested only when container rules are turned on |
 
 ## Why, given upstream already ships one
 
@@ -90,16 +91,19 @@ on each (not verified):
 
 ## The minimum version
 
-`strict_min_version` is the latest ESR major at release time. I don't know
-which major that is today: 140 was ESR in 2025, and a newer one may have
-replaced it. So the build reads it from one place (a
+**153**, for both `gecko` and `gecko_android`. It is set in one place (a
 `FIREFOX_MIN_VERSION` line in `project.yml`), and the release checklist
-confirms it against Mozilla's ESR page.
+checks it against Mozilla's ESR page.
 
-`data_collection_permissions` (upstream sets it) sets a hard lower bound.
-`web-ext lint` says it begins in **Firefox 140** and **Firefox for Android
-142**. So the desktop floor is never below 140, and Android's never below
-142.
+- ESR 140 reaches end of life on 13 October 2026 (Firefox 158), when its
+  users move to ESR 153 (whattrainisitnow.com/release/?version=esr).
+  140.17.0 is its last release.
+- `data_collection_permissions` begins in Firefox 140 and Firefox for
+  Android 142 (`web-ext lint`), so 153 clears it on both.
+- When the next ESR replaces 153, the floor moves with it.
+- The BSD and distribution `firefox-esr` packages and Haiku's port are
+  expected to follow the ESR channel to 153. That is unverified per OS;
+  the hand checks confirm it.
 
 ## Android
 
@@ -174,8 +178,9 @@ lowered.
 
 **Findings that change the plan:**
 
-1. **The floor is 140 on desktop and 142 on Android**, set by
-   `data_collection_permissions` (see "The minimum version").
+1. **`data_collection_permissions` needs Firefox 140 and Firefox for
+   Android 142.** The floor is now 153 anyway (see "The minimum
+   version").
 2. **Drop `nativeMessaging` from the Firefox manifest.** With no app it is
    only a failed call (the shim falls back to its defaults), and Firefox
    would show users a native-messaging permission at install for nothing.
@@ -191,9 +196,9 @@ lowered.
      does that.
    - On Firefox 140 (and 136), installing `contextualIdentities` silently
      switches Firefox's containers on (`privacy.userContext.enabled` false
-     → true). On 153 they were already on before the install. So with a
-     floor below 153 it is an optional permission, requested when the user
-     turns on container rules (feature E).
+     → true). On 153 they were already on before the install. It is an
+     optional permission anyway (the owner's decision), so it can only
+     change Firefox for someone who turns container rules on (feature E).
 5. **`web-ext lint`** returns 0 errors and 6 warnings:
    - the two floor warnings above;
    - `UNSAFE_VAR_ASSIGNMENT` in upstream's `shared.js` (×3);

@@ -19,10 +19,10 @@ echo "==> Work dir: $WORK"
 
 version="$("$FIREFOX" --version | sed -n 's/.* \([0-9][0-9]*\)\..*/\1/p')"
 export FIREFOX_MAJOR="$version"
-floor=140.0
-if [[ -n "$version" && "$version" -lt 140 ]]; then
+floor=153.0
+if [[ -n "$version" && "$version" -lt 153 ]]; then
     floor="$version.0"
-    echo "warning: Firefox $version is below the floor (140); the bundle's floor is lowered to run here" >&2
+    echo "warning: Firefox $version is below the floor (153); the bundle's floor is lowered to run here" >&2
 fi
 
 [[ -d "$HERE/node_modules" ]] || (cd -- "$HERE" && npm ci --no-audit --no-fund --loglevel=error)
