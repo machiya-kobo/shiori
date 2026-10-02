@@ -207,7 +207,7 @@ extension KuraClient {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: URLRequest(url: components.url!))
+            (data, response) = try await session.roomData(for: URLRequest(url: components.url!), signIn: signIn)
         } catch {
             throw HisterError(transport: error)
         }

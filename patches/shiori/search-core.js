@@ -1541,7 +1541,163 @@
     }
   }
 
+
+  // --- Machiya sign-in (the identity file's tokens) ------------------------
+  // Twins: HisterKit's Machiya (Machiya.swift). A token (`mch_…` stored,
+  // `mcd_…` a paired device) goes as `Authorization: Bearer …` to exactly
+  // the configured Kura, Konbini and Niwa, compared by origin: never to
+  // Hister, SearXNG or any other host, and never across a redirect.
+
+  /** A pairing code as typed: uppercase, spaces and dashes gone; '' when it can't be one. */
+  function machiyaCode(raw) {
+    const code = String(raw == null ? '' : raw).replace(/[\s-]+/g, '').toUpperCase();
+    return /^[A-Z0-9]{1,64}$/.test(code) ? code : '';
+  }
+
+  /** A pasted token, trimmed; '' unless it looks like one (`mch_…` or `mcd_…`, no spaces or line breaks). */
+  function machiyaToken(raw) {
+    const token = String(raw == null ? '' : raw).trim();
+    return /^mc[hd]_[A-Za-z0-9_.-]{8,4096}$/.test(token) ? token : '';
+  }
+
+  /** A device's label for pairing: no control characters, at most 64 characters, `fallback` when empty. */
+  function machiyaDevice(raw, fallback = 'Shiori') {
+    const label = [...String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u007f]/g, '').trim()].slice(0, 64).join('').trim();
+    return label || fallback;
+  }
+
+  /** The Authorization header's value. */
+  function machiyaAuthHeader(token) {
+    return 'Bearer ' + token;
+  }
+
+  /** An address's origin ("https://host:port", default ports dropped), or '' for anything but plain http(s) (a user or password in it counts as not plain). */
+  function machiyaOrigin(raw) {
+    try {
+      const u = new URL(String(raw || '').trim());
+      if ((u.protocol !== 'https:' && u.protocol !== 'http:') || u.username || u.password || !u.hostname) return '';
+      return u.origin.toLowerCase();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /**
+   * The origins a token may go to: the rooms' bases (Kura, Konbini, Niwa;
+   * empty or unreadable ones left out), less any origin in `others`
+   * (Hister's, SearXNG's): a room sharing an origin with them gets none.
+   */
+  function machiyaRooms(bases, others = []) {
+    const never = new Set((others || []).map(machiyaOrigin).filter(Boolean));
+    return [...new Set((bases || []).map(machiyaOrigin).filter((o) => o && !never.has(o)))];
+  }
+
+  /** Whether a request to `url` may carry the token: its origin is one of `rooms` (machiyaRooms). */
+  function mayCarryMachiyaToken(url, rooms) {
+    const origin = machiyaOrigin(url);
+    return !!origin && (rooms || []).includes(origin);
+  }
+
+  /**
+   * A fetch's options for `url`: with the token's header when the host rule
+   * allows it, and then `redirect: 'error'`, so it never follows a
+   * redirect anywhere. Everything else (credentials included) as given.
+   */
+  function machiyaFetchOptions(url, token, rooms, init = {}) {
+    const clean = machiyaToken(token);
+    if (!clean || !mayCarryMachiyaToken(url, rooms)) return init;
+    return { ...init, headers: { ...(init.headers || {}), Authorization: machiyaAuthHeader(clean) }, redirect: 'error' };
+  }
+
+  /** What a pairing answer means for a person: [kind, message] by status. */
+  function machiyaPairError(status) {
+    switch (status) {
+      case 0: return ['unreachable', "The room didn't answer. Check your network or VPN, then try again."];
+      case 400: return ['invalid', "The room didn't take that as a pairing code."];
+      case 401: return ['bad-code', 'That code is wrong or has expired. Make a new one with identity pair.'];
+      case 404: return ['no-signin', "This room has no sign-in: it runs without Machiya's identity file."];
+      case 415: return ['not-json', 'The room wanted JSON and refused the request.'];
+      case 429: return ['throttled', 'Too many tries. Wait ten minutes, then try again.'];
+      default: return ['server', `The room answered HTTP ${status}.`];
+    }
+  }
+
+  /**
+   * Pairs this device with a code from `identity pair`: POST
+   * <base>api/pair {code, device} → {token, principal}. `fetchFn` is the
+   * fetch to use (tests pass a fake). Throws an Error with `kind` and
+   * `status` (machiyaPairError) when the room says no.
+   */
+  async function machiyaPair(base, rawCode, device, fetchFn = globalThis.fetch) {
+    const fail = (status, kind, message) => {
+      const [k, m] = machiyaPairError(status);
+      return Object.assign(new Error(message || m), { kind: kind || k, status });
+    };
+    const code = machiyaCode(rawCode);
+    if (!code) throw fail(400, 'invalid', 'Type the code identity pair showed (eight letters and digits).');
+    const origin = machiyaOrigin(base);
+    if (!origin) throw fail(0, 'no-room', 'Set Kura’s address first.');
+    const url = String(base).trim().replace(/\/?$/, '/') + 'api/pair';
+    let response;
+    try {
+      response = await fetchFn(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ code, device: machiyaDevice(device) }),
+        credentials: 'omit',
+        redirect: 'error',
+      });
+    } catch (_) {
+      throw fail(0);
+    }
+    let reply = null;
+    try {
+      reply = await response.json();
+    } catch (_) {}
+    if (response.status !== 200) throw fail(response.status);
+    const token = machiyaToken(reply && reply.token);
+    const principal = reply && typeof reply.principal === 'string' ? reply.principal.slice(0, 64) : '';
+    if (!token || !principal) throw fail(200, 'bad-reply', "The room's answer held no token.");
+    return { token, principal };
+  }
+
+  /**
+   * What was typed in Sign in to Machiya's one field: a pasted token
+   * ({token}), a pairing code ({code}, normalised), or null for neither.
+   */
+  function machiyaEntry(raw) {
+    const token = machiyaToken(raw);
+    if (token) return { token };
+    const code = machiyaCode(raw);
+    return code ? { code } : null;
+  }
+
+  /** The signed-in line: who, from pairing; a pasted token doesn't say. */
+  function machiyaStatusText(signIn) {
+    if (!signIn || !signIn.token) return 'Not signed in';
+    return signIn.principal ? `Signed in as ${signIn.principal}` : 'Signed in with a token';
+  }
+
+  /** A room's sign-in page (`<base>signin`), for a 401; '' without a plain http(s) base. */
+  function machiyaSignInURL(base) {
+    if (!machiyaOrigin(base)) return '';
+    return String(base).trim().replace(/\/?$/, '/') + 'signin';
+  }
+
   root.ShioriSearch = {
+    machiyaCode,
+    machiyaToken,
+    machiyaDevice,
+    machiyaAuthHeader,
+    machiyaOrigin,
+    machiyaRooms,
+    mayCarryMachiyaToken,
+    machiyaFetchOptions,
+    machiyaPairError,
+    machiyaPair,
+    machiyaSignInURL,
+    machiyaEntry,
+    machiyaStatusText,
     isSmallWebLink,
     smallWebKey,
     vaultChip,

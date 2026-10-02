@@ -243,15 +243,18 @@ public enum Notes {
         return base.appending(path: "p").appending(path: card.slug)
     }
 
-    /// Konbini's cards, for linking notes and cards both ways.
-    public static func fetchCards(base: String, session: URLSession = HisterClient.defaultSession) async -> [Card] {
+    /// Konbini's cards, for linking notes and cards both ways. `signIn`:
+    /// the Machiya sign-in, sent where its host rule allows.
+    public static func fetchCards(
+        base: String, session: URLSession = HisterClient.defaultSession, signIn: MachiyaSignIn? = nil
+    ) async -> [Card] {
         guard let url = URL(string: (base.hasSuffix("/") ? base : base + "/") + "api/cards"), url.scheme != nil else {
             return []
         }
         struct Wrapped: Decodable { var cards: [Card] }
         let data: Data
         do {
-            (data, _) = try await session.data(from: url)
+            (data, _) = try await session.roomData(for: URLRequest(url: url), signIn: signIn)
         } catch {
             HisterClient.log.notice("Konbini cards not fetched: \(String(describing: error), privacy: .public)")
             return []
