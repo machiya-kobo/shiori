@@ -265,14 +265,14 @@ struct DocumentView: View {
         }
     }
 
-    /// A work vault's note: its preview is Kura's,
-    /// never Hister's, and no AI, Hister link or delete is offered for it.
+    /// A private vault's note: no AI, Hister link or delete is offered for
+    /// it. (Every other vault's note is previewed from Kura, below.)
     private var workNote: Bool { app.isWorkNote(document.url) }
 
     private func load() async {
         if let vault = Notes.otherVault(of: document.url) {
-            // Kura's sanitized HTML: Hister never has a work note. Shown, not
-            // cached (Kura answers no-store for everything under /v/).
+            // Kura's sanitized HTML, for any vault but the default: Hister
+            // never has a private one's. Shown, never cached.
             guard let kura = app.notesKura, let path = Notes.path(of: document.url, cards: []) else {
                 error = .unreachable
                 return
@@ -339,9 +339,6 @@ struct DocumentView: View {
             return
         }
         let isNote = note || document.label == Notes.label
-        // A work note reaches no model at all (EngineChain refuses
-        // `.workNote`), even if a button slipped through.
-        let content: AIContent = workNote ? .workNote : isNote ? .note : .page
         let chain = app.ai.chain
         let title = preview.title.isEmpty ? document.displayTitle : preview.title
         let url = document.url
@@ -349,6 +346,11 @@ struct DocumentView: View {
         summary = .working
         summarizing = Task {
             do {
+                // A work note reaches no model at all (EngineChain refuses
+                // `.workNote`), even if a button slipped through. Another
+                // vault's note is asked of Kura afresh first: a shared vault
+                // may be private by now.
+                let content: AIContent = await app.isWorkNoteNow(url) ? .workNote : isNote ? .note : .page
                 let made = try await Summarizer(chain: chain).summarize(
                     title: title, url: url, html: preview.contentHTML, content: content)
                 SummaryCache.write(made, url: url, updated: preview.updated)

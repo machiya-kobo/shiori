@@ -47,7 +47,7 @@ function fakeStorage(initial = {}, { events = false } = {}) {
 // network(url, init) returns a Response or throws; calls are recorded.
 const RULES = { shioriCachedRules: '{"skip":[]}' };
 
-function loadBackground({ network, storage = fakeStorage({ histerURL: BASE, ...RULES }) }) {
+function loadBackground({ network, storage = fakeStorage({ histerURL: BASE, ...RULES }), source = backgroundShim }) {
   const calls = [];
   const fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input.url;
@@ -65,10 +65,11 @@ function loadBackground({ network, storage = fakeStorage({ histerURL: BASE, ...R
     setTimeout,
     clearTimeout,
     console,
+    AbortController,
   };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  vm.runInContext(backgroundShim, ctx);
+  vm.runInContext(source, ctx);
   return { ctx, calls, storage };
 }
 
@@ -110,6 +111,61 @@ test("a work vault's note is never sent or queued, however it's captured", async
     assert.equal(calls.some((c) => c.url === BASE + 'api/add'), false);
     assert.deepEqual(queued(storage), []);
   }
+});
+
+test('a shared vault\'s note is captured once Kura says so; a private one, or Kura out of reach, is refused', async () => {
+  const KURA = 'https://kura.example/';
+  const vaults = { vaults: [
+    { name: 'personal', default: true, private: false },
+    { name: 'work', default: false, private: false },
+    { name: 'client', default: false, private: true },
+  ] };
+  const settings = { shioriSettings: { niwaURL: KURA } };
+  const kuraUp = async (url) =>
+    url === KURA + 'api/vaults' ? new Response(JSON.stringify(vaults)) : new Response('{}', { status: 201 });
+  const up = loadBackground({ network: kuraUp, storage: fakeStorage({ histerURL: BASE, ...RULES, ...settings }) });
+  assert.equal((await up.ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/work/n/plan', html: '<p>x</p>' }))).status, 201);
+  assert.equal((await up.ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/client/n/plan', html: '<p>x</p>' }))).status, 406);
+  assert.equal((await up.ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'n/plan', html: '<p>x</p>' }))).status, 201);
+  assert.equal(up.calls.filter((c) => c.url === KURA + 'api/vaults').length, 2, "asked before each other vault's note, never for the default's");
+
+  const kuraDown = async (url) => {
+    if (url.startsWith(KURA)) throw new TypeError('Load failed');
+    return new Response('{}', { status: 201 });
+  };
+  const down = loadBackground({ network: kuraDown, storage: fakeStorage({ histerURL: BASE, ...RULES, ...settings }) });
+  assert.equal((await down.ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/work/n/plan', html: '<p>x</p>' }))).status, 406);
+  assert.equal(down.calls.some((c) => c.url === BASE + 'api/add'), false);
+});
+
+test('a vault made private between two captures is refused at once, never from a copy', async () => {
+  const KURA = 'https://kura.example/';
+  let shared = true;
+  const network = async (url) =>
+    url === KURA + 'api/vaults'
+      ? new Response(JSON.stringify({ vaults: [{ name: 'personal', default: true, private: false }, { name: 'work', default: false, private: !shared }] }))
+      : new Response('{}', { status: 201 });
+  const { ctx, calls } = loadBackground({ network, storage: fakeStorage({ histerURL: BASE, ...RULES, shioriSettings: { niwaURL: KURA } }) });
+  assert.equal((await ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/work/n/plan', html: '<p>x</p>' }))).status, 201);
+  shared = false;
+  const r = await ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/work/n/plan', html: '<p>x</p>' }));
+  assert.equal(r.status, 406);
+  assert.equal(calls.filter((c) => c.url === BASE + 'api/add').length, 1);
+});
+
+test("on a fresh install (no settings stored yet) Kura's address is the build's", async () => {
+  const KURA = 'https://kura.example/';
+  const network = async (url) =>
+    url === KURA + 'api/vaults'
+      ? new Response(JSON.stringify({ vaults: [{ name: 'personal', default: true, private: false }, { name: 'work', default: false, private: false }] }))
+      : new Response('{}', { status: 201 });
+  const source = backgroundShim.replaceAll('__SHIORI_NIWA_URL__', KURA);
+  const { ctx, calls } = loadBackground({ network, source });
+  assert.equal((await ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/work/n/plan', html: '<p>x</p>' }))).status, 201);
+  assert.equal(calls.filter((c) => c.url === KURA + 'api/vaults').length, 1);
+  // A Kura address cleared in the settings is no Kura: private.
+  const cleared = loadBackground({ network, source, storage: fakeStorage({ histerURL: BASE, ...RULES, shioriSettings: { niwaURL: '' } }) });
+  assert.equal((await cleared.ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/work/n/plan', html: '<p>x</p>' }))).status, 406);
 });
 
 test('a manual capture made offline is queued but still reports failure', async () => {

@@ -150,8 +150,9 @@ struct KuraLiveTests {
     }
 }
 
-/// Kura's work vaults: known by the address alone.
-@Suite struct VaultTests {
+/// Kura's work vaults: known by the address alone. Serialized: the shared
+/// set (`Notes.useVaults`) is the process's own.
+@Suite(.serialized) struct VaultTests {
     @Test func workNotesAreKnownByTheirAddress() {
         #expect(Notes.otherVault(of: "https://kura.example/v/work/n/Literature%20Notes/Weekly") == "work")
         #expect(Notes.otherVault(of: "https://kura.example/n/Projects/Example") == nil)
@@ -167,11 +168,58 @@ struct KuraLiveTests {
             #expect(Notes.otherVault(of: other) == nil, "\(other)")
         }
         // A name that won't decode is still another vault's.
-        #expect(Notes.isOtherVault("https://kura.example/v/work%25zz/n/X"))
+        Notes.useVaults([])
+        #expect(Notes.isPrivateNote("https://kura.example/v/work%25zz/n/X"))
         #expect(Notes.path(of: "https://kura.example/v/work/n/Literature%20Notes/Weekly", cards: []) == "Literature Notes/Weekly.md")
         #expect(Notes.path(of: "https://kura.example/n/Projects/Example", cards: []) == "Projects/Example.md")
         #expect(Notes.readerURL(page: "https://kura.example/v/work/n/X", base: "https://kura.example/", path: "X.md")?.absoluteString
             == "https://kura.example/v/work/n/X")
+    }
+
+    @Test func aVaultIsPrivateUntilKuraMarksItShared() {
+        let work = "https://kura.example/v/work/n/X"
+        let client = "https://kura.example/v/client/n/X"
+        Notes.useVaults([])
+        #expect(Notes.isPrivateNote(work))
+        #expect(!Notes.isPrivateNote("https://kura.example/n/Projects/Example"))
+        #expect(!Notes.isPrivateNote("https://example.com/"))
+        Notes.useVaults([
+            KuraVault(name: "personal", title: "Personal", isDefault: true, isPrivate: false, obsidian: "personal"),
+            KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: false, obsidian: "work"),
+            KuraVault(name: "client", title: "Client", isDefault: false, isPrivate: true, obsidian: "client"),
+        ])
+        #expect(!Notes.isPrivateNote(work))
+        #expect(Notes.isPrivateNote(client))
+        #expect(Notes.isPrivateNote("https://kura.example/v/new/n/X"), "not listed: private")
+        Notes.useVaults([])
+        #expect(Notes.isPrivateNote(work), "a failed read shares nothing")
+    }
+
+    @Test func kuraIsAskedAgainBeforeAnythingIsSent() async {
+        let work = "https://kura.example/v/work/n/X"
+        let shared = [KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: false, obsidian: "work")]
+        let madePrivate = [KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: true, obsidian: "work")]
+        Notes.useVaults(shared)
+        #expect(!Notes.isPrivateNote(work))
+        let flipped = await Notes.isPrivateNoteNow(work, read: { madePrivate })
+        #expect(flipped, "shared when cached, private when asked: refused")
+        #expect(Notes.isPrivateNote(work), "the fresh answer is kept")
+        Notes.useVaults(shared)
+        let unanswered = await Notes.isPrivateNoteNow(work, read: { throw HisterError.unreachable })
+        #expect(unanswered, "Kura out of reach: private")
+        let noKura = await Notes.isPrivateNoteNow(work, kura: nil)
+        #expect(noKura, "no Kura: private")
+        let stillShared = await Notes.isPrivateNoteNow(work, read: { shared })
+        #expect(!stillShared)
+        let defaultVault = await Notes.isPrivateNoteNow("https://kura.example/n/X", read: { throw HisterError.unreachable })
+        #expect(!defaultVault, "the default vault's notes ask nothing")
+        Notes.useVaults([])
+    }
+
+    @Test func aVaultWithoutThePrivateFlagIsPrivate() throws {
+        let reply = Data(#"[{"name":"personal","default":true},{"name":"work"}]"#.utf8)
+        let vaults = try JSONDecoder().decode([KuraVault].self, from: reply)
+        #expect(vaults.map(\.isPrivate) == [false, true])
     }
 
     @Test func aNotesChipNamesItsVault() {

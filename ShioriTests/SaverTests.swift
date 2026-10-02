@@ -58,6 +58,15 @@ struct SaverTests {
         #expect(outbox.status().count == 1)
     }
 
+    @Test func anotherVaultsNoteIsNeverSentOrQueued() async {
+        StubProtocol.handle(Self.host) { _ in (201, Data()) }
+        let note = Saver.Input(url: URL(string: "https://kura.example/v/work/n/Plan")!, title: "Plan", html: "<p>x</p>", text: "x")
+        let outcome = await Saver.save(note, label: nil, via: "share", client: client, outbox: outbox)
+        #expect(outcome == .rejected("A note from another vault stays in Kura."))
+        #expect(StubProtocol.requests(Self.host).isEmpty)
+        #expect(outbox.status().count == 0)
+    }
+
     @Test func aBadRequestFailsWithoutQueueing() async {
         StubProtocol.handle(Self.host) { _ in (400, Data(#"{"error":"no url"}"#.utf8)) }
         let outcome = await Saver.save(input, label: nil, via: "app", client: client, outbox: outbox)

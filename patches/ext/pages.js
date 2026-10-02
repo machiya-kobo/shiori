@@ -13,7 +13,7 @@
     for (const d of [...((reply && reply.history) || []), ...((reply && reply.documents) || [])]) {
       if (out.length >= limit) break;
       if (!d || !/^https?:\/\//i.test(String(d.url || ''))) continue;
-      if (S.isOtherVault(d.url) || S.isNoteURL(d.url, niwa, konbini)) continue;
+      if (S.isPrivateNote(d.url) || S.isNoteURL(d.url, niwa, konbini)) continue;
       const key = S.normalizeURL(d.url);
       if (seen.has(key)) continue;
       seen.add(key);

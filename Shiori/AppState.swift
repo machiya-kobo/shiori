@@ -206,14 +206,27 @@ final class AppState {
         konbiniCards = await Notes.fetchCards(base: searchPage.konbiniURL)
     }
 
-    /// Kura's vaults: the default one and the work vaults, for the Notes filter and a work note's place and links.
+    /// Kura's vaults: the default one and the others, for the Notes filter,
+    /// another vault's note's place and links, and which vaults are shared
+    /// (`Notes.useVaults`). Read again when older than ten minutes, so a
+    /// vault made private again counts; a failed read shares none.
     private(set) var kuraVaults: [KuraVault] = []
-    private var vaultsLoaded = false
+    private var vaultsReadAt: Date?
 
     func loadVaultsIfNeeded() async {
-        guard !vaultsLoaded, let kura = notesKura else { return }
-        vaultsLoaded = true
-        if let found = try? await kura.vaults() { kuraVaults = found }
+        guard let kura = notesKura else {
+            Notes.useVaults([])
+            return
+        }
+        if let at = vaultsReadAt, Date.now.timeIntervalSince(at) < 10 * 60 { return }
+        vaultsReadAt = .now
+        do {
+            let found = try await kura.vaults()
+            kuraVaults = found
+            Notes.useVaults(found)
+        } catch {
+            Notes.useVaults([])
+        }
     }
 
     /// Which vaults the Notes lists search: "all" (the default), or one
@@ -274,7 +287,14 @@ final class AppState {
 
     /// A work vault's note: never sent to Hister, never
     /// given to a model, never cached, exported or put in a feed.
-    func isWorkNote(_ url: String) -> Bool { Notes.isOtherVault(url) }
+    func isWorkNote(_ url: String) -> Bool { Notes.isPrivateNote(url) }
+
+    /// The same with Kura asked afresh, for anything about another vault's
+    /// note that goes to Hister or a model (a shared vault may be private
+    /// by now; unanswered, it is). The default vault's notes ask nothing.
+    func isWorkNoteNow(_ url: String) async -> Bool {
+        await Notes.isPrivateNoteNow(url, kura: notesKura)
+    }
 
     func noteLinks(for document: StoredPage) -> NoteLinks? {
         guard label(of: document) == Notes.label || document.label == Notes.label,
@@ -410,6 +430,8 @@ final class AppState {
     /// By address: automatic labelling and its Undo hold no StoredPage.
     func setLabel(_ label: String, url: String) async throws(HisterError) {
         guard let client else { throw .unreachable }
+        // Hister never has a private vault's note.
+        guard !(await isWorkNoteNow(url)) else { throw .notFound }
         try await client.setLabel(label, for: url)
         // Bounded: the lists refetch long before this many edits matter.
         if labelEdits.count >= 2000 { labelEdits.removeAll() }
@@ -418,6 +440,7 @@ final class AppState {
 
     func delete(_ document: StoredPage) async throws(HisterError) {
         guard let client else { throw .unreachable }
+        guard !(await isWorkNoteNow(document.url)) else { throw .notFound }
         try await client.delete(url: document.url)
         if deletedURLs.count >= 2000 { deletedURLs.removeAll() }
         deletedURLs.insert(document.url)
@@ -493,6 +516,8 @@ final class AppState {
         // Never a work note's address or title to Hister.
         guard searchPage.rememberOpened, let client, Self.remembers(query), !isWorkNote(url) else { return }
         Task {
+            // Another vault's note: Kura asked afresh first.
+            guard !(await self.isWorkNoteNow(url)) else { return }
             do {
                 try await client.recordOpened(url: url, title: title, query: query)
             } catch {

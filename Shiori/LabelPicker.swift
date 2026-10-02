@@ -204,6 +204,8 @@ struct LabelPicker: View {
 
     private func suggest() async {
         guard app.ai.hasEngine(note: false), suggestion == nil, let client = app.client else { return }
+        // Another vault's note reaches a model only while Kura, asked afresh, still shares it.
+        guard !(await app.isWorkNoteNow(document.url)) else { return }
         let excluded = Set(app.ai.neverSuggest)
         let labels = app.rules.labels.filter { !LabelClassifier.notTopics.contains($0) && !excluded.contains($0) }
         guard !labels.isEmpty else { return }
