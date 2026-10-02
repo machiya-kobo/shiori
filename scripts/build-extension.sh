@@ -1,20 +1,35 @@
 #!/usr/bin/env bash
-# Build the upstream Hister extension and stage it, patched for Safari, in
-# ShioriExtension/Resources/ (gitignored). Every Xcode build copies that
-# directory into both the iOS and macOS appex.
+# Build the upstream Hister extension and patch it for one browser:
+#
+#   scripts/build-extension.sh                   Safari, staged in
+#       ShioriExtension/Resources/ (gitignored); every Xcode build copies it
+#       into both the iOS and macOS appex.
+#   scripts/build-extension.sh --target firefox  Firefox (desktop and
+#       Android) in build/firefox/, then linted and packed by web-ext into
+#       build/shiori-firefox-<version>.zip (unsigned; docs/firefox-plan.md).
 #
 # Stages:
 #   1. npm ci + build of the upstream extension inside vendor/hister.
-#   2. Copy dist/, merge patches/manifest.safari.json over its manifest.
-#   3. Prepend the Safari shims, the host (the app, over native messaging)
-#      and Shiori's core to background.js and the content shim to
-#      content.js, and link the popup stylesheet override into popup.html.
+#   2. Copy dist/; merge patches/manifest.shiori.json, then the browser's
+#      patches/manifest.<target>.json, over its upstream manifest.
+#   3. Prepend the browser's background files (its shims, the host and
+#      Shiori's core) to background.js and the content shim to content.js,
+#      and link the popup stylesheet override into popup.html.
 #   4. Point the default server URL at SHIORI_SERVER_URL (from local.yml).
 #   5. Copy the prebuilt icons, then check the bundle.
 #
 # Upstream source is never modified; only the built dist/ is patched.
 
 set -euo pipefail
+
+TARGET=safari
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --target) TARGET="${2:-}"; shift 2 ;;
+        --target=*) TARGET="${1#*=}"; shift ;;
+        *) echo "usage: $0 [--target safari|firefox]" >&2; exit 2 ;;
+    esac
+done
 
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd -- "$REPO_ROOT"
@@ -36,15 +51,35 @@ SHIORI_SERVER_URL="${SHIORI_SERVER_URL:-}"
 UPSTREAM_ROOT="vendor/hister"
 UPSTREAM_EXT="$UPSTREAM_ROOT/webui/ext"
 DIST="$UPSTREAM_EXT/dist"
-RESOURCES="ShioriExtension/Resources"
 UPSTREAM_DEFAULT_URL="http://127.0.0.1:4433/"
+
+# Per browser: where the bundle goes, which of upstream's manifests it
+# starts from, and what is prepended to background.js, in order (the host
+# defines shioriHost, which the core uses; scripts/shims.test.mjs and
+# scripts/host-local.test.mjs load the same files in the same order).
+case "$TARGET" in
+    safari)
+        RESOURCES="ShioriExtension/Resources"
+        UPSTREAM_MANIFEST="manifest.json"
+        BACKGROUND=(patches/safari-shims.js patches/ext/host-native.js patches/ext/core.js)
+        ;;
+    firefox)
+        RESOURCES="build/firefox"
+        UPSTREAM_MANIFEST="manifest_ff.json"
+        BACKGROUND=(patches/ext/host-local.js patches/ext/core.js)
+        ;;
+    *)
+        echo "error: unknown target '$TARGET' (safari or firefox)" >&2
+        exit 2
+        ;;
+esac
 
 if [[ ! -d "$UPSTREAM_EXT" ]]; then
     echo "error: $UPSTREAM_EXT missing; run 'git submodule update --init'" >&2
     exit 1
 fi
 
-echo "==> Building upstream extension ($(git -C "$UPSTREAM_ROOT" describe --tags --always))"
+echo "==> Building upstream extension ($(git -C "$UPSTREAM_ROOT" describe --tags --always)) for $TARGET"
 # The extension is an npm workspace; install from the workspace root so
 # @hister/components resolves, then build only the extension.
 (
@@ -64,22 +99,23 @@ rsync -a --delete \
 
 # Upstream permissions this build accounts for. A new one fails the build
 # so a submodule bump cannot slip a permission past review.
-python3 - "$DIST/manifest.json" <<'PY'
+python3 - "$DIST/$UPSTREAM_MANIFEST" "$TARGET" <<'PY'
 import json, sys
 known = {"tabs", "storage", "cookies"}
 m = json.load(open(sys.argv[1]))
 if m.get("content_scripts") != [{"js": ["content.js"], "matches": ["<all_urls>"]}]:
-    sys.exit("upstream content_scripts changed; update the copy in patches/manifest.safari.json")
-perms = set(json.load(open(sys.argv[1])).get("permissions", []))
+    sys.exit("upstream content_scripts changed; update the copy in patches/manifest.shiori.json")
+perms = set(m.get("permissions", []))
 new = sorted(perms - known)
 if new:
     sys.exit("upstream manifest asks for new permissions %s; review them and update "
-             "patches/manifest.safari.json and this check" % new)
+             "patches/manifest.%s.json and this check" % (new, sys.argv[2]))
 PY
 
 node scripts/patch-manifest.mjs \
-    "$DIST/manifest.json" \
-    patches/manifest.safari.json \
+    "$DIST/$UPSTREAM_MANIFEST" \
+    patches/manifest.shiori.json \
+    "patches/manifest.$TARGET.json" \
     "$RESOURCES/manifest.json"
 
 # The manifest carries Shiori's version (project.yml MARKETING_VERSION),
@@ -101,9 +137,7 @@ prepend() { # <bundle file> <shim>...
     { for shim in "$@"; do cat -- "$shim"; printf '\n'; done; cat -- "$DIST/$target"; } > "$RESOURCES/$target.tmp"
     mv -- "$RESOURCES/$target.tmp" "$RESOURCES/$target"
 }
-# The order matters: the host defines shioriHost, which the core uses
-# (scripts/shims.test.mjs loads the same files in the same order).
-prepend background.js patches/safari-shims.js patches/ext/host-native.js patches/ext/core.js
+prepend background.js "${BACKGROUND[@]}"
 prepend content.js patches/safari-content-shim.js
 
 # Shiori's own pages and scripts: the combined-search results page and the
@@ -203,12 +237,13 @@ else
   echo "==> Room icons: neutral glyphs"
 fi
 
-# The app's ID for sendNativeMessage, from the bundle prefix (local.yml).
-# Safari ignores it and answers from the containing app, so a build
-# without one names the placeholder Apple's samples use.
-SHIORI_BUNDLE_PREFIX="${SHIORI_BUNDLE_PREFIX:-$(yml SHIORI_BUNDLE_PREFIX)}"
-APP_ID="${SHIORI_BUNDLE_PREFIX:+$SHIORI_BUNDLE_PREFIX.shiori}"
-python3 - "$RESOURCES/background.js" "${APP_ID:-application.id}" <<'PY'
+if [[ "$TARGET" == safari ]]; then
+    # The app's ID for sendNativeMessage, from the bundle prefix (local.yml).
+    # Safari ignores it and answers from the containing app, so a build
+    # without one names the placeholder Apple's samples use.
+    SHIORI_BUNDLE_PREFIX="${SHIORI_BUNDLE_PREFIX:-$(yml SHIORI_BUNDLE_PREFIX)}"
+    APP_ID="${SHIORI_BUNDLE_PREFIX:+$SHIORI_BUNDLE_PREFIX.shiori}"
+    python3 - "$RESOURCES/background.js" "${APP_ID:-application.id}" <<'PY'
 import sys
 p, app = sys.argv[1:]
 s = open(p, encoding="utf-8").read()
@@ -216,7 +251,8 @@ if "__SHIORI_APP_ID__" not in s:
     sys.exit("background.js lost the app ID placeholder")
 open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_APP_ID__", app))
 PY
-echo "==> App ID: ${APP_ID:-(none: application.id)}"
+    echo "==> App ID: ${APP_ID:-(none: application.id)}"
+fi
 
 # The Machiya rooms for the results page's switcher (optional).
 SHIORI_ROOMS="${SHIORI_ROOMS:-$(yml SHIORI_ROOMS)}"
@@ -277,34 +313,15 @@ done
 cp -- assets/icon-128.png "$RESOURCES/assets/icons/icon128.png"
 [[ -f "$RESOURCES/assets/logo.png" ]] && cp -- assets/icon-256.png "$RESOURCES/assets/logo.png"
 
-python3 - "$RESOURCES" <<'PY'
-import json, os, sys
-root = sys.argv[1]
-m = json.load(open(os.path.join(root, "manifest.json")))
-paths = list((m.get("icons") or {}).values())
-paths += list(((m.get("action") or {}).get("default_icon") or {}).values())
-paths += [m["background"]["service_worker"], m["action"]["default_popup"], m["options_page"]]
-paths += [js for cs in m.get("content_scripts", []) for js in cs["js"]]
-missing = [p for p in paths if not os.path.isfile(os.path.join(root, p))]
-if missing:
-    sys.exit("bundle is missing files named by the manifest: " + ", ".join(missing))
-if "cookies" in m.get("permissions", []):
-    sys.exit("manifest still asks for cookies")
-# More than four suggested shortcuts and Safari drops the extension's
-# background without a word: nothing is captured and Safari's searches stay
-# on DuckDuckGo.
-suggested = [k for k, c in (m.get("commands") or {}).items() if c.get("suggested_key")]
-if len(suggested) > 4:
-    sys.exit("manifest suggests %d shortcuts (%s); Safari allows at most 4" % (len(suggested), ", ".join(suggested)))
-checks = {"background.js": ("installIconShim", "const shioriHost", "installCaptureQueue", "installCombinedSearch"),
-          "content.js": ("installPageSizeCap",),
-          "popup.html": ("safari-popup.css", "shiori-popup.js"),
-          "search.html": ("search-core.js", "search.js"),
-          "shiori-options.html": ("shiori-options.js", "search.css")}
-for name, marks in checks.items():
-    s = open(os.path.join(root, name), encoding="utf-8").read()
-    for mark in marks:
-        if mark not in s:
-            sys.exit("%s is missing the %s shim" % (name, mark))
-print("==> Bundle ok: manifest files present, shims in place")
-PY
+python3 scripts/check-extension.py "$RESOURCES" "$TARGET"
+
+# Firefox: Mozilla's linter (0 errors or the build fails; warnings are
+# printed), then the unsigned package. Signing happens in the release
+# workflow (docs/firefox-plan.md, phase 5).
+if [[ "$TARGET" == firefox ]]; then
+    WEB_EXT="web-ext@10.7.0"
+    echo "==> $WEB_EXT lint"
+    npx --yes "$WEB_EXT" lint --source-dir "$RESOURCES" --self-hosted --output text
+    npx --yes "$WEB_EXT" build --source-dir "$RESOURCES" --artifacts-dir build \
+        --filename "shiori-firefox-$SHIORI_VERSION.zip" --overwrite-dest
+fi

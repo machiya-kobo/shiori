@@ -616,17 +616,23 @@
     { key: 'searxng', name: 'SearXNG', tint: 'secondary', neighbour: true },
   ];
 
-  /** The switcher's button glyph (24-point strokes), shared by both web pages. */
+  /** The switcher's button glyph (24-point strokes, each a path's `d`), shared by both web pages. */
   const ROOM_GLYPHS = {
-    house: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+    house: ['M3 11l9-7 9 7', 'M5 10v10h14V10', 'M10 20v-6h4v6'],
   };
 
-  /** A glyph as an <svg> (constant markup; the pages' CSP allows it). */
+  /** A glyph as an <svg>, built node by node: no markup, so Mozilla's
+   *  linter has no innerHTML to flag in the signed Firefox build. */
   function roomGlyph(name) {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('aria-hidden', 'true');
-    svg.innerHTML = ROOM_GLYPHS[name] || '';
+    for (const d of ROOM_GLYPHS[name] || []) {
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', d);
+      svg.append(path);
+    }
     return svg;
   }
 

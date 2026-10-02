@@ -1,0 +1,61 @@
+{
+  "$comment": "Shiori's overrides for every browser, merged over upstream's manifest (vendor/hister/webui/ext/dist/manifest.json or manifest_ff.json) before the browser's own patches/manifest.<target>.json, by scripts/patch-manifest.mjs. Keys starting with $ are dropped, null deletes a key, objects merge recursively, arrays and scalars replace whole.",
+  "key": null,
+  "name": "Shiori",
+  "description": "Sends the pages you visit to your own Hister server.",
+  "$comment_content_scripts": "Upstream's content script (build-extension.sh checks it is unchanged), plus Shiori's combined-search redirect on duckduckgo.com.",
+  "content_scripts": [
+    { "js": ["content.js"], "matches": ["<all_urls>"] },
+    {
+      "js": ["search-core.js", "shiori-redirect.js"],
+      "matches": ["https://duckduckgo.com/*", "https://www.duckduckgo.com/*"],
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "64": "assets/icons/icon-64.png",
+    "96": "assets/icons/icon-96.png",
+    "128": "assets/icons/icon-128.png",
+    "256": "assets/icons/icon-256.png",
+    "512": "assets/icons/icon-512.png"
+  },
+  "$comment_options": "Shiori's settings page in place of upstream's (server, token, headers, browser-session sign-in).",
+  "options_page": "shiori-options.html",
+  "action": {
+    "default_title": "Shiori",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "64": "assets/icons/icon-64.png",
+      "128": "assets/icons/icon-128.png"
+    }
+  },
+  "$comment_commands": "Shiori's commands. The keys suit Safari and macOS (Control-Shift, which they leave free); a browser's own overlay moves them where they collide. _execute_action is the toolbar button's menu, with no default key.",
+  "commands": {
+    "_execute_action": {
+      "description": "Open the Shiori menu"
+    },
+    "index-current-page": {
+      "suggested_key": { "default": "Ctrl+Shift+S", "mac": "MacCtrl+Shift+S" },
+      "description": "Save this page to Hister"
+    },
+    "disable-indexing-current-page": {
+      "suggested_key": { "default": "Ctrl+Shift+P", "mac": "MacCtrl+Shift+P" },
+      "description": "Never save this page"
+    },
+    "disable-indexing-current-domain": {
+      "suggested_key": { "default": "Ctrl+Shift+D", "mac": "MacCtrl+Shift+D" },
+      "description": "Never save this site"
+    },
+    "open-shiori-search": {
+      "suggested_key": { "default": "Ctrl+Shift+F", "mac": "MacCtrl+Shift+F" },
+      "description": "Open Shiori Search"
+    }
+  },
+  "$comment_war": "Upstream exposes assets/* to no page (empty matches), which Safari rejects. Nothing in the content script loads extension files, so drop the key rather than widen it: exposing assets to every page lets any site detect the extension.",
+  "web_accessible_resources": null
+}

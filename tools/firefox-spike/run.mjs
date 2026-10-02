@@ -1,6 +1,6 @@
-// Phase 0 of docs/firefox-plan.md: the Safari-shimmed bundle in headless
-// Firefox, against fake-hister.py. One line per check; exits 1 if any fails.
-// Started by run.sh, which builds the bundle and serves the pages.
+// The Firefox build in headless Firefox, against fake-hister.py (begun as
+// phase 0 of docs/firefox-plan.md). One line per check; exits 1 if any
+// fails. Started by run.sh, which builds the bundle and serves the pages.
 //
 // Environment: FIREFOX (binary), FIREFOX_MAJOR (its version), GECKODRIVER
 // (default: on PATH), EXT (the Firefox bundle), PROBE (container-probe/),
@@ -132,10 +132,21 @@ async function captureSession() {
 
     const perms = await inPage(driver, EXT_URL + 'shiori-options.html', async () => ({
       allUrls: await browser.permissions.contains({ origins: ['<all_urls>'] }),
-      chromeNamespace: typeof chrome !== 'undefined' && !!chrome.storage,
+      nativeMessaging: await browser.permissions.contains({ permissions: ['nativeMessaging'] }),
       histerURL: (await browser.storage.local.get('histerURL')).histerURL || null,
+      commands: (await browser.commands.getAll()).map((c) => `${c.name}=${c.shortcut || '(none)'}`),
     }));
-    note('at install', JSON.stringify(perms));
+    note('at install', JSON.stringify({ ...perms, commands: undefined }));
+    check('no native messaging (Firefox has no app)', perms.nativeMessaging === false);
+    note('shortcuts Firefox assigned', perms.commands.join(' '));
+
+    // The results page's Settings: kept by ext/host-local.js, AI refused.
+    const kept = await inPage(driver, EXT_URL + 'search.html', async () => {
+      const reply = await browser.runtime.sendMessage({ shiori: 'set-settings', values: { theme: 'day', histerCount: 10, aiProvider: 'x' } });
+      const stored = (await browser.storage.local.get('shioriLocalSettings')).shioriLocalSettings || {};
+      return { ok: reply && reply.ok, theme: reply && reply.settings && reply.settings.theme, stored };
+    });
+    check('a settings change is kept on this device, AI keys refused', kept.ok === true && kept.theme === 'day' && kept.stored.histerCount === 10 && !('aiProvider' in kept.stored), JSON.stringify(kept.stored));
     const early = requests().slice(mark).filter((r) => r.p.startsWith('/api/rules')).length;
     note('skip rules fetched before the first capture', `${early} (0: the queue's start-up fetch runs before upstream stores histerURL on a fresh install)`);
 

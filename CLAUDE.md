@@ -13,8 +13,8 @@ holds the rules and the traps the code can't tell you.
   applied to the built `dist/` by `scripts/build-extension.sh`. Upgrade by
   moving the submodule to an upstream tag; the Hister server runs the
   matching version.
-- **Never edit `Shiori.xcodeproj/` or `ShioriExtension/Resources/`**: both
-  are generated. Change `project.yml` or `patches/`.
+- **Never edit `Shiori.xcodeproj/`, `ShioriExtension/Resources/` or
+  `build/`**: all generated. Change `project.yml` or `patches/`.
 - **No personal details in the repo**: server addresses, network names,
   device names, team IDs. They go in the gitignored `local.yml`/`local.env`.
 - **No new network endpoints** without discussion. Shiori talks to the
@@ -98,6 +98,12 @@ holds the rules and the traps the code can't tell you.
 - **The native handler class must be `nonisolated`**: Safari calls it off
   the main thread, and a MainActor handler crashes on every message. Same
   for `NSItemProvider` callbacks and `openURL`'s completion on macOS.
+- One build, a target per browser: `scripts/build-extension.sh` (Safari,
+  into `ShioriExtension/Resources/`) or `--target firefox` (into
+  `build/firefox/`, then `web-ext` lint and pack). Manifests are upstream's,
+  then `patches/manifest.shiori.json` (every browser), then
+  `patches/manifest.<target>.json`; `scripts/check-extension.py` holds each
+  target's rules.
 - Shiori's background logic is `patches/ext/core.js`, for Safari and
   Firefox alike. It reaches settings only through `shioriHost`:
   `ext/host-native.js` (the app) on Safari, `ext/host-local.js`

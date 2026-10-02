@@ -258,3 +258,8 @@ test("a search recorded from the results page reaches the page's settings", asyn
   await send({ shiori: 'record-search', q: ' lantern ' });
   assert.deepEqual(storage.data.shioriSettings.recentSearches, ['lantern']);
 });
+
+test("the Firefox build prepends the host and the core in the order these tests load them", () => {
+  const build = read('../scripts/build-extension.sh');
+  assert.ok(build.includes('BACKGROUND=(patches/ext/host-local.js patches/ext/core.js)\n'));
+});

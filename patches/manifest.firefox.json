@@ -1,0 +1,28 @@
+{
+  "$comment": "Firefox's overrides (desktop and Android), merged over upstream's manifest_ff.json after patches/manifest.shiori.json (see there for the rules). Checked by scripts/build-extension.sh --target firefox; see docs/firefox-plan.md.",
+  "$comment_permissions": "No 'cookies' (as on Safari) and no nativeMessaging: there's no app, settings live in storage.local (ext/host-local.js).",
+  "permissions": ["tabs", "storage"],
+  "$comment_bss": "The add-on's ID is fixed: Mozilla's signing ties it to the account, and updates follow it. strict_min_version is the current ESR, for desktop and Android alike; it moves with the ESR. data_collection_permissions comes from upstream and stays honest: the extension sends the pages you visit and their content to your own server.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "shiori@machiya-kobo.github.io",
+      "strict_min_version": "153.0",
+      "update_url": "https://github.com/machiya-kobo/shiori/releases/latest/download/updates.json"
+    },
+    "gecko_android": {
+      "strict_min_version": "153.0"
+    }
+  },
+  "$comment_incognito": "Never in private windows: not loaded there at all.",
+  "incognito": "not_allowed",
+  "$comment_options": "Firefox opens the settings in a tab, not inside about:addons.",
+  "options_page": null,
+  "options_ui": { "page": "shiori-options.html", "open_in_tab": true },
+  "$comment_commands": "Control-Shift S, P and D are Firefox's own on Windows and Linux (screenshot, private window, bookmark all tabs), so Shiori's are Alt-Shift there; the Mac keeps Control-Shift, which Firefox leaves free. Firefox for Android has no keyboard shortcuts.",
+  "commands": {
+    "index-current-page": { "suggested_key": { "default": "Alt+Shift+S" } },
+    "disable-indexing-current-page": { "suggested_key": { "default": "Alt+Shift+P" } },
+    "disable-indexing-current-domain": { "suggested_key": { "default": "Alt+Shift+D" } },
+    "open-shiori-search": { "suggested_key": { "default": "Alt+Shift+F" } }
+  }
+}

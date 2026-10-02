@@ -687,5 +687,6 @@ test("with the hosted page down, results open on the extension's own page", asyn
 
 test('the build prepends the Safari background files in the order these tests load them', () => {
   const build = read('../scripts/build-extension.sh');
-  assert.ok(build.includes('prepend background.js ' + SAFARI_BACKGROUND.join(' ') + '\n'));
+  assert.ok(build.includes('BACKGROUND=(' + SAFARI_BACKGROUND.join(' ') + ')\n'));
+  assert.ok(build.includes('prepend background.js "${BACKGROUND[@]}"'));
 });

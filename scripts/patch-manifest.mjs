@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Merges a Safari override document over the upstream extension manifest.
-// Usage: patch-manifest.mjs <upstream-manifest> <override> <output>
+// Merges override documents, in order, over the upstream extension manifest:
+// Shiori's own (patches/manifest.shiori.json), then the browser's.
+// Usage: patch-manifest.mjs <upstream-manifest> <override>... <output>
 // Semantics:
 //   - Keys starting with '$' are dropped (comment convention).
 //   - `null` values in the override remove the key from the merged output.
@@ -35,15 +36,15 @@ export function patchManifest(upstream, override) {
 }
 
 function main(argv) {
-  const [, , upstreamPath, overridePath, outPath] = argv;
-  if (!upstreamPath || !overridePath || !outPath) {
-    console.error('usage: patch-manifest.mjs <upstream> <override> <output>');
+  const [, , upstreamPath, ...rest] = argv;
+  const outPath = rest.pop();
+  if (!upstreamPath || !rest.length || !outPath) {
+    console.error('usage: patch-manifest.mjs <upstream> <override>... <output>');
     process.exit(2);
   }
 
   const upstream = JSON.parse(readFileSync(upstreamPath, 'utf8'));
-  const override = JSON.parse(readFileSync(overridePath, 'utf8'));
-  const merged = merge(upstream, override);
+  const merged = rest.reduce((m, path) => merge(m, JSON.parse(readFileSync(path, 'utf8'))), upstream);
 
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, JSON.stringify(merged, null, 2) + '\n');

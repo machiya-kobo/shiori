@@ -1,6 +1,6 @@
 # Plan: Shiori for Firefox
 
-Status: phases 0 (the spike) and 1 (the split) done; phase 2 is next.
+Status: phases 0 (the spike), 1 (the split) and 2 (the Firefox build) done; phase 3 is next.
 
 ## Decisions
 
@@ -17,6 +17,7 @@ Status: phases 0 (the spike) and 1 (the split) done; phase 2 is next.
 | Platforms | Every OS and architecture Firefox runs on, Haiku included |
 | Release builds | On Linux in CI. Building natively on the BSDs is a separate task (see "Building on the BSDs") |
 | Features | All six suggestions, in the order of phase 7 |
+| Chrome | Later, not scoped yet. The build stays target-based so Chrome is a third target, not a fork (see "Chrome, later") |
 | Container permission | Optional: `contextualIdentities` is requested only when container rules are turned on |
 
 ## Why, given upstream already ships one
@@ -91,9 +92,10 @@ on each (not verified):
 
 ## The minimum version
 
-**153**, for both `gecko` and `gecko_android`. It is set in one place (a
-`FIREFOX_MIN_VERSION` line in `project.yml`), and the release checklist
-checks it against Mozilla's ESR page.
+**153**, for both `gecko` and `gecko_android`. It is set in one place,
+`patches/manifest.firefox.json` (the bundle check holds desktop and Android
+to the same value), and the release checklist checks it against Mozilla's
+ESR page.
 
 - ESR 140 reaches end of life on 13 October 2026 (Firefox 158), when its
   users move to ESR 153 (whattrainisitnow.com/release/?version=esr).
@@ -270,30 +272,76 @@ Proof:
 - **Spike:** `tools/firefox-spike/run.sh` on ESR 153 passes all 16 checks
   on the rebuilt bundle.
 
-### 2. The Firefox target in the build
+### 2. The Firefox target in the build (done)
 
-- `scripts/build-extension.sh --target firefox` (default `safari`), sharing
-  the stamping steps. Output goes to a gitignored `build/firefox/`, never to
-  `ShioriExtension/Resources/`.
-- `patches/manifest.firefox.json` merged over `manifest_ff.json`:
-  - drop `cookies` (the existing check covers it) and `key`;
-  - `browser_specific_settings.gecko.id`: `shiori@machiya-kobo.github.io`;
-  - `gecko.update_url`:
-    `https://github.com/machiya-kobo/shiori/releases/latest/download/updates.json`;
-  - `strict_min_version` from `FIREFOX_MIN_VERSION`, for `gecko` and
-    `gecko_android`;
-  - `data_collection_permissions` kept honest (`browsingActivity`,
-    `websiteContent`);
-  - `"incognito": "not_allowed"`;
-  - `options_ui` → `shiori-options.html`, opened in a tab;
-  - `web_accessible_resources: null`, the same reasoning as Safari;
-  - no `nativeMessaging` (phase 0, finding 2);
-  - `optional_permissions: ["contextualIdentities"]` once feature E lands.
-- The bundle check also:
-  - accepts `background.scripts` beside `service_worker`;
-  - fails unless `incognito` is `not_allowed`;
-  - fails unless the ID and the update URL are as above.
-- Last steps: `npx web-ext lint`, then `web-ext build`.
+`scripts/build-extension.sh --target firefox` builds into a gitignored
+`build/firefox/`. The default target, `safari`, still stages
+`ShioriExtension/Resources/`. Each target is one entry in the script's
+table: where its bundle goes, which of upstream's manifests it starts from,
+and its background files.
+
+| Target | Upstream manifest | Background, in order |
+|---|---|---|
+| `safari` | `manifest.json` | `safari-shims.js`, `ext/host-native.js`, `ext/core.js` |
+| `firefox` | `manifest_ff.json` | `ext/host-local.js`, `ext/core.js` |
+
+Manifests are layered by `scripts/patch-manifest.mjs`, which now takes any
+number of overlays:
+
+- upstream's manifest;
+- then `patches/manifest.shiori.json`, shared by every browser: name,
+  icons, action, content scripts, commands, no `key`, no
+  `web_accessible_resources`;
+- then `patches/manifest.<target>.json`.
+
+The Safari bundle built this way is **byte-identical** to the one before
+the change.
+
+`patches/manifest.firefox.json` adds:
+
+- `permissions: tabs, storage`: no `cookies`, no `nativeMessaging`;
+- the fixed ID `shiori@machiya-kobo.github.io` and the update URL;
+- `strict_min_version: 153.0` for desktop and Android. This file is the
+  floor's one home: no `project.yml` setting, so Xcode never sees it;
+- `incognito: not_allowed`;
+- `options_ui` (opens in a tab) in place of `options_page`;
+- shortcuts on **Alt+Shift** S/P/D/F. Control+Shift S, P and D are
+  Firefox's own on Windows and Linux (screenshot, private window, bookmark
+  all tabs). The Mac keeps MacCtrl+Shift. In the spike Firefox assigned all
+  four. Whether they clash with anything on each OS is a hand check.
+
+`data_collection_permissions` comes from upstream unchanged.
+
+**The bundle check** is now `scripts/check-extension.py ROOT TARGET`, with
+tests:
+
+- both targets: no `cookies`, every file the manifest names present,
+  Shiori's shims in place;
+- Safari: at most four suggested shortcuts;
+- Firefox: an event page, no `nativeMessaging`, `incognito: not_allowed`,
+  the ID, the update URL, the same floor on desktop and Android, and no
+  native-messaging code in `background.js`.
+
+**Last steps**, Firefox only:
+
+- `npx web-ext@10.7.0 lint --self-hosted`: 0 errors, or the build fails;
+- `web-ext build` → `build/shiori-firefox-<version>.zip` (unsigned).
+
+**Lint** returns 0 errors and 3 warnings, all `innerHTML` in upstream's
+`shared.js`. Ours, in `search-core.js`, is gone: the room glyph is built
+node by node, and Firefox renders the same markup as before.
+
+**Proof:**
+
+- 148 of 148 script tests pass;
+- `tools/firefox-spike/run.sh` now builds and installs the real Firefox
+  bundle and passes on ESR 153. New checks: no native messaging; a settings
+  change kept by `host-local.js` with AI keys refused; the shortcuts
+  Firefox assigned;
+- the packed `.zip` installs on ESR 153 and captures a page.
+
+The settings page is still Safari's read-only one ("set it in the Shiori
+app"). Phase 3 replaces it.
 
 ### 3. The settings page
 
@@ -418,6 +466,43 @@ check their API and stay off on Android.
   a later grant does the same is unchecked; phase 7 checks it.
 - The skip happens in the background, before upstream's capture is sent,
   keyed by the sender tab's `cookieStoreId`.
+
+## Chrome, later
+
+Not scoped yet. What we already know, so the Firefox work doesn't close
+doors:
+
+- **The build is ready for a third target**: a `chrome` row in
+  `build-extension.sh`'s table, upstream's `manifest.json` (a service
+  worker, which the core already runs as on Safari),
+  `patches/manifest.chrome.json`, and `ext/host-local.js` + `ext/core.js`.
+  `host-local.js` is browser-neutral, so Chrome gets the Firefox settings
+  page from phase 3.
+- **Blocker: Hister won't take Shiori's saves from Chrome.** Stock Hister
+  skips its CSRF check for an extension's API calls only from
+  `moz-extension://…`, `safari-web-extension://…`, or exactly
+  `chrome-extension://cciilamhchpmbdnniabclekddabkifhb`, upstream's own
+  Chrome ID (`server/extension.go`, `withCSRF` in `server/server.go`). A
+  Shiori Chrome extension gets its own ID from the Chrome Web Store, so its
+  `api/add` would answer 403 (CSRF mismatch). Search still works:
+  `?format=json` skips that check. Options, none chosen:
+  1. Upstream: Hister accepts configured extension IDs. That needs a change
+     in Hister; Shiori never patches `vendor/hister/`.
+  2. Keep upstream's `key`, so the ID matches. That only works for builds
+     loaded unpacked, clashes with upstream's own extension, and can't be
+     published.
+  3. Rewrite the Origin header to `hister://` with
+     `declarativeNetRequest`, as the native apps send it. That's a new
+     permission, and it sidesteps the protection the server chose.
+     Discuss first.
+- **Distribution**: Chrome on Windows and macOS installs extensions only
+  from the Chrome Web Store (a developer account and review). Edge has its
+  own store; Brave and Vivaldi use Chrome's. Chrome for Android has no
+  extensions.
+- **Feature differences**: no containers (feature E is Firefox-only); the
+  sidebar is `side_panel`, not `sidebar_action`; the context menu is
+  `contextMenus`; `omnibox` is the same.
+- The BSDs package Chromium, so the platform reach is similar.
 
 ## Rules this must keep (from CLAUDE.md)
 

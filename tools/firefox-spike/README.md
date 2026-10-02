@@ -1,30 +1,31 @@
 # Firefox spike
 
-Phase 0 of [docs/firefox-plan.md](../../docs/firefox-plan.md): today's
-Safari bundle, shims unchanged, in headless Firefox against a fake Hister.
-It answers "what breaks before we change anything" and stays as a
-regression check until phase 6 replaces it.
+The Firefox build (`scripts/build-extension.sh --target firefox`) in
+headless Firefox against a fake Hister. It began as phase 0 of
+[docs/firefox-plan.md](../../docs/firefox-plan.md), on the Safari bundle,
+and stays as the in-browser check, growing with each phase.
 
 ```bash
 FIREFOX=/path/to/firefox tools/firefox-spike/run.sh
 ```
 
 Needs node, python3, rsync, a Firefox and geckodriver (on `PATH`, or
-`GECKODRIVER=`). It restages `ShioriExtension/Resources` with the fake
-server's address (the build and install scripts restage it). Ports 8775
+`GECKODRIVER=`). It rebuilds `build/firefox` with the fake server's
+address. Ports 8775
 (fake Hister) and 8776 (test pages), or `HISTER_PORT`/`PAGES_PORT`. Logs and
 `results.json` go to `WORK` (a temporary folder by default).
 
 | File | What it is |
 |---|---|
-| `run.sh` | Builds, converts, serves `pages/`, runs `run.mjs` |
-| `make-firefox.py` | The Safari bundle's manifest made loadable in Firefox, nothing more |
+| `run.sh` | Builds the Firefox target, serves `pages/`, runs `run.mjs` |
 | `fake-hister.py` | Skip rules (`skipme`), stats, profile, search; logs requests as JSON lines. Never a real Hister |
 | `run.mjs` | Three sessions: capture, private browsing, containers |
 | `container-probe/` | A tiny add-on: what `contextualIdentities` gives without `cookies` |
 
 ## What it checks
 
+- No native messaging; a settings change is kept on the device (AI keys
+  refused); the shortcuts Firefox assigned.
 - A visited page reaches `api/add` with Shiori's metadata, HTML and no text.
 - A skip rule holds.
 - Offline (the fake stopped), a capture is queued and drains when Hister is
