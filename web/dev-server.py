@@ -21,7 +21,11 @@ that error), since the real endpoint refuses a localhost origin.
 
 Requests pass through unchanged: in particular no `Origin: hister://` is
 added, so Hister's own check (same-origin allowed, cross-site refused)
-still guards writes. For testing only; stdlib, no dependencies.
+still guards writes. One exception: the Machiya sign-in's cookie
+(`machiya_session`) goes only to the rooms, /kura/ and /konbini/, and is
+taken out of the Cookie header everywhere else (Hister, SearXNG, the
+gateway). Replies pass back as they are, Set-Cookie included. For testing
+only; stdlib, no dependencies.
 """
 
 import http.server
@@ -49,7 +53,17 @@ NOT_ROUTED = ""  # route()'s answer for a path no one serves here
 HISTER = os.environ.get("HISTER_URL", "")
 AI_STUB = os.environ.get("AI_STUB") == "1"
 AI_ERRORS = {"cap": 429, "note": 403, "not_indexed": 404, "empty": 422, "engine": 502, "declined": 502, "unavailable": 503, "no_results": 422, "searx": 504}
+# The paths whose upstream is a Machiya room, which may read the sign-in cookie.
+ROOMS = ("/kura/", "/konbini/")
+SESSION_COOKIE = "machiya_session"
 HOP = {"connection", "keep-alive", "transfer-encoding", "upgrade", "host", "content-length", "proxy-connection"}
+
+
+def without_session(cookie):
+    """A Cookie header without the Machiya session ('' when nothing is left)."""
+    kept = [part.strip() for part in cookie.split(";")
+            if part.strip() and part.split("=", 1)[0].strip() != SESSION_COOKIE]
+    return "; ".join(kept)
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -73,6 +87,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if length:
             body = self.rfile.read(length)
         headers = {k: v for k, v in self.headers.items() if k.lower() not in HOP}
+        if not self.path.startswith(ROOMS):
+            for key in [k for k in headers if k.lower() == "cookie"]:
+                rest = without_session(headers.pop(key))
+                if rest:
+                    headers[key] = rest
         request = urllib.request.Request(target, data=body, headers=headers, method=self.command)
         try:
             response = urllib.request.urlopen(request, timeout=30)

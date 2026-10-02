@@ -45,6 +45,21 @@ extension's capture included) keeps such a page out of Hister, AI and
 caches by that `/v/` at the start of the path. Under `/kura/` the same
 page would read as any other, so pass only the API paths above.
 
+**Signing in (Machiya's identity file).** When Kura and Konbini run with
+Machiya's identity file they ask who is calling, and these pages carry no
+token: they use the browser's `machiya_session` cookie, from the room's
+own sign-in page (`<kura>/signin`) with `MACHIYA_COOKIE_DOMAIN` covering
+this host too. So the host must:
+
+- pass `Cookie` through to `/kura/` and `/konbini/` unchanged, and their
+  `Set-Cookie` back (a session is renewed on use);
+- take `machiya_session` out of the `Cookie` header on every other route
+  (Hister, SearXNG, the gateway): only the rooms read it.
+
+The pages only read the rooms, so the rooms' same-origin rule for changes
+never applies. When Kura answers 401, the Notes list says so with a Sign
+In link to Kura's own sign-in page.
+
 `web/dev-server.py` does exactly this routing locally, for testing.
 
 ## What it keeps where

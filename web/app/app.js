@@ -374,8 +374,25 @@ function openDoc(doc, row) {
   }
 }
 
-function status(title, text, retry) {
-  return h('div', { class: 'status' }, h('h2', {}, title), text ? h('p', {}, text) : null, retry ? h('button', { type: 'button', onclick: retry }, 'Try Again') : null);
+function status(title, text, retry, link = null) {
+  return h(
+    'div',
+    { class: 'status' },
+    h('h2', {}, title),
+    text ? h('p', {}, text) : null,
+    link ? h('p', {}, h('a', { href: link.href }, link.text)) : null,
+    retry ? h('button', { type: 'button', onclick: retry }, 'Try Again') : null,
+  );
+}
+
+/**
+ * A room that wants the Machiya sign-in (401, with the identity file): the
+ * room's own sign-in page, whose machiya_session cookie then rides along on
+ * this host's same-origin /kura/ and /konbini/ (docs/signing-in.md).
+ */
+function signInStatus(retry) {
+  const href = S.machiyaSignInURL(settings.niwaURL);
+  return status('Sign In to See Your Notes', 'Kura asks who you are. Sign in there, then come back.', retry, href ? { href, text: 'Sign In to Kura' } : null);
 }
 
 /**
@@ -555,7 +572,8 @@ function resultsList(container, options) {
       if (!done && (added === 0 || list.querySelectorAll('.row').length < 15)) page(false);
     } catch (error) {
       loading = false;
-      if (first) container.replaceChildren(status(error.unreachable ? "Can't Reach Hister" : 'Something Went Wrong', error.message, () => resultsList(container, options)));
+      const retry = () => resultsList(container, options);
+      if (first) container.replaceChildren(error.status === 401 && source !== 'pages' ? signInStatus(retry) : status(error.unreachable ? "Can't Reach Hister" : 'Something Went Wrong', error.message, retry));
     }
   }
   new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && page(false), { root: $('list'), rootMargin: '600px' }).observe(sentinel);
