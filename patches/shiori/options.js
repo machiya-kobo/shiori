@@ -24,6 +24,15 @@
   $('vault').textContent = orNone(settings.obsidianVault);
   $('niwa').textContent = orNone(settings.niwaURL);
   $('konbini').textContent = orNone(settings.konbiniURL);
+  // Who the app signed in as (the background asks it; this page never sees the token).
+  try {
+    chrome.runtime.sendMessage({ shiori: 'machiya-status' }, (reply) => {
+      void chrome.runtime.lastError;
+      $('machiya').textContent = (reply && reply.ok && reply.text) || 'Not signed in';
+    });
+  } catch (_) {
+    $('machiya').textContent = 'Unknown';
+  }
   const queued = Array.isArray(got.shioriQueueIndex) ? got.shioriQueueIndex.length : 0;
   $('queue').textContent = queued ? `${queued} ${queued === 1 ? 'page' : 'pages'}` : 'Nothing';
 

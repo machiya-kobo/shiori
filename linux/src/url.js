@@ -106,6 +106,18 @@ export class ShimURL {
   get host() {
     return this.port ? `${this.hostname}:${this.port}` : this.hostname;
   }
+  // The user and password before "@", as given (search-core's host rule
+  // refuses an address with either).
+  get username() {
+    const info = this._userinfo.slice(0, -1);
+    const colon = info.indexOf(':');
+    return colon >= 0 ? info.slice(0, colon) : info;
+  }
+  get password() {
+    const info = this._userinfo.slice(0, -1);
+    const colon = info.indexOf(':');
+    return colon >= 0 ? info.slice(colon + 1) : '';
+  }
   get origin() {
     return `${this.protocol}//${this.host}`;
   }

@@ -6,9 +6,10 @@
 //
 //   gjs -m linux/gjs/main.js [search <words…> | --quick | save <url> [label] | …]
 //
-// Configuration: ~/.config/shiori/config.json
+// Configuration: ~/.config/shiori/config.json (0600 once it holds a token)
 //   { "webApp": "https://shiori.example/", "server": "https://hister.example/",
-//     "kura": "https://kura.example/", "smallweb": "https://smallweb.example/" }
+//     "kura": "https://kura.example/", "smallweb": "https://smallweb.example/",
+//     "machiyaToken": "mch_…" }
 // No hostnames in the repo, as for the other clients.
 
 import GLib from 'gi://GLib';
@@ -21,6 +22,7 @@ import { installURL } from '../src/url.js';
 import { parseArgs, saveLinksTarget } from '../src/cli.js';
 import { QuickSearch } from './quick.js';
 import { save, sendWaiting, waitingStatus } from './save.js';
+import { pairedMessage, signInStatus } from '../src/machiya.js';
 
 installURL(globalThis);
 // search-core.js sets globalThis.ShioriSearch, once URL exists.
@@ -65,22 +67,60 @@ const APP_ID = GLib.getenv('FLATPAK_ID') || 'io.github.machiya_kobo.Shiori';
     } catch (e) {
       r = { code: 1, message: `shiori: ${e.message}` };
     }
+    if (early.command === 'status') r.message += '\n' + signInStatus(config, configMode(), globalThis.ShioriSearch);
     (r.code !== 0 ? printerr : print)(r.message);
     System.exit(r.code);
   }
+  // Pairing with a code from `identity pair`, against the config's Kura. The
+  // config is read-only here (the Flatpak mounts it so), so the token is
+  // printed for you to add; nothing else keeps it.
+  if (early.command === 'pair') {
+    const config = loadConfig();
+    const { requestJSON } = await import('./http.js');
+    const viaSoup = async (url, init) => {
+      const r = await requestJSON(config, url, { method: 'POST', body: init.body, signIn: false, redirects: false });
+      return { status: r.status, json: async () => r.json };
+    };
+    let code = 0;
+    let message;
+    try {
+      message = pairedMessage(await globalThis.ShioriSearch.machiyaPair(config.kura || '', early.code, early.device, viaSoup));
+    } catch (e) {
+      code = 1;
+      message = `shiori: ${e.message}`;
+    }
+    (code !== 0 ? printerr : print)(message);
+    System.exit(code);
+  }
+}
+
+// The app's config dir, then the host's ~/.config (inside the Flatpak the
+// first is ~/.var/app/…; the manifest shares ~/.config/shiori read-only).
+// A declaration, hoisted: the commands above run before this line.
+function configPaths() {
+  return [GLib.get_user_config_dir(), GLib.build_filenamev([GLib.get_home_dir(), '.config'])].map((dir) =>
+    GLib.build_filenamev([dir, 'shiori', 'config.json']));
 }
 
 /** The configuration, or {} when there's none (the window then says so). */
 function loadConfig() {
-  // The app's config dir, then the host's ~/.config (inside the Flatpak the
-  // first is ~/.var/app/…; the manifest shares ~/.config/shiori read-only).
-  for (const dir of [GLib.get_user_config_dir(), GLib.build_filenamev([GLib.get_home_dir(), '.config'])]) {
+  for (const path of configPaths()) {
     try {
-      const [, bytes] = GLib.file_get_contents(GLib.build_filenamev([dir, 'shiori', 'config.json']));
+      const [, bytes] = GLib.file_get_contents(path);
       return JSON.parse(new TextDecoder().decode(bytes)) || {};
     } catch (_) {}
   }
   return {};
+}
+
+/** config.json's permission bits (the one loadConfig read), or null. */
+function configMode() {
+  for (const path of configPaths()) {
+    try {
+      return Gio.File.new_for_path(path).query_info('unix::mode', Gio.FileQueryInfoFlags.NONE, null).get_attribute_uint32('unix::mode');
+    } catch (_) {}
+  }
+  return null;
 }
 
 const withSlash = (u) => (u && !u.endsWith('/') ? u + '/' : u || '');

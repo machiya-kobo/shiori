@@ -8,8 +8,11 @@ import Foundation
 public struct KuraClient: Sendable {
     public let baseURL: URL
     let session: URLSession
+    /// The Machiya sign-in, sent where its host rule allows (Kura's own
+    /// origin, when it's one of the rooms); nil without the identity file.
+    public var signIn: MachiyaSignIn?
 
-    public init?(serverURL: String, session: URLSession = HisterClient.defaultSession) {
+    public init?(serverURL: String, session: URLSession = HisterClient.defaultSession, signIn: MachiyaSignIn? = nil) {
         var s = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return nil }
         if !s.hasSuffix("/") { s += "/" }
@@ -18,6 +21,7 @@ public struct KuraClient: Sendable {
         else { return nil }
         self.baseURL = url
         self.session = session
+        self.signIn = signIn
     }
 
     /// A page of notes: a search, or the newest changed first for "*"
@@ -34,7 +38,7 @@ public struct KuraClient: Sendable {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: URLRequest(url: url))
+            (data, response) = try await session.roomData(for: URLRequest(url: url), signIn: signIn)
         } catch let error as URLError where error.code == .cancelled {
             throw .cancelled
         } catch is CancellationError {
@@ -56,7 +60,7 @@ public struct KuraClient: Sendable {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: URLRequest(url: baseURL.appending(path: "api/vaults"), timeoutInterval: 4))
+            (data, response) = try await session.roomData(for: URLRequest(url: baseURL.appending(path: "api/vaults"), timeoutInterval: 4), signIn: signIn)
         } catch {
             throw HisterError(transport: error)
         }
@@ -75,7 +79,7 @@ public struct KuraClient: Sendable {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: URLRequest(url: components.url!))
+            (data, response) = try await session.roomData(for: URLRequest(url: components.url!), signIn: signIn)
         } catch {
             throw HisterError(transport: error)
         }

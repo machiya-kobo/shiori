@@ -8,12 +8,14 @@
 //                               a note's (or a folder's notes') links, those
 //                               Hister doesn't hold yet (docs/linux.md)
 //   shiori send                 send what's waiting
-//   shiori status               how many wait
+//   shiori status               how many wait, and the Machiya sign-in
+//   shiori pair <code> [device] pair with a code from `identity pair` (against
+//                               the config's Kura); prints the token for config.json
 //   shiori provider-search <words…>  the desktop search's rows, as JSON (for Cinnamon's menu)
 //   shiori shiori://… | kura://… an app link
 
 const USAGE =
-  'usage: shiori [--quick | search <words…> | save <url> [label] | save-links [--folder] <note path or folder> [label] [--dry-run] | send | status | <shiori:// link>]';
+  'usage: shiori [--quick | search <words…> | save <url> [label] | save-links [--folder] <note path or folder> [label] [--dry-run] | send | status | pair <code> [device] | <shiori:// link>]';
 
 export function parseArgs(argv) {
   const [first, ...rest] = argv;
@@ -39,6 +41,13 @@ export function parseArgs(argv) {
     if (words.length > 2) return { command: 'error', message: 'save-links takes one note or folder and at most one label', usage: USAGE };
     const target = folder ? { folder: where.replace(/\/+$/, '') } : { path: where };
     return { command: 'save-links', ...target, ...(label ? { label } : {}), dryRun };
+  }
+  if (first === 'pair') {
+    // A code may be typed in its two groups ("ABCD EFGH"); the device is the rest after a code-shaped first word.
+    const [code, ...device] = rest;
+    if (!code) return { command: 'error', message: 'pair needs the code from identity pair', usage: USAGE };
+    const joined = /^[A-Za-z0-9]{4}$/.test(code) && /^[A-Za-z0-9]{4}$/.test(device[0] || '') ? [code + device.shift()] : [code];
+    return { command: 'pair', code: joined[0], device: device.join(' ').trim() || 'Linux' };
   }
   if (first === 'provider-search') return { command: 'provider-search', query: rest.join(' ').trim() };
   if (first === 'send' || first === 'status') return rest.length ? { command: 'error', message: `${first} takes nothing`, usage: USAGE } : { command: first };

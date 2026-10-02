@@ -114,6 +114,36 @@
     void showQueue();
   });
 
+  // --- Machiya sign-in ---
+  // The background pairs and keeps the token (core.js, shioriMachiya); this
+  // page sees only who is signed in, never the token.
+
+  async function showMachiya() {
+    const reply = await send({ shiori: 'machiya-status' });
+    $('machiya-status').textContent = (reply && reply.ok && reply.text) || 'Not signed in';
+    $('machiya-sign-out').hidden = !(reply && reply.signedIn);
+  }
+
+  $('machiya-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    showError($('machiya-error'), '');
+    const entry = $('machiya-entry').value;
+    $('machiya-status').textContent = 'Signing in…';
+    const reply = await send({ shiori: 'machiya-sign-in', entry, device: $('machiya-device').value });
+    if (!reply || !reply.ok) showError($('machiya-error'), (reply && reply.error) || "Couldn't sign in; try again.");
+    else $('machiya-entry').value = '';
+    await showMachiya();
+  });
+
+  $('machiya-sign-out').addEventListener('click', async () => {
+    showError($('machiya-error'), '');
+    const reply = await send({ shiori: 'machiya-sign-out' });
+    if (!reply || !reply.ok) showError($('machiya-error'), "Couldn't sign out; try again.");
+    await showMachiya();
+  });
+
+  void showMachiya();
+
   // --- site access ---
 
   async function showAccess() {

@@ -9,8 +9,13 @@
 // key lists to the Swift ones. Change both.
 //
 // Settings are per device: storage.local, never storage.sync.
+//
+// The Machiya sign-in ({token, principal}) has a key of its own, never in
+// the settings (which a settings file can export) and never synced or
+// logged.
 const shioriHost = (() => {
   const STORE_KEY = 'shioriLocalSettings';
+  const MACHIYA_KEY = 'machiyaSignIn';
 
   const RECENT_LIMIT = 5;
   const TEXT_SIZES = ['system', 'xSmall', 'small', 'medium', 'large', 'xLarge', 'xxLarge', 'xxxLarge'];
@@ -102,6 +107,18 @@ const shioriHost = (() => {
 
     // No app to set the server: the settings page does (ext/settings.js).
     ownsServer: true,
+
+    /** The Machiya sign-in, {token, principal}, or {} when signed out. */
+    async machiya() {
+      const stored = (await storage().get([MACHIYA_KEY]))[MACHIYA_KEY];
+      return stored && typeof stored === 'object' && typeof stored.token === 'string' ? { token: stored.token, principal: String(stored.principal || '') } : {};
+    },
+    /** Keeps a sign-in (the core checked the token's shape). */
+    setMachiya: (token, principal) => storage().set({ [MACHIYA_KEY]: { token, principal: String(principal || '') } }),
+    /** Signs out: the token is deleted from this browser. */
+    clearMachiya: () => storage().remove(MACHIYA_KEY),
+    // No app: the settings page signs in and out.
+    ownsMachiya: true,
   };
 })();
 

@@ -47,3 +47,64 @@ test('the other routes are as they were', () => {
     'https://hister.example/api/stats',
   ]);
 });
+
+/**
+ * Requests through the dev server to upstreams that record what they got:
+ * for each path, the Cookie header the upstream saw and the Set-Cookie
+ * headers that came back.
+ */
+function throughProxy(paths, cookie) {
+  const script = `
+import http.server, importlib.util, json, sys, threading, urllib.request
+seen = {}
+class Up(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        seen[self.path] = self.headers.get("Cookie")
+        self.send_response(200)
+        self.send_header("Set-Cookie", "machiya_session=renewed; Path=/; HttpOnly")
+        self.send_header("Set-Cookie", "machiya_theme=night; Path=/")
+        self.send_header("Content-Length", "2")
+        self.end_headers()
+        self.wfile.write(b"{}")
+    def log_message(self, *a): pass
+up = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Up)
+threading.Thread(target=up.serve_forever, daemon=True).start()
+base = "http://127.0.0.1:%d/" % up.server_address[1]
+import os
+for name in ("HISTER_URL", "KURA_URL", "KONBINI_URL", "SEARXNG_URL", "SMALLWEB_URL"):
+    os.environ[name] = base + name.split("_")[0].lower() + "/"
+spec = importlib.util.spec_from_file_location("dev_server", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+m.Handler.log_message = lambda *a: None
+dev = http.server.ThreadingHTTPServer(("127.0.0.1", 0), m.Handler)
+threading.Thread(target=dev.serve_forever, daemon=True).start()
+out = []
+for path in json.loads(sys.argv[2]):
+    request = urllib.request.Request("http://127.0.0.1:%d%s" % (dev.server_address[1], path), headers={"Cookie": sys.argv[3]})
+    reply = urllib.request.urlopen(request, timeout=10)
+    upstream = [p for p in seen if p.endswith(path.split("/")[-1])]
+    out.append({"cookie": seen.get(upstream[-1]) if upstream else None, "setCookie": reply.headers.get_all("Set-Cookie")})
+    seen.clear()
+print(json.dumps(out))
+`;
+  return JSON.parse(execFileSync('python3', ['-c', script, server, JSON.stringify(paths), cookie], { encoding: 'utf8' }));
+}
+
+test("the Machiya session cookie reaches only the rooms, and their Set-Cookie comes back", () => {
+  const cookie = 'machiya_session=abc.def; machiya_theme=night';
+  const [kura, konbini, hister, searx, smallweb] = throughProxy(
+    ['/kura/api/vaults', '/konbini/api/cards', '/api/stats', '/searx/search', '/smallweb/api/search'],
+    cookie,
+  );
+  assert.equal(kura.cookie, cookie);
+  assert.equal(konbini.cookie, cookie);
+  for (const other of [hister, searx, smallweb]) assert.equal(other.cookie, 'machiya_theme=night');
+  // A renewed session (and the house's settings) pass back unchanged.
+  assert.deepEqual(kura.setCookie, ['machiya_session=renewed; Path=/; HttpOnly', 'machiya_theme=night; Path=/']);
+});
+
+test('a Cookie header holding only the session is dropped for the others', () => {
+  const [hister] = throughProxy(['/api/stats'], 'machiya_session=abc.def');
+  assert.equal(hister.cookie, null);
+});

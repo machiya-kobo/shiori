@@ -22,7 +22,8 @@ holds the rules and the traps the code can't tell you.
   services, not in this repository: the feed service `/shiori/feed` and the
   AI endpoint `/shiori/ai/*`, hosted pages only), Kura (notes), the
   small-web gateway, SearXNG, the visited site's favicon and PDFs (upstream
-  behaviour). Firefox itself fetches the add-on's `updates.json` from this
+  behaviour). With Machiya's identity file, Kura's `POST /api/pair`
+  (pairing a device). Firefox itself fetches the add-on's `updates.json` from this
   repository's GitHub Releases (its `update_url`); the extension's code
   never does. NewsBlur, status pages and the Wayback Machine and archive.is
   copies are only ever opened as links.
@@ -31,6 +32,19 @@ holds the rules and the traps the code can't tell you.
   the app.
 - **Never re-add the `cookies` permission.** The server has no login; the
   network is the gate.
+- **The Machiya sign-in** (docs/signing-in.md): a token (`mch_…` pasted,
+  `mcd_…` from `POST /api/pair` with a code) in `Authorization: Bearer`,
+  only where the host rule allows (`S.machiyaRooms` /
+  `S.mayCarryMachiyaToken`, `Machiya.rooms` / `mayCarryToken`, twins):
+  the configured Kura and Konbini by origin, less Hister's and SearXNG's;
+  never across a redirect. It lives in the Keychain (`MachiyaKeychain`,
+  service "Machiya"; Safari's extension asks the app, `machiya`),
+  Firefox's `storage.local` key `machiyaSignIn` (never in settings or a
+  settings file), Linux's config.json; never UserDefaults, never logged.
+  The extension hands it to its own pages only, never a content script;
+  extension fetches keep `credentials: 'omit'`. The hosted pages carry
+  none: the browser's `machiya_session` cookie goes to `/kura/` and
+  `/konbini/` only, and the host strips it everywhere else.
 - **Tests:** `node --test scripts/*.test.mjs` (Node 22 fails on the
   folder form) after touching `patches/`, `scripts/`, `web/` or `linux/`;
   `swift test` in `Packages/HisterKit` and `Packages/ShioriAI`;

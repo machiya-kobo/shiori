@@ -10,6 +10,7 @@ import { newPage, addRequest, titleIn, capped, MAX_HTML_CHARACTERS } from '../li
 import * as outbox from '../linux/src/outbox.js';
 import { parseArgs, saveLinksTarget } from '../linux/src/cli.js';
 import { providerQuery, providerResults, activation } from '../linux/src/provider.js';
+import { roomHeaders, roomOrigins, signInStatus, pairedMessage } from '../linux/src/machiya.js';
 
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
@@ -23,11 +24,14 @@ test('the URL shim reads URLs as Node does', () => {
     'https://host.example:443/x',
     'https://host.example/?',
     'https://[::1]:3000/v6',
+    'https://kura.example@evil.example/api/search',
+    'https://user@host.example/',
+    'https://KURA.example:443/api',
   ];
   for (const raw of urls) {
     const ours = new ShimURL(raw);
     const node = new URL(raw);
-    for (const part of ['protocol', 'hostname', 'host', 'port', 'pathname', 'search', 'hash', 'origin', 'href']) {
+    for (const part of ['protocol', 'username', 'password', 'hostname', 'host', 'port', 'pathname', 'search', 'hash', 'origin', 'href']) {
       assert.equal(ours[part], node[part], `${part} of ${raw}`);
     }
     assert.deepEqual([...ours.searchParams], [...node.searchParams], `params of ${raw}`);
@@ -193,4 +197,67 @@ test('the desktop search provider: pages, then notes', () => {
   ]);
   assert.deepEqual(plain(activation(rows[1].id)), { kind: 'note', url: 'https://kura.example/n/Projects/Sample' });
   assert.equal(activation('bogus'), null);
+});
+
+
+// --- the Machiya sign-in (linux/src/machiya.js), on search-core under the shim as in GJS ---
+
+function shimmedCore() {
+  const source = readFileSync(new URL('../patches/shiori/search-core.js', import.meta.url), 'utf8');
+  const ctx = {};
+  installURL(ctx);
+  vm.createContext(ctx);
+  vm.runInContext(source, ctx);
+  return ctx.ShioriSearch;
+}
+
+const TOKEN = 'mch_q9xa_' + 'A'.repeat(43);
+const CONFIG = {
+  server: 'https://hister.example/',
+  kura: 'https://kura.example/',
+  smallweb: 'https://smallweb.example/',
+  webApp: 'https://shiori.example/',
+  machiyaToken: TOKEN,
+};
+
+test('the token goes to the configured Kura only, read with the shim as GJS reads it', () => {
+  const S = shimmedCore();
+  assert.deepEqual(plain(roomOrigins(CONFIG, S)), ['https://kura.example']);
+  assert.deepEqual(plain(roomHeaders(CONFIG, 'https://kura.example/api/search?q=x', S)), { Authorization: 'Bearer ' + TOKEN });
+  assert.deepEqual(plain(roomHeaders(CONFIG, 'https://KURA.example:443/api/note', S)), { Authorization: 'Bearer ' + TOKEN });
+  for (const url of [
+    'https://hister.example/search', 'https://smallweb.example/api/save', 'https://shiori.example/',
+    'https://kura.example@evil.example/api/search', 'https://user:pw@kura.example/api/search',
+    'https://kura.example.evil.example/', 'https://kura.example:8443/', 'http://kura.example/',
+  ]) {
+    assert.deepEqual(plain(roomHeaders(CONFIG, url, S)), {}, url);
+  }
+  // No token, or not a token: nothing.
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, machiyaToken: '' }, 'https://kura.example/', S)), {});
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, machiyaToken: 'hunter2' }, 'https://kura.example/', S)), {});
+  // Kura on the web app's host (one host, /kura/ under it): no token at all.
+  assert.deepEqual(plain(roomOrigins({ ...CONFIG, kura: 'https://shiori.example/kura/' }, S)), []);
+});
+
+test("Hister's requests never carry the token, and a signed-in request follows no redirect", () => {
+  const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
+  assert.match(http, /const auth = signIn && !hister \? roomHeaders\(config, url, globalThis\.ShioriSearch\)\.Authorization : undefined;/);
+  assert.match(http, /if \(auth \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
+});
+
+test("status says who can read the token, and pair prints the line to add", () => {
+  const S = shimmedCore();
+  assert.equal(signInStatus({}, 0o600, S), 'Machiya: not signed in.');
+  assert.match(signInStatus({ machiyaToken: 'nope' }, 0o600, S), /isn’t a token/);
+  assert.equal(signInStatus(CONFIG, 0o100600, S), 'Machiya: signed in (a token in config.json).');
+  assert.match(signInStatus(CONFIG, 0o100644, S), /mode 644\): chmod 600/);
+  const printed = pairedMessage({ token: TOKEN, principal: 'alex' });
+  assert.match(printed, /Paired as alex/);
+  assert.ok(printed.includes(`"machiyaToken": "${TOKEN}"`));
+});
+
+test('the command line pairs with a code, in one piece or two', () => {
+  assert.deepEqual(plain(parseArgs(['pair', 'ABCD-EFGH'])), { command: 'pair', code: 'ABCD-EFGH', device: 'Linux' });
+  assert.deepEqual(plain(parseArgs(['pair', 'abcd', 'efgh', 'Desk', 'Mint'])), { command: 'pair', code: 'abcdefgh', device: 'Desk Mint' });
+  assert.equal(parseArgs(['pair']).command, 'error');
 });

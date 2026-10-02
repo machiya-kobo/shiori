@@ -35,10 +35,11 @@ WebKitGTK 6).
   opens, Escape closes.
 - **The command line** (`linux/src/cli.js`): `shiori`, `--quick`,
   `search <words>`, `save <url> [label]`, `send`, `status`,
+  `pair <code> [device]`,
   `provider-search <words>`, and `shiori://` / `kura://` links. One
   `GApplication`, so a second invocation talks to the running one.
-  Commands with no window (`save`, `send`, `status`, `provider-search`,
-  `--help`) run before the application starts, so they work without a
+  Commands with no window (`save`, `send`, `status`, `pair`,
+  `provider-search`, `--help`) run before the application starts, so they work without a
   display: over SSH, from cron or a script.
 - **The desktop search provider**: Cinnamon's menu providers are JS files
   outside any Flatpak, so a thin one (`linux/cinnamon/`) runs
@@ -77,6 +78,20 @@ a private vault is never cached, exported or sent to Hister.
   Flatpak reads it read-only (`--filesystem=xdg-config/shiori:ro`); that
   mount also covers the app's own config dir, so the host's file is the one
   it reads.
+- **Signing in to Machiya** (when Kura runs with Machiya's identity file,
+  docs/signing-in.md): put a token in the same file, `"machiyaToken":
+  "mch_…"`, and `chmod 600 ~/.config/shiori/config.json`. There's no
+  settings window to type it into, and the Flatpak reads the file
+  read-only, so Shiori never writes it. Get one either way:
+  `identity token mint <you> --label "Linux"` on the server, or a pairing
+  code from `identity pair <you> --label "Linux"`, then
+  `shiori pair ABCD-EFGH`, which pairs with the config's Kura and prints
+  the line to add. `shiori status` says whether you're signed in and
+  warns when others can read the file. The token goes only to the
+  config's Kura (and `konbini` or `niwa`, if you name them), by origin:
+  never to Hister, the gateway or the web app, and a request carrying it
+  follows no redirect. To sign out, delete the line; revoke it on the
+  server with `identity device revoke` or `identity token revoke`.
 - The HTTP client (`linux/gjs/http.js`, libsoup 3) refuses hosts the config
   doesn't name, except the page `shiori save` was asked to download. The
   network itself (your tailnet's or LAN's access rules) is the real

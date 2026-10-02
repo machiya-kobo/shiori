@@ -24,6 +24,10 @@ before anything is disclosed.
   an AI engine, a cache or an export.
 - **AI:** keys leaving the device, or page text reaching an engine the user
   didn't switch on.
+- **Signing in to Machiya:** the token (docs/signing-in.md) reaching any
+  host but the configured rooms (Hister, SearXNG, a redirect, a lookalike),
+  a web page or content script getting it, or it being stored somewhere
+  other than the Keychain, Firefox's `storage.local` or Linux's config.
 - **Shiori for Linux:** requests to hosts the configuration doesn't name.
 
 Hister, SearXNG, Kura and the other servers Shiori talks to are separate
