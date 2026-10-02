@@ -30,7 +30,8 @@ jobs:
     permissions:
       contents: write # the release, on a tag
     env:
-      SIGN: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      # A push of a version tag only: a manual run on a tag ref builds and tests.
+      SIGN: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v4
         with:
