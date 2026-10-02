@@ -9,6 +9,7 @@ document included. Never point the extension at a real Hister for writes.
 import http.server
 import json
 import sys
+import urllib.parse
 
 PORT = int(sys.argv[1])
 LOG = open(sys.argv[2], "a", buffering=1)
@@ -44,6 +45,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "/api/profile": {"user_id": 0},
             "/search": {"total": 0, "documents": []},
         }
+        # Searches for "lantern…" find two pages (the address-bar keyword's
+        # suggestions), one opened before for that search.
+        if path == "/search" and "lantern" in urllib.parse.unquote(self.path):
+            replies["/search"] = {
+                "total": 2,
+                "history": [{"url": "https://lantern.example/opened", "title": "Opened Before"}],
+                "documents": [{"url": "https://lantern.example/kyoto", "title": "Lanterns of Kyoto"}],
+            }
         if path in replies:
             return self._reply(200, replies[path])
         return self._reply(404, {"error": "not found"})

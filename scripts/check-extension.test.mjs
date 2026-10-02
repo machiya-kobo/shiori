@@ -44,6 +44,7 @@ function manifest(target) {
     m.background = { scripts: ['background.js'] };
     m.options_ui = { page: 'shiori-settings.html', open_in_tab: true };
     m.incognito = 'not_allowed';
+    m.omnibox = { keyword: 'sh' };
     m.browser_specific_settings = {
       gecko: {
         id: 'shiori@machiya-kobo.github.io',
@@ -58,7 +59,7 @@ function manifest(target) {
 
 const BACKGROUND = {
   safari: 'installIconShim const shioriHost installCaptureQueue installCombinedSearch',
-  firefox: "const shioriHost 'shioriLocalSettings' installCaptureQueue installCombinedSearch",
+  firefox: "const shioriHost 'shioriLocalSettings' installCaptureQueue installCombinedSearch root.ShioriSearch installOmnibox",
 };
 
 function check(target, change = () => {}) {
@@ -113,6 +114,8 @@ test("Firefox fails on each of its rules broken alone", () => {
     'native messaging': (m, f) => (f['background.js'] += ' chrome.runtime.sendNativeMessage(__SHIORI_APP_ID__)'),
     'shioriLocalSettings': (m, f) => (f['background.js'] = BACKGROUND.safari),
     'settings page': (m) => (m.options_ui.page = 'shiori-options.html'),
+    'omnibox': (m) => delete m.omnibox,
+    'installOmnibox': (m, f) => (f['background.js'] = f['background.js'].replace('installOmnibox', '')),
   };
   for (const [rule, change] of Object.entries(cases)) {
     const r = check('firefox', change);

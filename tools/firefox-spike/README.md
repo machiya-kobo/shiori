@@ -19,7 +19,7 @@ address. Ports 8775
 |---|---|
 | `run.sh` | Builds the Firefox target, serves `pages/`, runs `run.mjs` |
 | `fake-hister.py` | Skip rules (`skipme`), stats, profile, search; logs requests as JSON lines. Never a real Hister |
-| `run.mjs` | Four sessions: the settings page, capture, private browsing, containers |
+| `run.mjs` | Six sessions: the settings page, capture, the address bar, DuckDuckGo, private browsing, containers |
 | `container-probe/` | A tiny add-on: what `contextualIdentities` gives without `cookies` |
 
 ## What it checks
@@ -29,6 +29,12 @@ address. Ports 8775
   are kept; without site access it says so and offers Allow.
 - No native messaging; a settings change is kept on the device (AI keys
   refused); the shortcuts Firefox assigned.
+- `sh lantern` in Firefox's address bar suggests the fake's pages (the one
+  opened before first); Enter on one opens it and tells Hister; Enter on
+  the text opens Shiori Search.
+- A DuckDuckGo search opens Shiori Search; Back stays; a `!bang` and a
+  switched-off take-over leave DuckDuckGo alone (on the real
+  duckduckgo.com; a note instead when it's out of reach).
 - A visited page reaches `api/add` with Shiori's metadata, HTML and no text.
 - A skip rule holds.
 - Offline (the fake stopped), a capture is queued and drains when Hister is
@@ -55,6 +61,11 @@ address. Ports 8775
   sees no new window; `run.mjs` reads the tabs from Firefox.
 - `SHOTS=<folder>` saves screenshots of the settings page (both themes,
   desktop and phone width).
+- **A proxy that re-signs TLS** (some sandboxes) makes Firefox refuse
+  duckduckgo.com's certificate; the DuckDuckGo session alone accepts it.
+- **The address bar is driven from Firefox's chrome context**
+  (`gURLBar.search`, then a row and `handleCommand`); WebDriver can't type
+  there.
 - **Offline means stopped.** A fake that drops the socket mid-request makes
   Firefox retry idempotent GETs dozens of times on its own.
 - An older Firefox than the floor (153) still runs: `run.sh` lowers the

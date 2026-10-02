@@ -113,6 +113,10 @@ holds the rules and the traps the code can't tell you.
   the server (`set-server`: from its own address, where
   `shioriHost.ownsServer`); everything else goes through `set-settings`, the
   gear's whitelist.
+- Firefox's address-bar keyword (`sh`, `patches/ext/omnibox.js`) searches
+  through `search-core.js` (`histerText`), drops notes and non-web pages,
+  and records an opened suggestion in `api/history` only while Remember What
+  You Open is on.
 - Settings reach the extension through the App Group: the background asks by
   `sendNativeMessage` on every search (400 ms budget, then its cache in
   `storage.local`). A setting the extension page shows must be in both

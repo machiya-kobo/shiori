@@ -80,8 +80,9 @@ async function hister(up) {
   }
 }
 
-async function browser(prefs = {}) {
+async function browser(prefs = {}, { insecureCerts = false } = {}) {
   const opts = new firefox.Options().setBinary(FIREFOX).addArguments('-headless');
+  if (insecureCerts) opts.setAcceptInsecureCerts(true);
   for (const [k, v] of Object.entries(prefs)) opts.setPreference(k, v);
   const out = fs.openSync(path.join(WORK, 'firefox.log'), 'a');
   const service = new firefox.ServiceBuilder(GECKODRIVER).setStdio(['ignore', out, out]);
@@ -291,6 +292,114 @@ async function settingsSession() {
   }
 }
 
+// The address bar's keyword, typed into Firefox's own address bar: "sh
+// lantern" suggests the fake's pages (the one opened before first); Enter
+// on a suggestion opens it and tells Hister; Enter on the text opens Shiori
+// Search.
+async function addressBarSession() {
+  const driver = await browser({ 'extensions.webextensions.uuids': JSON.stringify({ [ID]: UUID }) });
+  // In the browser's own window: type into the address bar, wait, and
+  // optionally pick a row and press Enter. Returns the rows shown.
+  const urlbar = (text, pick = null) =>
+    driver.setContext(firefox.Context.CHROME).then(() =>
+      driver.executeAsyncScript(
+        `const [text, pick, done] = arguments;
+         (async () => {
+           const win = Services.wm.getMostRecentWindow('navigator:browser');
+           const bar = win.gURLBar;
+           bar.focus();
+           bar.search(text);
+           await new Promise((r) => win.setTimeout(r, 2000));
+           const rows = (bar.view.visibleResults || []).map((r) => r.payload.title || '');
+           if (pick !== null) {
+             bar.view.selectedRowIndex = pick;
+             bar.handleCommand();
+           }
+           return rows;
+         })().then(done, (e) => done(['error: ' + e]));`,
+        text,
+        pick,
+      ),
+    ).finally(() => driver.setContext(firefox.Context.CONTENT));
+  const tabURL = () =>
+    chrome(driver, 'return Services.wm.getMostRecentWindow("navigator:browser").gBrowser.selectedBrowser.currentURI.spec');
+  try {
+    await hister(true);
+    await install(driver, EXT);
+    await sleep(2000);
+    setMark();
+    const rows = await urlbar('sh lantern');
+    const searched = requests().slice(mark).filter((r) => r.p.startsWith('/search'));
+    check('typing "sh lantern" suggests your pages, the one opened before first',
+      rows[1] === 'Opened Before — lantern.example' && rows[2] === 'Lanterns of Kyoto — lantern.example' && searched.length === 1,
+      JSON.stringify(rows));
+    check('  searched as Shiori searches: a prefix, never the notes', searched.length > 0 &&
+      decodeURIComponent(searched[0].p).includes('"text":"lantern* -label:vault -metadata.source:vault"'), searched[0] && decodeURIComponent(searched[0].p));
+
+    setMark();
+    await urlbar('sh lantern', 2);
+    const told = await waitFor((r) => r.m === 'POST' && r.p === '/api/history', 5000);
+    await sleep(500);
+    check('Enter on a suggestion opens it and tells Hister', (await tabURL()) === 'https://lantern.example/kyoto' && !!told,
+      `tab=${await tabURL()} history=${!!told}`);
+
+    await urlbar('sh paper lanterns', 0);
+    await sleep(1500);
+    check('Enter on the text opens Shiori Search for it', (await tabURL()) === EXT_URL + 'search.html?q=paper%20lanterns', await tabURL());
+  } finally {
+    await driver.quit().catch(() => {});
+    await hister(false);
+  }
+}
+
+// DuckDuckGo's searches handed to Shiori Search (redirect.js and the
+// core), on the real duckduckgo.com: needs it reachable, else a note.
+async function duckDuckGoSession() {
+  const reachable = await fetch('https://duckduckgo.com/', { method: 'HEAD' }).then(() => true, () => false);
+  if (!reachable) {
+    note('DuckDuckGo hand-off', 'duckduckgo.com is out of reach from here; not checked');
+    return;
+  }
+  // Behind a proxy that re-signs TLS (some sandboxes), Firefox would refuse
+  // duckduckgo.com's certificate; this session alone accepts it.
+  const driver = await browser({ 'extensions.webextensions.uuids': JSON.stringify({ [ID]: UUID }) }, { insecureCerts: true });
+  const settle = async () => {
+    // The tab moves once the background answers; give it a moment.
+    for (let i = 0; i < 20; i++) {
+      const url = await driver.getCurrentUrl();
+      if (url.startsWith(EXT_URL)) return url;
+      await sleep(250);
+    }
+    return driver.getCurrentUrl();
+  };
+  try {
+    await hister(true);
+    await install(driver, EXT);
+    await sleep(2000);
+    await driver.get('https://duckduckgo.com/?q=paper+lanterns');
+    const taken = await settle();
+    check('a DuckDuckGo search opens Shiori Search', taken === EXT_URL + 'search.html?q=paper%20lanterns', taken);
+    await driver.navigate().back();
+    await sleep(3000);
+    const back = await driver.getCurrentUrl();
+    check('  Back stays on DuckDuckGo', back.startsWith('https://duckduckgo.com/'), back);
+
+    await driver.get('https://duckduckgo.com/?q=!w+lanterns');
+    await sleep(3000);
+    const bang = await driver.getCurrentUrl();
+    check('a !bang is left to DuckDuckGo', !bang.startsWith(EXT_URL), bang);
+
+    await inPage(driver, EXT_URL + 'search.html', async () => browser.runtime.sendMessage({ shiori: 'set-settings', values: { combinedSearch: false } }));
+    await driver.get('https://duckduckgo.com/?q=kyoto+lanterns');
+    await sleep(3000);
+    const off = await driver.getCurrentUrl();
+    check('with the take-over switched off, DuckDuckGo keeps its search', off.startsWith('https://duckduckgo.com/'), off);
+  } finally {
+    await driver.quit().catch(() => {});
+    await hister(false);
+  }
+}
+
 async function privateSession() {
   const driver = await browser({ 'browser.privatebrowsing.autostart': true });
   try {
@@ -326,7 +435,7 @@ async function containerSession() {
   }
 }
 
-for (const session of [settingsSession, captureSession, privateSession, containerSession]) {
+for (const session of [settingsSession, captureSession, addressBarSession, duckDuckGoSession, privateSession, containerSession]) {
   try {
     await session();
   } catch (e) {

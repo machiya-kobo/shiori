@@ -13,6 +13,8 @@
       "strict_min_version": "153.0"
     }
   },
+  "$comment_omnibox": "The address bar's keyword: 'sh lantern' suggests your pages from Hister (ext/omnibox.js).",
+  "omnibox": { "keyword": "sh" },
   "$comment_incognito": "Never in private windows: not loaded there at all.",
   "incognito": "not_allowed",
   "$comment_options": "Shiori's own settings page (ext/settings.html: there's no app to set them), opened in a tab, not inside about:addons.",

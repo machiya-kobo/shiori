@@ -1,6 +1,6 @@
 # Plan: Shiori for Firefox
 
-Status: phases 0 to 3 done (spike, split, Firefox build, settings page); phase 4 is next.
+Status: phases 0 to 4 done (spike, split, Firefox build, settings page, search with the address-bar keyword); phase 5 is next.
 
 ## Decisions
 
@@ -417,11 +417,58 @@ Proof:
 - **Hand check left:** clicking Allow. Firefox's prompt can't be answered
   from WebDriver.
 
-### 4. Search integration
+### 4. Search integration (done)
 
-- Keep the DuckDuckGo hand-off (`redirect.js` and `search-core.js`'s rules;
-  never `tabs.update`).
-- The address-bar keyword is feature A (phase 7).
+**The DuckDuckGo hand-off** works in Firefox unchanged (`redirect.js` and
+`search-core.js`'s rules; Shiori's own code never opens results with
+`tabs.update`). The spike checks it on the real duckduckgo.com:
+
+- a search opens Shiori Search;
+- Back stays on DuckDuckGo;
+- a `!bang` is left to DuckDuckGo;
+- with the take-over switched off on the settings page, DuckDuckGo keeps
+  the search.
+
+**The address-bar keyword** (feature A, brought forward):
+`patches/ext/omnibox.js`, with `"omnibox": {"keyword": "sh"}` in
+`manifest.firefox.json`.
+
+- Typing `sh lantern` searches the configured Hister after a 150 ms pause,
+  so it's one search, not one per key. `search-core.js` (now in Firefox's
+  background too) shapes the query as every Shiori search does: the last
+  word a prefix, never the notes.
+- It suggests up to six pages: those opened before for this search
+  (Hister's `history`) first, then the results. Each page appears once
+  (`normalizeURL`), web pages only, never a note (`isNoteURL` against the
+  Kura and Konbini addresses, `isOtherVault`).
+- **Enter on a suggestion** opens it. It also tells Hister it was opened for
+  that search (`api/history`, as the results page does), unless Remember
+  What You Open is off.
+- **Enter on the text** opens Shiori Search for it, in the current tab, a
+  new one or a background one, as the person chose. A typed address opens
+  as it is.
+- It talks only to the configured server. With no server, or the server
+  out of reach, there are no suggestions, and Enter still opens Shiori
+  Search.
+- Firefox for Android: the manifest key passes lint; whether Android
+  offers the keyword at all is part of the Android hand check.
+
+Background order on Firefox is now `host-local.js`, `core.js`,
+`search-core.js`, `omnibox.js` (the build, the tests and
+`check-extension.py` agree).
+
+Proof:
+
+- **Unit tests:** 163 of 163 script tests pass. Nine are new for the
+  keyword (`scripts/omnibox.test.mjs`): the query, the order and filters,
+  the six-suggestion limit, one search for fast typing, failures, each Enter
+  and each kind of tab, and Remember What You Open on and off.
+- **Spike on ESR 153:** 34 of 34 pass. Typed into Firefox's own address bar:
+  - `sh lantern` shows the fake's two pages, the one opened before first;
+  - Enter on one opens it and posts `api/history`;
+  - Enter on `sh paper lanterns` opens
+    `search.html?q=paper%20lanterns`.
+- **Lint:** unchanged, 0 errors and upstream's 3 warnings.
 
 ### 5. Release on GitHub
 
@@ -476,11 +523,8 @@ The rest of phase 5:
 Ordered by value for effort; each ships on its own. Desktop-only features
 check their API and stay off on Android.
 
-**A. Address-bar keyword** (`omnibox` manifest key, no permission)
-- Type `sh lantern` to get suggestions from the configured Hister: recent
-  opens, then results.
-- Enter opens Shiori Search.
-- It talks only to the server already configured.
+**A. Address-bar keyword** (`omnibox` manifest key, no permission). Done
+in phase 4.
 
 **B. Toolbar badge**
 - Shows the queued count.
@@ -551,7 +595,9 @@ doors:
   extensions.
 - **Feature differences**: no containers (feature E is Firefox-only); the
   sidebar is `side_panel`, not `sidebar_action`; the context menu is
-  `contextMenus`; `omnibox` is the same.
+  `contextMenus`. `omnibox` is the same API, but Chrome reads a suggestion's
+  description as XML: `omnibox.js` must escape `&`, `<` and `>` there
+  (Firefox shows it as plain text).
 - The BSDs package Chromium, so the platform reach is similar.
 
 ## Rules this must keep (from CLAUDE.md)
