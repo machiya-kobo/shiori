@@ -1099,18 +1099,11 @@
   }
 
   /** Theme, tabs and filters: from the copy before the first paint, then from settings. */
-  // The header's height as it sticks, for the section headings that stick
-  // under it (search.css, --header-h), and the brand row's share, which
-  // scrolls away above it (--brand-hide).
+  // The header's height, for the section headings that stick under it
+  // (search.css, --header-h).
   {
     const header = document.querySelector('header');
-    const brand = $('brand-row');
-    const keep = () => {
-      const hide = brand ? brand.offsetTop + brand.offsetHeight : 0;
-      const root = document.documentElement.style;
-      root.setProperty('--brand-hide', `${hide}px`);
-      root.setProperty('--header-h', `${header ? header.offsetHeight - hide : 0}px`);
-    };
+    const keep = () => document.documentElement.style.setProperty('--header-h', `${header ? header.offsetHeight : 0}px`);
     if (header && window.ResizeObserver) new ResizeObserver(keep).observe(header);
     keep();
   }

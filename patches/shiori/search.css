@@ -67,11 +67,8 @@ a { color: var(--accent); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 /* Header: search field, categories, filters */
-/* --brand-hide is the brand row's share of the header (search.js keeps
-   it): the header sticks that far above the top, so the brand row
-   scrolls away and the field and tabs stay. */
 header {
-  position: sticky; top: calc(-1 * var(--brand-hide, 0px)); z-index: 2; padding: 10px 0 0;
+  position: sticky; top: 0; z-index: 2; padding: 10px 0 0;
   background: var(--frost);
   -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
   border-bottom: 1px solid var(--line);
