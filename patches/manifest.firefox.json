@@ -2,6 +2,8 @@
   "$comment": "Firefox's overrides (desktop and Android), merged over upstream's manifest_ff.json after patches/manifest.shiori.json (see there for the rules). Checked by scripts/build-extension.sh --target firefox; see docs/firefox-plan.md.",
   "$comment_permissions": "No 'cookies' (as on Safari) and no nativeMessaging: there's no app, settings live in storage.local (ext/host-local.js). menus: the right-click items (ext/menus.js).",
   "permissions": ["tabs", "storage", "menus"],
+  "$comment_optional": "Container rules (ext/containers.js) read the containers' names: asked for only when the user chooses containers on the settings page, since granting it can switch Firefox's containers on.",
+  "optional_permissions": ["contextualIdentities"],
   "$comment_bss": "The add-on's ID is fixed: Mozilla's signing ties it to the account, and updates follow it. strict_min_version is the current ESR, for desktop and Android alike; it moves with the ESR. data_collection_permissions comes from upstream and stays honest: the extension sends the pages you visit and their content to your own server.",
   "browser_specific_settings": {
     "gecko": {

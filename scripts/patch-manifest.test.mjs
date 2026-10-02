@@ -108,6 +108,7 @@ test("Safari's manifest: the app's messaging, Control-Shift keys, no cookies", (
 test("Firefox's manifest: no messaging, never private, Alt-Shift keys (the Mac's kept), its own ID and floor", () => {
   const m = merge(merge({ ...UPSTREAM, background: { scripts: ['background.js'] } }, overlay('shiori')), overlay('firefox'));
   assert.deepEqual(m.permissions, ['tabs', 'storage', 'menus']);
+  assert.deepEqual(m.optional_permissions, ['contextualIdentities']);
   assert.equal(m.incognito, 'not_allowed');
   for (const name of ['index-current-page', 'disable-indexing-current-page', 'disable-indexing-current-domain', 'open-shiori-search']) {
     assert.match(m.commands[name].suggested_key.default, /^Alt\+Shift\+/, name);

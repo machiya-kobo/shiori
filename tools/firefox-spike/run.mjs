@@ -519,6 +519,71 @@ async function sidebarSession() {
   }
 }
 
+// Container rules: the settings page offers to ask for contextualIdentities,
+// lists the containers once granted, and a page in a chosen one is never
+// captured on its own, while a normal tab's is. It starts with containers
+// off: granting must leave them so, and the page say where to turn them on.
+async function containerRulesSession() {
+  const driver = await browser({
+    'extensions.webextensions.uuids': JSON.stringify({ [ID]: UUID }),
+    'privacy.userContext.enabled': false,
+  });
+  const containersOn = () => chrome(driver, "return Services.prefs.getBoolPref('privacy.userContext.enabled')");
+  try {
+    await hister(true);
+    await install(driver, EXT);
+    await sleep(2000);
+    await driver.get(EXT_URL + 'shiori-settings.html');
+    await sleep(1500);
+    const before = await containersOn();
+    const offered = await driver.findElement(By.id('containers-allow')).isDisplayed();
+    // Granted as Allow on Firefox's prompt does it (ExtensionPermissions.add);
+    // the prompt itself can't be answered from WebDriver: a hand check.
+    await chrome(driver, `
+      const { ExtensionPermissions } = ChromeUtils.importESModule('resource://gre/modules/ExtensionPermissions.sys.mjs');
+      const { ExtensionParent } = ChromeUtils.importESModule('resource://gre/modules/ExtensionParent.sys.mjs');
+      void ExtensionPermissions.add(arguments[0], { permissions: ['contextualIdentities'], origins: [] }, ExtensionParent.GlobalManager.extensionMap.get(arguments[0]));`, ID);
+    await sleep(1000);
+    const after = await containersOn();
+    check('granting the container permission leaves Firefox\'s containers as they were', before === false && after === false, `before=${before} after=${after}`);
+    await driver.navigate().refresh();
+    await sleep(1500);
+    const off = (await driver.findElement(By.id('containers-status')).getText()).trim();
+    const allowGone = !(await driver.findElement(By.id('containers-allow')).isDisplayed());
+    check('  with containers off in Firefox, the page says where to turn them on', offered && allowGone && /turned off/.test(off), off);
+    // The user turns containers on in Firefox's settings, and comes back.
+    await chrome(driver, "Services.prefs.setBoolPref('privacy.userContext.enabled', true)");
+    await driver.navigate().refresh();
+    await sleep(1500);
+    const names = await driver.executeScript("return [...document.querySelectorAll('#containers-list label span')].map((s) => s.textContent)");
+    check('  with them on, the page lists the containers', names.includes('Banking'), JSON.stringify(names));
+    await driver.executeScript("[...document.querySelectorAll('#containers-list label')].find((l) => l.textContent.includes('Banking')).querySelector('input').click()");
+    await sleep(1000);
+    const chosen = await driver.executeAsyncScript('const done = arguments[arguments.length - 1]; browser.storage.local.get("shioriSkipContainers").then((r) => done(r.shioriSkipContainers))');
+    const bankingId = await driver.executeAsyncScript('const done = arguments[arguments.length - 1]; browser.contextualIdentities.query({ name: "Banking" }).then((r) => done(r[0] && r[0].cookieStoreId))');
+    check('  choosing Banking keeps it', Array.isArray(chosen) && chosen.length === 1 && chosen[0] === bankingId, JSON.stringify({ chosen, bankingId }));
+
+    setMark();
+    // A Banking tab, opened as Firefox's own container menu would.
+    await chrome(driver, `
+      const win = Services.wm.getMostRecentWindow('navigator:browser');
+      const id = Number(arguments[1].split('-').pop());
+      win.gBrowser.selectedTab = win.gBrowser.addTab(arguments[0], {
+        userContextId: id, triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal() });`,
+      PAGES + 'page3.html?in-banking', bankingId);
+    await sleep(5000);
+    // Back to WebDriver's own tab (a normal one): a hidden tab isn't captured.
+    await chrome(driver, `const win = Services.wm.getMostRecentWindow('navigator:browser'); win.gBrowser.selectedTab = win.gBrowser.tabs[0];`);
+    await driver.get(PAGES + 'page2.html?normal-tab');
+    const normal = await waitFor(posted('page2.html?normal-tab'), 8000);
+    const banked = requests().slice(mark).some((r) => r.m === 'POST' && String(r.url || '').includes('in-banking'));
+    check('a page in a chosen container is never saved on its own; a normal tab is', !banked && !!normal, `banking=${banked} normal=${!!normal}`);
+  } finally {
+    await driver.quit().catch(() => {});
+    await hister(false);
+  }
+}
+
 async function privateSession() {
   const driver = await browser({ 'browser.privatebrowsing.autostart': true });
   try {
@@ -554,7 +619,7 @@ async function containerSession() {
   }
 }
 
-for (const session of [settingsSession, captureSession, addressBarSession, duckDuckGoSession, sidebarSession, privateSession, containerSession]) {
+for (const session of [settingsSession, captureSession, addressBarSession, duckDuckGoSession, sidebarSession, containerRulesSession, privateSession, containerSession]) {
   try {
     await session();
   } catch (e) {

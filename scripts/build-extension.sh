@@ -66,7 +66,7 @@ case "$TARGET" in
     firefox)
         RESOURCES="build/firefox"
         UPSTREAM_MANIFEST="manifest_ff.json"
-        BACKGROUND=(patches/ext/host-local.js patches/ext/core.js patches/shiori/search-core.js patches/ext/pages.js patches/ext/omnibox.js patches/ext/badge.js patches/ext/menus.js)
+        BACKGROUND=(patches/ext/host-local.js patches/ext/containers.js patches/ext/core.js patches/shiori/search-core.js patches/ext/pages.js patches/ext/omnibox.js patches/ext/badge.js patches/ext/menus.js)
         ;;
     *)
         echo "error: unknown target '$TARGET' (safari or firefox)" >&2

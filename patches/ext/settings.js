@@ -267,6 +267,76 @@
     void showQueue();
   });
 
+  // --- containers: never saved on their own (ext/containers.js) ---
+
+  const CONTAINERS = { permissions: ['contextualIdentities'] };
+  const identities = () => (globalThis.browser || chrome).contextualIdentities;
+  const containerStatus = (text) => ($('containers-status').textContent = text || '');
+
+  async function showContainers() {
+    const list = $('containers-list');
+    let allowed = false;
+    try {
+      allowed = await chrome.permissions.contains(CONTAINERS);
+    } catch (_) {}
+    $('containers-allow').hidden = allowed;
+    if (!allowed) {
+      list.replaceChildren();
+      containerStatus('');
+      return;
+    }
+    const api = identities();
+    if (!api) {
+      list.replaceChildren();
+      containerStatus('This Firefox has no containers.');
+      return;
+    }
+    let found = [];
+    try {
+      found = await api.query({});
+    } catch (_) {
+      list.replaceChildren();
+      containerStatus('Containers are turned off in Firefox (Settings → General → Tabs).');
+      return;
+    }
+    const chosen = new Set((await chrome.storage.local.get(['shioriSkipContainers'])).shioriSkipContainers || []);
+    list.replaceChildren(
+      ...found.map((c) => {
+        const row = document.createElement('label');
+        row.className = 'row toggle';
+        const name = document.createElement('span');
+        name.textContent = c.name;
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.dataset.id = c.cookieStoreId;
+        box.checked = chosen.has(c.cookieStoreId);
+        box.addEventListener('change', saveContainers);
+        row.append(name, box);
+        return row;
+      }),
+    );
+    containerStatus(found.length ? '' : 'No containers yet: make them with Firefox’s container tabs.');
+  }
+
+  async function saveContainers() {
+    const ids = [...document.querySelectorAll('#containers-list input:checked')].map((box) => box.dataset.id);
+    const reply = await send({ shiori: 'set-skip-containers', ids });
+    containerStatus(reply && reply.ok ? (ids.length ? `Never saved on their own: ${ids.length} ${ids.length === 1 ? 'container' : 'containers'}.` : 'Every container is saved as usual.') : "Couldn't save that; try again.");
+  }
+
+  $('containers-allow').addEventListener('click', async () => {
+    // Asked from the click itself: Firefox asks only in answer to the user.
+    let granted = false;
+    try {
+      granted = await chrome.permissions.request(CONTAINERS);
+    } catch (_) {}
+    if (!granted) return;
+    // The containers API arrives with the permission; a page opened before
+    // may not have it yet.
+    if (!identities()) location.reload();
+    else await showContainers();
+  });
+
   await showAccess();
-  await Promise.all([checkServer(), showQueue()]);
+  await Promise.all([checkServer(), showQueue(), showContainers()]);
 })();

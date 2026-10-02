@@ -61,7 +61,9 @@ def problems(root, target):
         if len(suggested) > 4:
             out.append("manifest suggests %d shortcuts (%s); Safari allows at most 4" % (len(suggested), ", ".join(suggested)))
     elif target == "firefox":
-        marks["background.js"] += ["shioriLocalSettings", "root.ShioriSearch", "installOmnibox", "installQueueBadge", "installMenus"]
+        marks["background.js"] += ["shioriLocalSettings", "root.ShioriSearch", "installOmnibox", "installQueueBadge", "installMenus", "installContainerRules"]
+        if "contextualIdentities" in permissions:
+            out.append("contextualIdentities must stay optional: granting it can switch Firefox's containers on")
         if not (m.get("omnibox") or {}).get("keyword"):
             out.append("Firefox's address-bar keyword (omnibox) is missing")
         if background.get("scripts") != ["background.js"] or "service_worker" in background:

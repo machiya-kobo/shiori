@@ -61,7 +61,7 @@ function manifest(target) {
 
 const BACKGROUND = {
   safari: 'installIconShim const shioriHost installCaptureQueue installCombinedSearch',
-  firefox: "const shioriHost 'shioriLocalSettings' installCaptureQueue installCombinedSearch root.ShioriSearch installOmnibox installQueueBadge installMenus",
+  firefox: "const shioriHost 'shioriLocalSettings' installCaptureQueue installCombinedSearch root.ShioriSearch installOmnibox installQueueBadge installMenus installContainerRules",
 };
 
 function check(target, change = () => {}) {
@@ -118,6 +118,7 @@ test("Firefox fails on each of its rules broken alone", () => {
     'settings page': (m) => (m.options_ui.page = 'shiori-options.html'),
     'omnibox': (m) => delete m.omnibox,
     'sidebar': (m) => delete m.sidebar_action,
+    'contextualIdentities': (m) => m.permissions.push('contextualIdentities'),
     'installOmnibox': (m, f) => (f['background.js'] = f['background.js'].replace('installOmnibox', '')),
   };
   for (const [rule, change] of Object.entries(cases)) {
