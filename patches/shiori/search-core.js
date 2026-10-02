@@ -217,25 +217,40 @@
    * Read as Kura reads it: Kura serves `/v/` however the path reaches it
    * (its server folds a leading `//`, then it decodes `%XX` once), so
    * `//v/…` and `/%76/…` are a work note too. Only ASCII escapes are
-   * decoded: a vault's name and the `/v/…/n/` around it are ASCII. Kura
-   * refuses a public address with a path, so `/v/` starts the path.
+   * decoded: a vault's name and the `/v/…/n/` around it are ASCII. The
+   * name is then used as it is, never decoded again (`/v/%2577ork/n/` is
+   * `%77ork`, which isPrivateNote holds private). Kura refuses a public
+   * address with a path, so `/v/` starts the path.
    */
   function noteVault(url) {
+    const path = kuraPath(url);
+    const m = path && path.match(/^\/v\/([^/]+)\/n\/./);
+    return m ? m[1] : null;
+  }
+  /**
+   * The path as Kura would serve it: `%XX` escapes of ASCII characters
+   * decoded once, leading slashes folded into one, `.` and `..` segments
+   * resolved (new URL resolves them; again after the decoding, which is
+   * over-inclusive and so safe). null when the address can't be parsed:
+   * isPrivateNote then holds it private. HisterKit's Notes.kuraPath is the twin.
+   */
+  function kuraPath(url) {
+    let pathname;
     try {
-      const path = new URL(url).pathname
-        .replace(/%([0-7][0-9a-f])/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-        .replace(/^\/+/, '/');
-      const m = path.match(/^\/v\/([^/]+)\/n\/./);
-      if (!m) return null;
-      try {
-        return decodeURIComponent(m[1]);
-      } catch (_) {
-        return m[1]; // a name that won't decode is still another vault's
-      }
+      pathname = new URL(url).pathname;
     } catch (_) {
       return null;
     }
+    const decoded = pathname.replace(/%([0-7][0-9a-f])/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    const segments = [];
+    for (const segment of decoded.replace(/^\/+/, '').split('/')) {
+      if (segment === '..') segments.pop();
+      else if (segment !== '.') segments.push(segment);
+    }
+    return '/' + segments.join('/');
   }
+  // A vault name as Kura allows it.
+  const VAULT_NAME = /^[a-z0-9-]+$/;
   // The vaults Kura marks shared (/api/vaults: not the default, `private:
   // false`), from the last useVaults. Empty until then, so every other
   // vault is private until Kura says otherwise.
@@ -254,8 +269,11 @@
    * caches, exports) asks this. HisterKit's Notes.isPrivateNote is the twin.
    */
   const isPrivateNote = (url) => {
+    // Fails closed: an address that can't be parsed, and a name that isn't
+    // one Kura allows, are private.
+    if (kuraPath(url) === null) return true;
     const vault = noteVault(url);
-    return vault !== null && !sharedVaults.has(vault);
+    return vault !== null && (!VAULT_NAME.test(vault) || !sharedVaults.has(vault));
   };
   /**
    * isPrivateNote with Kura asked afresh: before another vault's note (its

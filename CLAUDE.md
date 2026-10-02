@@ -31,10 +31,11 @@ holds the rules and the traps the code can't tell you.
   the app.
 - **Never re-add the `cookies` permission.** The server has no login; the
   network is the gate.
-- **Tests:** `node --test scripts/` after touching `patches/`, `scripts/`,
-  `web/` or `linux/`; `swift test` in `Packages/HisterKit` and
-  `Packages/ShioriAI`; `xcodebuild test -scheme ShioriTests -destination
-  platform=macOS` after touching `Shared/`. `HISTER_LIVE_URL` and
+- **Tests:** `node --test scripts/*.test.mjs` (Node 22 fails on the
+  folder form) after touching `patches/`, `scripts/`, `web/` or `linux/`;
+  `swift test` in `Packages/HisterKit` and `Packages/ShioriAI`;
+  `xcodebuild test -scheme ShioriTests -destination platform=macOS` after
+  touching `Shared/`. `HISTER_LIVE_URL` and
   `KURA_LIVE_URL` add read-only checks against real servers.
 - **Never test a write against a live Hister.** Use the stubs in the test
   suites or `linux/fake-hister.py`. Reads against your own server are fine.
@@ -61,9 +62,12 @@ holds the rules and the traps the code can't tell you.
   the web) refuses every other vault's note. `noteVault` /
   `Notes.otherVault(of:)` only say which vault (on any host: over-inclusive,
   so safe). The address is read as Kura serves it: a leading `//` folded,
-  `%XX` decoded once (`//v/…` and `/%76/…` are the same page). `/v/`
-  always starts the path: Kura refuses a public address with a path, and
-  the hosted page's `/kura/` passes only Kura's API, never its reader.
+  `%XX` decoded once (`//v/…` and `/%76/…` are the same page), dot
+  segments resolved; a name that still isn't `[a-z0-9-]+` (`%2577ork`
+  reads `%77ork`) and an address that can't be parsed are private.
+  `/v/` always starts the path: Kura refuses a public address with a
+  path, and the hosted page's `/kura/` passes only Kura's API, never its
+  reader.
 - Never put `.searchSuggestions(.hidden, for: .content)` on a sheet's
   `.searchable`: on iOS 27 the sheet went blank.
 

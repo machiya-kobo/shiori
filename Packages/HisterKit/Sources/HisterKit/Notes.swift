@@ -56,18 +56,44 @@ public enum Notes {
     /// Read as Kura reads it: Kura serves `/v/` however the path reaches it
     /// (its server folds a leading `//`, then it decodes `%XX` once), so
     /// `//v/…` and `/%76/…` are a work note too. Only ASCII escapes are
-    /// decoded: a vault's name and the `/v/…/n/` around it are ASCII. Kura
-    /// refuses a public address with a path, so `/v/` starts the path.
+    /// decoded: a vault's name and the `/v/…/n/` around it are ASCII. The
+    /// name is then used as it is, never decoded again (`/v/%2577ork/n/`
+    /// is `%77ork`, which `isPrivateNote` holds private). Kura refuses a
+    /// public address with a path, so `/v/` starts the path.
     /// search-core's `noteVault` is the twin.
     public static func otherVault(of url: String) -> String? {
-        guard let components = URLComponents(string: url) else { return nil }
-        var path = decodingASCIIEscapes(components.percentEncodedPath)
-        while path.hasPrefix("//") { path.removeFirst() }
+        guard let path = kuraPath(of: url) else { return nil }
         let parts = path.split(separator: "/", omittingEmptySubsequences: false)
         // "", "v", vault, "n", …
         guard parts.count >= 5, parts[1] == "v", parts[3] == "n", !parts[2].isEmpty else { return nil }
-        // A name that won't decode is still another vault's.
-        return parts[2].removingPercentEncoding ?? String(parts[2])
+        return String(parts[2])
+    }
+
+    /// The path as Kura would serve it: `%XX` escapes of ASCII characters
+    /// decoded once, leading slashes folded into one, `.` and `..` segments
+    /// resolved (as search-core's `new URL` resolves them; after the
+    /// decoding too, which is over-inclusive and so safe). A `\` in an
+    /// http(s) address is a `/`, as a browser reads it. Nil when the
+    /// address can't be parsed: `isPrivateNote` then holds it private.
+    static func kuraPath(of url: String) -> String? {
+        let lower = url.lowercased()
+        let text = lower.hasPrefix("http://") || lower.hasPrefix("https://") ? url.replacingOccurrences(of: "\\", with: "/") : url
+        guard let components = URLComponents(string: text) else { return nil }
+        let decoded = decodingASCIIEscapes(components.percentEncodedPath)
+        var segments: [Substring] = []
+        for segment in decoded.drop(while: { $0 == "/" }).split(separator: "/", omittingEmptySubsequences: false) {
+            if segment == ".." {
+                _ = segments.popLast()
+            } else if segment != "." {
+                segments.append(segment)
+            }
+        }
+        return "/" + segments.joined(separator: "/")
+    }
+
+    /// A vault name as Kura allows it: `[a-z0-9-]+`.
+    static func isVaultName(_ name: String) -> Bool {
+        !name.isEmpty && name.unicodeScalars.allSatisfy { (0x61...0x7A).contains($0.value) || (0x30...0x39).contains($0.value) || $0.value == 0x2D }
     }
 
     /// `%XX` escapes of ASCII characters decoded once; every other one left
@@ -116,10 +142,12 @@ public enum Notes {
 
     /// A private vault's note: another vault's, unless Kura marks that vault
     /// shared. Kept out of Hister, AI, on-device caches, exports and feeds.
-    /// search-core's `isPrivateNote` is the twin.
+    /// Fails closed: an address that can't be parsed, and a name that isn't
+    /// one Kura allows, are private. search-core's `isPrivateNote` is the twin.
     public static func isPrivateNote(_ url: String) -> Bool {
+        guard kuraPath(of: url) != nil else { return true }
         guard let vault = otherVault(of: url) else { return false }
-        return !sharedVaults.withLock { $0.contains(vault) }
+        return !isVaultName(vault) || !sharedVaults.withLock { $0.contains(vault) }
     }
 
     /// `isPrivateNote` with Kura asked afresh: before another vault's note

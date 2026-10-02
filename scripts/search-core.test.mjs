@@ -652,6 +652,36 @@ test('loadVaults passes what Kura says to useVaults, and [] when it fails', asyn
   assert.equal(S.isPrivateNote('https://kura.example/v/team/n/X'), true);
 });
 
+// HisterKit's VaultTests.addressesKuraWouldServeAsAnotherVaults, case for case.
+test("decoded once, dots and backslashes as a browser reads them; anything Kura wouldn't name is private", () => {
+  // Decoded once only: /v/%2577ork/n/ is the name %77ork, which Kura
+  // would refuse; private even with work shared, as is any name outside
+  // [a-z0-9-]+.
+  S.useVaults([{ name: 'work', default: false, private: false }]);
+  assert.equal(S.noteVault('https://kura.example/v/%2577ork/n/X'), '%77ork');
+  for (const url of ['https://kura.example/v/%2577ork/n/X', 'https://kura.example/v/work%25zz/n/X', 'https://kura.example/v/Work%2Ex/n/X']) {
+    assert.equal(S.isPrivateNote(url), true, url);
+  }
+  assert.equal(S.isPrivateNote('https://kura.example/v/work/n/X'), false);
+  // Dot segments (also escaped) and backslashes lead to /v/ too.
+  const ways = [
+    'https://kura.example/x/../v/work/n/X',
+    'https://kura.example/x/%2e%2e/v/work/n/X',
+    'https://kura.example/x%2F..%2Fv/work/n/X',
+    'https://kura.example/./v/work/n/X',
+    'https://kura.example/v\\work\\n\\X',
+  ];
+  for (const url of ways) assert.equal(S.noteVault(url), 'work', url);
+  assert.equal(S.noteVault('https://kura.example/v/work/../n/X'), null);
+  S.useVaults([]);
+  for (const url of [...ways, 'https://kura.example//v/work/n/X', 'https://kura.example/%76/work/n/X', 'https://kura.example/v/%2577ork/n/X']) {
+    assert.equal(S.isPrivateNote(url), true, url);
+  }
+  // An address that can't be parsed could be anything: private.
+  assert.equal(S.isPrivateNote('https://[kura/v/work/n/X'), true);
+  assert.equal(S.isPrivateNote('https://kura.example/x/../n/X'), false);
+});
+
 test('work vaults: known by the address alone', () => {
   assert.equal(S.noteVault('https://kura.example/v/work/n/Literature%20Notes/Weekly'), 'work');
   assert.equal(S.noteVault('https://kura.example/n/Projects/Example'), null);
@@ -666,8 +696,6 @@ test('work vaults: known by the address alone', () => {
   for (const other of ['https://kura.example/%2576/work/n/X', 'https://kura.example/V/work/n/X']) {
     assert.equal(S.noteVault(other), null, other);
   }
-  // A name that won't decode is still another vault's.
-  assert.equal(S.isPrivateNote('https://kura.example/v/work%25zz/n/X'), true);
   assert.equal(S.notePath('https://kura.example/v/work/n/Literature%20Notes/Weekly', []), 'Literature Notes/Weekly.md');
   assert.equal(S.readerURL('https://kura.example/v/work/n/X', 'https://kura.example/', 'X.md'), 'https://kura.example/v/work/n/X');
   assert.equal(S.isNoteURL('https://kura.example/v/work/n/X', 'https://kura.example/'), true);

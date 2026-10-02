@@ -167,13 +167,44 @@ struct KuraLiveTests {
         for other in ["https://kura.example/%2576/work/n/X", "https://kura.example/V/work/n/X"] {
             #expect(Notes.otherVault(of: other) == nil, "\(other)")
         }
-        // A name that won't decode is still another vault's.
         Notes.useVaults([])
         #expect(Notes.isPrivateNote("https://kura.example/v/work%25zz/n/X"))
         #expect(Notes.path(of: "https://kura.example/v/work/n/Literature%20Notes/Weekly", cards: []) == "Literature Notes/Weekly.md")
         #expect(Notes.path(of: "https://kura.example/n/Projects/Example", cards: []) == "Projects/Example.md")
         #expect(Notes.readerURL(page: "https://kura.example/v/work/n/X", base: "https://kura.example/", path: "X.md")?.absoluteString
             == "https://kura.example/v/work/n/X")
+    }
+
+    /// search-core's "decoded once, dots and backslashes…" test, case for case.
+    @Test func addressesKuraWouldServeAsAnotherVaults() {
+        // Decoded once only: /v/%2577ork/n/ is the name %77ork, which Kura
+        // would refuse; private even with work shared, as is any name
+        // outside [a-z0-9-]+.
+        Notes.useVaults([KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: false, obsidian: "work")])
+        #expect(Notes.otherVault(of: "https://kura.example/v/%2577ork/n/X") == "%77ork")
+        for url in ["https://kura.example/v/%2577ork/n/X", "https://kura.example/v/work%25zz/n/X", "https://kura.example/v/Work%2Ex/n/X"] {
+            #expect(Notes.isPrivateNote(url), "\(url)")
+        }
+        #expect(!Notes.isPrivateNote("https://kura.example/v/work/n/X"))
+        // Dot segments (also escaped) and backslashes lead to /v/ too.
+        let ways = [
+            "https://kura.example/x/../v/work/n/X",
+            "https://kura.example/x/%2e%2e/v/work/n/X",
+            "https://kura.example/x%2F..%2Fv/work/n/X",
+            "https://kura.example/./v/work/n/X",
+            "https://kura.example/v\\work\\n\\X",
+        ]
+        for url in ways {
+            #expect(Notes.otherVault(of: url) == "work", "\(url)")
+        }
+        #expect(Notes.otherVault(of: "https://kura.example/v/work/../n/X") == nil)
+        Notes.useVaults([])
+        for url in ways + ["https://kura.example//v/work/n/X", "https://kura.example/%76/work/n/X", "https://kura.example/v/%2577ork/n/X"] {
+            #expect(Notes.isPrivateNote(url), "\(url)")
+        }
+        // An address that can't be parsed could be anything: private.
+        #expect(Notes.isPrivateNote("https://[kura/v/work/n/X"))
+        #expect(!Notes.isPrivateNote("https://kura.example/x/../n/X"))
     }
 
     @Test func aVaultIsPrivateUntilKuraMarksItShared() {
