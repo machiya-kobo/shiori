@@ -231,7 +231,17 @@ async function captureSession() {
 // saving a server fetches that server's rules at once; a bad address is
 // refused on the page; a switch and a neighbour's address are kept.
 async function settingsSession() {
-  const driver = await browser({ 'extensions.webextensions.uuids': JSON.stringify({ [ID]: UUID }) });
+  // Downloads (the settings file) go straight to WORK/downloads.
+  const downloads = path.join(WORK, 'downloads');
+  fs.mkdirSync(downloads, { recursive: true });
+  const driver = await browser({
+    'extensions.webextensions.uuids': JSON.stringify({ [ID]: UUID }),
+    'browser.download.dir': downloads,
+    'browser.download.folderList': 2,
+    'browser.download.useDownloadDir': true,
+    'browser.download.always_ask_before_handling_new_types': false,
+    'browser.helperApps.neverAsk.saveToDisk': 'application/json',
+  });
   const text = async (id) => (await driver.findElement(By.id(id)).getText()).trim();
   try {
     await hister(true);
@@ -273,6 +283,34 @@ async function settingsSession() {
     check('a switch and a neighbour are kept on this device', local.combinedSearch === false && local.searxngURL === 'https://searx.example/',
       JSON.stringify(local) + ' ' + (await text('rooms-saved')));
     check('  the web-results switch follows the take-over switch', !(await driver.findElement(By.id('webResults')).isEnabled()));
+
+    // Another device: the settings to a file, and a file back.
+    await driver.findElement(By.id('export')).click();
+    let exported = null;
+    for (let i = 0; i < 20 && !exported; i++) {
+      await sleep(250);
+      const file = fs.readdirSync(downloads).find((f) => /^shiori-settings-\d{4}-\d\d-\d\d\.json$/.test(f));
+      if (file) exported = JSON.parse(fs.readFileSync(path.join(downloads, file), 'utf8'));
+    }
+    check('saving to a file writes the server and settings, no searches', !!exported && exported.server === `http://localhost:${HISTER_PORT}/` &&
+      exported.settings.searxngURL === 'https://searx.example/' && !('recentSearches' in exported.settings), JSON.stringify(exported));
+    const importFile = path.join(WORK, 'import.json');
+    fs.writeFileSync(importFile, JSON.stringify({
+      kind: 'shiori-settings', version: 1, server: `http://127.0.0.1:${HISTER_PORT}/`,
+      settings: { theme: 'day', konbiniURL: 'https://konbini.example/', aiProvider: 'anthropic' },
+    }));
+    await driver.findElement(By.id('import')).sendKeys(importFile);
+    await sleep(800);
+    const preview = await text('move-status');
+    const applyShown = await driver.findElement(By.id('apply')).isDisplayed();
+    await driver.findElement(By.id('apply')).click();
+    await sleep(2000);
+    const after = await driver.executeAsyncScript('const done = arguments[arguments.length - 1]; browser.storage.local.get(["histerURL", "shioriLocalSettings"]).then(done)');
+    check('opening a file shows what it would change before Apply', applyShown && /Hister server to http:\/\/127\.0\.0\.1/.test(preview), preview);
+    check('  Apply sets the server and the settings the page takes; the rest is left out',
+      after.histerURL === `http://127.0.0.1:${HISTER_PORT}/` && after.shioriLocalSettings.theme === 'day' &&
+      after.shioriLocalSettings.konbiniURL === 'https://konbini.example/' && !('aiProvider' in after.shioriLocalSettings),
+      `${await text('move-status')} ${JSON.stringify(after)}`);
 
     // Site access taken away, as about:addons does: both the host
     // permission and the content script's <all_urls> (Firefox counts that

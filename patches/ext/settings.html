@@ -82,8 +82,20 @@
         <p class="note">All optional. Shiori Search shows what each one has beside your pages.</p>
       </section>
 
+      <section class="group" aria-labelledby="h-move">
+        <h2 id="h-move">Another Device</h2>
+        <p class="note">To set up another device, save these settings to a file here and open it there. The file holds addresses and switches, never your searches or pages.</p>
+        <p class="buttons">
+          <button id="export" type="button" class="secondary">Save to a File</button>
+          <label class="button secondary file">Open a File…<input id="import" type="file" accept="application/json,.json" /></label>
+          <button id="apply" type="button" hidden>Apply</button>
+        </p>
+        <p id="move-status" class="note" role="status" aria-live="polite"></p>
+      </section>
+
       <p class="note center">These settings stay on this device; nothing syncs them.</p>
     </main>
+    <script src="shiori-settings-file.js"></script>
     <script src="shiori-settings.js"></script>
   </body>
 </html>

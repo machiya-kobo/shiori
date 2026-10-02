@@ -19,7 +19,7 @@ const FILES = {
   'popup.js': '',
   'search.html': 'search-core.js search.js',
   'shiori-options.html': 'shiori-options.js search.css',
-  'shiori-settings.html': 'shiori-settings.js shiori-settings.css search.css',
+  'shiori-settings.html': 'shiori-settings.js shiori-settings-file.js shiori-settings.css search.css',
   'search-core.js': '',
   'shiori-redirect.js': '',
   'assets/icons/icon-16.png': '',

@@ -203,6 +203,70 @@
     $('rooms-saved').textContent = !vault && saved.obsidianVault ? 'Saved (the vault keeps its name)' : 'Saved';
   });
 
+  // --- another device: settings to a file and back (ext/settings-file.js) ---
+
+  const F = globalThis.ShioriSettingsFile;
+  const moveStatus = (text) => ($('move-status').textContent = text);
+
+  $('export').addEventListener('click', async () => {
+    const got = await chrome.storage.local.get(['histerURL', 'shioriLocalSettings']);
+    const doc = F.exportSettings({ server: got.histerURL || '', settings: got.shioriLocalSettings || {} });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 2) + '\n'], { type: 'application/json' }));
+    link.download = F.fileName();
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+    moveStatus(`Saved as ${link.download}.`);
+  });
+
+  let pending = null; // a file read, waiting for Apply
+  $('import').addEventListener('change', async () => {
+    const file = $('import').files[0];
+    pending = null;
+    $('apply').hidden = true;
+    if (!file) return;
+    const read = F.readImport(await file.text().catch(() => ''));
+    $('import').value = ''; // the same file can be chosen again
+    if (read.error) {
+      moveStatus(read.error);
+      return;
+    }
+    pending = read;
+    moveStatus(F.describeImport(read, histerURL));
+    $('apply').hidden = false;
+  });
+
+  $('apply').addEventListener('click', async () => {
+    if (!pending) return;
+    const { server, settings: values } = pending;
+    pending = null;
+    $('apply').hidden = true;
+    let serverText = '';
+    if (server && server !== histerURL) {
+      const reply = await send({ shiori: 'set-server', url: server });
+      if (reply && reply.ok) {
+        histerURL = server;
+        $('server').value = server;
+        serverText = 'the server';
+      }
+    }
+    const keys = Object.keys(values);
+    if (keys.length) fill((await save(values)) || settings);
+    // What the whitelist kept: the same value is now stored.
+    const local = (await chrome.storage.local.get(['shioriLocalSettings'])).shioriLocalSettings || {};
+    const kept = keys.filter((k) => JSON.stringify(local[k]) === JSON.stringify(values[k])).length;
+    const parts = [serverText, kept ? `${kept} ${kept === 1 ? 'setting' : 'settings'}` : ''].filter(Boolean);
+    const left = keys.length - kept;
+    moveStatus(
+      (parts.length ? `Applied ${parts.join(' and ')}.` : 'Nothing applied.') +
+        (left ? ` ${left} ${left === 1 ? "wasn't a setting" : "weren't settings"} this page takes, and ${left === 1 ? 'was' : 'were'} left out.` : ''),
+    );
+    void checkServer();
+    void showQueue();
+  });
+
   await showAccess();
   await Promise.all([checkServer(), showQueue()]);
 })();

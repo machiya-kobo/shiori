@@ -155,6 +155,7 @@ else
     cp -- patches/ext/settings.html "$RESOURCES/shiori-settings.html"
     cp -- patches/ext/settings.css "$RESOURCES/shiori-settings.css"
     cp -- patches/ext/settings.js "$RESOURCES/shiori-settings.js"
+    cp -- patches/ext/settings-file.js "$RESOURCES/shiori-settings-file.js"
 fi
 # Your server's status page, linked in the results page's footer.
 SHIORI_STATUS_URL="${SHIORI_STATUS_URL:-$(yml SHIORI_STATUS_URL)}"
