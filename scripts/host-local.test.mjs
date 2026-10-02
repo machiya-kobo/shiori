@@ -55,17 +55,23 @@ const SWIFT = {
 
 // --- loading ---
 
-function fakeStorage(initial = {}) {
+// With `events`, it has the browser's storage.onChanged.
+function fakeStorage(initial = {}, { events = false } = {}) {
   const data = structuredClone(initial);
+  const changed = [];
   return {
     data,
+    onChanged: events ? { addListener: (l) => changed.push(l) } : undefined,
     async get(keys) {
       const out = {};
       for (const k of [].concat(keys)) if (k in data) out[k] = structuredClone(data[k]);
       return out;
     },
     async set(items) {
+      const changes = {};
+      for (const [k, v] of Object.entries(items)) changes[k] = { oldValue: data[k], newValue: v };
       Object.assign(data, structuredClone(items));
+      setTimeout(() => changed.forEach((l) => l(structuredClone(changes), 'local')));
     },
     async remove(keys) {
       for (const k of [].concat(keys)) delete data[k];
@@ -94,7 +100,7 @@ function loadCore(storage = fakeStorage({}), network = async () => new Response(
   const opened = [];
   const ctx = {
     chrome: {
-      storage: { local: storage },
+      storage: { local: storage, onChanged: storage.onChanged },
       runtime: {
         getManifest: () => ({ version: '9.8.7' }),
         getURL: (p) => `moz-extension://x/${p}`,
@@ -305,6 +311,29 @@ test('the settings page sets the server: new rules fetched, old ones gone, queue
   await settle();
   assert.deepEqual(sent, ['https://new.example/api/add']);
   assert.equal((storage.data.shioriQueueIndex || []).length, 0);
+});
+
+test("the settings page's server is followed once, though storage reports the change too", async () => {
+  const storage = fakeStorage(
+    {
+      histerURL: 'https://h.example/',
+      shioriCachedRules: '{"skip":[]}',
+      shioriQueueIndex: [{ key: 'shioriQueueItem:1', pageURL: 'https://a.example/', bytes: 2, attempts: 0, queuedAt: Date.now() }],
+      'shioriQueueItem:1': { url: 'https://h.example/api/add', headers: {}, body: '{"url":"https://a.example/"}' },
+    },
+    { events: true },
+  );
+  const { send, fetched } = loadCore(storage, async (url) => {
+    if (url === 'https://h.example/x/api/rules') return new Response('{"skip":["x"]}');
+    throw new TypeError('offline');
+  });
+  await settle();
+  await send({ shiori: 'set-server', url: 'https://h.example/x/' }, SETTINGS_PAGE);
+  await settle();
+  await settle();
+  assert.equal(storage.data['shioriQueueItem:1'].url, 'https://h.example/x/api/add');
+  assert.equal(fetched.filter((u) => u === 'https://h.example/x/api/rules').length, 1);
+  assert.equal(storage.data.shioriCachedRules, '{"skip":["x"]}');
 });
 
 test('a server out of reach is still saved, its pages wait, and the old rules are gone', async () => {

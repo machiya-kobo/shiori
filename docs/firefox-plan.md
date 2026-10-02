@@ -187,11 +187,14 @@ lowered.
 2. **Drop `nativeMessaging` from the Firefox manifest.** With no app it is
    only a failed call (the shim falls back to its defaults), and Firefox
    would show users a native-messaging permission at install for nothing.
-3. **Write `histerURL` explicitly** (phase 3). On a fresh install, the
-   queue's start-up rule fetch runs before upstream stores its default
-   `histerURL`, so the rules arrive with the first capture instead. The
-   queue still fails closed, so nothing leaks. On Safari, the app's reply
-   writes it.
+3. **Fetch the rules when `histerURL` is first stored** (done, with the
+   Safari ports). On a fresh install, the queue's start-up rule fetch ran
+   before upstream stored its default `histerURL`, so the rules arrived
+   with the first capture instead (the queue failed closed, so nothing
+   leaked). The queue now listens to `storage.onChanged`: a server stored
+   by anyone but the settings page (upstream's default, the Safari app)
+   gets its rules fetched at once, and pages queued for the old one follow
+   it, as `set-server` does.
 4. **Containers don't need `cookies`.**
    - `contextualIdentities.query()` gives names, and `tab.cookieStoreId` is
      readable with `tabs`.

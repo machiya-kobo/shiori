@@ -150,7 +150,9 @@ async function captureSession() {
     });
     check('a settings change is kept on this device, AI keys refused', kept.ok === true && kept.theme === 'day' && kept.stored.histerCount === 10 && !('aiProvider' in kept.stored), JSON.stringify(kept.stored));
     const early = requests().slice(mark).filter((r) => r.p.startsWith('/api/rules')).length;
-    note('skip rules fetched before the first capture', `${early} (0: the queue's start-up fetch runs before upstream stores histerURL on a fresh install)`);
+    // The start-up fetch runs before upstream stores histerURL on a fresh
+    // install; the queue's storage.onChanged listener fetches them then.
+    check('skip rules fetched before the first capture', early >= 1, `${early} rules requests`);
 
     setMark();
     await driver.get(PAGES + 'page1.html');

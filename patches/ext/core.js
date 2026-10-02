@@ -421,30 +421,67 @@
     if (base) await fetchRules(base);
   })().finally(() => void drain());
 
+  const baseOf = (u) => (typeof u === 'string' && u ? (u.endsWith('/') ? u : u + '/') : '');
+
+  /** The server moved from old to base (either may be ''): the old
+   *  server's rules go, and pages queued for it are sent to the new one
+   *  rather than waiting out their 14 days at the old address. Under the
+   *  lock. */
+  async function followServer(old, base) {
+    await storage.remove(RULES_KEY);
+    if (!old || !base) return;
+    // With one address inside the other (`h/` and `h/x/`), a page already
+    // addressed to the new server isn't the old one's.
+    const isOld = (url) => url.startsWith(old) && !(base.startsWith(old) && url.startsWith(base));
+    for (const e of await readIndex()) {
+      const item = (await storage.get([e.key]))[e.key];
+      if (item && typeof item.url === 'string' && isOld(item.url)) {
+        await storage.set({ [e.key]: { ...item, url: base + item.url.slice(old.length) } });
+      }
+    }
+  }
+
   /** A new Hister server (the settings page, where the host owns it): the
-   *  old server's rules go, the new one's are fetched at once (so the queue
-   *  has them before the first offline capture), and pages already queued
-   *  are sent to the new server rather than waiting out their 14 days at
-   *  the old address. Returns whether the new server answered. */
+   *  queue follows it (followServer) and its rules are fetched at once, so
+   *  the queue has them before the first offline capture. Returns whether
+   *  the new server answered. */
+  const ownWrites = new Set(); // addresses setServer stored, for onChanged below
   async function setServer(url) {
-    const base = url.endsWith('/') ? url : url + '/';
+    const base = baseOf(url);
     const old = await serverBase();
     if (base !== old) {
       await withLock(async () => {
-        await storage.remove(RULES_KEY);
-        const index = await readIndex();
-        for (const e of index) {
-          const item = (await storage.get([e.key]))[e.key];
-          if (item && old && typeof item.url === 'string' && item.url.startsWith(old)) {
-            await storage.set({ [e.key]: { ...item, url: base + item.url.slice(old.length) } });
-          }
+        await followServer(old, base);
+        ownWrites.add(base);
+        try {
+          await storage.set({ histerURL: base });
+        } catch (error) {
+          ownWrites.delete(base);
+          throw error;
         }
-        await storage.set({ histerURL: base });
       });
     }
     const reachable = await fetchRules(base);
     if (reachable) void drain();
     return reachable;
+  }
+
+  // A server set anywhere else follows the same way: on Safari the app's
+  // (askHost stores it), upstream's own options page, and upstream's
+  // default on a fresh install, whose rules the start-up fetch above ran too
+  // early to get.
+  if (chrome.storage.onChanged && chrome.storage.onChanged.addListener) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local' || !changes || !changes.histerURL) return;
+      const old = baseOf(changes.histerURL.oldValue);
+      const base = baseOf(changes.histerURL.newValue);
+      if (ownWrites.delete(base) || old === base) return;
+      withLock(() => followServer(old, base))
+        .then(async () => {
+          if (base && (await fetchRules(base))) void drain();
+        })
+        .catch(() => {});
+    });
   }
 
   async function queueStatus() {

@@ -94,7 +94,9 @@ holds the rules and the traps the code can't tell you.
   been fetched once. No auth headers are stored. 406/413/422 and other 4xx
   are never retried; 5xx/429 get 5 tries; entries older than 14 days drop.
   It drains on any Hister reply under 500 and on worker start (no timer: iOS
-  suspends the worker).
+  suspends the worker). It follows a server change from anywhere
+  (`storage.onChanged`; `set-server` marks its own write): queued pages
+  move to the new address, and its rules are fetched at once.
 - A capture with HTML carries no `text` (Hister derives it). Never strip
   `<script>`: Hister's sensitive-content check reads the raw HTML.
 - **The native handler class must be `nonisolated`**: Safari calls it off

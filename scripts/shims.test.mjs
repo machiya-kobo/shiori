@@ -18,17 +18,25 @@ const contentShim = read('../patches/safari-content-shim.js');
 const BASE = 'https://hister.example/';
 const settle = () => new Promise((r) => setTimeout(r, 20));
 
-function fakeStorage(initial = {}) {
+// With `events`, it has the browser's storage.onChanged (else none, as
+// before Shiori listened).
+function fakeStorage(initial = {}, { events = false } = {}) {
   const data = structuredClone(initial);
+  const changed = [];
   return {
     data,
+    onChanged: events ? { addListener: (l) => changed.push(l) } : undefined,
     async get(keys) {
       const out = {};
       for (const k of keys) if (k in data) out[k] = structuredClone(data[k]);
       return out;
     },
     async set(items) {
+      const changes = {};
+      for (const [k, v] of Object.entries(items)) changes[k] = { oldValue: data[k], newValue: v };
       Object.assign(data, structuredClone(items));
+      // The browser tells listeners after the write, never inside it.
+      setTimeout(() => changed.forEach((l) => l(structuredClone(changes), 'local')));
     },
     async remove(keys) {
       for (const k of [].concat(keys)) delete data[k];
@@ -47,7 +55,7 @@ function loadBackground({ network, storage = fakeStorage({ histerURL: BASE, ...R
     return network(url, init);
   };
   const ctx = {
-    chrome: { storage: { local: storage }, runtime: { getManifest: () => ({ version: '9.8.7' }) } },
+    chrome: { storage: { local: storage, onChanged: storage.onChanged }, runtime: { getManifest: () => ({ version: '9.8.7' }) } },
     fetch,
     Response,
     Headers,
@@ -420,6 +428,7 @@ function loadCombinedSearch({
   searchPage = '',
   pageUp = async () => new Response('<OpenSearchDescription/>'),
   nativeGate = null,
+  network = async () => new Response('{}'),
 }) {
   const listeners = [];
   const updates = [];
@@ -428,7 +437,7 @@ function loadCombinedSearch({
   const tabListeners = [];
   const ctx = {
     chrome: {
-      storage: { local: storage },
+      storage: { local: storage, onChanged: storage.onChanged },
       runtime: {
         getManifest: () => ({ version: '9.8.7' }),
         getURL: (p) => `safari-web-extension://x/${p}`,
@@ -448,7 +457,7 @@ function loadCombinedSearch({
     fetch: async (input, init) => {
       const url = typeof input === 'string' ? input : input.url;
       fetched.push(url);
-      return searchPage && url.startsWith(searchPage) ? pageUp(url, init) : new Response('{}');
+      return searchPage && url.startsWith(searchPage) ? pageUp(url, init) : network(url, init);
     },
     Response, Headers, URL, TypeError, JSON, setTimeout, clearTimeout, console, Date, AbortController,
   };
@@ -702,4 +711,81 @@ test('on Safari the app owns the server: the extension never sets it', async () 
   });
   assert.equal(reply.ok, false);
   assert.equal(storage.data.histerURL, 'https://kept.example/');
+});
+
+// --- the queue follows a server set elsewhere (the app, a fresh install) ---
+
+const queuedItem = (key, url, pageURL = 'https://a.example/') => ({
+  index: { key, pageURL, bytes: 2, attempts: 0, queuedAt: Date.now() },
+  item: { url, headers: {}, body: JSON.stringify({ url: pageURL }) },
+});
+
+test("the app's new server: queued pages follow it, its rules replace the old ones, the queue drains", async () => {
+  const q = queuedItem('shioriQueueItem:1', 'https://old.example/api/add');
+  const storage = fakeStorage(
+    { histerURL: 'https://old.example/', shioriCachedRules: '{"skip":["old"]}', shioriQueueIndex: [q.index], [q.index.key]: q.item },
+    { events: true },
+  );
+  const sent = [];
+  const { fetched } = loadCombinedSearch({
+    nativeReply: { serverURL: 'https://new.example' },
+    storage,
+    network: async (url, init) => {
+      if (url.startsWith('https://old.example/')) throw new TypeError('the old server is gone');
+      if (url === 'https://new.example/api/rules') return new Response('{"skip":["new"]}');
+      if (init && init.method === 'POST') sent.push(url);
+      return new Response('{}', { status: 201 });
+    },
+  });
+  for (let i = 0; i < 10 && !sent.length; i++) await settle();
+  assert.equal(storage.data.histerURL, 'https://new.example/');
+  assert.equal(storage.data.shioriCachedRules, '{"skip":["new"]}');
+  assert.ok(fetched.includes('https://new.example/api/rules'));
+  assert.deepEqual(sent, ['https://new.example/api/add']);
+  assert.equal(queued(storage).length, 0);
+});
+
+test('a fresh install fetches the rules once its server is stored, so the first offline capture is queued', async () => {
+  const storage = fakeStorage({}, { events: true });
+  const { ctx } = loadBackground({
+    storage,
+    network: async (url) => {
+      if (url === BASE + 'api/rules') return new Response('{"skip":[]}');
+      throw new TypeError('Load failed');
+    },
+  });
+  await settle();
+  assert.equal('shioriCachedRules' in storage.data, false);
+  await storage.set({ histerURL: BASE }); // upstream's default, written on install
+  await settle();
+  assert.equal(storage.data.shioriCachedRules, '{"skip":[]}');
+  const r = await ctx.fetch(BASE + 'api/add', addInit({ url: 'https://a.example/' }));
+  assert.equal(r.status, 201);
+  assert.equal(queued(storage).length, 1);
+});
+
+test('the same server written again changes nothing', async () => {
+  const storage = fakeStorage({ histerURL: BASE, ...RULES }, { events: true });
+  const { calls } = loadBackground({ storage, network: offline });
+  await settle();
+  const before = calls.length;
+  await storage.set({ histerURL: BASE.slice(0, -1) }); // without its slash
+  await settle();
+  assert.equal(storage.data.shioriCachedRules, RULES.shioriCachedRules);
+  assert.equal(calls.length, before);
+});
+
+test('a server moved inside the old address moves each queued page once', async () => {
+  const a = queuedItem('shioriQueueItem:1', 'https://h.example/api/add', 'https://a.example/');
+  const b = queuedItem('shioriQueueItem:2', 'https://h.example/x/api/add', 'https://b.example/');
+  const storage = fakeStorage(
+    { histerURL: 'https://h.example/', ...RULES, shioriQueueIndex: [a.index, b.index], [a.index.key]: a.item, [b.index.key]: b.item },
+    { events: true },
+  );
+  loadBackground({ storage, network: offline });
+  await settle();
+  await storage.set({ histerURL: 'https://h.example/x/' });
+  await settle();
+  assert.equal(storage.data[a.index.key].url, 'https://h.example/x/api/add');
+  assert.equal(storage.data[b.index.key].url, 'https://h.example/x/api/add');
 });
