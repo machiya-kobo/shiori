@@ -173,12 +173,18 @@ async function captureSession() {
     await sleep(4000);
     const queued = await inPage(driver, EXT_URL + 'shiori-settings.html', async () => (await browser.storage.local.get('shioriQueueIndex')).shioriQueueIndex || []);
     check('offline: the capture is queued', queued.length === 1, JSON.stringify(queued.map((q) => q.pageURL)));
+    const badge = () => inPage(driver, EXT_URL + 'shiori-settings.html', async () => ({ text: await browser.action.getBadgeText({}), title: await browser.action.getTitle({}) }));
+    const waiting = await badge();
+    check('  the toolbar badge counts it, and says so', waiting.text === '1' && /1 page waiting/.test(waiting.title), JSON.stringify(waiting));
 
     setMark();
     await hister(true);
     await driver.get(PAGES + 'page3.html');
     const drained = await waitFor(posted('page2.html'), 10000);
     check('back online: the queue drains', !!drained, drained ? `added=${drained.added} (${typeof drained.added})` : '');
+    await sleep(500);
+    const cleared = await badge();
+    check('  and the badge clears', cleared.text === '' && cleared.title === 'Shiori', JSON.stringify(cleared));
 
     await driver.get('about:blank');
     await sleep(8000);

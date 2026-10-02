@@ -274,7 +274,7 @@ test("a search recorded from the results page reaches the page's settings", asyn
 
 test("the Firefox build prepends the host and the core in the order these tests load them", () => {
   const build = read('../scripts/build-extension.sh');
-  assert.ok(build.includes('BACKGROUND=(patches/ext/host-local.js patches/ext/core.js patches/shiori/search-core.js patches/ext/omnibox.js)\n'));
+  assert.ok(build.includes('BACKGROUND=(patches/ext/host-local.js patches/ext/core.js patches/shiori/search-core.js patches/ext/omnibox.js patches/ext/badge.js)\n'));
 });
 
 // --- the settings page's messages ---

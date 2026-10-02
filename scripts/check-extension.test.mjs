@@ -59,7 +59,7 @@ function manifest(target) {
 
 const BACKGROUND = {
   safari: 'installIconShim const shioriHost installCaptureQueue installCombinedSearch',
-  firefox: "const shioriHost 'shioriLocalSettings' installCaptureQueue installCombinedSearch root.ShioriSearch installOmnibox",
+  firefox: "const shioriHost 'shioriLocalSettings' installCaptureQueue installCombinedSearch root.ShioriSearch installOmnibox installQueueBadge",
 };
 
 function check(target, change = () => {}) {
