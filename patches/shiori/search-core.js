@@ -172,6 +172,11 @@
     return 'https://web.archive.org/web/' + url;
   }
 
+  /** The page's latest snapshot on archive.is (a link only, never fetched). */
+  function archiveURL(url) {
+    return 'https://archive.is/newest/' + url;
+  }
+
   // --- vault notes (Hister's label:vault documents) ---------------------------
 
   /**
@@ -1533,6 +1538,7 @@
     shortDate,
     duration,
     cachedURL,
+    archiveURL,
     hasBang,
     webQuery,
     normalizeURL,

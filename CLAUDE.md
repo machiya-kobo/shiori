@@ -24,7 +24,8 @@ holds the rules and the traps the code can't tell you.
   small-web gateway, SearXNG, the visited site's favicon and PDFs (upstream
   behaviour). Firefox itself fetches the add-on's `updates.json` from this
   repository's GitHub Releases (its `update_url`); the extension's code
-  never does. NewsBlur and status pages are only ever opened as links.
+  never does. NewsBlur, status pages and the Wayback Machine and archive.is
+  copies are only ever opened as links.
   `gemini://`/`gopher://` links are handed to the system, never fetched. No
   analytics. AI providers only when the user switches AI on, and only from
   the app.

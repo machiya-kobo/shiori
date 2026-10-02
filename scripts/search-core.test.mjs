@@ -113,6 +113,7 @@ test('dates and durations read like SearXNG', () => {
   assert.equal(S.duration(3725), '1:02:05');
   assert.equal(S.duration('None'), '');
   assert.equal(S.cachedURL('https://a.example/x'), 'https://web.archive.org/web/https://a.example/x');
+  assert.equal(S.archiveURL('https://a.example/x?y=1'), 'https://archive.is/newest/https://a.example/x?y=1');
 });
 
 const cards = [

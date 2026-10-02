@@ -54,7 +54,14 @@
     if (asked === 'dense' || asked === 'cards') localStorage.setItem('shioriCardLayout', asked);
     document.body.classList.toggle('dense', localStorage.getItem('shioriCardLayout') === 'dense');
   } catch (_) {}
+  // As the field's default too: Safari resets an autocomplete="off" field
+  // to its default when the page comes back from its Back-Forward cache,
+  // which left the web page's field empty after leaving for a result.
+  $('q').defaultValue = q;
   $('q').value = q;
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted && document.activeElement !== $('q')) $('q').value = q;
+  });
   document.title = q ? `${q} – Shiori Search` : 'Shiori Search';
   if (header) drawHeader(header);
   // All's first page has the two columns (results, and the Info card
@@ -1634,7 +1641,13 @@
       { class: 'engines' },
       ...(r.engines || [r.engine]).filter(Boolean).map((e) => el('span', {}, e)),
     );
-    const meta = el('div', { class: 'meta' }, engines, el('a', { href: S.cachedURL(r.url) }, 'cached'));
+    const meta = el(
+      'div',
+      { class: 'meta' },
+      engines,
+      el('a', { href: S.cachedURL(r.url) }, 'cached'),
+      el('a', { href: S.archiveURL(r.url) }, 'archive.is'),
+    );
     const li = el(
       'li',
       { class: 'card' },
