@@ -162,13 +162,16 @@
   async function kuraNotes(text, options) {
     return S.kuraDocuments(await fetchJSON(S.kuraURL(kuraBase, text, options), { timeout: 8000 }));
   }
-  // Kura's vaults (/api/vaults), for a work note's title and Obsidian vault
-  // and the Notes tab's filter. Asked once, only for the Notes tab.
+  // Kura's vaults (/api/vaults), for a work note's title and Obsidian vault,
+  // the Notes tab's filter, and which vaults are shared (S.useVaults; until
+  // it answers, every other vault is private). Asked once, only for the
+  // Notes tab, where another vault's notes show.
   let kuraVaults = [];
-  const vaultsReady = () =>
-    kuraBase
-      ? fetchJSON(`${kuraBase}api/vaults`, { timeout: 4000 }).then((r) => (kuraVaults = (r && r.vaults) || [])).catch(() => [])
-      : Promise.resolve([]);
+  // Read afresh each time (no copy kept here); also before another vault's
+  // note goes to Hister (S.isPrivateNoteNow). A failure throws: none shared.
+  const readVaultsNow = () =>
+    kuraBase ? fetchJSON(`${kuraBase}api/vaults`, { timeout: 4000 }).then((r) => r && r.vaults) : Promise.resolve([]);
+  const vaultsReady = () => S.loadVaults(readVaultsNow).then((list) => (list.length ? (kuraVaults = list) : list));
 
   // Every source can be switched off on its own (the app's Settings): Hister
   // and the vault each in General and as a tab, and the web results.
@@ -249,7 +252,7 @@
     const all = (await chrome.storage.local.get([PAGE_CACHE_KEY]))[PAGE_CACHE_KEY] || {};
     // Never a work vault's note on the device: its results
     // leave the Back copy.
-    const vault = pageState.vault && (pageState.vault.documents || []).some((d) => S.isOtherVault(d.url)) ? undefined : pageState.vault;
+    const vault = pageState.vault && (pageState.vault.documents || []).some((d) => S.isPrivateNote(d.url)) ? undefined : pageState.vault;
     all[cacheId] = {
       at: (all[cacheId] && all[cacheId].at) || Date.now(),
       hister: pageState.hister,
@@ -1299,17 +1302,23 @@
 
   function recordOpened(url, title) {
     // Gemini and Gopher too: Hister keeps a small-web page's canonical address.
-    // Never a work vault's note to Hister.
-    if (settings.rememberOpened === false || !histerBase || !q || !/^(https?|gemini|gopher):\/\//i.test(url) || S.isOtherVault(url)) return;
-    fetch(`${histerBase}api/history`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // As the search was sent: Hister matches the exact text.
-      body: JSON.stringify({ url, title, query: S.histerText(q) }),
-      credentials: 'omit',
-      // The page is being left: let the request finish anyway.
-      keepalive: true,
-    }).catch(() => {});
+    // Never a private vault's note to Hister.
+    if (settings.rememberOpened === false || !histerBase || !q || !/^(https?|gemini|gopher):\/\//i.test(url) || S.isPrivateNote(url)) return;
+    const query = S.histerText(q);
+    const send = () =>
+      fetch(`${histerBase}api/history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // As the search was sent: Hister matches the exact text.
+        body: JSON.stringify({ url, title, query }),
+        credentials: 'omit',
+        // The page is being left: let the request finish anyway.
+        keepalive: true,
+      }).catch(() => {});
+    // A shared vault's note: Kura is asked again first (it may be private
+    // by now). If the page is gone before it answers, nothing is sent.
+    if (S.noteVault(url) === null) return void send();
+    void S.isPrivateNoteNow(url, readVaultsNow).then((isPrivate) => (isPrivate ? undefined : send()));
   }
 
   document.addEventListener('click', (event) => {

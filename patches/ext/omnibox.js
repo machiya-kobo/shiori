@@ -70,10 +70,12 @@
   });
 
   /** Tell Hister a suggestion was opened for this search (as the results
-   *  page does), unless Remember What You Open is off. */
+   *  page does), unless Remember What You Open is off. Never another
+   *  vault's note, shared or not: the keyword drops notes, and whether a
+   *  vault is still shared would need Kura asked (fail closed). */
   async function recordOpened(url, title, query) {
     const { base, settings } = await stored();
-    if (!base || settings.rememberOpened === false || S.isOtherVault(url)) return;
+    if (!base || settings.rememberOpened === false || S.noteVault(url) !== null) return;
     await fetch(`${base}api/history`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

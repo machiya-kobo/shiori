@@ -207,7 +207,7 @@ struct DocumentLinks: View {
             }
         }
         // Not a work note: Hister never has one.
-        if let client = app.client, !Notes.isOtherVault(document.url) {
+        if let client = app.client, !Notes.isPrivateNote(document.url) {
             Link(destination: client.webPreviewURL(for: document.url)) {
                 Label("Open in Hister", systemImage: "magnifyingglass")
             }

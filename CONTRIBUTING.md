@@ -51,8 +51,9 @@ are fine: `HISTER_LIVE_URL` and `KURA_LIVE_URL` turn them on.
 - No new network endpoints without discussion: Shiori talks to the
   servers the user configures (and AI providers only when the user turns AI
   on). No analytics.
-- A note from any vault but the default never goes to Hister, to an AI
-  engine, a cache, an export or a feed.
+- A note from a private vault (any but the default, unless Kura marks it
+  shared) never goes to Hister, to an AI engine, a cache, an export or a
+  feed. When Kura can't say, every other vault is private.
 - Match the surrounding code: its naming, comment density and idiom.
 
 ## Sending a change

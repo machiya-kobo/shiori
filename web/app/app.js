@@ -1565,8 +1565,8 @@ async function allResults(list) {
     // A notes list's from Kura; any other from Hister (pages only, All too).
     const reply = await (list.source === 'notes' ? api.kura : api.search)(list.query, { sort: list.sort || '', pageKey: key, limit: 100 });
     for (const d of reply.documents) {
-      // No work note leaves the device in an export.
-      if (seen.has(d.url) || S.isOtherVault(d.url)) continue;
+      // No private vault's note leaves the device in an export.
+      if (seen.has(d.url) || S.isPrivateNote(d.url)) continue;
       seen.add(d.url);
       const text = new DOMParser().parseFromString(`<div>${d.text || ''}</div>`, 'text/html').body.textContent || '';
       out.push({ url: d.url, title: d.title || '', domain: d.domain || hostOf(d.url), label: d.label || '', added: d.added, updated: d.updated || d.added, text: text.trim() });
@@ -1952,7 +1952,21 @@ function watchBars() {
 
 watchBars();
 render();
-Promise.all([loadRules(), api.cards().then((c) => (konbiniCards = c)), api.kuraVaults().then((v) => (kuraVaults = v))]).then(render);
+// Kura's vaults also say which are shared (S.useVaults): read again when
+// the app comes back after a while, so a vault made private again counts.
+// Until they answer, every vault but the default is private.
+let vaultsAt = 0;
+const loadVaults = () => {
+  vaultsAt = Date.now();
+  // api.kuraVaults passes them to S.useVaults.
+  return api.kuraVaults().then((v) => {
+    kuraVaults = v;
+  });
+};
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && Date.now() - vaultsAt > 10 * 60_000) void loadVaults();
+});
+Promise.all([loadRules(), api.cards().then((c) => (konbiniCards = c)), loadVaults()]).then(render);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(watchForUpdates).catch(() => {});

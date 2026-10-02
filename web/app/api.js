@@ -90,7 +90,19 @@ export async function rules() {
   return globalThis.ShioriSearch.collectionAliases(reply.aliases || {});
 }
 
-export function setLabel(url, label) {
+/**
+ * Whether a note is private, Kura asked afresh: before another vault's note
+ * goes to Hister (a shared vault can be made private again at any time). A
+ * failed read is private; the default vault's notes and pages ask nothing.
+ */
+export function isPrivateNow(url) {
+  return globalThis.ShioriSearch.isPrivateNoteNow(url, readVaults);
+}
+
+const PRIVATE = "A private vault's note isn't in Hister.";
+
+export async function setLabel(url, label) {
+  if (await isPrivateNow(url)) throw new HisterError(PRIVATE);
   return request('api/label', { method: 'POST', body: { url, label } });
 }
 
@@ -99,8 +111,8 @@ export function setLabel(url, label) {
  * one. `keepalive` lets both go out while the page is being left.
  */
 export async function deletePage(url, { keepalive = false } = {}) {
-  // Hister never has a work note, and must never be sent one's address.
-  if (globalThis.ShioriSearch.isOtherVault(url)) throw new HisterError("A work vault's note isn't in Hister.");
+  // Hister never has a private vault's note, and must never be sent one's address.
+  if (await isPrivateNow(url)) throw new HisterError(PRIVATE);
   const exact = `url:"${url.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   const dry = await request('api/delete', { method: 'POST', body: { query: exact, dry_run: true }, keepalive });
   const matched = (dry && dry.matched) || 0;
@@ -109,15 +121,16 @@ export async function deletePage(url, { keepalive = false } = {}) {
 }
 
 /** Tells Hister `url` was opened from a search, so it ranks it first next time. */
-export function recordOpened(url, title, q) {
+export async function recordOpened(url, title, q) {
   const text = (q || '').trim();
-  // Never a work note's address or title to Hister.
-  if (!text || text === '*' || globalThis.ShioriSearch.isOtherVault(url)) return Promise.resolve();
+  // Never a private vault's note's address or title to Hister.
+  if (!text || text === '*' || globalThis.ShioriSearch.isPrivateNote(url) || (await isPrivateNow(url))) return;
   // As the search was sent: Hister matches the exact text.
   return request('api/history', { method: 'POST', body: { url, title, query: globalThis.ShioriSearch.histerText(text) } }).catch(() => {});
 }
 
-export function forgetOpened(url, q) {
+export async function forgetOpened(url, q) {
+  if (await isPrivateNow(url)) throw new HisterError(PRIVATE);
   return request('api/history', { method: 'POST', body: { url, query: q, delete: true } });
 }
 
@@ -145,10 +158,15 @@ export async function web(q, page = 1) {
   return response.json();
 }
 
-/** Kura's vaults (the default one and the work vaults), for the Notes filter; [] on failure. */
-export async function kuraVaults() {
-  const reply = await request('kura/api/vaults').catch(() => null);
-  return (reply && Array.isArray(reply.vaults) && reply.vaults) || [];
+const readVaults = () => request('kura/api/vaults', { timeout: 4000 }).then((r) => r && r.vaults);
+
+/**
+ * Kura's vaults (the default one and the others, private or shared), for
+ * the Notes filter, and which are shared (passed to S.useVaults); [] on
+ * failure, sharing none.
+ */
+export function kuraVaults() {
+  return globalThis.ShioriSearch.loadVaults(readVaults);
 }
 
 /** A note's sanitized HTML from Kura (a work note's preview: Hister never has one). Not cached. */

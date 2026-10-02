@@ -60,8 +60,11 @@
     return tab ? chrome.tabs.update(tab.id, { url }) : chrome.tabs.create({ url });
   }
 
+  // Never another vault's note, shared or not: Hister's results hold none
+  // to open here, and whether a vault is still shared would need Kura
+  // asked first (fail closed).
   function recordOpened(url, title, query) {
-    if (!base || !query || settings.rememberOpened === false || S.isOtherVault(url)) return;
+    if (!base || !query || settings.rememberOpened === false || S.noteVault(url) !== null) return;
     fetch(`${base}api/history`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

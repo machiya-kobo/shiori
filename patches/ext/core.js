@@ -14,8 +14,8 @@
 // - Every POST api/add gets metadata.client = "shiori" and
 //   metadata.client_version = the manifest version.
 //
-// - POST api/add for a work vault's note (/v/<vault>/n/…) is answered 406
-//   here and never sent or queued.
+// - POST api/add for a private vault's note (/v/<vault>/n/… that Kura
+//   doesn't mark shared) is answered 406 here and never sent or queued.
 // - POST api/add that fails at the network level is queued in
 //   storage.local, stamped with the visit time (`added`, unix seconds), and
 //   replayed later unchanged. An automatic capture then answers with a
@@ -375,11 +375,14 @@
 
     if (endpoint === 'api/add' && method === 'POST' && init && typeof init.body === 'string') {
       const prepared = prepAdd(init.body);
-      // A work vault's note never reaches Hister, whatever sent it (the
+      // A private vault's note never reaches Hister, whatever sent it (the
       // automatic capture, the shortcut, the menu): refused here as a skip
-      // rule would refuse it, and never queued.
+      // rule would refuse it, and never queued. Kura is asked afresh which
+      // vaults are shared, every time; unanswered, every other vault is
+      // private. Without search-core, every other vault's note is refused.
       const S = globalThis.ShioriSearch;
-      if (prepared.pageURL && S && S.isOtherVault(prepared.pageURL)) {
+      const refused = prepared.pageURL && (S ? await S.isPrivateNoteNow(prepared.pageURL, readVaults) : /\/v\/[^/]+\/n\//.test(prepared.pageURL));
+      if (refused) {
         return new Response('{}', {
           status: 406,
           headers: { 'Content-Type': 'application/json', 'X-Shiori-Refused': 'work-note' },
@@ -414,6 +417,27 @@
 
     return originalFetch(input, init);
   };
+
+  // Kura's vaults (/api/vaults), for which are shared: read afresh each
+  // time another vault's note is about to be sent (a vault made private
+  // again counts at once), from the Kura address in the settings or, before
+  // the settings were ever stored, the build's (installCombinedSearch's
+  // DEFAULTS.niwaURL). A failure throws: isPrivateNoteNow then shares none.
+  const KURA_DEFAULT = '__SHIORI_NIWA_URL__';
+  async function readVaults() {
+    const settings = { niwaURL: KURA_DEFAULT, ...((await storage.get(['shioriSettings'])).shioriSettings || {}) };
+    const base = String(settings.niwaURL || '').trim();
+    if (!/^https?:\/\//i.test(base)) return [];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    try {
+      const r = await originalFetch(base.replace(/\/?$/, '/') + 'api/vaults', { signal: controller.signal, credentials: 'omit' });
+      if (!r.ok) return [];
+      return ((await r.json()) || {}).vaults || [];
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 
   /** The server's skip rules, remembered for the queue; whether it answered. */
   async function fetchRules(base) {

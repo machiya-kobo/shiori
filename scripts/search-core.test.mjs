@@ -401,6 +401,7 @@ test('vi keys: modifiers belong to the browser; in a field only Escape counts', 
 test('summaries: web pages only, never notes', () => {
   assert.equal(S.summarizable('https://example.com/a', ''), true);
   assert.equal(S.summarizable('https://example.com/a', 'vault'), false);
+  assert.equal(S.summarizable('https://notes.example/v/work/n/x', ''), false, "another vault's note, whatever its label");
   assert.equal(S.summarizable('https://kura.example.ts.net/n/x', ''), false);
   assert.equal(S.summarizable('https://konbini.example.ts.net/p/x', 'alpha'), false);
   assert.equal(S.summarizable('https://niwa.example.ts.net/n/x', ''), false);
@@ -600,11 +601,62 @@ test('Small Web: the gateway search, results and marks', () => {
 });
 
 // HisterKit's VaultTests, case for case.
+test("a vault is private until Kura marks it shared, and again when it can't be read", () => {
+  const work = 'https://kura.example/v/work/n/X';
+  const client = 'https://kura.example/v/client/n/X';
+  S.useVaults([]);
+  assert.equal(S.isPrivateNote(work), true);
+  assert.equal(S.isPrivateNote('https://kura.example/n/Projects/Example'), false);
+  assert.equal(S.isPrivateNote('https://example.com/'), false);
+  S.useVaults([
+    { name: 'personal', default: true, private: false },
+    { name: 'work', default: false, private: false },
+    { name: 'client', default: false, private: true },
+    { name: 'other', default: false },
+  ]);
+  assert.equal(S.isPrivateNote(work), false);
+  assert.equal(S.isPrivateNote(client), true);
+  assert.equal(S.isPrivateNote('https://kura.example/v/other/n/X'), true, 'no flag: private');
+  assert.equal(S.isPrivateNote('https://kura.example/v/new/n/X'), true, 'not listed: private');
+  S.useVaults(null);
+  assert.equal(S.isPrivateNote(work), true, 'a failed read shares nothing');
+});
+
+
+// HisterKit's VaultTests.kuraIsAskedAgainBeforeAnythingIsSent, case for case.
+test('Kura is asked again before anything is sent: shared when cached, private when asked, refused', async () => {
+  const work = 'https://kura.example/v/work/n/X';
+  const shared = [{ name: 'work', default: false, private: false }];
+  const madePrivate = [{ name: 'work', default: false, private: true }];
+  S.useVaults(shared);
+  assert.equal(S.isPrivateNote(work), false);
+  assert.equal(await S.isPrivateNoteNow(work, async () => madePrivate), true, 'shared when cached, private when asked: refused');
+  assert.equal(S.isPrivateNote(work), true, 'the fresh answer is kept');
+  S.useVaults(shared);
+  assert.equal(await S.isPrivateNoteNow(work, async () => { throw new Error('unreachable'); }), true, 'Kura out of reach: private');
+  assert.equal(await S.isPrivateNoteNow(work, async () => null), true, 'no list: private');
+  assert.equal(await S.isPrivateNoteNow(work, async () => shared), false);
+  let asked = 0;
+  const count = async () => (asked++, shared);
+  assert.equal(await S.isPrivateNoteNow('https://kura.example/n/X', count), false);
+  assert.equal(await S.isPrivateNoteNow('https://example.com/', count), false);
+  assert.equal(asked, 0, "the default vault's notes and pages ask nothing");
+  S.useVaults([]);
+});
+
+test('loadVaults passes what Kura says to useVaults, and [] when it fails', async () => {
+  const list = [{ name: 'personal', default: true, private: false }, { name: 'team', default: false, private: false }];
+  assert.deepEqual(await S.loadVaults(async () => list), list);
+  assert.equal(S.isPrivateNote('https://kura.example/v/team/n/X'), false);
+  assert.equal((await S.loadVaults(async () => { throw new Error('down'); })).length, 0);
+  assert.equal(S.isPrivateNote('https://kura.example/v/team/n/X'), true);
+});
+
 test('work vaults: known by the address alone', () => {
   assert.equal(S.noteVault('https://kura.example/v/work/n/Literature%20Notes/Weekly'), 'work');
   assert.equal(S.noteVault('https://kura.example/n/Projects/Example'), null);
   assert.equal(S.noteVault('https://example.com/v/x'), null);
-  assert.equal(S.isOtherVault('https://kura.example/v/client/n/X'), true);
+  assert.equal(S.isPrivateNote('https://kura.example/v/client/n/X'), true);
   assert.equal(S.notePath('https://kura.example/v/work/n/Literature%20Notes/Weekly', []), 'Literature Notes/Weekly.md');
   assert.equal(S.readerURL('https://kura.example/v/work/n/X', 'https://kura.example/', 'X.md'), 'https://kura.example/v/work/n/X');
   assert.equal(S.isNoteURL('https://kura.example/v/work/n/X', 'https://kura.example/'), true);

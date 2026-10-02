@@ -67,7 +67,7 @@ web view, same-origin.
 
 Notes come only from Kura. The quick search's Notes may include other
 vaults; the desktop provider asks for the default vault only. A note from
-another vault is never cached, exported or sent to Hister.
+a private vault is never cached, exported or sent to Hister.
 
 ## Configuration and privacy
 

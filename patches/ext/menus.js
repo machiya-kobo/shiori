@@ -117,8 +117,9 @@
     if (!/^https?:\/\//i.test(url)) return { outcome: 'failed', reason: 'Not a web page' };
     if (S.linkLooksLikeFile(url)) return { outcome: 'failed', reason: 'A file, not a web page' };
     if (!base) return { outcome: 'failed', reason: 'No Hister server set (Shiori settings)' };
-    // Notes come only from Kura, and a work vault's never reach Hister.
-    const isNote = (u) => S.isOtherVault(u) || S.isNoteURL(u, settings.niwaURL || '', settings.konbiniURL || '');
+    // Notes come only from Kura: none is saved from here, another vault's
+    // (shared or not) known by its address wherever Kura is.
+    const isNote = (u) => S.noteVault(u) !== null || S.isNoteURL(u, settings.niwaURL || '', settings.konbiniURL || '');
     const NOTE = { outcome: 'failed', reason: 'A note, which stays in Kura' };
     if (isNote(url)) return NOTE;
     // Hister out of reach: not known to hold it; the save is then queued.
