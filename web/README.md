@@ -29,7 +29,7 @@ origin):
 | `/` (with any `?q=…`), `/_shiori/*`, and for the web app `/sw.js` and `/manifest.webmanifest` | the built files (`/` is `index.html`) |
 | `/searx/*` | SearXNG, `/searx` removed (the page asks for `search?format=json` and `image_proxy`) |
 | `/konbini/*` | Konbini, `/konbini` removed (only `api/cards`) |
-| `/kura/*` | Kura, `/kura` removed (`api/search`, `api/recent`, `api/note`, `api/vaults`, `feed.xml`): your notes |
+| `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/feed.xml` | Kura, `/kura` removed: your notes. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
 | `/smallweb/*` | the small-web gateway, `/smallweb` removed (`api/search`, `api/save`): Gemini and Gopher |
 | anything else | the Hister host as it is: Hister's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (companion services, not part of this repository: README) |
 
@@ -38,6 +38,12 @@ lets a same-origin browser write (`Sec-Fetch-Site: same-origin`) and
 refuses a cross-site one (403), and that check is what keeps other sites
 from, say, deleting pages through this host. Keep the host private (your
 network or VPN), like Hister itself, which has no login.
+
+**Kura's reader pages stay at Kura's own address.** Kura gives a work
+vault's note an address starting `/v/<vault>/n/`, and Shiori (the
+extension's capture included) keeps such a page out of Hister, AI and
+caches by that `/v/` at the start of the path. Under `/kura/` the same
+page would read as any other, so pass only the API paths above.
 
 `web/dev-server.py` does exactly this routing locally, for testing.
 

@@ -50,6 +50,9 @@ address. Ports 8775
 - A fresh install fetches the skip rules before its first capture.
 - A visited page reaches `api/add` with Shiori's metadata, HTML and no text.
 - A skip rule holds.
+- Kura's JSON opened in a tab (a work note's HTML at an address without
+  `/v/`) is never captured; plain text is. Upstream takes only HTML and
+  plain text; an upstream bump that widens that fails here.
 - Offline (the fake stopped), a capture is queued and drains when Hister is
   back.
 - The idle event page is unloaded, and the queue survives it.
