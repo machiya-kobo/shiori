@@ -53,7 +53,7 @@ carry none of them.
 
 **Sign Out** deletes the token from the device (Linux: delete the line).
 That doesn't make it invalid: revoke it on the server with the identity
-CLI, `identity device revoke <device id>` for a paired device (all of a
-person's devices: `identity epoch bump`), or `identity token revoke <id>`
+CLI, `identity device revoke <name> <device id>` for a paired device (all of a
+person's devices: `identity epoch bump <name>`), or `identity token revoke <id>`
 for a stored token. A revoked token gets 401, and Shiori says to sign in
 again.

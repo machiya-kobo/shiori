@@ -242,7 +242,24 @@ Lantern festival kit
 
 The Mac and iOS apps take the same addresses in `local.yml` (`SHIORI_SEARXNG_URL`, `SHIORI_NIWA_URL`, `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`) or in their Settings.
 
-**Signing in.** When the rooms run with Machiya's identity file, Kura and Konbini want to know who is calling. Each Shiori signs in on its own, with a one-time code from `identity pair` or a token from `identity token mint`: the apps in Settings → Notes → Sign in to Machiya (the Keychain; Safari's extension asks the app), Firefox in Shiori's settings page (`storage.local`, never synced), Linux with `"machiyaToken"` in `config.json` (0600; `shiori pair <code>` prints it), and the hosted pages through the browser's `machiya_session` cookie from Kura's own sign-in. The token goes only to the configured Kura and Konbini, never to Hister or SearXNG. Sign Out deletes it from the device; revoke it with `identity device revoke` or `identity token revoke`. [docs/signing-in.md](docs/signing-in.md) has the details.
+**Signing in.** With Machiya's identity file on, see [Sign in to Machiya](#sign-in-to-machiya).
+
+## Sign in to Machiya
+
+Shiori needs no sign-in: Hister and SearXNG have no login, and the Machiya rooms run without one unless their owner
+turns on Machiya's identity file (off by default). When they do, Kura and Konbini ask who is calling, and each Shiori
+signs in once, on its own:
+
+- **With a pairing code** (easiest): on the server, `python3 -m vaultkit.identity pair <you> --label iPhone` shows a
+  one-time code for ten minutes; type it into Shiori, which trades it with Kura for a device token.
+- **Or with a token** from `python3 -m vaultkit.identity token mint <you> --label iPhone`, pasted in.
+
+Where: the iPhone, iPad and Mac apps in Settings → Notes → Sign in to Machiya (kept in the Keychain; Safari's extension
+asks the app); Firefox in Shiori's settings page (`storage.local`, never synced); Linux as `"machiyaToken"` in
+`~/.config/shiori/config.json` (`shiori pair <code>` prints it); the hosted pages use Kura's own `/signin` cookie. The
+token goes only to the configured Kura and Konbini, never to Hister or SearXNG. Sign Out deletes it from the device;
+revoke it on the server. [docs/signing-in.md](docs/signing-in.md) has the details, and
+[Machiya's identity guide](https://github.com/machiya-kobo/machiya/blob/main/docs/identity.md) sets up the server side.
 
 ## The app
 
