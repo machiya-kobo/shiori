@@ -247,7 +247,7 @@ struct SettingsView: View {
                     .disabled(!app.searchPage.webResults)
                 Toggle("Related Searches", isOn: $app.searchPage.showRelated)
                     .disabled(!app.searchPage.webResults)
-                // Shiori Search as a hosted page and the web app: an
+                // Shiori's search page, hosted, and the web app: an
                 // answer from the web results, only when opened.
                 Toggle("AI Answer", isOn: $app.searchPage.aiAnswer)
                     .disabled(!app.searchPage.webResults)
@@ -394,7 +394,7 @@ struct SettingsView: View {
     }
 
     private var searchingFooter: String {
-        var text = "Remember What You Open tells Hister which result you opened for a search, so it comes first next time, in Shiori and in Safari's results. Show Opened shows those pages (first in Your Pages, and the Opened list); off, they're left out. Result Style sets how your pages, notes and opened pages stand apart: a tinted card, a bar down the edge, or nothing. Search Filters adds date, site and visit filters above results. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”. Labels in Search Page Suggestions lists matching labels and collections first as you type on Shiori Search (Safari's results page); Shiori's own search fields suggest nothing, and your recent searches are in the sidebar. A label's tag on a result shows all its pages."
+        var text = "Remember What You Open tells Hister which result you opened for a search, so it comes first next time, in Shiori and in Safari's results. Show Opened shows those pages (first in Your Pages, and the Opened list); off, they're left out. Result Style sets how your pages, notes and opened pages stand apart: a tinted card, a bar down the edge, or nothing. Search Filters adds date, site and visit filters above results. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”. Labels in Search Page Suggestions lists matching labels and collections first as you type in Shiori (Safari's results page); Shiori's own search fields suggest nothing, and your recent searches are in the sidebar. A label's tag on a result shows all its pages."
         if app.capabilities?.semantic != true {
             text += " Meaning-based search appears here once it's set up on the server."
         }

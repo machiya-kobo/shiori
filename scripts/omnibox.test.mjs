@@ -90,7 +90,7 @@ test('typing searches Hister as every Shiori search does: last word a prefix, ne
   const { type, omnibox } = load({ hister: (q) => ((asked = q), { documents: [] }) });
   await type('paper lant');
   assert.deepEqual(plain(asked), { text: 'paper lant* -label:vault -metadata.source:vault', limit: 6 });
-  assert.match(omnibox.defaultSuggestion.description, /Shiori Search/);
+  assert.match(omnibox.defaultSuggestion.description, / in Shiori$/);
 });
 
 test('pages opened for this search come first, each page once, web pages only, never a note', async () => {
@@ -138,7 +138,7 @@ test('no server, no text, or Hister out of reach: no suggestions, nothing thrown
   assert.deepEqual(plain(await down.type('lantern')), []);
 });
 
-test('Enter on the text opens Shiori Search for it, in the tab the person chose', async () => {
+test('Enter on the text opens Shiori for it, in the tab the person chose', async () => {
   const { enter, opened } = load();
   await enter('paper lanterns');
   await enter('kyoto', 'newForegroundTab');

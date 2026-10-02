@@ -1,6 +1,6 @@
 // The address bar's keyword (Firefox): "sh lantern" suggests your pages from
 // Hister as you type, the pages you opened for that search first; Enter on
-// a suggestion opens it, Enter on the text opens Shiori Search. Prepended to
+// a suggestion opens it, Enter on the text opens Shiori. Prepended to
 // background.js after search-core.js (ShioriSearch), ext/pages.js and
 // ext/core.js (resultsBase), so it talks only to the configured Hister server, with the
 // query as every Shiori search sends it (the last word a prefix, never the
@@ -34,7 +34,7 @@
     }));
   }
 
-  chrome.omnibox.setDefaultSuggestion({ description: 'Search your pages for "%s" in Shiori Search' });
+  chrome.omnibox.setDefaultSuggestion({ description: 'Search your pages for "%s" in Shiori' });
 
   chrome.omnibox.onInputChanged.addListener((text, suggest) => {
     if (current) {

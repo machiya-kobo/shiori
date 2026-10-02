@@ -164,10 +164,10 @@ def render_checks(scenario):
     except ImportError:
         return None
     if scenario == "stack":  # the stack's Hister holds the vault's notes, which come from Kura
-        wants = [("Shiori Search shows Your Notes from Kura", "http://localhost:8765/?q=lantern", "Your Notes"),
+        wants = [("Shiori shows Your Notes from Kura", "http://localhost:8765/?q=lantern", "Your Notes"),
                  ("the web app lists the vault's notes", "http://localhost:8766/#/library?s=notes", "Lantern festival kit")]
     else:
-        wants = [("Shiori Search lists the sample pages for \"lantern\"", "http://localhost:8765/?q=lantern", "Folding a chōchin lantern"),
+        wants = [("Shiori lists the sample pages for \"lantern\"", "http://localhost:8765/?q=lantern", "Folding a chōchin lantern"),
                  ("the web app's Library lists the sample pages", "http://localhost:8766/", "Kyoto's summer lantern festival")]
     results = []
     with sync_playwright() as p:

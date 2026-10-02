@@ -62,7 +62,7 @@
   window.addEventListener('pageshow', (event) => {
     if (event.persisted && document.activeElement !== $('q')) $('q').value = q;
   });
-  document.title = q ? `${q} – Shiori Search` : 'Shiori Search';
+  document.title = q ? `${q} – Shiori` : 'Shiori';
   if (header) drawHeader(header);
   // All's first page has the two columns (results, and the Info card
   // beside them) from the first paint: they came only when the card did,

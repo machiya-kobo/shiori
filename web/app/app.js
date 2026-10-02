@@ -1507,7 +1507,7 @@ function viewSettings() {
       { class: 'settings' },
       group('Appearance', [
         choice('theme', 'Theme', [['system', 'System'], ['night', 'Tokyo Night'], ['day', 'Tokyo Night Day']]),
-        // The app's names and steps (TextSize), as Shiori Search offers them.
+        // The app's names and steps (TextSize), as Shiori offers them.
         choice('textSize', 'Text Size', [['system', 'Standard'], ['xSmall', 'Extra Small'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large'], ['xLarge', 'Extra Large'], ['xxLarge', 'Extra Extra Large'], ['xxxLarge', 'Largest']]),
         toggle('previewImages', 'Images in Previews'),
       ]),

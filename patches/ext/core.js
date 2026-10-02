@@ -989,7 +989,7 @@ async function checkSearchPage() {
   });
 })();
 
-// Shiori's own command: Open Shiori Search (on Safari its key is set in
+// Shiori's own command: Open Shiori (on Safari its key is set in
 // Safari → Settings → Extensions → Shiori). Opens the results page's start
 // page in a new tab.
 (function installShioriCommands() {

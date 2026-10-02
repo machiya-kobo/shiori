@@ -51,12 +51,12 @@ Settings stay on this device; nothing syncs them.
   settings page) and go out once it answers; after 14 days they drop.
 - **The address bar**: type `sh`, a space and your words. Your pages are
   suggested as you type, the ones you opened before for that search first.
-  Enter on one opens it; Enter on the words opens Shiori Search, with your
+  Enter on one opens it; Enter on the words opens Shiori, with your
   pages and notes, then the web.
 - **Shiori as a search engine**: Shiori never takes over another engine's
   searches (Safari's version takes DuckDuckGo's, having no other way in).
   If you host the search page (web/README.md), open it, then the address
-  bar's search button offers "Add Shiori Search" (the page advertises
+  bar's search button offers "Add Shiori" (the page advertises
   itself through OpenSearch). Then Settings → Search makes it the default
   or gives it a keyword. Without a hosted page, `sh` is the way in.
 - **Shortcuts** (Firefox's Add-ons and themes → ⚙ → Manage Extension
@@ -67,7 +67,7 @@ Settings stay on this device; nothing syncs them.
   | Save this page | Alt+Shift+S | Control+Shift+S |
   | Never save this page | Alt+Shift+P | Control+Shift+P |
   | Never save this site | Alt+Shift+D | Control+Shift+D |
-  | Open Shiori Search | Alt+Shift+F | Control+Shift+F |
+  | Open Shiori | Alt+Shift+F | Control+Shift+F |
 
 - **The toolbar button** shows how many pages are waiting to send.
 - **The right-click menu**:
@@ -222,4 +222,4 @@ Automation covers the rest (above). These need a person:
 | "Needs site access" | Allow on All Websites, on the same page. |
 | "Can't reach it" | The address (with its port), your network or VPN. Pages wait in the queue meanwhile. |
 | Firefox says the add-on is corrupt or unverified | Install the signed `.xpi` from Releases. The `.zip` from a build is unsigned and loads only as a temporary add-on. |
-| The keyword shows nothing | The server must answer, and Hister must have pages for those words. Enter still opens Shiori Search. |
+| The keyword shows nothing | The server must answer, and Hister must have pages for those words. Enter still opens Shiori. |

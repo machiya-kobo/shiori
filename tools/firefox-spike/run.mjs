@@ -457,7 +457,7 @@ async function addressBarSession() {
 
     await urlbar('sh paper lanterns', 0);
     await sleep(1500);
-    check('Enter on the text opens Shiori Search for it', (await tabURL()) === EXT_URL + 'search.html?q=paper%20lanterns', await tabURL());
+    check('Enter on the text opens Shiori for it', (await tabURL()) === EXT_URL + 'search.html?q=paper%20lanterns', await tabURL());
   } finally {
     await driver.quit().catch(() => {});
     await hister(false);

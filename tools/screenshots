@@ -12,7 +12,7 @@ shots have no notes. The web search is a stand-in serving an invented Info card 
 show real sites). Nothing but the sample pages, the sample vault and those invented results is ever shown.
 
 Shots, as <out_dir>/shiori-<what>-<light|dark>.png, squeezed to a small palette when over 200 KB:
-the web app's Library with a page open (1280x800, light and dark), Shiori Search for "lantern" (1280x800, light
+the web app's Library with a page open (1280x800, light and dark), Shiori for "lantern" (1280x800, light
 and dark), and the web app's Library at phone width (390x844, light). Dates in them ("2 days ago") are relative to
 the day of the capture: run it again to refresh them.
 
@@ -199,7 +199,7 @@ def main():
             browser.close()
     finally:
         if a.keep:
-            print("kept: Shiori Search on http://localhost:%d/, the web app on http://localhost:%d/, Hister %s"
+            print("kept: Shiori on http://localhost:%d/, the web app on http://localhost:%d/, Hister %s"
                   % (site_port, app_port, name))
             print("the stand-in SearXNG stops with this script; the pages' web results won't answer")
         else:

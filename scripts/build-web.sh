@@ -39,7 +39,7 @@ sed \
   -e 's#<script src="search-core.js"></script>#<script src="/_shiori/web-shim.js"></script>\n    <script src="/_shiori/search-core.js"></script>#' \
   -e 's#<script src="search.js"></script>#<script src="/_shiori/search.js"></script>#' \
   -e 's#src="assets/icons/icon-256.png"#src="/_shiori/icon-256.png"#' \
-  -e 's#</title>#</title>\n    <link rel="icon" href="/_shiori/web-icon-64.png" />\n    <link rel="apple-touch-icon" href="/_shiori/icon-256.png" />\n    <link rel="search" type="application/opensearchdescription+xml" title="Shiori Search" href="/_shiori/opensearch.xml" />#' \
+  -e 's#</title>#</title>\n    <link rel="icon" href="/_shiori/web-icon-64.png" />\n    <link rel="apple-touch-icon" href="/_shiori/icon-256.png" />\n    <link rel="search" type="application/opensearchdescription+xml" title="Shiori" href="/_shiori/opensearch.xml" />#' \
   patches/shiori/search.html >"$out/index.html"
 
 python3 scripts/status-link.py "$out/index.html" "$status"
@@ -77,7 +77,7 @@ done
 cat >"$out/_shiori/opensearch.xml" <<XML
 <?xml version="1.0" encoding="UTF-8"?>
 <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
-  <ShortName>Shiori Search</ShortName>
+  <ShortName>Shiori</ShortName>
   <Description>Your Hister pages and notes, then the web</Description>
   <InputEncoding>UTF-8</InputEncoding>
   <Image width="32" height="32" type="image/png">${base}_shiori/icon-32.png</Image>

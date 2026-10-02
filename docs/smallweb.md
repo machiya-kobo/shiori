@@ -20,7 +20,7 @@ small-web gateway (TLGS, Kennedy and Veronica-2).
 ## In Shiori
 
 - A **Small Web** scope/tab (teal) beside Web, in the apps, the web app and
-  Shiori Search. `SmallWebClient` in HisterKit, `S.smallweb*` and
+  Shiori. `SmallWebClient` in HisterKit, `S.smallweb*` and
   `S.markRuns` in search-core, `api.smallweb` in the web app.
 - **Where a result opens is a setting** (`smallWebOpen`): through the
   gateway (`proxy_url`, the default; the gateway saves what it shows to

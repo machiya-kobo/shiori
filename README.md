@@ -10,14 +10,14 @@ Hister is a self-hosted personal search engine: its browser extension sends the 
 
 <p>
   <img src="docs/screenshots/shiori-library-dark.png" alt="The web app's Library in the dark theme: collections and labels in the sidebar, sample pages in the list, one open in the preview" width="49%">
-  <img src="docs/screenshots/shiori-search-light.png" alt="Shiori Search for &quot;lantern&quot; in the light theme: the sample pages under Your Pages" width="49%">
+  <img src="docs/screenshots/shiori-search-light.png" alt="Shiori for &quot;lantern&quot; in the light theme: the sample pages under Your Pages" width="49%">
 </p>
 <p>
   <img src="docs/screenshots/shiori-library-light.png" alt="The web app's Library in the light theme, a sample page open" width="49%">
   <img src="docs/screenshots/shiori-library-phone-light.png" alt="The web app's Library at phone width" width="24%">
 </p>
 
-The web app and Shiori Search with the Quickstart's sample pages and Machiya's sample vault; the Info card and web results are invented too (`tools/screenshots` makes them).
+The web app and Shiori with the Quickstart's sample pages and Machiya's sample vault; the Info card and web results are invented too (`tools/screenshots` makes them).
 
 ## Quickstart
 
@@ -124,7 +124,7 @@ curl -s http://localhost:8766/manifest.webmanifest | grep -o '"name": *"[^"]*"'
 
 <!-- quickstart-expect: pages-check -->
 ```text
-<ShortName>Shiori Search</ShortName>
+<ShortName>Shiori</ShortName>
 "name": "Shiori"
 ```
 
@@ -143,7 +143,7 @@ Kyoto's summer lantern festival
 Restoring an old paper lantern
 ```
 
-Now open <http://localhost:8765/?q=lantern>: Shiori Search lists those pages under **Your Pages** (and says no web search is set up: that needs SearXNG, part B). <http://localhost:8766/> is the web app: its Library has all twelve, and the sidebar their labels (`lanterns`, `paper`, `travel`, `workshop`). For a real host, [web/README.md](web/README.md) has the routing table.
+Now open <http://localhost:8765/?q=lantern>: Shiori lists those pages under **Your Pages** (and says no web search is set up: that needs SearXNG, part B). <http://localhost:8766/> is the web app: its Library has all twelve, and the sidebar their labels (`lanterns`, `paper`, `travel`, `workshop`). For a real host, [web/README.md](web/README.md) has the routing table.
 
 **3. Shiori for Linux** (Debian 13 here; any distribution with Flatpak works the same): the GNOME runtime it builds on, and the app itself, installed for your user:
 
@@ -312,7 +312,7 @@ The popup, skip rules, "index this page", "skip this page/domain", and PDF index
 - **Tagged captures.** Every page sent carries `metadata.client: "shiori"` and `metadata.client_version`, so Hister can tell Shiori's captures from other clients' (search `metadata.client:shiori`).
 - **Full-width popup** on iPhone and iPad; the Mac keeps upstream's 320px.
 - **No cookies permission.** The "Authenticate with Browser Session" option in the popup won't work. Use an access token, or a server gated by your network.
-- **Keyboard shortcuts**: four are suggested (Control-Shift-S save the page, P never save this page, D never this site, F open Shiori Search); change them in Safari Settings on the Mac.
+- **Keyboard shortcuts**: four are suggested (Control-Shift-S save the page, P never save this page, D never this site, F open Shiori); change them in Safari Settings on the Mac.
 
 Shiori adds no analytics. The extension talks to your Hister server and, for its search page, the servers you configure (SearXNG, Kura, the small-web gateway), plus the sites you visit (for their favicon, and for PDFs you open), exactly as upstream does.
 
@@ -396,7 +396,7 @@ Then tell it where your servers are, in `~/.config/shiori/config.json`:
 
 ## Hosting the web pages
 
-The search page (Shiori Search) and the web app are plain static files that any browser can use and install. Build them with `scripts/build-web.sh` and `scripts/build-pwa.sh`, and serve them from one host that also routes, on the same origin, to your Hister server, SearXNG, and optionally Kura, Konbini, the small-web gateway and the AI endpoint. Pass requests through unchanged, keep the host reachable only by you (your network or VPN is the gate: Hister has no login), and set the build's environment for the options you use. [web/README.md](web/README.md) has the routing table and the variables.
+Shiori's search page and the web app are plain static files that any browser can use and install. Build them with `scripts/build-web.sh` and `scripts/build-pwa.sh`, and serve them from one host that also routes, on the same origin, to your Hister server, SearXNG, and optionally Kura, Konbini, the small-web gateway and the AI endpoint. Pass requests through unchanged, keep the host reachable only by you (your network or VPN is the gate: Hister has no login), and set the build's environment for the options you use. [web/README.md](web/README.md) has the routing table and the variables.
 
 ## Updating upstream
 

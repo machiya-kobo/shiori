@@ -31,7 +31,7 @@ address. Ports 8775
   refused); the shortcuts Firefox assigned.
 - `sh lantern` in Firefox's address bar suggests the fake's pages (the one
   opened before first); Enter on one opens it and tells Hister; Enter on
-  the text opens Shiori Search.
+  the text opens Shiori.
 - A DuckDuckGo search stays on DuckDuckGo: Firefox never takes it over (on
   the real duckduckgo.com; a note instead when it's out of reach). The
   settings page has no take-over switch.

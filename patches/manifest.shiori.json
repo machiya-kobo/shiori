@@ -46,7 +46,7 @@
     },
     "open-shiori-search": {
       "suggested_key": { "default": "Ctrl+Shift+F", "mac": "MacCtrl+Shift+F" },
-      "description": "Open Shiori Search"
+      "description": "Open Shiori"
     }
   },
   "$comment_war": "Upstream exposes assets/* to no page (empty matches), which Safari rejects. Nothing in the content script loads extension files, so drop the key rather than widen it: exposing assets to every page lets any site detect the extension.",
