@@ -353,8 +353,10 @@ struct DocumentMenu: View {
         if previewable {
             Button("Preview", systemImage: "doc.richtext") { actions.preview(document) }
         }
-        // Save This Note's Links: the default vault's notes only.
-        if app.noteLinks(for: document) != nil, !Notes.isPrivateNote(document.url),
+        // Save This Note's Links: the default vault's notes only, shared vaults
+        // included in that "not": Kura's /api/note is asked by path alone,
+        // which it reads in the default vault.
+        if app.noteLinks(for: document) != nil, Notes.otherVault(of: document.url) == nil,
             let path = Notes.path(of: document.url, cards: app.konbiniCards)
         {
             Button("Save Links to Hister…", systemImage: "link.badge.plus") { app.saveLinksRequest = .note(path) }
