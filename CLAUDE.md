@@ -52,10 +52,15 @@ holds the rules and the traps the code can't tell you.
   included), a cache, an export or a feed. Kura's config is the one switch
   (a shared vault is treated like the default); clients fail closed: until
   Kura answers, or when it can't be read, every vault but the default is
-  private. `useVaults` sets the list (apps and web app: re-read after ten
-  minutes away; the extension: at most a minute old, read before sending
-  another vault's note). `noteVault` / `Notes.otherVault(of:)` only say
-  which vault.
+  private. `useVaults` sets the list, which only what's shown may use
+  (apps and web app: re-read after ten minutes away). **Before anything
+  about another vault's note goes to Hister or a model, Kura is asked
+  afresh** (`Notes.isPrivateNoteNow` / `S.isPrivateNoteNow`, 4 s); a
+  default-vault note asks nothing. A path that can't wait (the share
+  sheet, the sidebar, the address bar, the right-click menu, Summarize on
+  the web) refuses every other vault's note. `noteVault` /
+  `Notes.otherVault(of:)` only say which vault (on any host: over-inclusive,
+  so safe).
 - Never put `.searchSuggestions(.hidden, for: .content)` on a sheet's
   `.searchable`: on iOS 27 the sheet went blank.
 

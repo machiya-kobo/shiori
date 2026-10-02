@@ -1958,8 +1958,8 @@ render();
 let vaultsAt = 0;
 const loadVaults = () => {
   vaultsAt = Date.now();
+  // api.kuraVaults passes them to S.useVaults.
   return api.kuraVaults().then((v) => {
-    S.useVaults(v);
     kuraVaults = v;
   });
 };

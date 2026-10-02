@@ -127,7 +127,8 @@ where it went wrong.
   has its own switch. Turning AI off stops the labeller at once.
 - **A note never goes to a cloud engine**, and a note from a private
   vault (any but the default, unless Kura marks it shared) never goes to
-  any engine, on-device included.
+  any engine, on-device included. Kura is asked afresh before each use of
+  another vault's note; no answer means private.
   `EngineChain.eligible(for:)` enforces both by the content's kind, so no
   caller has to remember.
 - Skip-listed and sensitive pages never reach Hister, so never reach the AI.

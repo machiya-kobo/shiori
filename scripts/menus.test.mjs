@@ -80,7 +80,7 @@ function load({ held = [], web = () => html(), settings = {}, stored, safari = f
     clicked.forEach((l) => l(info, tab));
     await new Promise((r) => setTimeout(r, 20));
   };
-  return { menus: ctx.ShioriMenus, fetched, added, created, commands, badges, click, cleared };
+  return { ctx, menus: ctx.ShioriMenus, fetched, added, created, commands, badges, click, cleared };
 }
 const noWait = { wait: async () => {} };
 
@@ -118,6 +118,23 @@ test("never a note: a work vault's, a Kura or Konbini page, or a link that redir
   assert.equal(t.fetched.length, 0, 'not looked up, not downloaded');
 
   const moved = load({ settings, web: () => html(HTML, 'https://kura.example/v/work/n/plan') });
+  assert.equal((await moved.menus.saveLink('https://short.example/x')).reason, 'A note, which stays in Kura');
+  assert.equal(moved.added.length, 0);
+});
+
+test("never another vault's note, even one Kura shares, even with no Kura address set", async () => {
+  const t = load({ settings: {} });
+  t.ctx.ShioriSearch.useVaults([
+    { name: 'personal', default: true, private: false },
+    { name: 'team', default: false, private: false },
+  ]);
+  for (const url of ['https://kura.example/v/team/n/plan', 'https://kura.example/v/work/n/plan']) {
+    assert.deepEqual(plain(await t.menus.saveLink(url)), { outcome: 'failed', reason: 'A note, which stays in Kura' });
+  }
+  assert.equal(t.fetched.length, 0, 'not looked up, not downloaded');
+
+  const moved = load({ settings: {}, web: () => html(HTML, 'https://kura.example/v/team/n/plan') });
+  moved.ctx.ShioriSearch.useVaults([{ name: 'team', default: false, private: false }]);
   assert.equal((await moved.menus.saveLink('https://short.example/x')).reason, 'A note, which stays in Kura');
   assert.equal(moved.added.length, 0);
 });

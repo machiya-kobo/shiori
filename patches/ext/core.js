@@ -377,11 +377,12 @@
       const prepared = prepAdd(init.body);
       // A private vault's note never reaches Hister, whatever sent it (the
       // automatic capture, the shortcut, the menu): refused here as a skip
-      // rule would refuse it, and never queued. Kura is asked which vaults
-      // are shared first; unanswered, every other vault is private.
+      // rule would refuse it, and never queued. Kura is asked afresh which
+      // vaults are shared, every time; unanswered, every other vault is
+      // private. Without search-core, every other vault's note is refused.
       const S = globalThis.ShioriSearch;
-      if (prepared.pageURL && S && S.noteVault(prepared.pageURL) !== null) await readVaults(S);
-      if (prepared.pageURL && S && S.isPrivateNote(prepared.pageURL)) {
+      const refused = prepared.pageURL && (S ? await S.isPrivateNoteNow(prepared.pageURL, readVaults) : /\/v\/[^/]+\/n\//.test(prepared.pageURL));
+      if (refused) {
         return new Response('{}', {
           status: 406,
           headers: { 'Content-Type': 'application/json', 'X-Shiori-Refused': 'work-note' },
@@ -417,35 +418,25 @@
     return originalFetch(input, init);
   };
 
-  // Kura's vaults, for which are shared: read when another vault's note is
-  // about to be sent, at most once a minute (so a vault made private again
-  // counts within a minute), from the Kura address in the settings.
-  let vaultsAt = 0;
-  let vaultsRead = null;
-  function readVaults(S) {
-    if (vaultsRead && Date.now() - vaultsAt < 60_000) return vaultsRead;
-    vaultsAt = Date.now();
-    vaultsRead = (async () => {
-      let list = [];
-      try {
-        const settings = (await storage.get(['shioriSettings'])).shioriSettings || {};
-        const base = String(settings.niwaURL || '').trim();
-        if (/^https?:\/\//i.test(base)) {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 4000);
-          try {
-            const r = await originalFetch(base.replace(/\/?$/, '/') + 'api/vaults', { signal: controller.signal, credentials: 'omit' });
-            if (r.ok) list = ((await r.json()) || {}).vaults || [];
-          } finally {
-            clearTimeout(timer);
-          }
-        }
-      } catch (_) {
-        list = [];
-      }
-      S.useVaults(list);
-    })();
-    return vaultsRead;
+  // Kura's vaults (/api/vaults), for which are shared: read afresh each
+  // time another vault's note is about to be sent (a vault made private
+  // again counts at once), from the Kura address in the settings or, before
+  // the settings were ever stored, the build's (installCombinedSearch's
+  // DEFAULTS.niwaURL). A failure throws: isPrivateNoteNow then shares none.
+  const KURA_DEFAULT = '__SHIORI_NIWA_URL__';
+  async function readVaults() {
+    const settings = { niwaURL: KURA_DEFAULT, ...((await storage.get(['shioriSettings'])).shioriSettings || {}) };
+    const base = String(settings.niwaURL || '').trim();
+    if (!/^https?:\/\//i.test(base)) return [];
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    try {
+      const r = await originalFetch(base.replace(/\/?$/, '/') + 'api/vaults', { signal: controller.signal, credentials: 'omit' });
+      if (!r.ok) return [];
+      return ((await r.json()) || {}).vaults || [];
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /** The server's skip rules, remembered for the queue; whether it answered. */

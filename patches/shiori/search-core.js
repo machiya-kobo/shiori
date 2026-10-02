@@ -243,6 +243,36 @@
     const vault = noteVault(url);
     return vault !== null && !sharedVaults.has(vault);
   };
+  /**
+   * isPrivateNote with Kura asked afresh: before another vault's note (its
+   * address, title or text) goes to Hister or an AI engine, since a shared
+   * vault can be made private again at any time. `read` answers
+   * /api/vaults' list; its answer is kept (useVaults), and a failed read
+   * shares none. The default vault's notes and other pages ask nothing.
+   * The cached isPrivateNote is enough for what's only shown.
+   * HisterKit's Notes.isPrivateNoteNow is the twin.
+   */
+  async function isPrivateNoteNow(url, read) {
+    if (noteVault(url) === null) return isPrivateNote(url);
+    await loadVaults(read);
+    return isPrivateNote(url);
+  }
+  /**
+   * Kura's vaults through `read` (it answers /api/vaults' list), passed to
+   * useVaults and returned; [] when the read fails, which shares none.
+   * Every client reads them this way.
+   */
+  async function loadVaults(read) {
+    let list = [];
+    try {
+      const got = await read();
+      list = Array.isArray(got) ? got : [];
+    } catch (_) {
+      list = [];
+    }
+    useVaults(list);
+    return list;
+  }
 
   /**
    * A note's chip, naming its vault ("Work vault"), since Notes mix
@@ -1182,7 +1212,9 @@
 
   /** A web page may be summarized; a note never (the server refuses them too). */
   function summarizable(url, label) {
-    if (label === 'vault') return false;
+    // Another vault's note never, shared or not (its label aside): whether
+    // it's still shared would need Kura asked first.
+    if (label === 'vault' || noteVault(url) !== null) return false;
     try {
       const u = new URL(url);
       return /^https?:$/.test(u.protocol) && !/^(kura|konbini|niwa)\./i.test(u.hostname);
@@ -1523,6 +1555,8 @@
     kuraFeedURL,
     noteVault,
     isPrivateNote,
+    isPrivateNoteNow,
+    loadVaults,
     useVaults,
     smallwebSearchURL,
     smallwebResults,

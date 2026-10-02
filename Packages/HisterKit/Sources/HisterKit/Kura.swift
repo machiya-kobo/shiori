@@ -49,13 +49,14 @@ public struct KuraClient: Sendable {
     }
 
     /// Kura's vaults (`/api/vaults`): the default one and the
-    /// work vaults, with their titles and Obsidian vault names.
+    /// work vaults, with their titles and Obsidian vault names. Four
+    /// seconds at most: a write waits on it (`Notes.isPrivateNoteNow`).
     public func vaults() async throws(HisterError) -> [KuraVault] {
         struct Reply: Decodable { let vaults: [KuraVault] }
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: URLRequest(url: baseURL.appending(path: "api/vaults")))
+            (data, response) = try await session.data(for: URLRequest(url: baseURL.appending(path: "api/vaults"), timeoutInterval: 4))
         } catch {
             throw HisterError(transport: error)
         }

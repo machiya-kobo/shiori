@@ -91,6 +91,28 @@ public enum Notes {
         return !sharedVaults.withLock { $0.contains(vault) }
     }
 
+    /// `isPrivateNote` with Kura asked afresh: before another vault's note
+    /// (its address, title or text) goes to Hister or an AI engine, since a
+    /// shared vault can be made private again at any time. `read` answers
+    /// `/api/vaults`; its answer is kept (`useVaults`), and a failed read
+    /// shares none. The default vault's notes and other pages ask nothing.
+    /// The cached `isPrivateNote` is enough for what's only shown.
+    /// search-core's `isPrivateNoteNow` is the twin.
+    public static func isPrivateNoteNow(_ url: String, read: @Sendable () async throws -> [KuraVault]) async -> Bool {
+        guard otherVault(of: url) != nil else { return isPrivateNote(url) }
+        let vaults = (try? await read()) ?? []
+        useVaults(vaults)
+        return isPrivateNote(url)
+    }
+
+    /// The same, asking this Kura (none: every other vault is private).
+    public static func isPrivateNoteNow(_ url: String, kura: KuraClient?) async -> Bool {
+        await isPrivateNoteNow(url, read: {
+            guard let kura else { return [] }
+            return try await kura.vaults()
+        })
+    }
+
     /// The vault path ("Projects/Example.md") of a note at this URL.
     public static func path(of url: String, cards: [Card]) -> String? {
         guard let components = URLComponents(string: url) else { return nil }

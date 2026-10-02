@@ -150,8 +150,9 @@ struct KuraLiveTests {
     }
 }
 
-/// Kura's work vaults: known by the address alone.
-@Suite struct VaultTests {
+/// Kura's work vaults: known by the address alone. Serialized: the shared
+/// set (`Notes.useVaults`) is the process's own.
+@Suite(.serialized) struct VaultTests {
     @Test func workNotesAreKnownByTheirAddress() {
         #expect(Notes.otherVault(of: "https://kura.example/v/work/n/Literature%20Notes/Weekly") == "work")
         #expect(Notes.otherVault(of: "https://kura.example/n/Projects/Example") == nil)
@@ -180,6 +181,27 @@ struct KuraLiveTests {
         #expect(Notes.isPrivateNote("https://kura.example/v/new/n/X"), "not listed: private")
         Notes.useVaults([])
         #expect(Notes.isPrivateNote(work), "a failed read shares nothing")
+    }
+
+    @Test func kuraIsAskedAgainBeforeAnythingIsSent() async {
+        let work = "https://kura.example/v/work/n/X"
+        let shared = [KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: false, obsidian: "work")]
+        let madePrivate = [KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: true, obsidian: "work")]
+        Notes.useVaults(shared)
+        #expect(!Notes.isPrivateNote(work))
+        let flipped = await Notes.isPrivateNoteNow(work, read: { madePrivate })
+        #expect(flipped, "shared when cached, private when asked: refused")
+        #expect(Notes.isPrivateNote(work), "the fresh answer is kept")
+        Notes.useVaults(shared)
+        let unanswered = await Notes.isPrivateNoteNow(work, read: { throw HisterError.unreachable })
+        #expect(unanswered, "Kura out of reach: private")
+        let noKura = await Notes.isPrivateNoteNow(work, kura: nil)
+        #expect(noKura, "no Kura: private")
+        let stillShared = await Notes.isPrivateNoteNow(work, read: { shared })
+        #expect(!stillShared)
+        let defaultVault = await Notes.isPrivateNoteNow("https://kura.example/n/X", read: { throw HisterError.unreachable })
+        #expect(!defaultVault, "the default vault's notes ask nothing")
+        Notes.useVaults([])
     }
 
     @Test func aVaultWithoutThePrivateFlagIsPrivate() throws {

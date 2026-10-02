@@ -55,6 +55,12 @@ nonisolated enum Saver {
             if page.title.isEmpty { page.title = fetched.title }
         }
         if page.title.isEmpty { page.title = input.url.host() ?? input.url.absoluteString }
+        // Another vault's note, shared or not, never from here (after
+        // redirects too): whether Kura still shares it would need asking
+        // first (fail closed).
+        if Notes.otherVault(of: input.url.absoluteString) != nil || Notes.otherVault(of: page.url) != nil {
+            return .rejected("A note from another vault stays in Kura.")
+        }
 
         do {
             try await client.add(page)

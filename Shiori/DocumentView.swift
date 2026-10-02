@@ -339,9 +339,6 @@ struct DocumentView: View {
             return
         }
         let isNote = note || document.label == Notes.label
-        // A work note reaches no model at all (EngineChain refuses
-        // `.workNote`), even if a button slipped through.
-        let content: AIContent = workNote ? .workNote : isNote ? .note : .page
         let chain = app.ai.chain
         let title = preview.title.isEmpty ? document.displayTitle : preview.title
         let url = document.url
@@ -349,6 +346,11 @@ struct DocumentView: View {
         summary = .working
         summarizing = Task {
             do {
+                // A work note reaches no model at all (EngineChain refuses
+                // `.workNote`), even if a button slipped through. Another
+                // vault's note is asked of Kura afresh first: a shared vault
+                // may be private by now.
+                let content: AIContent = await app.isWorkNoteNow(url) ? .workNote : isNote ? .note : .page
                 let made = try await Summarizer(chain: chain).summarize(
                     title: title, url: url, html: preview.contentHTML, content: content)
                 SummaryCache.write(made, url: url, updated: preview.updated)

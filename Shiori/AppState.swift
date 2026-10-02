@@ -289,6 +289,13 @@ final class AppState {
     /// given to a model, never cached, exported or put in a feed.
     func isWorkNote(_ url: String) -> Bool { Notes.isPrivateNote(url) }
 
+    /// The same with Kura asked afresh, for anything about another vault's
+    /// note that goes to Hister or a model (a shared vault may be private
+    /// by now; unanswered, it is). The default vault's notes ask nothing.
+    func isWorkNoteNow(_ url: String) async -> Bool {
+        await Notes.isPrivateNoteNow(url, kura: notesKura)
+    }
+
     func noteLinks(for document: StoredPage) -> NoteLinks? {
         guard label(of: document) == Notes.label || document.label == Notes.label,
             let path = Notes.path(of: document.url, cards: konbiniCards)
@@ -423,6 +430,8 @@ final class AppState {
     /// By address: automatic labelling and its Undo hold no StoredPage.
     func setLabel(_ label: String, url: String) async throws(HisterError) {
         guard let client else { throw .unreachable }
+        // Hister never has a private vault's note.
+        guard !(await isWorkNoteNow(url)) else { throw .notFound }
         try await client.setLabel(label, for: url)
         // Bounded: the lists refetch long before this many edits matter.
         if labelEdits.count >= 2000 { labelEdits.removeAll() }
@@ -431,6 +440,7 @@ final class AppState {
 
     func delete(_ document: StoredPage) async throws(HisterError) {
         guard let client else { throw .unreachable }
+        guard !(await isWorkNoteNow(document.url)) else { throw .notFound }
         try await client.delete(url: document.url)
         if deletedURLs.count >= 2000 { deletedURLs.removeAll() }
         deletedURLs.insert(document.url)
@@ -506,6 +516,8 @@ final class AppState {
         // Never a work note's address or title to Hister.
         guard searchPage.rememberOpened, let client, Self.remembers(query), !isWorkNote(url) else { return }
         Task {
+            // Another vault's note: Kura asked afresh first.
+            guard !(await self.isWorkNoteNow(url)) else { return }
             do {
                 try await client.recordOpened(url: url, title: title, query: query)
             } catch {
