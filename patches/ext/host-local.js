@@ -92,6 +92,9 @@ const shioriHost = (() => {
       await save(store);
     },
 
+    /** What setSettings would keep of these values, for a file's preview. */
+    judge: (values) => apply(values && typeof values === 'object' ? values : {}, {}),
+
     // Nothing outside the extension to tell; the toolbar badge shows the
     // queue (docs/firefox-plan.md, feature B).
     canReportQueue: () => false,

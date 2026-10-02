@@ -17,17 +17,22 @@
   const ID = /^firefox-container-\d+$/;
 
   let skip = new Set();
-  let changed = false; // a change seen before the first read answers wins over it
+  // Until the list is known (read, or a change seen), every container's tab
+  // is skipped: a list that can't be read fails closed, as the queue does.
+  let known = false;
   const listOf = (ids) => new Set((Array.isArray(ids) ? ids : []).filter((id) => ID.test(id)));
   const loaded = chrome.storage.local.get([KEY]).then((got) => {
-    if (!changed) skip = listOf(got[KEY]);
+    if (known) return; // a change seen before the first read answers wins over it
+    skip = listOf(got[KEY]);
+    known = true;
   }, () => {});
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local' || !(KEY in changes)) return;
-    changed = true;
     skip = listOf(changes[KEY].newValue);
+    known = true;
   });
-  const skipped = (tab) => !!tab && typeof tab.cookieStoreId === 'string' && skip.has(tab.cookieStoreId);
+  const skipped = (tab) =>
+    !!tab && typeof tab.cookieStoreId === 'string' && (known ? skip.has(tab.cookieStoreId) : ID.test(tab.cookieStoreId));
 
   // Upstream's message listener: an automatic capture from a chosen
   // container is skipped. Shiori's own messages and everything else pass.

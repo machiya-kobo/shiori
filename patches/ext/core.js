@@ -14,6 +14,8 @@
 // - Every POST api/add gets metadata.client = "shiori" and
 //   metadata.client_version = the manifest version.
 //
+// - POST api/add for a work vault's note (/v/<vault>/n/…) is answered 406
+//   here and never sent or queued.
 // - POST api/add that fails at the network level is queued in
 //   storage.local, stamped with the visit time (`added`, unix seconds), and
 //   replayed later unchanged. An automatic capture then answers with a
@@ -373,6 +375,16 @@
 
     if (endpoint === 'api/add' && method === 'POST' && init && typeof init.body === 'string') {
       const prepared = prepAdd(init.body);
+      // A work vault's note never reaches Hister, whatever sent it (the
+      // automatic capture, the shortcut, the menu): refused here as a skip
+      // rule would refuse it, and never queued.
+      const S = globalThis.ShioriSearch;
+      if (prepared.pageURL && S && S.isOtherVault(prepared.pageURL)) {
+        return new Response('{}', {
+          status: 406,
+          headers: { 'Content-Type': 'application/json', 'X-Shiori-Refused': 'work-note' },
+        });
+      }
       init = { ...init, body: prepared.body };
       const headers = plainHeaders(init.headers);
       let r;
@@ -514,6 +526,15 @@
           () => sendResponse({ ok: false }),
         );
         return true;
+      }
+      // What the whitelist would keep of a settings file, before it's applied.
+      if (request.shiori === 'judge-settings') {
+        if (!fromSettings || typeof shioriHost.judge !== 'function' || !request.values || typeof request.values !== 'object') {
+          sendResponse({ ok: false });
+          return false;
+        }
+        sendResponse({ ok: true, kept: shioriHost.judge(request.values) });
+        return false;
       }
       if (request.shiori === 'queue-status' || request.shiori === 'retry-queue') {
         const run = request.shiori === 'retry-queue' ? drain() : Promise.resolve();
@@ -717,7 +738,10 @@
         .then(() => shioriHost.setSettings(request.values))
         .then(
           () => refreshSettings({ after: true }).then(readSettings),
-          async () => {
+          async (err) => {
+            // Where the host is the store itself (Firefox), its failure is
+            // the answer: never keep values its whitelist hasn't judged.
+            if (shioriHost.ownsServer) throw err;
             // No app to answer: keep the change here, until the app has a say.
             const next = { ...(await readSettings()), ...request.values };
             await chrome.storage.local.set({ [SETTINGS_KEY]: next });

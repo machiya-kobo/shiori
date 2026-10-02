@@ -13,7 +13,7 @@ const source = readFileSync(fileURLToPath(new URL('../patches/ext/containers.js'
 const plain = (v) => JSON.parse(JSON.stringify(v));
 const SETTINGS_PAGE = { url: 'moz-extension://x/shiori-settings.html', tab: { id: 9 } };
 
-function load(stored = {}) {
+function load(stored = {}, { unreadable = false } = {}) {
   const data = structuredClone(stored);
   const messageListeners = [];
   const tabListeners = [];
@@ -24,7 +24,7 @@ function load(stored = {}) {
       tabs: { onUpdated: { addListener: (l) => tabListeners.push(l) } },
       storage: {
         local: {
-          get: async (keys) => Object.fromEntries(keys.filter((k) => k in data).map((k) => [k, structuredClone(data[k])])),
+          get: async (keys) => unreadable ? Promise.reject(new Error('storage')) : Object.fromEntries(keys.filter((k) => k in data).map((k) => [k, structuredClone(data[k])])),
           set: async (items) => {
             Object.assign(data, structuredClone(items));
             for (const [k, v] of Object.entries(items)) changed.forEach((l) => l({ [k]: { newValue: v } }, 'local'));
@@ -134,4 +134,13 @@ test('in the Firefox background as built, the settings page reaches the list', a
   });
   assert.equal(reply && reply.ok, true, 'someone answered');
   assert.deepEqual(plain(data.shioriSkipContainers), ['firefox-container-3']);
+});
+
+test("a list that can't be read skips every container's pages, and only theirs", async () => {
+  const { send, update, upstream } = load({ shioriSkipContainers: [] }, { unreadable: true });
+  assert.equal(plain(await send(capture, tabIn('firefox-container-2'))).status_code, 406);
+  assert.equal(plain(await send(capture, tabIn('firefox-default'))).status_code, 201);
+  update({ id: 5, cookieStoreId: 'firefox-container-2' });
+  update({ id: 6, cookieStoreId: 'firefox-default' });
+  assert.deepEqual(plain(upstream.tabs), [6]);
 });

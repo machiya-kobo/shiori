@@ -57,4 +57,5 @@ test('what applying it would change, before it is applied', () => {
   assert.equal(F.describeImport({ server: 'https://same.example/', settings: { a: 1 } }, 'https://same.example/'), 'This file sets 1 setting.');
   assert.equal(F.describeImport({ server: 'https://new.example/', settings: {} }, ''), 'This file sets the Hister server to https://new.example/.');
   assert.equal(F.describeImport({ server: null, settings: {} }, ''), 'This file changes nothing here.');
+  assert.equal(F.describeImport({ server: null, settings: { a: 1 }, ignored: 2 }, ''), "This file sets 1 setting. 2 entries aren't settings this page takes, and will be left out.");
 });

@@ -1,6 +1,7 @@
 // The toolbar button's badge: how many pages are waiting to send, on every
 // tab, and the button's tooltip says so (Firefox, which has no app to show
-// the queue, and Safari on the Mac, beside the app's Waiting to Send).
+// the queue, and Safari on the Mac and iOS, beside the app's Waiting to
+// Send).
 // Prepended to background.js before upstream's code (which badges single
 // tabs: "!" for an error, "✓" for a page saved when its option is on).
 // Upstream clears a tab's badge with "", which would hide the count on that

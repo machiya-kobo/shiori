@@ -162,10 +162,24 @@ account; every later one must use the same account.
    6. writes `updates.json` (version, download link, the signed file's
       SHA-256, the floor);
    7. attaches both files to the tag's GitHub Release, creating it if
-      needed.
+      needed. A new release is marked Latest only when its version is
+      the highest, so a backport (v0.1.1 after v0.2.0) never takes over
+      Firefox's updates.
+
+   Steps 1–4 run in a `build` job with a read-only token and no secrets
+   (the build installs upstream's npm dependencies); 5–7 in a `release`
+   job holding the AMO keys and the write token, which takes the build
+   as an artifact.
 
 Run by hand (Actions → Firefox release → Run workflow), it only tests and
-builds, and keeps the unsigned package as the run's artifact.
+builds, even on a tag, and keeps the unsigned package as the run's
+artifact.
+
+**A failed run after signing:** Mozilla keeps a signed version for good,
+so re-running it fails at signing ("version already exists"). Download
+the signed file from the add-on's page on addons.mozilla.org (Developer
+Hub → the add-on → Manage Status & Versions) and attach it by hand, or
+bump `MARKETING_VERSION` and tag again.
 
 **Keep `updates.json` on the latest release.** Firefox asks
 `releases/latest/download/updates.json`. A newer release without it, such

@@ -232,8 +232,15 @@
       moveStatus(read.error);
       return;
     }
-    pending = read;
-    moveStatus(F.describeImport(read, histerURL));
+    // Counted as the whitelist will judge it: only what it would keep.
+    const judged = await send({ shiori: 'judge-settings', values: read.settings });
+    if (!judged || !judged.ok) {
+      moveStatus("Couldn't read that file's settings here.");
+      return;
+    }
+    const kept = Object.fromEntries(Object.keys(judged.kept || {}).filter((k) => k in read.settings).map((k) => [k, read.settings[k]]));
+    pending = { server: read.server, settings: kept, ignored: Object.keys(read.settings).length - Object.keys(kept).length };
+    moveStatus(F.describeImport(pending, histerURL));
     $('apply').hidden = false;
   });
 

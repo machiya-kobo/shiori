@@ -388,3 +388,25 @@ test('the settings page opens on first install, not on an update', () => {
   install('install');
   assert.equal(opened.length, 1);
 });
+
+test("a settings file is judged by the whitelist before it's shown, and only for the settings page", async () => {
+  const { send } = loadCore();
+  const values = { theme: 'night', histerCount: 7, aiAnswer: true, anthropicKey: 'sk-x', foo: 1 };
+  const reply = await send({ shiori: 'judge-settings', values }, SETTINGS_PAGE);
+  assert.equal(reply.ok, true);
+  assert.deepEqual(plain(reply.kept), { theme: 'night', aiAnswer: true });
+  assert.equal((await send({ shiori: 'judge-settings', values }, { url: 'moz-extension://x/search.html', tab: { id: 7 } })).ok, false);
+});
+
+test("when this device's store fails, a change is refused, never kept unjudged", async () => {
+  const storage = fakeStorage({});
+  const set = storage.set.bind(storage);
+  storage.set = async (items) => {
+    if ('shioriLocalSettings' in items) throw new Error('quota');
+    return set(items);
+  };
+  const { send } = loadCore(storage);
+  const reply = await send({ shiori: 'set-settings', values: { theme: 'day', anthropicKey: 'sk-x' } });
+  assert.equal(reply.ok, false);
+  assert.equal('anthropicKey' in (storage.data.shioriSettings || {}), false);
+});

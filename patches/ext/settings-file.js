@@ -55,13 +55,15 @@
   }
 
   /** What applying it would change, in words, for the page to show first. */
-  function describeImport({ server, settings }, currentServer = '') {
+  // `settings` is what the whitelist would keep; `ignored` counts the rest.
+  function describeImport({ server, settings, ignored = 0 }, currentServer = '') {
     const count = Object.keys(settings || {}).length;
     const others = `${count} ${count === 1 ? 'setting' : 'settings'}`;
+    const left = ignored > 0 ? ` ${ignored} ${ignored === 1 ? "entry isn't a setting" : "entries aren't settings"} this page takes, and will be left out.` : '';
     if (server && server !== currentServer) {
-      return count ? `This file sets the Hister server to ${server}, plus ${others}.` : `This file sets the Hister server to ${server}.`;
+      return (count ? `This file sets the Hister server to ${server}, plus ${others}.` : `This file sets the Hister server to ${server}.`) + left;
     }
-    return count ? `This file sets ${others}.` : 'This file changes nothing here.';
+    return (count ? `This file sets ${others}.` : 'This file changes nothing here.') + left;
   }
 
   root.ShioriSettingsFile = { exportSettings, fileName, readImport, describeImport };
