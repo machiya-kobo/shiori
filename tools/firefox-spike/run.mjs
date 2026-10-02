@@ -218,6 +218,35 @@ async function captureSession() {
     const search = requests().slice(mark).find((r) => r.p.startsWith('/search'));
     check('search.html runs and queries Hister', !!search, search ? decodeURIComponent(search.p).slice(0, 140) : '');
 
+    // The right-click menu: its items are registered (updating one fails
+    // when it doesn't exist), and Save Link to Hister, run in the real
+    // background, downloads the page and saves it with where it came from.
+    const menu = await inPage(driver, EXT_URL + 'shiori-settings.html', async () => {
+      const ids = ['shiori-search', 'shiori-save-link', 'shiori-save-page', 'shiori-never-page', 'shiori-never-site'];
+      const there = [];
+      for (const id of ids) {
+        try {
+          await browser.menus.update(id, {});
+          there.push(id);
+        } catch (_) {}
+      }
+      return there;
+    });
+    check('the right-click menu has its five items', menu.length === 5, JSON.stringify(menu));
+    setMark();
+    const saved = await inPage(driver, EXT_URL + 'shiori-settings.html', async () => {
+      const bg = await browser.runtime.getBackgroundPage();
+      return {
+        page: await bg.ShioriMenus.saveLink('http://localhost:8776/page4.html?from-a-link'),
+        file: await bg.ShioriMenus.saveLink('http://localhost:8776/release.zip'),
+      };
+    });
+    const linkAdd = await waitFor(posted('page4.html?from-a-link'), 5000);
+    check('Save Link to Hister saves the linked page, marked as from the menu', saved.page.outcome === 'saved' && !!linkAdd &&
+      linkAdd.meta && linkAdd.meta.via === 'context-menu' && linkAdd.meta.source === 'shiori' && linkAdd.title === 'Spike page 4',
+      JSON.stringify({ saved, meta: linkAdd && linkAdd.meta, title: linkAdd && linkAdd.title }));
+    check('  and refuses a file', saved.file.outcome === 'failed' && /file/.test(saved.file.reason || ''), JSON.stringify(saved.file));
+
     await driver.get(EXT_URL + 'popup.html');
     await sleep(2000);
     note('popup', JSON.stringify((await driver.executeScript('return document.body.innerText')).replace(/\s+/g, ' ').slice(0, 160)));
