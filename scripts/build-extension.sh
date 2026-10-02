@@ -19,6 +19,12 @@ REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd -- "$REPO_ROOT"
 
 [[ -f local.env ]] && source local.env
+# A key's value from local.yml, or nothing. Returns 0 without the file:
+# under set -e, a failing $(...) in an assignment would end the build.
+yml() {
+    [[ -f local.yml ]] || return 0
+    sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *\$/\1/p" local.yml | head -1
+}
 # The server URL normally lives in local.yml, which the app build reads too;
 # the environment or local.env can override it.
 if [[ -z "${SHIORI_SERVER_URL:-}" && -f local.yml ]]; then
@@ -106,7 +112,7 @@ cp -- patches/shiori/options.html "$RESOURCES/shiori-options.html"
 cp -- patches/shiori/options.css "$RESOURCES/shiori-options.css"
 cp -- patches/shiori/options.js "$RESOURCES/shiori-options.js"
 # Your server's status page, linked in the results page's footer.
-SHIORI_STATUS_URL="${SHIORI_STATUS_URL:-$( [[ -f local.yml ]] && sed -n 's/^ *SHIORI_STATUS_URL: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' local.yml | head -1)}"
+SHIORI_STATUS_URL="${SHIORI_STATUS_URL:-$(yml SHIORI_STATUS_URL)}"
 python3 scripts/status-link.py "$RESOURCES/search.html" "$SHIORI_STATUS_URL"
 echo "==> Status page: ${SHIORI_STATUS_URL:-(none)}"
 
@@ -140,7 +146,6 @@ PY
 echo "==> Default SearXNG URL: ${SHIORI_SEARXNG_URL:-(none)}"
 
 # Niwa and Konbini, where vault notes live on the web (optional).
-yml() { [[ -f local.yml ]] && sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *\$/\1/p" local.yml | head -1; }
 SHIORI_NIWA_URL="${SHIORI_NIWA_URL:-$(yml SHIORI_NIWA_URL)}"
 SHIORI_KONBINI_URL="${SHIORI_KONBINI_URL:-$(yml SHIORI_KONBINI_URL)}"
 python3 - "$RESOURCES/background.js" "$SHIORI_NIWA_URL" "$SHIORI_KONBINI_URL" <<'PY'

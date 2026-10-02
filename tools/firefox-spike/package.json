@@ -1,0 +1,9 @@
+{
+  "name": "shiori-firefox-spike",
+  "private": true,
+  "description": "Phase 0 of docs/firefox-plan.md: the Safari-shimmed bundle in headless Firefox against a fake Hister.",
+  "type": "module",
+  "devDependencies": {
+    "selenium-webdriver": "^4.35.0"
+  }
+}

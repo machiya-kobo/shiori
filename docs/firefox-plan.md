@@ -1,7 +1,6 @@
 # Plan: Shiori for Firefox
 
-Status: scope settled, ready to start with the spike (phase 0). Nothing is
-built yet.
+Status: phase 0 (the spike) done; results below. Phase 1 is next.
 
 ## Decisions
 
@@ -95,9 +94,12 @@ on each (not verified):
 which major that is today: 140 was ESR in 2025, and a newer one may have
 replaced it. So the build reads it from one place (a
 `FIREFOX_MIN_VERSION` line in `project.yml`), and the release checklist
-confirms it against Mozilla's ESR page. `data_collection_permissions`
-(upstream sets it) needs a recent Firefox too, so the floor can't drop below
-140.
+confirms it against Mozilla's ESR page.
+
+`data_collection_permissions` (upstream sets it) sets a hard lower bound.
+`web-ext lint` says it begins in **Firefox 140** and **Firefox for Android
+142**. So the desktop floor is never below 140, and Android's never below
+142.
 
 ## Android
 
@@ -105,11 +107,12 @@ confirms it against Mozilla's ESR page. `data_collection_permissions`
   floor (upstream sets it already).
 - As far as I know, Firefox for Android has no `sidebar_action`, no
   `commands` (keyboard shortcuts), no `menus` and no containers, and its
-  `omnibox` support is uncertain. The spike confirms which. Each feature
-  that uses one checks it exists.
+  `omnibox` support is uncertain. Each feature that uses one checks it
+  exists.
 - Installing an unlisted `.xpi` from a file on Android may need a hidden
-  setting. Unverified; the spike checks it, and `docs/firefox.md` documents
-  what's true.
+  setting. `docs/firefox.md` documents what's true.
+- Neither point is verified yet: the spike had no Android device. It needs
+  a hand check on a phone or an emulator.
 - The settings page works at phone width (16 px gutters, no horizontal
   scroll), as the web app does.
 
@@ -140,19 +143,80 @@ Firefox CSP (`script-src 'self'`).
 
 ## Phases
 
-### 0. Spike
+### 0. Spike (done)
 
-- Build upstream; load `dist/` with `manifest_ff.json` through `web-ext run`
-  against `linux/fake-hister.py` (never a live Hister for writes).
-- Prepend today's shims unchanged; note what breaks.
-- Confirm:
-  - captures arrive with `metadata.source = "shiori"`;
-  - the queue drains;
-  - PDFs still index (upstream fetches them from the background);
-  - `search.html` works as an extension page.
-- Check the open facts:
-  - on Android: which APIs exist, and how an unlisted `.xpi` installs;
-  - for containers (feature E): whether reading names needs `cookies`.
+`tools/firefox-spike/` (see its README) builds today's Safari bundle, makes
+its manifest loadable in Firefox and nothing more, and drives headless
+Firefox through geckodriver against a fake Hister.
+
+It ran on Firefox 136, the newest reachable from the build container
+(Mozilla's servers were blocked), with the floor lowered to match. Rerun
+it on the real floor before phase 2 ships.
+
+**Works unchanged.** The Safari shims need no Firefox changes:
+
+- capture reaches `api/add`, with `metadata.source = "shiori"`, `client`
+  and `client_version`, the HTML, and no text;
+- `Origin` is `moz-extension://…`, which Hister trusts;
+- the skip rule holds;
+- offline, a capture is queued; back online, it drains with `added` as
+  integer seconds;
+- Firefox unloads the idle event page (`backgroundState: stopped`); a page
+  queued while it was unloaded and offline still drains on wake;
+- PDFs reach `api/add_pdf`, and `prepPDF` adds Shiori's metadata;
+- the settings page, `search.html` (with ` -label:vault
+  -metadata.source:vault`) and the popup load;
+- `"incognito": "not_allowed"` keeps it out of private browsing entirely
+  (nothing sent);
+- `<all_urls>` is granted at install. That is for a temporary install; a
+  signed install's prompt still needs a hand check (phase 3's Grant card
+  covers both).
+
+**Findings that change the plan:**
+
+1. **The floor is 140 on desktop and 142 on Android**, set by
+   `data_collection_permissions` (see "The minimum version").
+2. **Drop `nativeMessaging` from the Firefox manifest.** With no app it is
+   only a failed call (the shim falls back to its defaults), and Firefox
+   would show users a native-messaging permission at install for nothing.
+3. **Write `histerURL` explicitly** (phase 3). On a fresh install, the
+   queue's start-up rule fetch runs before upstream stores its default
+   `histerURL`, so the rules arrive with the first capture instead. The
+   queue still fails closed, so nothing leaks. On Safari, the app's reply
+   writes it.
+4. **Containers don't need `cookies`.**
+   - `contextualIdentities.query()` gives names, and `tab.cookieStoreId` is
+     readable with `tabs`.
+   - Only opening a tab in a container needs `cookies`, and Shiori never
+     does that.
+   - But installing `contextualIdentities` silently switches Firefox's
+     containers on (`privacy.userContext.enabled` false → true). So it is
+     an optional permission, requested when the user turns on container
+     rules (feature E).
+5. **`web-ext lint`** returns 0 errors and 6 warnings:
+   - the two floor warnings above;
+   - `UNSAFE_VAR_ASSIGNMENT` in upstream's `shared.js` (×3);
+   - one in ours: `search-core.js:629` (`svg.innerHTML` from a constant
+     glyph table). It's safe, but it will be rebuilt with DOM calls so the
+     signed build carries no warning of ours.
+
+**Fixed along the way:** `scripts/build-extension.sh` died without a
+`local.yml` (a failing `$( [[ -f local.yml ]] && … )` under `set -e`). Now
+`yml()` returns 0 when the file is missing.
+
+**Not covered here** (hand checks):
+
+- the DuckDuckGo hand-off (needs duckduckgo.com);
+- Android;
+- the forks;
+- a signed `.xpi` install.
+
+**Harness traps** (in its README):
+
+- In some containers, a zipped temporary add-on's content script never
+  loads, upstream's too ("invalid file descriptor"), so it installs
+  unpacked.
+- A fake server that drops sockets makes Firefox retry GETs on its own.
 
 ### 1. Split the shims (no Safari behaviour change)
 
@@ -185,7 +249,9 @@ Firefox CSP (`script-src 'self'`).
     `websiteContent`);
   - `"incognito": "not_allowed"`;
   - `options_ui` → `shiori-options.html`, opened in a tab;
-  - `web_accessible_resources: null`, the same reasoning as Safari.
+  - `web_accessible_resources: null`, the same reasoning as Safari;
+  - no `nativeMessaging` (phase 0, finding 2);
+  - `optional_permissions: ["contextualIdentities"]` once feature E lands.
 - The bundle check also:
   - accepts `background.scripts` beside `service_worker`;
   - fails unless `incognito` is `not_allowed`;
@@ -210,6 +276,8 @@ Shiori app") becomes an editor. One page for every OS.
   nothing is captured.
 - **Queue**: how many pages are waiting, and Retry Now.
 - First install (`runtime.onInstalled`) opens the page.
+- Saving the server writes `histerURL` and fetches the skip rules at once,
+  so the queue has them before the first capture (phase 0, finding 3).
 - Build defaults (`SHIORI_SERVER_URL` and the rest, from `local.yml`) fill
   the page only in a build that sets them. The published `.xpi` sets none,
   so it starts empty and asks.
@@ -258,8 +326,10 @@ The rest of phase 5:
   - the `updates.json` writer;
   - each feature's pure logic.
 - Writes only against stubs; `linux/fake-hister.py` for manual runs.
-- In-browser automation needs Firefox and geckodriver (this container only
-  has Chromium): a later step.
+- In browser: `tools/firefox-spike/run.sh` (headless Firefox, geckodriver,
+  a fake Hister). It grows with each phase and becomes the Firefox check.
+- On Node 22, `node --test scripts/` fails before running anything (it
+  treats the folder as a module). `node --test scripts/*.test.mjs` works.
 - Hand-check before the first release:
   - Windows, macOS, Linux;
   - the BSD VMs, and Haiku x86_64 (Firefox, plus LibreWolf or Floorp there);
@@ -304,12 +374,13 @@ check their API and stay off on Android.
 - Reuses `search.html` and `search-core.js`; no second results page.
 
 **E. Container rules** (desktop)
-- Skip capture in chosen containers (Banking, Work).
-- **Blocked on the spike**: if reading container names needs the `cookies`
-  permission, it doesn't get it. That's a rule. Fallback: "never save
-  pages from this tab's container", keyed by the tab's `cookieStoreId`
-  with no names. If even that needs `cookies`, the feature is dropped and
-  the owner is told.
+- Skip capture in chosen containers (Banking, Work), picked by name.
+- Needs `contextualIdentities`, and no `cookies` (phase 0, finding 4).
+- Requested as an optional permission only when the user turns the rules
+  on. Installing it switched Firefox's containers on in the spike. Whether
+  a later grant does the same is unchecked; phase 7 checks it.
+- The skip happens in the background, before upstream's capture is sent,
+  keyed by the sender tab's `cookieStoreId`.
 
 ## Rules this must keep (from CLAUDE.md)
 
