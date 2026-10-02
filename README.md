@@ -337,7 +337,14 @@ Never edit `Shiori.xcodeproj` (it is generated and gitignored) or `ShioriExtensi
 
 ## Firefox
 
-The same extension, built for Firefox 153 and later (the current ESR) on every system Firefox runs on, including LibreWolf, Zen, Floorp and Firefox for Android. It has no app behind it, so its own settings page sets the server and the rest, and the address bar gains a keyword: `sh` and your words suggest your pages. Signed builds, kept up to date by Firefox, come with each [release](https://github.com/machiya-kobo/shiori/releases); [docs/firefox.md](docs/firefox.md) covers installing, building and releasing.
+The same extension, built for Firefox 153 and later (the current ESR) on every system Firefox runs on, including LibreWolf, Zen, Floorp and Firefox for Android. It has no app behind it, so its own settings page sets the server and the rest. Firefox adds:
+
+- the address-bar keyword `sh`;
+- a sidebar;
+- right-click saves;
+- a waiting-to-send count on the toolbar button;
+- container rules;
+- settings you can carry to another device. Signed builds, kept up to date by Firefox, come with each [release](https://github.com/machiya-kobo/shiori/releases); [docs/firefox.md](docs/firefox.md) covers installing, building and releasing.
 
 ```bash
 git submodule update --init

@@ -519,10 +519,11 @@ async function sidebarSession() {
   }
 }
 
-// Container rules: the settings page offers to ask for contextualIdentities,
-// lists the containers once granted, and a page in a chosen one is never
-// captured on its own, while a normal tab's is. It starts with containers
-// off: granting must leave them so, and the page say where to turn them on.
+// Container rules (contextualIdentities, a required permission: Firefox
+// refuses it as optional). Firefox starts with containers off, to record
+// what installing does to them; then, with them off, the settings page
+// says where to turn them on; with them on, it lists them, and a page in a
+// chosen one is never captured on its own while a normal tab's is.
 async function containerRulesSession() {
   const driver = await browser({
     'extensions.webextensions.uuids': JSON.stringify({ [ID]: UUID }),
@@ -531,26 +532,17 @@ async function containerRulesSession() {
   const containersOn = () => chrome(driver, "return Services.prefs.getBoolPref('privacy.userContext.enabled')");
   try {
     await hister(true);
+    const before = await containersOn();
     await install(driver, EXT);
     await sleep(2000);
+    const after = await containersOn();
+    note('containers before and after installing Shiori (its contextualIdentities)', `before=${before} after=${after}`);
+    // As someone who keeps them off would: off again, then the page.
+    await chrome(driver, "Services.prefs.setBoolPref('privacy.userContext.enabled', false)");
     await driver.get(EXT_URL + 'shiori-settings.html');
     await sleep(1500);
-    const before = await containersOn();
-    const offered = await driver.findElement(By.id('containers-allow')).isDisplayed();
-    // Granted as Allow on Firefox's prompt does it (ExtensionPermissions.add);
-    // the prompt itself can't be answered from WebDriver: a hand check.
-    await chrome(driver, `
-      const { ExtensionPermissions } = ChromeUtils.importESModule('resource://gre/modules/ExtensionPermissions.sys.mjs');
-      const { ExtensionParent } = ChromeUtils.importESModule('resource://gre/modules/ExtensionParent.sys.mjs');
-      void ExtensionPermissions.add(arguments[0], { permissions: ['contextualIdentities'], origins: [] }, ExtensionParent.GlobalManager.extensionMap.get(arguments[0]));`, ID);
-    await sleep(1000);
-    const after = await containersOn();
-    check('granting the container permission leaves Firefox\'s containers as they were', before === false && after === false, `before=${before} after=${after}`);
-    await driver.navigate().refresh();
-    await sleep(1500);
     const off = (await driver.findElement(By.id('containers-status')).getText()).trim();
-    const allowGone = !(await driver.findElement(By.id('containers-allow')).isDisplayed());
-    check('  with containers off in Firefox, the page says where to turn them on', offered && allowGone && /turned off/.test(off), off);
+    check('with containers off in Firefox, the settings page says where to turn them on', /turned off/.test(off), off);
     // The user turns containers on in Firefox's settings, and comes back.
     await chrome(driver, "Services.prefs.setBoolPref('privacy.userContext.enabled', true)");
     await driver.navigate().refresh();

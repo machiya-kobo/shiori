@@ -19,7 +19,7 @@ address. Ports 8775
 |---|---|
 | `run.sh` | Builds the Firefox target, serves `pages/`, runs `run.mjs` |
 | `fake-hister.py` | Skip rules (`skipme`), stats, profile, search; logs requests as JSON lines. Never a real Hister |
-| `run.mjs` | Six sessions: the settings page, capture, the address bar, DuckDuckGo, private browsing, containers |
+| `run.mjs` | Nine sessions: the settings page, capture, the address bar, DuckDuckGo, the sidebar, container rules, private browsing, the container probe |
 | `container-probe/` | A tiny add-on: what `contextualIdentities` gives without `cookies` |
 
 ## What it checks
@@ -35,6 +35,16 @@ address. Ports 8775
 - A DuckDuckGo search opens Shiori Search; Back stays; a `!bang` and a
   switched-off take-over leave DuckDuckGo alone (on the real
   duckduckgo.com; a note instead when it's out of reach).
+- Settings to a file and back: the file holds no searches; opening one
+  shows what it changes; Apply keeps only what the page takes.
+- The toolbar badge counts the queue and clears.
+- The right-click menu's five items are registered; Save Link to Hister
+  saves a page (marked `via: context-menu`) and refuses a file.
+- The sidebar searches as you type (marks only in snippets, one column);
+  the real sidebar follows the tab's site.
+- Container rules: what installing does to Firefox's containers (a note);
+  the page with containers off and on; a Banking page not captured while a
+  normal tab is.
 - A visited page reaches `api/add` with Shiori's metadata, HTML and no text.
 - A skip rule holds.
 - Offline (the fake stopped), a capture is queued and drains when Hister is
@@ -66,6 +76,15 @@ address. Ports 8775
 - **The address bar is driven from Firefox's chrome context**
   (`gURLBar.search`, then a row and `handleCommand`); WebDriver can't type
   there.
+- **Firefox's own prompts** (optional permissions, Allow on All Websites)
+  can't be answered from WebDriver. And a grant made from the chrome side
+  (`ExtensionPermissions.add`) skips the manifest's checks, so it can pass
+  where a real user would be refused. Read `ext.optionalPermissions`.
+- **A hidden tab isn't captured** (upstream skips `document.hidden`): select
+  the tab before navigating it.
+- **The right-click menu** can't be opened from WebDriver: its items are
+  checked with `menus.update`, and Save Link through
+  `getBackgroundPage().ShioriMenus`.
 - **Offline means stopped.** A fake that drops the socket mid-request makes
   Firefox retry idempotent GETs dozens of times on its own.
 - An older Firefox than the floor (153) still runs: `run.sh` lowers the

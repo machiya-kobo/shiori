@@ -46,6 +46,7 @@ function manifest(target) {
     m.options_ui = { page: 'shiori-settings.html', open_in_tab: true };
     m.incognito = 'not_allowed';
     m.omnibox = { keyword: 'sh' };
+    m.permissions.push('contextualIdentities');
     m.sidebar_action = { default_panel: 'shiori-sidebar.html' };
     m.browser_specific_settings = {
       gecko: {
@@ -118,7 +119,8 @@ test("Firefox fails on each of its rules broken alone", () => {
     'settings page': (m) => (m.options_ui.page = 'shiori-options.html'),
     'omnibox': (m) => delete m.omnibox,
     'sidebar': (m) => delete m.sidebar_action,
-    'contextualIdentities': (m) => m.permissions.push('contextualIdentities'),
+    'contextualIdentities': (m) => (m.permissions = m.permissions.filter((p) => p !== 'contextualIdentities')),
+    'optional_permissions': (m) => (m.optional_permissions = ['contextualIdentities']),
     'installOmnibox': (m, f) => (f['background.js'] = f['background.js'].replace('installOmnibox', '')),
   };
   for (const [rule, change] of Object.entries(cases)) {

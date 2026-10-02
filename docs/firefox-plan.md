@@ -1,6 +1,6 @@
 # Plan: Shiori for Firefox
 
-Status: phases 0 to 6 done; the release workflow waits for the AMO keys and a first tag. Then the hand checks and phase 7's features.
+Status: phases 0 to 7 done; the release workflow waits for the AMO keys and a first tag, then the hand checks (docs/firefox.md).
 
 ## Decisions
 
@@ -18,7 +18,7 @@ Status: phases 0 to 6 done; the release workflow waits for the AMO keys and a fi
 | Release builds | On Linux in CI. Building natively on the BSDs is a separate task (see "Building on the BSDs") |
 | Features | All six suggestions, in the order of phase 7 |
 | Chrome | Later, not scoped yet. The build stays target-based so Chrome is a third target, not a fork (see "Chrome, later") |
-| Container permission | Optional: `contextualIdentities` is requested only when container rules are turned on |
+| Container permission | **Required** `contextualIdentities` (changed from optional: Firefox 153 refuses it in `optional_permissions`, see feature E) |
 
 ## Why, given upstream already ships one
 
@@ -540,48 +540,106 @@ Docs:
   Firefox's `about:` pages. No spike check showed a problem.
 - The hand checks before a release are listed in `docs/firefox.md`.
 
-### 7. Features
+### 7. Features (done)
 
-Ordered by value for effort; each ships on its own. Desktop-only features
-check their API and stay off on Android.
+Each shipped on its own commit, with unit tests and spike checks. The spike
+now has 50 checks on ESR 153, and 190 unit tests pass. The Firefox
+background, in order:
 
-**A. Address-bar keyword** (`omnibox` manifest key, no permission). Done
-in phase 4.
+1. `host-local.js`
+2. `containers.js`
+3. `core.js`
+4. `search-core.js`
+5. `pages.js`
+6. `omnibox.js`
+7. `badge.js`
+8. `menus.js`
 
-**B. Toolbar badge**
-- Shows the queued count.
-- Marks whether this page was saved, skipped by a rule, or queued.
-- Replaces Safari's `reportQueue`.
+**A. Address-bar keyword**: done in phase 4.
 
-**F. Settings export and import**
-- A JSON file of this device's settings, for setting up another machine
-  without syncing.
-- Import goes through the same whitelist as the page.
-- It holds addresses only, never queue contents or notes.
+**B. Toolbar badge** (`ext/badge.js`)
 
-**C. Context menu** (`menus` permission; desktop)
-- Search Shiori for the selection.
-- Never save this site.
-- Save this link to Hister, following Save This Note's Links' rules:
-  - never a URL Hister holds, looked up before the save and again after
-    redirects;
-  - skip rules hold;
-  - links to files are never saved;
-  - `gemini://`/`gopher://` go through the small-web gateway.
+- Every tab's toolbar button shows how many pages are waiting to send
+  (amber, dark text, 8.55:1), with a tooltip that says so. It clears when
+  the queue drains.
+- Upstream clears a tab's badge with `""`, which would hide the count; that
+  becomes `null`, "use the count". Upstream's own `!` and `✓` stay.
 
-**D. Sidebar** (`sidebar_action`; desktop)
-- Shiori Search beside the page.
-- "From this site" for the current tab.
-- Reuses `search.html` and `search-core.js`; no second results page.
+**F. Settings export and import** (`ext/settings-file.js`, Another Device
+on the settings page)
 
-**E. Container rules** (desktop)
-- Skip capture in chosen containers (Banking, Work), picked by name.
-- Needs `contextualIdentities`, and no `cookies` (phase 0, finding 4).
-- Requested as an optional permission only when the user turns the rules
-  on. Installing it switched Firefox's containers on in the spike. Whether
-  a later grant does the same is unchecked; phase 7 checks it.
-- The skip happens in the background, before upstream's capture is sent,
-  keyed by the sender tab's `cookieStoreId`.
+- Save to a File writes the server and this device's settings, never
+  recent searches, queued pages or notes.
+- Open a File reads one, says what it would change, and applies only on
+  Apply. It goes through the page's own doors (`set-server` and the
+  whitelist), so a file can't set anything the page couldn't. Whatever was
+  refused is named.
+
+**C. Context menu** (`ext/menus.js`, permission `menus`)
+
+- Search Shiori for "…", in a tab beside this one.
+- Save Page to Hister, Never Save This Page, Never Save This Site: these
+  run upstream's own commands (the menu keeps upstream's command listener
+  as upstream adds it), so the server's rules stay the truth. No rule
+  editor.
+- Save Link to Hister follows Save This Note's Links' rules:
+  - never a file, and never a page Hister holds, looked up before and again
+    after redirects;
+  - downloaded without cookies, with `http://` tried as `https://` first;
+  - skip rules hold (no `ignore_skip_rules`);
+  - `gemini://` and `gopher://` go through the small-web gateway.
+- A saved link goes through the core's fetch, so it carries Shiori's
+  metadata (`via: context-menu`) and waits in the queue offline.
+- The answer shows on the tab's badge and tooltip for six seconds, rather
+  than as notifications, which would need a new permission.
+
+**D. Sidebar** (`ext/sidebar.*`, `sidebar_action`)
+
+- A field searches your pages as you type.
+- While it's empty, "From This Site" shows what you've saved from the
+  active tab's site, newest first (`domain:<hostname>`, sort `date`), and
+  follows the tab.
+- Snippets keep Hister's `<mark>`s and nothing else. Script and style text
+  is dropped; the results page still shows it, untouched here.
+- A plain click opens the page in the current tab, and for a search tells
+  Hister it was opened (unless Remember What You Open is off). A modified
+  click opens a new tab.
+- `_execute_sidebar_action` is a command with no key of its own.
+- The page list it shares with the keyword is `ext/pages.js`.
+
+**E. Container rules** (`ext/containers.js`, permission
+`contextualIdentities`)
+
+- Choose containers on the settings page. A page in one of them is never
+  captured on its own: the automatic capture is answered as a skip rule
+  would answer it (406), and a PDF tab there is never fetched. A deliberate
+  save ("Index this page now", Save Page) still goes through.
+- The list (cookieStoreIds) comes only from the settings page, through
+  `set-skip-containers`, guarded like `set-server`.
+- **Why the permission is required, not optional.** Firefox 153's schema
+  makes `contextualIdentities` a required-only permission
+  (`PermissionNoPrompt`). Firefox drops it from `optional_permissions` at
+  install with a warning, so an Allow button could never be granted for a
+  real user.
+
+  The spike had first granted it from Firefox's privileged side, which
+  skips that check; Firefox's parsed manifest (`optionalPermissions: []`)
+  showed the truth. The owner chose required. It costs no prompt at
+  install.
+- **Its side effect.** Installing Shiori switches Firefox's containers on
+  where someone had turned them off (spike: `false` → `true` on 153).
+  Firefox 153 has them on by default. Granting it later would not have
+  switched them on, but Firefox doesn't allow that.
+- **Order matters.** `containers.js` runs before `core.js`. The core hides
+  `shiori:` messages from every listener added after it, and that had
+  hidden this file's own. A test on the real Firefox order now catches
+  this.
+
+**Hand checks left** (docs/firefox.md):
+
+- the right-click menu itself (WebDriver can't open it);
+- the sidebar from View → Sidebar;
+- the file dialogs on Android.
 
 ## Chrome, later
 

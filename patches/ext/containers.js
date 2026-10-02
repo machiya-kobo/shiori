@@ -8,9 +8,9 @@
 // save ("Index this page now", Save Page to Hister) still goes through.
 //
 // The list is the tabs' cookieStoreIds, set only by the settings page
-// (`set-skip-containers`, as `set-server`). Reading container names needs
-// the optional contextualIdentities permission, which the settings page
-// asks for when you choose; matching a tab needs only `tabs`.
+// (`set-skip-containers`, as `set-server`). The page reads the containers'
+// names with contextualIdentities, a required permission (Firefox refuses
+// it as optional); matching a tab needs only `tabs`.
 (function installContainerRules() {
   if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.onMessage || !chrome.storage) return;
   const KEY = 'shioriSkipContainers';

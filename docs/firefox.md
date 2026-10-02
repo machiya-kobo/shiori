@@ -65,12 +65,37 @@ Settings stay on this device; nothing syncs them.
   | Never save this site | Alt+Shift+D | Control+Shift+D |
   | Open Shiori Search | Alt+Shift+F | Control+Shift+F |
 
+- **The toolbar button** shows how many pages are waiting to send.
+- **The right-click menu**:
+  - Search Shiori for the selected words;
+  - Save Page to Hister, Never Save This Page, Never Save This Site;
+  - Save Link to Hister.
+
+  A link is saved as Save This Note's Links saves one: never a file or a
+  page Hister has, skip rules holding, `gemini://` and `gopher://` through
+  the small-web gateway. The toolbar button shows the answer on that tab
+  for a few seconds.
+- **The sidebar** (View → Sidebar → Shiori, or a key you set for "Show or
+  hide Shiori in the sidebar"):
+  - search your pages as you type;
+  - with the field empty, it shows what you've saved from the site in the
+    tab beside it.
+- **Containers**: choose containers on the settings page (Banking, Work).
+  Pages in them are never saved on their own; saving one by hand still
+  works. Installing Shiori turns Firefox's containers on if they were off
+  (it needs them to read their names; Firefox has them on by default).
+- **Another device**: the settings page's Save to a File and Open a File
+  carry the server and settings over (never your searches or pages). A
+  file is applied only after you've seen what it changes.
 - **Private windows**: Shiori isn't loaded in them at all.
 
 ## What it talks to
 
 - **Your Hister server**, and the neighbours you set, to save and search.
 - **Visited sites**: their favicons and PDFs (upstream's behaviour).
+- **A link you save** with Save Link to Hister: that page is downloaded
+  (without cookies), or, for `gemini://` and `gopher://`, handed to your
+  small-web gateway.
 - **GitHub**: Firefox itself checks this repository's
   `releases/latest/download/updates.json` (the add-on's `update_url`)
   for a newer version, on its own schedule. The extension's code never
@@ -158,8 +183,11 @@ Automation covers the rest (above). These need a person:
       The shortcuts work and clash with nothing.
 - [ ] LibreWolf, Zen and Floorp: install, save a page, `sh` in the address
       bar.
+- [ ] The right-click menu: each item, on a page, a link and a selection.
+- [ ] The sidebar from View → Sidebar; a search; a click.
 - [ ] Firefox for Android: how the file installs; capture; the settings
-      page at phone width; whether `sh` is offered.
+      page at phone width; whether `sh` is offered; Save to a File and
+      Open a File.
 - [ ] An update: with the previous release installed, Firefox picks up the
       new one (about:addons → Check for Updates).
 

@@ -120,6 +120,16 @@ holds the rules and the traps the code can't tell you.
   add-on ID `shiori@machiya-kobo.github.io` and the AMO account are fixed
   for good. Every latest release must carry `updates.json`, or Firefox's
   updates break (docs/firefox.md).
+- **Firefox's background order matters** (`BACKGROUND` in
+  `build-extension.sh`, held by a test): `host-local`, `containers`,
+  `core`, `search-core`, `pages`, `omnibox`, `badge`, `menus`. The core
+  hides `shiori:` messages from every `onMessage` listener added after it,
+  so a file with its own `shiori:` messages must come before it.
+- `contextualIdentities` (container rules) is a **required** permission:
+  Firefox drops it from `optional_permissions`. Installing switches
+  containers on where they were off; say so in docs/firefox.md.
+- The right-click menu's page items run upstream's own commands (the menu
+  keeps upstream's `onCommand` listener). Never add a rule editor there.
 - Firefox's address-bar keyword (`sh`, `patches/ext/omnibox.js`) searches
   through `search-core.js` (`histerText`), drops notes and non-web pages,
   and records an opened suggestion in `api/history` only while Remember What
