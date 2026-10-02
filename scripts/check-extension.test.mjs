@@ -22,7 +22,6 @@ const FILES = {
   'shiori-settings.html': 'shiori-settings.js shiori-settings-file.js shiori-settings.css search.css',
   'shiori-sidebar.html': 'search-core.js shiori-pages.js shiori-sidebar.js shiori-sidebar.css',
   'search-core.js': '',
-  'shiori-redirect.js': '',
   'assets/icons/icon-16.png': '',
 };
 
@@ -31,14 +30,12 @@ function manifest(target) {
     permissions: ['tabs', 'storage'],
     icons: { 16: 'assets/icons/icon-16.png' },
     action: { default_icon: { 16: 'assets/icons/icon-16.png' }, default_popup: 'popup.html' },
-    content_scripts: [
-      { js: ['content.js'], matches: ['<all_urls>'] },
-      { js: ['search-core.js', 'shiori-redirect.js'], matches: ['https://duckduckgo.com/*'] },
-    ],
+    content_scripts: [{ js: ['content.js'], matches: ['<all_urls>'] }],
     commands: {},
   };
   if (target === 'safari') {
     m.permissions.push('nativeMessaging');
+    m.content_scripts.push({ js: ['search-core.js', 'shiori-redirect.js'], matches: ['https://duckduckgo.com/*'] });
     m.background = { service_worker: 'background.js' };
     m.options_page = 'shiori-options.html';
   } else {
@@ -68,7 +65,7 @@ const BACKGROUND = {
 function check(target, change = () => {}) {
   const root = mkdtempSync(join(tmpdir(), 'shiori-bundle-'));
   try {
-    const files = { ...FILES, 'background.js': BACKGROUND[target] };
+    const files = { ...FILES, 'background.js': BACKGROUND[target], ...(target === 'safari' ? { 'shiori-redirect.js': '' } : {}) };
     const m = manifest(target);
     change(m, files);
     for (const [name, text] of Object.entries(files)) {
@@ -120,6 +117,7 @@ test("Firefox fails on each of its rules broken alone", () => {
     'omnibox': (m) => delete m.omnibox,
     'sidebar': (m) => delete m.sidebar_action,
     'contextualIdentities': (m) => (m.permissions = m.permissions.filter((p) => p !== 'contextualIdentities')),
+    'DuckDuckGo': (m) => m.content_scripts.push({ js: ['shiori-redirect.js'], matches: ['https://duckduckgo.com/*'] }),
     'optional_permissions': (m) => (m.optional_permissions = ['contextualIdentities']),
     'installOmnibox': (m, f) => (f['background.js'] = f['background.js'].replace('installOmnibox', '')),
   };

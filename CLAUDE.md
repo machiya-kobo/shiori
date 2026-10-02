@@ -141,9 +141,10 @@ holds the rules and the traps the code can't tell you.
 - The results page's gear writes through `SharedSettings.applyFromPage`, a
   whitelist of keys, types and values. AI settings are never in it: a page
   must never turn AI on.
-- Search from Safari: keep DuckDuckGo; `redirect.js` hands address-bar
-  searches to the hosted search page when it answers (else the extension's
-  `search.html`). `search-core.js` decides: no `!bang`, image/news search,
+- Search from Safari (Safari only: Firefox adds search engines, so it never
+  takes another engine's searches; `check-extension.py` holds that): keep
+  DuckDuckGo; `redirect.js` hands address-bar searches to the hosted search
+  page when it answers (else the extension's `search.html`). `search-core.js` decides: no `!bang`, image/news search,
   Back/Reload, or `shiori=off`. Never open results with `tabs.update`: Back
   then strands you on DuckDuckGo.
 

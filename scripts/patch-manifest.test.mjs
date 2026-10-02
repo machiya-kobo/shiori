@@ -102,6 +102,7 @@ test("Safari's manifest: the app's messaging, Control-Shift keys, no cookies", (
   assert.deepEqual(m.commands['index-current-page'].suggested_key, { default: 'Ctrl+Shift+S', mac: 'MacCtrl+Shift+S' });
   assert.equal(m.options_page, 'shiori-options.html');
   assert.equal(m.key, undefined);
+  assert.ok(m.content_scripts.some((c) => c.js.includes('shiori-redirect.js')), "Safari's DuckDuckGo hand-off");
   assert.equal(m.web_accessible_resources, undefined);
 });
 
@@ -110,6 +111,7 @@ test("Firefox's manifest: no messaging, never private, Alt-Shift keys (the Mac's
   assert.deepEqual(m.permissions, ['tabs', 'storage', 'menus', 'contextualIdentities']);
   assert.equal(m.optional_permissions, undefined);
   assert.equal(m.incognito, 'not_allowed');
+  assert.deepEqual(m.content_scripts, [{ js: ['content.js'], matches: ['<all_urls>'] }], 'no DuckDuckGo take-over on Firefox');
   for (const name of ['index-current-page', 'disable-indexing-current-page', 'disable-indexing-current-domain', 'open-shiori-search']) {
     assert.match(m.commands[name].suggested_key.default, /^Alt\+Shift\+/, name);
     assert.match(m.commands[name].suggested_key.mac, /^MacCtrl\+Shift\+/, name);

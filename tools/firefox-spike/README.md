@@ -32,9 +32,9 @@ address. Ports 8775
 - `sh lantern` in Firefox's address bar suggests the fake's pages (the one
   opened before first); Enter on one opens it and tells Hister; Enter on
   the text opens Shiori Search.
-- A DuckDuckGo search opens Shiori Search; Back stays; a `!bang` and a
-  switched-off take-over leave DuckDuckGo alone (on the real
-  duckduckgo.com; a note instead when it's out of reach).
+- A DuckDuckGo search stays on DuckDuckGo: Firefox never takes it over (on
+  the real duckduckgo.com; a note instead when it's out of reach). The
+  settings page has no take-over switch.
 - Settings to a file and back: the file holds no searches; opening one
   shows what it changes; Apply keeps only what the page takes.
 - The toolbar badge counts the queue and clears.

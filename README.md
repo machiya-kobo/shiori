@@ -344,7 +344,9 @@ The same extension, built for Firefox 153 and later (the current ESR) on every s
 - right-click saves;
 - a waiting-to-send count on the toolbar button;
 - container rules;
-- settings you can carry to another device. Signed builds, kept up to date by Firefox, come with each [release](https://github.com/machiya-kobo/shiori/releases); [docs/firefox.md](docs/firefox.md) covers installing, building and releasing.
+- settings you can carry to another device.
+
+It never takes over DuckDuckGo's searches as Safari's does: Firefox adds search engines, so add the hosted search page as one (it advertises OpenSearch), or use `sh`. Signed builds, kept up to date by Firefox, come with each [release](https://github.com/machiya-kobo/shiori/releases); [docs/firefox.md](docs/firefox.md) covers installing, building and releasing.
 
 ```bash
 git submodule update --init

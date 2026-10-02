@@ -8,7 +8,7 @@
   const $ = (id) => document.getElementById(id);
   const HOSTS = ['*://*/*'];
   const ROOM_KEYS = ['searxngURL', 'niwaURL', 'konbiniURL', 'smallwebURL', 'obsidianVault'];
-  const TOGGLES = ['combinedSearch', 'webResults'];
+  const TOGGLES = ['webResults'];
 
   /** A message to the background; null when it didn't answer. */
   const send = (message) =>
@@ -49,7 +49,6 @@
   }
   function fill(s) {
     for (const key of TOGGLES) $(key).checked = s[key] !== false;
-    $('webResults').disabled = s.combinedSearch === false;
     for (const key of ROOM_KEYS) $(key).value = typeof s[key] === 'string' ? s[key] : '';
   }
   look(settings);

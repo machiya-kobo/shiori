@@ -36,7 +36,7 @@ themes → Shiori → Preferences, and behind the gear in the toolbar menu.
    read "Connected · N pages". Saving fetches the server's skip rules
    straight away, so pages visited offline can wait in the queue.
 2. **Site Access**: it should read "Allowed". If not, Allow on All
-   Websites. Without it, nothing is sent and searches aren't taken over.
+   Websites. Without it, nothing is sent.
    Firefox lets you take it away under Add-ons and themes → Shiori →
    Permissions; this page shows it.
 3. **Neighbours** (optional): SearXNG for web results, Kura for notes,
@@ -49,12 +49,16 @@ Settings stay on this device; nothing syncs them.
 - **Saving pages** is automatic; Hister's rules decide what it keeps.
   Pages visited while it's out of reach wait (Waiting to Send on the
   settings page) and go out once it answers; after 14 days they drop.
-- **Search**: a DuckDuckGo search opens Shiori Search, with your pages and
-  notes, then the web. Back returns to DuckDuckGo; a `!bang` stays on
-  DuckDuckGo. Take Over DuckDuckGo Searches turns this off.
 - **The address bar**: type `sh`, a space and your words. Your pages are
   suggested as you type, the ones you opened before for that search first.
-  Enter on one opens it; Enter on the words opens Shiori Search.
+  Enter on one opens it; Enter on the words opens Shiori Search, with your
+  pages and notes, then the web.
+- **Shiori as a search engine**: Shiori never takes over another engine's
+  searches (Safari's version takes DuckDuckGo's, having no other way in).
+  If you host the search page (web/README.md), open it, then the address
+  bar's search button offers "Add Shiori Search" (the page advertises
+  itself through OpenSearch). Then Settings → Search makes it the default
+  or gives it a keyword. Without a hosted page, `sh` is the way in.
 - **Shortcuts** (Firefox's Add-ons and themes → ⚙ → Manage Extension
   Shortcuts changes them):
 

@@ -66,6 +66,8 @@ def problems(root, target):
             out.append("container rules need contextualIdentities, as a required permission (Firefox refuses it as optional)")
         if "contextualIdentities" in (m.get("optional_permissions") or []):
             out.append("Firefox drops contextualIdentities from optional_permissions: keep it in permissions")
+        if any("duckduckgo" in str(cs.get("matches")) for cs in m.get("content_scripts", [])) or os.path.exists(os.path.join(root, "shiori-redirect.js")):
+            out.append("Firefox never takes a DuckDuckGo search over (Shiori is a search engine there)")
         if not (m.get("omnibox") or {}).get("keyword"):
             out.append("Firefox's address-bar keyword (omnibox) is missing")
         if background.get("scripts") != ["background.js"] or "service_worker" in background:

@@ -32,8 +32,9 @@ solved upstream. Shiori adds what `patches/` carries:
 - **Provenance**: `metadata.source = "shiori"`, `client`, `client_version`.
 - **The page-size cap and HTML-only capture** (`installPageSizeCap`).
 - **No `cookies` permission** (upstream asks for it).
-- **Shiori Search** (`search.html`) and the DuckDuckGo hand-off
-  (`redirect.js`).
+- **Shiori Search** (`search.html`). Safari's DuckDuckGo hand-off
+  (`redirect.js`) stays Safari's: Firefox adds search engines, so it never
+  takes another engine's searches.
 - Shiori's commands and settings page.
 
 It installs beside upstream's Hister extension (its own add-on ID), though
@@ -214,7 +215,6 @@ lowered.
 
 **Not covered here** (hand checks):
 
-- the DuckDuckGo hand-off (needs duckduckgo.com);
 - Android;
 - the forks;
 - a signed `.xpi` install, on 140 especially: in this container a
@@ -355,7 +355,7 @@ each build ships only its own. Chrome will use the Firefox page.
 | Hister Server | The address (http(s), checked on the page), Save, and the status from `api/stats` ("Connected · N pages", "Can't reach it", or "Needs site access" when that's what's missing) |
 | Site Access | Allowed or not, for `*://*/*`; when not, a note and **Allow on All Websites** (`permissions.request` from the click) |
 | Waiting to Send | The queue's count and since when, and **Retry Now** |
-| Search | Take Over DuckDuckGo Searches, Web Results (greyed while the first is off), and a link to Shiori Search, whose gear holds the rest |
+| Search | Web Results, a note on the `sh` keyword and on adding the hosted page as a search engine, and a link to Shiori Search, whose gear holds the rest |
 | Neighbours | SearXNG, Kura, Konbini, the small-web gateway, the Obsidian vault (each optional, checked on the page) |
 
 How it's wired:
@@ -419,15 +419,15 @@ Proof:
 
 ### 4. Search integration (done)
 
-**The DuckDuckGo hand-off** works in Firefox unchanged (`redirect.js` and
-`search-core.js`'s rules; Shiori's own code never opens results with
-`tabs.update`). The spike checks it on the real duckduckgo.com:
-
-- a search opens Shiori Search;
-- Back stays on DuckDuckGo;
-- a `!bang` is left to DuckDuckGo;
-- with the take-over switched off on the settings page, DuckDuckGo keeps
-  the search.
+**No DuckDuckGo hand-off on Firefox.** It worked unchanged, but Firefox
+lets you add a search engine, so taking another engine's searches over is
+Safari's workaround, not a feature. `redirect.js` and its DuckDuckGo
+content script are in `manifest.safari.json` only, and
+`check-extension.py` refuses either in a Firefox bundle. The ways in are
+the `sh` keyword (below) and the hosted search page's OpenSearch
+description (`scripts/build-web.sh`), which Firefox offers to add from the
+address bar. The spike checks a search on the real duckduckgo.com stays
+there.
 
 **The address-bar keyword** (feature A, brought forward):
 `patches/ext/omnibox.js`, with `"omnibox": {"keyword": "sh"}` in

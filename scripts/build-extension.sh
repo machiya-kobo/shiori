@@ -144,7 +144,10 @@ prepend content.js patches/safari-content-shim.js
 # duckduckgo.com redirect.
 cp -- patches/shiori/search.html patches/shiori/search.css patches/shiori/search.js \
     patches/shiori/search-core.js "$RESOURCES/"
-cp -- patches/shiori/redirect.js "$RESOURCES/shiori-redirect.js"
+# The DuckDuckGo hand-off is Safari's alone (manifest.safari.json).
+if [[ "$TARGET" == safari ]]; then
+    cp -- patches/shiori/redirect.js "$RESOURCES/shiori-redirect.js"
+fi
 # Shiori's settings page. Safari's shows what the app set (Safari →
 # Extensions → Shiori → Settings); Firefox has no app, so its page sets them.
 if [[ "$TARGET" == safari ]]; then

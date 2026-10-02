@@ -3,15 +3,8 @@
   "key": null,
   "name": "Shiori",
   "description": "Sends the pages you visit to your own Hister server.",
-  "$comment_content_scripts": "Upstream's content script (build-extension.sh checks it is unchanged), plus Shiori's combined-search redirect on duckduckgo.com.",
-  "content_scripts": [
-    { "js": ["content.js"], "matches": ["<all_urls>"] },
-    {
-      "js": ["search-core.js", "shiori-redirect.js"],
-      "matches": ["https://duckduckgo.com/*", "https://www.duckduckgo.com/*"],
-      "run_at": "document_start"
-    }
-  ],
+  "$comment_content_scripts": "Upstream's content script (build-extension.sh checks it is unchanged). Safari adds its DuckDuckGo hand-off (patches/manifest.safari.json); Firefox never takes searches over.",
+  "content_scripts": [{ "js": ["content.js"], "matches": ["<all_urls>"] }],
   "icons": {
     "16": "assets/icons/icon-16.png",
     "32": "assets/icons/icon-32.png",

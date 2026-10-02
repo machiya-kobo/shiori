@@ -304,14 +304,14 @@ async function settingsSession() {
     check('saving the server stores it and fetches its rules at once', stored.histerURL === `http://localhost:${HISTER_PORT}/` && !!rules && typeof stored.shioriCachedRules === 'string',
       `histerURL=${stored.histerURL} rules=${!!rules} status=${await text('status')}`);
 
-    await driver.findElement(By.id('combinedSearch')).click();
+    await driver.findElement(By.id('webResults')).click();
     await driver.findElement(By.id('searxngURL')).sendKeys('https://searx.example');
     await driver.findElement(By.css('#rooms-form button[type=submit]')).click();
     await sleep(1500);
     const local = await driver.executeAsyncScript('const done = arguments[arguments.length - 1]; browser.storage.local.get("shioriLocalSettings").then((r) => done(r.shioriLocalSettings || {}))');
-    check('a switch and a neighbour are kept on this device', local.combinedSearch === false && local.searxngURL === 'https://searx.example/',
+    check('a switch and a neighbour are kept on this device', local.webResults === false && local.searxngURL === 'https://searx.example/',
       JSON.stringify(local) + ' ' + (await text('rooms-saved')));
-    check('  the web-results switch follows the take-over switch', !(await driver.findElement(By.id('webResults')).isEnabled()));
+    check('  the page has no DuckDuckGo take-over switch', (await driver.findElements(By.id('combinedSearch'))).length === 0);
 
     // Another device: the settings to a file, and a file back.
     await driver.findElement(By.id('export')).click();
@@ -425,48 +425,26 @@ async function addressBarSession() {
   }
 }
 
-// DuckDuckGo's searches handed to Shiori Search (redirect.js and the
-// core), on the real duckduckgo.com: needs it reachable, else a note.
+// Firefox never takes a DuckDuckGo search over (Shiori is a search engine
+// there: the `sh` keyword, or the hosted page's OpenSearch), on the real
+// duckduckgo.com: needs it reachable, else a note.
 async function duckDuckGoSession() {
   const reachable = await fetch('https://duckduckgo.com/', { method: 'HEAD' }).then(() => true, () => false);
   if (!reachable) {
-    note('DuckDuckGo hand-off', 'duckduckgo.com is out of reach from here; not checked');
+    note('DuckDuckGo left alone', 'duckduckgo.com is out of reach from here; not checked');
     return;
   }
   // Behind a proxy that re-signs TLS (some sandboxes), Firefox would refuse
   // duckduckgo.com's certificate; this session alone accepts it.
   const driver = await browser({ 'extensions.webextensions.uuids': JSON.stringify({ [ID]: UUID }) }, { insecureCerts: true });
-  const settle = async () => {
-    // The tab moves once the background answers; give it a moment.
-    for (let i = 0; i < 20; i++) {
-      const url = await driver.getCurrentUrl();
-      if (url.startsWith(EXT_URL)) return url;
-      await sleep(250);
-    }
-    return driver.getCurrentUrl();
-  };
   try {
     await hister(true);
     await install(driver, EXT);
     await sleep(2000);
     await driver.get('https://duckduckgo.com/?q=paper+lanterns');
-    const taken = await settle();
-    check('a DuckDuckGo search opens Shiori Search', taken === EXT_URL + 'search.html?q=paper%20lanterns', taken);
-    await driver.navigate().back();
-    await sleep(3000);
-    const back = await driver.getCurrentUrl();
-    check('  Back stays on DuckDuckGo', back.startsWith('https://duckduckgo.com/'), back);
-
-    await driver.get('https://duckduckgo.com/?q=!w+lanterns');
-    await sleep(3000);
-    const bang = await driver.getCurrentUrl();
-    check('a !bang is left to DuckDuckGo', !bang.startsWith(EXT_URL), bang);
-
-    await inPage(driver, EXT_URL + 'search.html', async () => browser.runtime.sendMessage({ shiori: 'set-settings', values: { combinedSearch: false } }));
-    await driver.get('https://duckduckgo.com/?q=kyoto+lanterns');
-    await sleep(3000);
-    const off = await driver.getCurrentUrl();
-    check('with the take-over switched off, DuckDuckGo keeps its search', off.startsWith('https://duckduckgo.com/'), off);
+    await sleep(4000);
+    const url = await driver.getCurrentUrl();
+    check('a DuckDuckGo search stays on DuckDuckGo', url.startsWith('https://duckduckgo.com/'), url);
   } finally {
     await driver.quit().catch(() => {});
     await hister(false);
