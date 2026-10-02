@@ -54,7 +54,14 @@
     if (asked === 'dense' || asked === 'cards') localStorage.setItem('shioriCardLayout', asked);
     document.body.classList.toggle('dense', localStorage.getItem('shioriCardLayout') === 'dense');
   } catch (_) {}
+  // As the field's default too: Safari resets an autocomplete="off" field
+  // to its default when the page comes back from its Back-Forward cache,
+  // which left the web page's field empty after leaving for a result.
+  $('q').defaultValue = q;
   $('q').value = q;
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted && document.activeElement !== $('q')) $('q').value = q;
+  });
   document.title = q ? `${q} – Shiori Search` : 'Shiori Search';
   if (header) drawHeader(header);
   // All's first page has the two columns (results, and the Info card
@@ -1092,11 +1099,18 @@
   }
 
   /** Theme, tabs and filters: from the copy before the first paint, then from settings. */
-  // The header's height, for the section headings that stick under it
-  // (search.css, --header-h).
+  // The header's height as it sticks, for the section headings that stick
+  // under it (search.css, --header-h), and the brand row's share, which
+  // scrolls away above it (--brand-hide).
   {
     const header = document.querySelector('header');
-    const keep = () => document.documentElement.style.setProperty('--header-h', `${header ? header.offsetHeight : 0}px`);
+    const brand = $('brand-row');
+    const keep = () => {
+      const hide = brand ? brand.offsetTop + brand.offsetHeight : 0;
+      const root = document.documentElement.style;
+      root.setProperty('--brand-hide', `${hide}px`);
+      root.setProperty('--header-h', `${header ? header.offsetHeight - hide : 0}px`);
+    };
     if (header && window.ResizeObserver) new ResizeObserver(keep).observe(header);
     keep();
   }
@@ -1634,7 +1648,13 @@
       { class: 'engines' },
       ...(r.engines || [r.engine]).filter(Boolean).map((e) => el('span', {}, e)),
     );
-    const meta = el('div', { class: 'meta' }, engines, el('a', { href: S.cachedURL(r.url) }, 'cached'));
+    const meta = el(
+      'div',
+      { class: 'meta' },
+      engines,
+      el('a', { href: S.cachedURL(r.url) }, 'cached'),
+      el('a', { href: S.archiveURL(r.url) }, 'archive.is'),
+    );
     const li = el(
       'li',
       { class: 'card' },
