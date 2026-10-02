@@ -6,8 +6,9 @@
 # Stages:
 #   1. npm ci + build of the upstream extension inside vendor/hister.
 #   2. Copy dist/, merge patches/manifest.safari.json over its manifest.
-#   3. Prepend the Safari shims to background.js and content.js, and link
-#      the popup stylesheet override into popup.html.
+#   3. Prepend the Safari shims, the host (the app, over native messaging)
+#      and Shiori's core to background.js and the content shim to
+#      content.js, and link the popup stylesheet override into popup.html.
 #   4. Point the default server URL at SHIORI_SERVER_URL (from local.yml).
 #   5. Copy the prebuilt icons, then check the bundle.
 #
@@ -95,12 +96,15 @@ open(p, "a").write("\n")
 PY
 echo "==> Shiori version $SHIORI_VERSION"
 
-prepend() { # <shim> <bundle file>
-    { cat -- "$1"; printf '\n'; cat -- "$DIST/$2"; } > "$RESOURCES/$2.tmp"
-    mv -- "$RESOURCES/$2.tmp" "$RESOURCES/$2"
+prepend() { # <bundle file> <shim>...
+    local target="$1"; shift
+    { for shim in "$@"; do cat -- "$shim"; printf '\n'; done; cat -- "$DIST/$target"; } > "$RESOURCES/$target.tmp"
+    mv -- "$RESOURCES/$target.tmp" "$RESOURCES/$target"
 }
-prepend patches/safari-shims.js background.js
-prepend patches/safari-content-shim.js content.js
+# The order matters: the host defines shioriHost, which the core uses
+# (scripts/shims.test.mjs loads the same files in the same order).
+prepend background.js patches/safari-shims.js patches/ext/host-native.js patches/ext/core.js
+prepend content.js patches/safari-content-shim.js
 
 # Shiori's own pages and scripts: the combined-search results page and the
 # duckduckgo.com redirect.
@@ -292,7 +296,7 @@ if "cookies" in m.get("permissions", []):
 suggested = [k for k, c in (m.get("commands") or {}).items() if c.get("suggested_key")]
 if len(suggested) > 4:
     sys.exit("manifest suggests %d shortcuts (%s); Safari allows at most 4" % (len(suggested), ", ".join(suggested)))
-checks = {"background.js": ("installIconShim", "installCaptureQueue", "installCombinedSearch"),
+checks = {"background.js": ("installIconShim", "const shioriHost", "installCaptureQueue", "installCombinedSearch"),
           "content.js": ("installPageSizeCap",),
           "popup.html": ("safari-popup.css", "shiori-popup.js"),
           "search.html": ("search-core.js", "search.js"),

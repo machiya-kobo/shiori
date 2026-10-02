@@ -36,7 +36,9 @@ holds the rules and the traps the code can't tell you.
 - **Never test a write against a live Hister.** Use the stubs in the test
   suites or `linux/fake-hister.py`. Reads against your own server are fine.
 - **Logic shared by Swift and JavaScript has twins** (HisterKit and
-  `patches/shiori/search-core.js`) with the same test cases. Change both.
+  `patches/shiori/search-core.js`; `SharedSettings`' apply, recordSearch and
+  extensionPayload and `patches/ext/host-local.js`) with the same test
+  cases. Change both.
 - **No rule editor in the app**: the server's rules are the truth. Shiori
   edits aliases only through Keep Collections Current (docs/ai.md).
 - **Settings are per device, never synced.** Anything on the network could
@@ -96,10 +98,14 @@ holds the rules and the traps the code can't tell you.
 - **The native handler class must be `nonisolated`**: Safari calls it off
   the main thread, and a MainActor handler crashes on every message. Same
   for `NSItemProvider` callbacks and `openURL`'s completion on macOS.
+- Shiori's background logic is `patches/ext/core.js`, for Safari and
+  Firefox alike. It reaches settings only through `shioriHost`:
+  `ext/host-native.js` (the app) on Safari, `ext/host-local.js`
+  (`storage.local`) on Firefox (docs/firefox-plan.md).
 - Settings reach the extension through the App Group: the background asks by
   `sendNativeMessage` on every search (400 ms budget, then its cache in
   `storage.local`). A setting the extension page shows must be in both
-  `SharedSettings.extensionPayload` and the shim's `DEFAULTS`.
+  `SharedSettings.extensionPayload` and the core's `DEFAULTS`.
 - The results page's gear writes through `SharedSettings.applyFromPage`, a
   whitelist of keys, types and values. AI settings are never in it: a page
   must never turn AI on.

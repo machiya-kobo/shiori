@@ -1,6 +1,6 @@
 # Plan: Shiori for Firefox
 
-Status: phase 0 (the spike) done; results below. Phase 1 is next.
+Status: phases 0 (the spike) and 1 (the split) done; phase 2 is next.
 
 ## Decisions
 
@@ -228,20 +228,47 @@ lowered.
   chrome context (and 153 for opening `moz-extension://` pages).
 - A fake server that drops sockets makes Firefox retry GETs on its own.
 
-### 1. Split the shims (no Safari behaviour change)
+### 1. Split the shims (done; no Safari behaviour change)
 
-- `patches/ext/core.js`: queue, provenance, combined search, commands,
-  search-page check. It reads settings only through a
-  `getSettings()`/`setSettings()`/`recent()` seam.
-- `patches/ext/settings-native.js` (Safari): today's `sendNativeMessage`
-  path, moved.
-- `patches/ext/settings-local.js` (Firefox): `storage.local` only, never
-  `storage.sync` (settings are per device).
-- `patches/safari-shims.js` keeps only what is Safari's (icon shim, Safari
-  URL filter).
-- Proof: Safari's staged `ShioriExtension/Resources/` behaves the same before
-  and after; `node --test scripts/` stays green, with new tests for the
-  seam.
+`background.js` on Safari is now three files, prepended in this order:
+
+| File | What it holds |
+|---|---|
+| `patches/safari-shims.js` | Safari's own: the icon shim and the Safari URL filter |
+| `patches/ext/host-native.js` | `shioriHost` on Safari: the app, over native messaging (moved as it was) |
+| `patches/ext/core.js` | Shiori's part on both browsers: the queue, provenance, combined search, the search-page check, commands |
+
+The core reaches settings only through `shioriHost`:
+
+- `settings()`;
+- `recordSearch(q)`;
+- `setSettings(values)`;
+- `canReportQueue()` / `reportQueue(count, oldest)`.
+
+`patches/ext/host-local.js` is `shioriHost` on Firefox. It stands in for
+the app in `storage.local` (`shioriLocalSettings`, never `storage.sync`),
+as a twin of `SharedSettings.swift`:
+
+- `apply` / `applyFromPage`: the same keys, types and values;
+- `recordSearch`: 5, newest first, once whatever its case;
+- `extensionPayload`: only what was set, plus the recent searches.
+
+AI settings, the server and unknown keys are refused. There's no queue
+report; the badge will show it (feature B).
+
+Proof:
+
+- **Code:** comments aside, the old and new Safari code differ only at the
+  seam. Two edge cases now behave better: before, a missing
+  `sendNativeMessage` threw inside the message listener. Now a recorded
+  search fails quietly and a settings change is kept on the device. Real
+  Safari always has it.
+- **Tests:** `node --test scripts/*.test.mjs` passes 140 of 140. That is
+  the 125 before, unchanged, plus a check that the build prepends the files
+  in the tests' order, plus 14 for the local host. Those read the key lists
+  out of `SharedSettings.swift`, so a key added there and not here fails.
+- **Spike:** `tools/firefox-spike/run.sh` on ESR 153 passes all 16 checks
+  on the rebuilt bundle.
 
 ### 2. The Firefox target in the build
 

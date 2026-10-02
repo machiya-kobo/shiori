@@ -1,5 +1,6 @@
-// Tests for the Safari shims in patches/. Each test loads a shim into a
-// fresh vm context with fake chrome.* and fetch.
+// Tests for the Safari shims in patches/ (and Shiori's core in patches/ext/,
+// with the app as its host). Each test loads a shim into a fresh vm context
+// with fake chrome.* and fetch.
 // Run: node --test scripts/
 
 import { readFileSync } from 'node:fs';
@@ -9,7 +10,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
-const backgroundShim = read('../patches/safari-shims.js');
+// What build-extension.sh prepends to Safari's background.js, in its order.
+const SAFARI_BACKGROUND = ['patches/safari-shims.js', 'patches/ext/host-native.js', 'patches/ext/core.js'];
+const backgroundShim = SAFARI_BACKGROUND.map((f) => read('../' + f)).join('\n');
 const contentShim = read('../patches/safari-content-shim.js');
 
 const BASE = 'https://hister.example/';
@@ -680,4 +683,9 @@ test("with the hosted page down, results open on the extension's own page", asyn
   assert.equal(answer.redirect, true);
   assert.equal(answer.url, undefined);
   assert.deepEqual(updates, [[7, 'safari-web-extension://x/search.html?q=go']]);
+});
+
+test('the build prepends the Safari background files in the order these tests load them', () => {
+  const build = read('../scripts/build-extension.sh');
+  assert.ok(build.includes('prepend background.js ' + SAFARI_BACKGROUND.join(' ') + '\n'));
 });
