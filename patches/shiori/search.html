@@ -9,6 +9,35 @@
   </head>
   <body class="pending">
     <header>
+      <!-- The brand row (results only; it stays with the field and tabs):
+           the mark and name, then the rooms, time range or sort, and
+           Settings. -->
+      <div id="brand-row" class="brand-row">
+        <a id="brand" class="brand" href="?" title="Shiori Search">
+          <img src="assets/icons/icon-256.png" alt="" width="28" height="28" />
+          <span>Shiori</span>
+        </a>
+        <div class="filters">
+          <label id="sort-label" hidden>
+            <span class="visually-hidden">Sort</span>
+            <select id="sort">
+              <option value="">Best match</option>
+              <option value="new">Newest</option>
+            </select>
+          </label>
+          <label id="time-label">
+            <span class="visually-hidden">Time range</span>
+            <select id="time">
+              <option value="">Anytime</option>
+              <option value="day">Past day</option>
+              <option value="week">Past week</option>
+              <option value="month">Past month</option>
+              <option value="year">Past year</option>
+            </select>
+          </label>
+          <button id="settings-open" class="icon-button" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog"></button>
+        </div>
+      </div>
       <!-- The start page (no search yet): the mark, then the field, then
            recent searches as chips. -->
       <div id="home-brand" class="home-brand" hidden>
@@ -33,26 +62,6 @@
       <nav id="home-recent" class="home-recent" aria-label="Recent searches" hidden></nav>
       <div class="tabs-row">
       <nav id="categories" aria-label="Categories"></nav>
-      <div class="filters">
-        <label id="sort-label" hidden>
-          <span class="visually-hidden">Sort</span>
-          <select id="sort">
-            <option value="">Best match</option>
-            <option value="new">Newest</option>
-          </select>
-        </label>
-        <label id="time-label">
-          <span class="visually-hidden">Time range</span>
-          <select id="time">
-            <option value="">Anytime</option>
-            <option value="day">Past day</option>
-            <option value="week">Past week</option>
-            <option value="month">Past month</option>
-            <option value="year">Past year</option>
-          </select>
-        </label>
-        <button id="settings-open" class="icon-button" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog"></button>
-      </div>
       </div>
     </header>
     <main>

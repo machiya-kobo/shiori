@@ -74,6 +74,15 @@ header {
   border-bottom: 1px solid var(--line);
 }
 .field { position: relative; }
+/* The brand row: the mark and name on the left; the rooms, time range
+   (or sort) and Settings on the right. */
+.brand-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.brand {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  color: var(--text); text-decoration: none; font-weight: 700; font-size: 1.15em; letter-spacing: -0.01em;
+}
+.brand img { width: 28px; height: 28px; border-radius: 7px; flex: none; }
+.brand:hover span, .brand:focus-visible span { color: var(--accent); }
 
 /* Recent searches, under the field while it has focus. */
 .recent {
@@ -140,8 +149,7 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
   transform: translate(-50%, -50%);
 }
 .icon-button { position: relative; }
-/* One row: the category pills, then time and Settings pinned at its end.
-   On a phone the pills scroll sideways inside it rather than wrapping to
+/* The category pills, one row. On a phone the pills scroll sideways inside it rather than wrapping to
    a second line, fading out at an end with more to scroll to (`data-fade`,
    set by fadeEdges(): a pill cut off at the edge looks like a mistake).
    Each pill
@@ -613,8 +621,8 @@ body.home #q { font-size: 1.15em; padding-top: 14px; padding-bottom: 14px; }
   background: var(--card); border: 1px solid var(--line); font-size: 0.9em;
 }
 .home-chip:hover, .home-chip:focus-visible { border-color: var(--accent); color: var(--accent); }
-body.home #categories, body.home #time-label, body.home #sort-label, body.home main { display: none; }
-body.home .tabs-row { position: fixed; top: 12px; right: 16px; margin: 0; }
+body.home .tabs-row, body.home #time-label, body.home #sort-label, body.home main, body.home .brand { display: none; }
+body.home .brand-row { position: fixed; top: 12px; right: 16px; margin: 0; }
 body.home footer { position: fixed; left: 0; right: 0; bottom: 16px; text-align: center; border-top: 0; }
 body.home footer #ddg, body.home footer #timing, body.home footer #engines { display: none; }
 /* Nothing to clear in an empty field. */

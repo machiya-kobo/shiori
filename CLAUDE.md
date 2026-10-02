@@ -22,7 +22,7 @@ holds the rules and the traps the code can't tell you.
   services, not in this repository: the feed service `/shiori/feed` and the
   AI endpoint `/shiori/ai/*`, hosted pages only), Kura (notes), the
   small-web gateway, SearXNG, the visited site's favicon and PDFs (upstream
-  behaviour). NewsBlur and status pages are only ever opened as links.
+  behaviour). NewsBlur, status pages and the Wayback Machine and archive.is copies are only ever opened as links.
   `gemini://`/`gopher://` links are handed to the system, never fetched. No
   analytics. AI providers only when the user switches AI on, and only from
   the app.
