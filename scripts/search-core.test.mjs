@@ -605,6 +605,16 @@ test('work vaults: known by the address alone', () => {
   assert.equal(S.noteVault('https://kura.example/n/Projects/Example'), null);
   assert.equal(S.noteVault('https://example.com/v/x'), null);
   assert.equal(S.isOtherVault('https://kura.example/v/client/n/X'), true);
+  // Read as Kura serves it: a leading // folded, %XX decoded once.
+  for (const same of ['https://kura.example//v/work/n/X', 'https://kura.example///v/work/n/X', 'https://kura.example/%76/work/n/X', 'https://kura.example/v/%77ork/n/X', 'https://kura.example/%2Fv/work/n/X']) {
+    assert.equal(S.noteVault(same), 'work', same);
+  }
+  // What Kura doesn't serve as /v/: decoded twice, or another case.
+  for (const other of ['https://kura.example/%2576/work/n/X', 'https://kura.example/V/work/n/X']) {
+    assert.equal(S.noteVault(other), null, other);
+  }
+  // A name that won't decode is still another vault's.
+  assert.equal(S.isOtherVault('https://kura.example/v/work%25zz/n/X'), true);
   assert.equal(S.notePath('https://kura.example/v/work/n/Literature%20Notes/Weekly', []), 'Literature Notes/Weekly.md');
   assert.equal(S.readerURL('https://kura.example/v/work/n/X', 'https://kura.example/', 'X.md'), 'https://kura.example/v/work/n/X');
   assert.equal(S.isNoteURL('https://kura.example/v/work/n/X', 'https://kura.example/'), true);

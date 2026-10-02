@@ -52,12 +52,43 @@ public enum Notes {
     /// for the default vault, and for anything that isn't a note.
     /// Everything that must not reach a work note (Hister, AI, caches,
     /// exports) asks this.
+    ///
+    /// Read as Kura reads it: Kura serves `/v/` however the path reaches it
+    /// (its server folds a leading `//`, then it decodes `%XX` once), so
+    /// `//v/…` and `/%76/…` are a work note too. Only ASCII escapes are
+    /// decoded: a vault's name and the `/v/…/n/` around it are ASCII. Kura
+    /// refuses a public address with a path, so `/v/` starts the path.
+    /// search-core's `noteVault` is the twin.
     public static func otherVault(of url: String) -> String? {
         guard let components = URLComponents(string: url) else { return nil }
-        let parts = components.percentEncodedPath.split(separator: "/", omittingEmptySubsequences: false)
+        var path = decodingASCIIEscapes(components.percentEncodedPath)
+        while path.hasPrefix("//") { path.removeFirst() }
+        let parts = path.split(separator: "/", omittingEmptySubsequences: false)
         // "", "v", vault, "n", …
         guard parts.count >= 5, parts[1] == "v", parts[3] == "n", !parts[2].isEmpty else { return nil }
-        return parts[2].removingPercentEncoding
+        // A name that won't decode is still another vault's.
+        return parts[2].removingPercentEncoding ?? String(parts[2])
+    }
+
+    /// `%XX` escapes of ASCII characters decoded once; every other one left
+    /// as it is.
+    static func decodingASCIIEscapes(_ text: String) -> String {
+        let scalars = Array(text.unicodeScalars)
+        var out = String.UnicodeScalarView()
+        var i = 0
+        while i < scalars.count {
+            if scalars[i] == "%", i + 2 < scalars.count,
+               scalars[i + 1].properties.isASCIIHexDigit, scalars[i + 2].properties.isASCIIHexDigit,
+               let byte = UInt8(String(Character(scalars[i + 1])) + String(Character(scalars[i + 2])), radix: 16),
+               byte < 0x80 {
+                out.append(Unicode.Scalar(byte))
+                i += 3
+            } else {
+                out.append(scalars[i])
+                i += 1
+            }
+        }
+        return String(out)
     }
 
     /// A note's chip, naming its vault ("Work vault"), since Notes mix

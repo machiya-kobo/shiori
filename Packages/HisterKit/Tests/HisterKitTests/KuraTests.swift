@@ -157,6 +157,17 @@ struct KuraLiveTests {
         #expect(Notes.otherVault(of: "https://kura.example/n/Projects/Example") == nil)
         #expect(Notes.otherVault(of: "https://example.com/v/x") == nil)
         #expect(Notes.otherVault(of: "https://example.com/") == nil)
+        // Read as Kura serves it: a leading // folded, %XX decoded once.
+        for same in ["https://kura.example//v/work/n/X", "https://kura.example///v/work/n/X", "https://kura.example/%76/work/n/X",
+                     "https://kura.example/v/%77ork/n/X", "https://kura.example/%2Fv/work/n/X"] {
+            #expect(Notes.otherVault(of: same) == "work", "\(same)")
+        }
+        // What Kura doesn't serve as /v/: decoded twice, or another case.
+        for other in ["https://kura.example/%2576/work/n/X", "https://kura.example/V/work/n/X"] {
+            #expect(Notes.otherVault(of: other) == nil, "\(other)")
+        }
+        // A name that won't decode is still another vault's.
+        #expect(Notes.isOtherVault("https://kura.example/v/work%25zz/n/X"))
         #expect(Notes.path(of: "https://kura.example/v/work/n/Literature%20Notes/Weekly", cards: []) == "Literature Notes/Weekly.md")
         #expect(Notes.path(of: "https://kura.example/n/Projects/Example", cards: []) == "Projects/Example.md")
         #expect(Notes.readerURL(page: "https://kura.example/v/work/n/X", base: "https://kura.example/", path: "X.md")?.absoluteString

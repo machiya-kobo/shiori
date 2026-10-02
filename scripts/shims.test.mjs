@@ -99,10 +99,13 @@ test('an automatic capture made offline is queued with a visit time and answers 
 test("a work vault's note is never sent or queued, however it's captured", async () => {
   for (const network of [offline, async () => new Response('{}', { status: 201 })]) {
     const { ctx, calls, storage } = loadBackground({ network });
-    for (const metadata of [{}, { ignore_skip_rules: true }]) {
-      const r = await ctx.fetch(BASE + 'api/add', addInit({ url: 'https://kura.example/v/work/n/plan', html: '<p>x</p>', metadata }));
-      assert.equal(r.status, 406);
-      assert.equal(r.headers.get('X-Shiori-Refused'), 'work-note');
+    // Kura serves the same note at //v/… and /%76/… (search-core's noteVault).
+    for (const url of ['https://kura.example/v/work/n/plan', 'https://kura.example//v/work/n/plan', 'https://kura.example/%76/work/n/plan']) {
+      for (const metadata of [{}, { ignore_skip_rules: true }]) {
+        const r = await ctx.fetch(BASE + 'api/add', addInit({ url, html: '<p>x</p>', metadata }));
+        assert.equal(r.status, 406, url);
+        assert.equal(r.headers.get('X-Shiori-Refused'), 'work-note');
+      }
     }
     assert.equal(calls.some((c) => c.url === BASE + 'api/add'), false);
     assert.deepEqual(queued(storage), []);

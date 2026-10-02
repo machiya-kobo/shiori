@@ -48,7 +48,11 @@ holds the rules and the traps the code can't tell you.
   write a shared document.
 - **A note from any vault but the default** (address `/v/<vault>/n/…`;
   `Notes.isOtherVault` / `S.isOtherVault`) never goes to Hister, to any AI
-  engine (on-device included), a cache, an export or a feed.
+  engine (on-device included), a cache, an export or a feed. The address
+  is read as Kura serves it: a leading `//` folded, `%XX` decoded once
+  (`//v/…` and `/%76/…` are the same page). `/v/` always starts the path:
+  Kura refuses a public address with a path, and the hosted page's
+  `/kura/` passes only Kura's API, never its reader.
 - Never put `.searchSuggestions(.hidden, for: .content)` on a sheet's
   `.searchable`: on iOS 27 the sheet went blank.
 
@@ -253,7 +257,8 @@ holds the rules and the traps the code can't tell you.
   extension APIs. The web app is `web/app/` (`scripts/build-pwa.sh`), plain
   ES modules sharing `search-core.js` and the theme tokens.
 - **One host serves everything** (web/README.md): the page, `/searx/`,
-  `/kura/`, `/konbini/`, `/smallweb/`, and Hister (with the optional
+  `/kura/` (only the API paths Shiori uses: `scripts/dev-server.test.mjs`),
+  `/konbini/`, `/smallweb/`, and Hister (with the optional
   companion `/shiori/feed` and `/shiori/ai/*`, not in this repository; their
   contracts are in README and docs/ai.md). **Never add `Origin:
   hister://` there**: Hister accepts same-origin browser writes and refuses

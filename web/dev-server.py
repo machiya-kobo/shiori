@@ -9,7 +9,8 @@ Routes (the same as web/README.md asks of the real host):
   /, /_shiori/*, and (the web app) /sw.js, /manifest.webmanifest: the build
   /searx/*             SearXNG, prefix removed
   /konbini/*           Konbini, prefix removed (only api/cards is used)
-  /kura/*              Kura, prefix removed (Notes from Kura: api/search, api/recent)
+  /kura/<path>         Kura, prefix removed, for only the paths Shiori asks
+                       for (KURA_PATHS); anything else under /kura/ is a 404
   /smallweb/*          the small-web gateway, prefix removed (api/search, api/save)
   anything else        the Hister host (Hister's API, /shiori/feed,
                        /shiori/ai/*)
@@ -40,6 +41,11 @@ UPSTREAMS = {
     "/kura/": os.environ.get("KURA_URL", ""),
     "/smallweb/": os.environ.get("SMALLWEB_URL", ""),
 }
+# What Shiori asks Kura for. Kura's reader pages stay at Kura's own address:
+# under /kura/ a work vault's note would have an address Shiori can't tell
+# from any other page's (it looks for /v/ at the start of the path).
+KURA_PATHS = {"api/search", "api/recent", "api/note", "api/vaults", "feed.xml"}
+NOT_ROUTED = ""  # route()'s answer for a path no one serves here
 HISTER = os.environ.get("HISTER_URL", "")
 AI_STUB = os.environ.get("AI_STUB") == "1"
 AI_ERRORS = {"cap": 429, "note": 403, "not_indexed": 404, "empty": 422, "engine": 502, "declined": 502, "unavailable": 503, "no_results": 422, "searx": 504}
@@ -56,6 +62,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return None
         for prefix, base in UPSTREAMS.items():
             if self.path.startswith(prefix):
+                if prefix == "/kura/" and path[len(prefix):] not in KURA_PATHS:
+                    return NOT_ROUTED
                 return base.rstrip("/") + "/" + self.path[len(prefix):]
         return HISTER.rstrip("/") + self.path
 
@@ -133,6 +141,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if self.path.startswith("/?") or self.path == "/":
                 self.path = "/index.html"
             return super().do_GET()
+        if target == NOT_ROUTED:
+            return self.send_error(404)
         self.proxy(target)
 
     def do_POST(self):
@@ -142,7 +152,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if target:
             self.proxy(target)
         else:
-            self.send_error(405)
+            self.send_error(404 if target == NOT_ROUTED else 405)
 
     do_PUT = do_POST
     do_DELETE = do_POST

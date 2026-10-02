@@ -213,11 +213,25 @@
    * at /v/<vault>/n/<slug>. null for the default vault or a non-note.
    * Everything that must not reach a work note (Hister, AI, caches,
    * exports) asks this. HisterKit's Notes.otherVault is the twin.
+   *
+   * Read as Kura reads it: Kura serves `/v/` however the path reaches it
+   * (its server folds a leading `//`, then it decodes `%XX` once), so
+   * `//v/…` and `/%76/…` are a work note too. Only ASCII escapes are
+   * decoded: a vault's name and the `/v/…/n/` around it are ASCII. Kura
+   * refuses a public address with a path, so `/v/` starts the path.
    */
   function noteVault(url) {
     try {
-      const m = new URL(url).pathname.match(/^\/v\/([^/]+)\/n\/./);
-      return m ? decodeURIComponent(m[1]) : null;
+      const path = new URL(url).pathname
+        .replace(/%([0-7][0-9a-f])/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/^\/+/, '/');
+      const m = path.match(/^\/v\/([^/]+)\/n\/./);
+      if (!m) return null;
+      try {
+        return decodeURIComponent(m[1]);
+      } catch (_) {
+        return m[1]; // a name that won't decode is still another vault's
+      }
     } catch (_) {
       return null;
     }
