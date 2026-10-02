@@ -145,9 +145,67 @@ final class AppState {
     /// Bumped when a search is submitted (Return): the results list takes
     /// the keyboard, for its vi keys.
     /// Kura, where every notes list comes from (Settings → Notes → Kura);
-    /// nil without an address: then there are no notes.
+    /// nil without an address: then there are no notes. Signed in to
+    /// Machiya when the device is (`machiyaSignIn`).
     var notesKura: KuraClient? {
-        KuraClient(serverURL: searchPage.niwaURL)
+        KuraClient(serverURL: searchPage.niwaURL, signIn: machiyaSignIn)
+    }
+
+    // MARK: Machiya sign-in
+
+    /// The Machiya sign-in (Settings → Notes → Sign in to Machiya): the
+    /// token and who it signs in as, from the Keychain (`MachiyaKeychain`,
+    /// never UserDefaults), read at launch and after every change.
+    private(set) var machiyaToken = MachiyaKeychain.token
+    private(set) var machiyaPrincipal = MachiyaKeychain.principal
+
+    /// The sign-in for the room clients: the token, and the rooms it may go
+    /// to by origin (Kura and Konbini as set in Settings → Notes, less
+    /// Hister's and SearXNG's origins). Hister's and SearXNG's clients never
+    /// take it. nil when signed out.
+    var machiyaSignIn: MachiyaSignIn? {
+        MachiyaSignIn(
+            token: machiyaToken,
+            rooms: Machiya.rooms([searchPage.niwaURL, searchPage.konbiniURL], excluding: [serverURL, searxngURL]))
+    }
+
+    /// Signs in with what was typed: a pairing code (paired against Kura,
+    /// `POST /api/pair`) or a pasted token. Nil when signed in, else what
+    /// to tell the person.
+    func signInToMachiya(_ text: String, device: String) async -> String? {
+        switch Machiya.entry(text) {
+        case nil:
+            return "Type the pairing code from identity pair, or paste a token (mch_… or mcd_…)."
+        case .token(let token):
+            guard MachiyaKeychain.save(token: token, principal: "") else { return "The Keychain didn't keep it. Try again." }
+        case .code(let code):
+            let pairing: Machiya.Pairing
+            do {
+                pairing = try await Machiya.pair(base: searchPage.niwaURL, code: code, device: device)
+            } catch {
+                return error.message
+            }
+            guard MachiyaKeychain.save(token: pairing.token, principal: pairing.principal) else {
+                return "The Keychain didn't keep it. Try again."
+            }
+        }
+        machiyaChanged()
+        return nil
+    }
+
+    /// Signs out: the token is deleted from this device (revoke it on the
+    /// server with the identity CLI's `device revoke` or `token revoke`).
+    func signOutOfMachiya() {
+        MachiyaKeychain.signOut()
+        machiyaChanged()
+    }
+
+    /// Reads the sign-in again, and Kura's vaults and Konbini's cards with it.
+    private func machiyaChanged() {
+        machiyaToken = MachiyaKeychain.token
+        machiyaPrincipal = MachiyaKeychain.principal
+        vaultsReadAt = nil
+        cardsLoaded = false
     }
 
     /// The pills over a list or search: Opened only while Show Opened is on.
@@ -203,7 +261,7 @@ final class AppState {
         await loadVaultsIfNeeded()
         guard !cardsLoaded, !searchPage.konbiniURL.isEmpty else { return }
         cardsLoaded = true
-        konbiniCards = await Notes.fetchCards(base: searchPage.konbiniURL)
+        konbiniCards = await Notes.fetchCards(base: searchPage.konbiniURL, signIn: machiyaSignIn)
     }
 
     /// Kura's vaults: the default one and the others, for the Notes filter,

@@ -56,7 +56,7 @@ struct SettingsView: View {
             case .server: "Hister and waiting pages"
             case .search: "SearXNG, Search from Safari, and what searches show"
             case .preview: "The preview pane and its images"
-            case .notes: "Obsidian, Kura and Konbini"
+            case .notes: "Obsidian, Kura and Konbini, and signing in to Machiya"
             case .safari: "The Safari extension"
             case .ai: "Summaries, AI providers and keys; off unless you turn it on"
             case .feeds: "Feeds, NewsBlur, export"
@@ -358,6 +358,9 @@ struct SettingsView: View {
                 Text("A note opens in this Obsidian vault; its Kura page (the vault's reader) and Konbini card are linked beside it, in Shiori and in Safari's results.")
             }
             .listRowBackground(palette.surface)
+
+            MachiyaSignInSection()
+                .listRowBackground(palette.surface)
 
             case .safari:
             Section {
