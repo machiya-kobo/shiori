@@ -473,6 +473,52 @@ async function duckDuckGoSession() {
   }
 }
 
+// The sidebar: its page searched by typing, in a tab; and the real
+// sidebar, opened from Firefox's own window, following the active tab's
+// site (seen as its `domain:` searches reaching the fake).
+async function sidebarSession() {
+  const driver = await browser({ 'extensions.webextensions.uuids': JSON.stringify({ [ID]: UUID }) });
+  try {
+    await hister(true);
+    await install(driver, EXT);
+    await sleep(2000);
+    await driver.get(EXT_URL + 'shiori-sidebar.html');
+    await sleep(1000);
+    const idle = (await driver.findElement(By.id('status')).getText()).trim();
+    await driver.findElement(By.id('q')).sendKeys('lantern');
+    await sleep(1500);
+    const found = await driver.executeScript("return [...document.querySelectorAll('#found-list .title')].map((a) => a.textContent)");
+    check('the sidebar finds your pages as you type, the one opened before first',
+      found[0] === 'Opened Before' && found[1] === 'Lanterns of Kyoto' && /web page/.test(idle), JSON.stringify({ found, idle }));
+    const snippet = await driver.executeScript("const p = document.querySelector('#found-list .snippet'); return p && { text: p.textContent, marks: p.querySelectorAll('mark').length, other: p.querySelectorAll(':not(mark)').length }");
+    check("  its snippet keeps Hister's <mark>s and nothing else", snippet && snippet.marks === 1 && snippet.other === 0 &&
+      snippet.text === 'Paper lanterns line the street in Kyoto', JSON.stringify(snippet));
+    const stacked = await driver.executeScript("const [a, b] = document.querySelectorAll('#found-list li'); return a && b && b.getBoundingClientRect().top > a.getBoundingClientRect().bottom - 1");
+    check('  results stack in one column', stacked === true);
+    if (env('SHOTS')) {
+      await driver.manage().window().setRect({ width: 360, height: 700 });
+      await sleep(300);
+      fs.writeFileSync(path.join(env('SHOTS'), 'sidebar-360.png'), await driver.takeScreenshot(), 'base64');
+    }
+
+    await driver.get(PAGES + 'page1.html');
+    setMark();
+    const shown = await chrome(driver, `
+      const win = Services.wm.getMostRecentWindow('navigator:browser');
+      const id = [...win.SidebarController.sidebars.keys()].find((k) => k.startsWith('shiori'));
+      win.SidebarController.show(id);
+      return id;`);
+    const first = await waitFor((r) => r.p.startsWith('/search') && decodeURIComponent(r.p).includes('domain:localhost'), 8000);
+    await driver.get(PAGES.replace('localhost', '127.0.0.1') + 'page2.html');
+    const second = await waitFor((r) => r.p.startsWith('/search') && decodeURIComponent(r.p).includes('domain:127.0.0.1'), 8000);
+    check("the real sidebar shows what you've saved from the tab's site, and follows the tab",
+      !!first && !!second && decodeURIComponent(first.p).includes('"sort":"date"'), `${shown} ${first && decodeURIComponent(first.p)}`);
+  } finally {
+    await driver.quit().catch(() => {});
+    await hister(false);
+  }
+}
+
 async function privateSession() {
   const driver = await browser({ 'browser.privatebrowsing.autostart': true });
   try {
@@ -508,7 +554,7 @@ async function containerSession() {
   }
 }
 
-for (const session of [settingsSession, captureSession, addressBarSession, duckDuckGoSession, privateSession, containerSession]) {
+for (const session of [settingsSession, captureSession, addressBarSession, duckDuckGoSession, sidebarSession, privateSession, containerSession]) {
   try {
     await session();
   } catch (e) {

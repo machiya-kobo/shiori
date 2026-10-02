@@ -20,6 +20,7 @@ const FILES = {
   'search.html': 'search-core.js search.js',
   'shiori-options.html': 'shiori-options.js search.css',
   'shiori-settings.html': 'shiori-settings.js shiori-settings-file.js shiori-settings.css search.css',
+  'shiori-sidebar.html': 'search-core.js shiori-pages.js shiori-sidebar.js shiori-sidebar.css',
   'search-core.js': '',
   'shiori-redirect.js': '',
   'assets/icons/icon-16.png': '',
@@ -45,6 +46,7 @@ function manifest(target) {
     m.options_ui = { page: 'shiori-settings.html', open_in_tab: true };
     m.incognito = 'not_allowed';
     m.omnibox = { keyword: 'sh' };
+    m.sidebar_action = { default_panel: 'shiori-sidebar.html' };
     m.browser_specific_settings = {
       gecko: {
         id: 'shiori@machiya-kobo.github.io',
@@ -115,6 +117,7 @@ test("Firefox fails on each of its rules broken alone", () => {
     'shioriLocalSettings': (m, f) => (f['background.js'] = BACKGROUND.safari),
     'settings page': (m) => (m.options_ui.page = 'shiori-options.html'),
     'omnibox': (m) => delete m.omnibox,
+    'sidebar': (m) => delete m.sidebar_action,
     'installOmnibox': (m, f) => (f['background.js'] = f['background.js'].replace('installOmnibox', '')),
   };
   for (const [rule, change] of Object.entries(cases)) {

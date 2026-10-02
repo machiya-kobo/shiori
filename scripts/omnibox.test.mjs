@@ -10,7 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
-const FIREFOX_BACKGROUND = ['patches/ext/host-local.js', 'patches/ext/core.js', 'patches/shiori/search-core.js', 'patches/ext/omnibox.js'];
+const FIREFOX_BACKGROUND = ['patches/ext/host-local.js', 'patches/ext/core.js', 'patches/shiori/search-core.js', 'patches/ext/pages.js', 'patches/ext/omnibox.js'];
 const source = FIREFOX_BACKGROUND.map((f) => read('../' + f)).join('\n');
 const plain = (v) => JSON.parse(JSON.stringify(v));
 const BASE = 'https://hister.example/';

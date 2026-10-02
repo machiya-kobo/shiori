@@ -13,6 +13,13 @@
       "strict_min_version": "153.0"
     }
   },
+  "$comment_sidebar": "Shiori in the sidebar: search your pages, and what you've saved from the site beside it (ext/sidebar.*). Desktop only; opened from View → Sidebar, or the command below (no key of its own: the user picks one).",
+  "sidebar_action": {
+    "default_panel": "shiori-sidebar.html",
+    "default_title": "Shiori",
+    "default_icon": { "16": "assets/icons/icon-16.png", "32": "assets/icons/icon-32.png" },
+    "open_at_install": false
+  },
   "$comment_omnibox": "The address bar's keyword: 'sh lantern' suggests your pages from Hister (ext/omnibox.js).",
   "omnibox": { "keyword": "sh" },
   "$comment_incognito": "Never in private windows: not loaded there at all.",
@@ -22,6 +29,7 @@
   "options_ui": { "page": "shiori-settings.html", "open_in_tab": true },
   "$comment_commands": "Control-Shift S, P and D are Firefox's own on Windows and Linux (screenshot, private window, bookmark all tabs), so Shiori's are Alt-Shift there; the Mac keeps Control-Shift, which Firefox leaves free. Firefox for Android has no keyboard shortcuts.",
   "commands": {
+    "_execute_sidebar_action": { "description": "Show or hide Shiori in the sidebar" },
     "index-current-page": { "suggested_key": { "default": "Alt+Shift+S" } },
     "disable-indexing-current-page": { "suggested_key": { "default": "Alt+Shift+P" } },
     "disable-indexing-current-domain": { "suggested_key": { "default": "Alt+Shift+D" } },

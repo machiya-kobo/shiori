@@ -66,7 +66,7 @@ case "$TARGET" in
     firefox)
         RESOURCES="build/firefox"
         UPSTREAM_MANIFEST="manifest_ff.json"
-        BACKGROUND=(patches/ext/host-local.js patches/ext/core.js patches/shiori/search-core.js patches/ext/omnibox.js patches/ext/badge.js patches/ext/menus.js)
+        BACKGROUND=(patches/ext/host-local.js patches/ext/core.js patches/shiori/search-core.js patches/ext/pages.js patches/ext/omnibox.js patches/ext/badge.js patches/ext/menus.js)
         ;;
     *)
         echo "error: unknown target '$TARGET' (safari or firefox)" >&2
@@ -156,6 +156,12 @@ else
     cp -- patches/ext/settings.css "$RESOURCES/shiori-settings.css"
     cp -- patches/ext/settings.js "$RESOURCES/shiori-settings.js"
     cp -- patches/ext/settings-file.js "$RESOURCES/shiori-settings-file.js"
+    # The sidebar (Firefox's sidebar_action), and the page list it shares
+    # with the address-bar keyword.
+    cp -- patches/ext/sidebar.html "$RESOURCES/shiori-sidebar.html"
+    cp -- patches/ext/sidebar.css "$RESOURCES/shiori-sidebar.css"
+    cp -- patches/ext/sidebar.js "$RESOURCES/shiori-sidebar.js"
+    cp -- patches/ext/pages.js "$RESOURCES/shiori-pages.js"
 fi
 # Your server's status page, linked in the results page's footer.
 SHIORI_STATUS_URL="${SHIORI_STATUS_URL:-$(yml SHIORI_STATUS_URL)}"

@@ -51,7 +51,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             replies["/search"] = {
                 "total": 2,
                 "history": [{"url": "https://lantern.example/opened", "title": "Opened Before"}],
-                "documents": [{"url": "https://lantern.example/kyoto", "title": "Lanterns of Kyoto"}],
+                "documents": [{"url": "https://lantern.example/kyoto", "title": "Lanterns of Kyoto",
+                               "text": "Paper <mark>lanterns</mark> line the street <b>in</b> Kyoto<script>x</script>"}],
             }
         if path in replies:
             return self._reply(200, replies[path])

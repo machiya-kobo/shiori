@@ -23,7 +23,7 @@ def problems(root, target):
     paths = list((m.get("icons") or {}).values())
     paths += list(((m.get("action") or {}).get("default_icon") or {}).values())
     paths += [background.get("service_worker")] + list(background.get("scripts") or [])
-    paths += [(m.get("action") or {}).get("default_popup"), options]
+    paths += [(m.get("action") or {}).get("default_popup"), options, (m.get("sidebar_action") or {}).get("default_panel")]
     paths += [js for cs in m.get("content_scripts", []) for js in cs["js"]]
     missing = [p for p in paths if p and not os.path.isfile(os.path.join(root, p))]
     if missing:
@@ -46,6 +46,9 @@ def problems(root, target):
         marks["shiori-options.html"] = ["shiori-options.js", "search.css"]
     else:
         marks["shiori-settings.html"] = ["shiori-settings.js", "shiori-settings-file.js", "shiori-settings.css", "search.css"]
+        marks["shiori-sidebar.html"] = ["search-core.js", "shiori-pages.js", "shiori-sidebar.js", "shiori-sidebar.css"]
+        if (m.get("sidebar_action") or {}).get("default_panel") != "shiori-sidebar.html":
+            out.append("Firefox's sidebar must be shiori-sidebar.html")
         if options != "shiori-settings.html":
             out.append("Firefox's settings page must be shiori-settings.html (there's no app to set them)")
 

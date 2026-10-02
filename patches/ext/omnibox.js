@@ -1,8 +1,8 @@
 // The address bar's keyword (Firefox): "sh lantern" suggests your pages from
 // Hister as you type, the pages you opened for that search first; Enter on
 // a suggestion opens it, Enter on the text opens Shiori Search. Prepended to
-// background.js after search-core.js (ShioriSearch) and ext/core.js
-// (resultsBase), so it talks only to the configured Hister server, with the
+// background.js after search-core.js (ShioriSearch), ext/pages.js and
+// ext/core.js (resultsBase), so it talks only to the configured Hister server, with the
 // query as every Shiori search sends it (the last word a prefix, never the
 // notes).
 (function installOmnibox() {
@@ -23,31 +23,15 @@
   }
 
   const isWeb = (url) => /^https?:\/\//i.test(String(url || ''));
-  // Plain text: Firefox shows descriptions as they are, control characters
-  // and all.
-  const plain = (text) => String(text || '').replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
 
-  /** The suggestions for a reply: pages opened for this search, then the
-   *  rest, once each, web pages only, never a note. */
+  /** The suggestions for a reply (ext/pages.js: opened before first, once
+   *  each, web pages only, never a note). */
   function suggestions(reply, settings) {
-    const seen = new Set();
-    const out = [];
-    const niwa = settings.niwaURL || '';
-    const konbini = settings.konbiniURL || '';
-    for (const d of [...((reply && reply.history) || []), ...((reply && reply.documents) || [])]) {
-      if (out.length >= LIMIT) break;
-      if (!d || !isWeb(d.url) || S.isOtherVault(d.url) || S.isNoteURL(d.url, niwa, konbini)) continue;
-      const key = S.normalizeURL(d.url);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const title = plain(d.title) || d.url;
-      let host = '';
-      try {
-        host = new URL(d.url).host;
-      } catch (_) {}
-      out.push({ content: d.url, description: host ? `${title} — ${host}` : title, title });
-    }
-    return out;
+    return globalThis.ShioriPages.webPages(reply, settings, LIMIT).map((p) => ({
+      content: p.url,
+      description: p.host ? `${p.title} — ${p.host}` : p.title,
+      title: p.title,
+    }));
   }
 
   chrome.omnibox.setDefaultSuggestion({ description: 'Search your pages for "%s" in Shiori Search' });
