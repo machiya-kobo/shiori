@@ -169,6 +169,17 @@ async function captureSession() {
     await driver.get(PAGES + 'skipme.html');
     check('a skip rule keeps the page off the server', !(await waitFor(posted('skipme.html'), 5000)));
 
+    // Kura's API opened in a tab holds a work note's HTML at an address
+    // without /v/ (/api/note?vault=work). Upstream captures only HTML and
+    // plain text, and Kura sends application/json: never captured, Firefox's
+    // JSON viewer included. Plain text is, as the control.
+    setMark();
+    await driver.get(PAGES + 'note.txt');
+    const plainText = await waitFor(posted('note.txt'), 5000);
+    await driver.get(PAGES + 'kura-note.json');
+    const json = await waitFor(posted('kura-note.json'), 5000);
+    check("Kura's JSON in a tab is never captured (plain text is)", !!plainText && !json, `plain=${!!plainText} json=${!!json}`);
+
     setMark();
     await hister(false);
     await driver.get(PAGES + 'page2.html');
