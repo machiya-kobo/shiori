@@ -1,0 +1,71 @@
+/* Shiori's settings page where there is no app (Firefox), in the results
+   page's colours: search.css holds the tokens (Tokyo Night and Tokyo
+   Night Day, every text colour at least 4.5:1 on its surface). Plain sizes
+   and the system font: Firefox has no -apple-system-* font keywords. */
+body.settings {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+  font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+.settings-head { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; }
+/* Not the results page's sticky, frosted header (search.css styles every <header>). */
+.settings .settings-head {
+  position: static; padding: 0; background: none; border-bottom: 0;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.settings-head img { border-radius: 14px; flex: none; }
+.settings-head h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text); }
+.settings-head p { margin: 4px 0 0; color: var(--secondary); }
+
+.settings .group { background: var(--card); border-radius: 14px; padding: 4px 16px 12px; margin: 0 0 16px; }
+.settings .group h2 { font-size: 0.8125rem; font-weight: 600; color: var(--secondary); margin: 12px 0 4px; }
+.settings .row {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 10px 0; border-top: 1px solid var(--line); color: var(--text);
+}
+.settings .group > .row:first-of-type, .settings form + .row { border-top: 0; }
+.settings .value { color: var(--secondary); text-align: right; overflow-wrap: anywhere; }
+.settings .value.ok { color: var(--kept); }
+.settings .value.bad { color: var(--tab-videos); }
+.settings .note { color: var(--secondary); font-size: 0.8125rem; margin: 6px 0 0; }
+.settings .note.center { text-align: center; margin-top: 16px; }
+
+.settings .field { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; }
+.settings .field label { font-size: 0.875rem; color: var(--text); }
+.settings .inline { display: flex; gap: 8px; }
+.settings .inline input { flex: 1; min-width: 0; }
+.settings input[type='url'], .settings input[type='text'] {
+  font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+}
+.settings input::placeholder { color: var(--secondary); opacity: 0.8; }
+.settings .toggle { cursor: pointer; }
+.settings .toggle input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); flex: none; }
+.settings .toggle input:disabled { opacity: 0.5; }
+
+.settings button, .settings .button {
+  font: inherit; font-weight: 600; display: inline-block; text-decoration: none; cursor: pointer;
+  padding: 7px 16px; border-radius: 999px; border: 0; color: var(--bg); background: var(--accent);
+}
+.settings button.secondary, .settings .button.secondary {
+  color: var(--accent); background: transparent; border: 1px solid var(--line);
+}
+.settings button:disabled { opacity: 0.5; cursor: default; }
+.settings .buttons { margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* A file picker that looks like the other buttons; the input stays
+   reachable by keyboard, its focus shown on the label. */
+.settings .file { position: relative; }
+.settings .file input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.settings .file:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings .error { color: var(--tab-videos); font-size: 0.8125rem; margin: 4px 0 0; }
+.settings .saved { color: var(--kept); font-size: 0.8125rem; margin-left: 8px; }
+
+/* A phone (Firefox for Android): stack the address and its button. */
+@media (max-width: 30rem) {
+  .settings .inline { flex-direction: column; }
+  .settings-head img { width: 44px; height: 44px; }
+}

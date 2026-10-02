@@ -1,6 +1,6 @@
 # Shiori 栞
 
-Shiori (栞, "bookmark") is [Hister](https://github.com/asciimoo/hister) for Safari on iPhone, iPad, and Mac: a native app to search your Hister server, plus the Safari extension that feeds it.
+Shiori (栞, "bookmark") is [Hister](https://github.com/asciimoo/hister) for Safari on iPhone, iPad, and Mac: a native app to search your Hister server, plus the Safari extension that feeds it. The same extension is built for Firefox too ([docs/firefox.md](docs/firefox.md)).
 
 Hister is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server, so you can search your history later. Upstream ships extensions for Firefox and Chrome only and has declined Safari support in-tree ([issue #49](https://github.com/asciimoo/hister/issues/49)). iOS only loads extensions that ship inside a signed app, so Shiori is that app.
 
@@ -273,9 +273,9 @@ The app talks only to the servers you configure: your Hister server and, if you 
 Shiori wraps the **official upstream extension** without forking it:
 
 - `vendor/hister/` pins upstream as a git submodule (currently **v0.20.0**, extension 0.31.0). It is never modified.
-- `scripts/build-extension.sh` builds upstream's extension with npm, then patches the built bundle for Safari:
-  - `patches/manifest.safari.json`: Safari manifest overrides (icons, name, drops the `cookies` permission).
-  - `patches/safari-shims.js`, prepended to `background.js`: prebuilt toolbar icons in place of `OffscreenCanvas`, ignores Safari's internal pages, and adds an **offline queue** (below).
+- `scripts/build-extension.sh` builds upstream's extension with npm, then patches the built bundle for Safari (or, with `--target firefox`, for Firefox):
+  - `patches/manifest.shiori.json`, then `patches/manifest.safari.json`: manifest overrides (icons, name, Shiori's shortcuts, drops the `cookies` permission).
+  - Prepended to `background.js`: `patches/safari-shims.js` (prebuilt toolbar icons in place of `OffscreenCanvas`, ignores Safari's internal pages), `patches/ext/host-native.js` (settings from the app), `patches/ext/core.js`, Shiori's own part for every browser (the **offline queue** (below), tagged captures and combined search), then `patches/shiori/search-core.js`, `patches/ext/badge.js` and `patches/ext/menus.js` (the toolbar count and the Mac's right-click menu, shared with Firefox).
   - `patches/safari-content-shim.js`, prepended to `content.js`: a **size cap** on captured pages.
   - `patches/safari-popup.css`, linked into `popup.html`: lets the popup fill the sheet on touch screens.
 - `project.yml` ([XcodeGen](https://github.com/yonaskolb/XcodeGen)) generates one Xcode project with an iOS/iPadOS app, a macOS app, and a Safari Web Extension for each.
@@ -285,7 +285,10 @@ The popup, skip rules, "index this page", "skip this page/domain", and PDF index
 
 ### Safari-only behaviour
 
-- **Offline queue.** When the server can't be reached (VPN off, no signal), a captured page is kept on the device, stamped with the time you visited it, and sent when the server answers again. This is on by default, with no error badge. The queue holds the newest 100 pages (24 M characters at most) and one entry per URL. Pages the server refuses (a skip rule, too large, or sensitive content) are dropped, not retried. The last skip rules fetched from the server still apply while offline, so skipped sites never reach the queue. Until the rules have been fetched once, nothing is queued. Queued pages never store credentials, and are dropped after 14 days.
+- **Offline queue.** When the server can't be reached (VPN off, no signal), a captured page is kept on the device, stamped with the time you visited it, and sent when the server answers again. This is on by default, with no error badge. The queue holds the newest 100 pages (24 M characters at most) and one entry per URL. Pages the server refuses (a skip rule, too large, or sensitive content) are dropped, not retried. The last skip rules fetched from the server still apply while offline, so skipped sites never reach the queue. Until the rules have been fetched once, nothing is queued. Queued pages never store credentials, and are dropped after 14 days. When the app's server changes, queued pages go to the new one and its skip rules are fetched at once.
+- **Waiting count on the toolbar button** (the Mac): how many pages are waiting to send, and the button's tooltip says so. The app's Settings → Waiting to Send shows the same.
+- **Right-click menu** (the Mac; iOS has none): Search Shiori for the selected words; Save Page to Hister, Never Save This Page, Never Save This Site (upstream's own commands); Save Link to Hister, by Save This Note's Links' rules (never a file or a page Hister has, skip rules holding, `gemini://` and `gopher://` through the small-web gateway). The answer shows on the toolbar button for a few seconds.
+- **Sites never saved on their own**: Safari has no containers. Turn Shiori off in a Safari profile (Safari Settings → Profiles → Extensions) and browse those sites there.
 - **Size cap.** Page HTML over 2 M characters is truncated at a tag boundary, never dropped. Mobile Safari kills extensions that use too much memory. A page's text isn't sent beside its HTML, since Hister reads the text from the HTML itself (text alone, with no HTML, is capped at 1 M).
 - **Tagged captures.** Every page sent carries `metadata.client: "shiori"` and `metadata.client_version`, so Hister can tell Shiori's captures from other clients' (search `metadata.client:shiori`).
 - **Full-width popup** on iPhone and iPad; the Mac keeps upstream's 320px.
@@ -334,6 +337,24 @@ Never edit `Shiori.xcodeproj` (it is generated and gitignored) or `ShioriExtensi
 **iPhone / iPad:** Settings → Apps → Safari → Extensions → Shiori. Turn it on, set **All Websites** to **Allow**, and leave **Allow in Private Browsing** off. Then in Safari, tap the Page Menu button at the left of the address bar → Shiori to check the server address.
 
 **Mac:** open Shiori, click **Open Safari Extensions Settings…**, turn on Shiori, and allow it on every website. A build signed with your team stays enabled. An ad-hoc build needs Develop → Allow Unsigned Extensions after every Safari restart.
+
+## Firefox
+
+The same extension, built for Firefox 153 and later (the current ESR) on every system Firefox runs on, including LibreWolf, Zen, Floorp and Firefox for Android. It has no app behind it, so its own settings page sets the server and the rest. Firefox adds:
+
+- the address-bar keyword `sh`;
+- a sidebar;
+- container rules;
+- settings you can carry to another device.
+
+The right-click menu and the toolbar's waiting count are the Mac's too.
+
+It never takes over DuckDuckGo's searches as Safari's does: Firefox adds search engines, so add the hosted search page as one (it advertises OpenSearch), or use `sh`. Signed builds, kept up to date by Firefox, come with each [release](https://github.com/machiya-kobo/shiori/releases); [docs/firefox.md](docs/firefox.md) covers installing, building and releasing.
+
+```bash
+git submodule update --init
+scripts/build-extension.sh --target firefox    # build/firefox/ and an unsigned build/shiori-firefox-<version>.zip
+```
 
 ## Linux
 

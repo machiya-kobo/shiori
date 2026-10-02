@@ -1,5 +1,6 @@
-// Tests for the Safari shims in patches/. Each test loads a shim into a
-// fresh vm context with fake chrome.* and fetch.
+// Tests for the Safari shims in patches/ (and Shiori's core in patches/ext/,
+// with the app as its host). Each test loads a shim into a fresh vm context
+// with fake chrome.* and fetch.
 // Run: node --test scripts/
 
 import { readFileSync } from 'node:fs';
@@ -9,23 +10,33 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
-const backgroundShim = read('../patches/safari-shims.js');
+// What build-extension.sh prepends to Safari's background.js, in its order.
+const SAFARI_BACKGROUND = ['patches/safari-shims.js', 'patches/ext/host-native.js', 'patches/ext/core.js', 'patches/shiori/search-core.js', 'patches/ext/badge.js', 'patches/ext/menus.js'];
+const backgroundShim = SAFARI_BACKGROUND.map((f) => read('../' + f)).join('\n');
 const contentShim = read('../patches/safari-content-shim.js');
 
 const BASE = 'https://hister.example/';
 const settle = () => new Promise((r) => setTimeout(r, 20));
 
-function fakeStorage(initial = {}) {
+// With `events`, it has the browser's storage.onChanged (else none, as
+// before Shiori listened).
+function fakeStorage(initial = {}, { events = false } = {}) {
   const data = structuredClone(initial);
+  const changed = [];
   return {
     data,
+    onChanged: events ? { addListener: (l) => changed.push(l) } : undefined,
     async get(keys) {
       const out = {};
       for (const k of keys) if (k in data) out[k] = structuredClone(data[k]);
       return out;
     },
     async set(items) {
+      const changes = {};
+      for (const [k, v] of Object.entries(items)) changes[k] = { oldValue: data[k], newValue: v };
       Object.assign(data, structuredClone(items));
+      // The browser tells listeners after the write, never inside it.
+      setTimeout(() => changed.forEach((l) => l(structuredClone(changes), 'local')));
     },
     async remove(keys) {
       for (const k of [].concat(keys)) delete data[k];
@@ -44,7 +55,7 @@ function loadBackground({ network, storage = fakeStorage({ histerURL: BASE, ...R
     return network(url, init);
   };
   const ctx = {
-    chrome: { storage: { local: storage }, runtime: { getManifest: () => ({ version: '9.8.7' }) } },
+    chrome: { storage: { local: storage, onChanged: storage.onChanged }, runtime: { getManifest: () => ({ version: '9.8.7' }) } },
     fetch,
     Response,
     Headers,
@@ -83,6 +94,19 @@ test('an automatic capture made offline is queued with a visit time and answers 
   assert.equal(item.url, BASE + 'api/add');
   const doc = JSON.parse(item.body);
   assert.ok(Number.isInteger(doc.added) && doc.added >= before);
+});
+
+test("a work vault's note is never sent or queued, however it's captured", async () => {
+  for (const network of [offline, async () => new Response('{}', { status: 201 })]) {
+    const { ctx, calls, storage } = loadBackground({ network });
+    for (const metadata of [{}, { ignore_skip_rules: true }]) {
+      const r = await ctx.fetch(BASE + 'api/add', addInit({ url: 'https://kura.example/v/work/n/plan', html: '<p>x</p>', metadata }));
+      assert.equal(r.status, 406);
+      assert.equal(r.headers.get('X-Shiori-Refused'), 'work-note');
+    }
+    assert.equal(calls.some((c) => c.url === BASE + 'api/add'), false);
+    assert.deepEqual(queued(storage), []);
+  }
 });
 
 test('a manual capture made offline is queued but still reports failure', async () => {
@@ -417,6 +441,7 @@ function loadCombinedSearch({
   searchPage = '',
   pageUp = async () => new Response('<OpenSearchDescription/>'),
   nativeGate = null,
+  network = async () => new Response('{}'),
 }) {
   const listeners = [];
   const updates = [];
@@ -425,7 +450,7 @@ function loadCombinedSearch({
   const tabListeners = [];
   const ctx = {
     chrome: {
-      storage: { local: storage },
+      storage: { local: storage, onChanged: storage.onChanged },
       runtime: {
         getManifest: () => ({ version: '9.8.7' }),
         getURL: (p) => `safari-web-extension://x/${p}`,
@@ -445,7 +470,7 @@ function loadCombinedSearch({
     fetch: async (input, init) => {
       const url = typeof input === 'string' ? input : input.url;
       fetched.push(url);
-      return searchPage && url.startsWith(searchPage) ? pageUp(url, init) : new Response('{}');
+      return searchPage && url.startsWith(searchPage) ? pageUp(url, init) : network(url, init);
     },
     Response, Headers, URL, TypeError, JSON, setTimeout, clearTimeout, console, Date, AbortController,
   };
@@ -680,4 +705,129 @@ test("with the hosted page down, results open on the extension's own page", asyn
   assert.equal(answer.redirect, true);
   assert.equal(answer.url, undefined);
   assert.deepEqual(updates, [[7, 'safari-web-extension://x/search.html?q=go']]);
+});
+
+test('the build prepends the Safari background files in the order these tests load them', () => {
+  const build = read('../scripts/build-extension.sh');
+  assert.ok(build.includes('BACKGROUND=(' + SAFARI_BACKGROUND.join(' ') + ')\n'));
+  assert.ok(build.includes('prepend background.js "${BACKGROUND[@]}"'));
+});
+
+test('on Safari the app owns the server: the extension never sets it', async () => {
+  const storage = fakeStorage({ histerURL: 'https://kept.example/' });
+  const { listeners } = loadCombinedSearch({ nativeReply: {}, storage });
+  // Even from the settings page's own address: the app sets the server.
+  const sender = { url: 'safari-web-extension://x/shiori-settings.html', tab: { id: 9 } };
+  const reply = await new Promise((resolve) => {
+    for (const l of listeners) if (l({ shiori: 'set-server', url: 'https://evil.example/' }, sender, resolve) === true) return;
+    resolve(undefined);
+  });
+  assert.equal(reply.ok, false);
+  assert.equal(storage.data.histerURL, 'https://kept.example/');
+});
+
+// --- the queue follows a server set elsewhere (the app, a fresh install) ---
+
+const queuedItem = (key, url, pageURL = 'https://a.example/') => ({
+  index: { key, pageURL, bytes: 2, attempts: 0, queuedAt: Date.now() },
+  item: { url, headers: {}, body: JSON.stringify({ url: pageURL }) },
+});
+
+test("the app's new server: queued pages follow it, its rules replace the old ones, the queue drains", async () => {
+  const q = queuedItem('shioriQueueItem:1', 'https://old.example/api/add');
+  const storage = fakeStorage(
+    { histerURL: 'https://old.example/', shioriCachedRules: '{"skip":["old"]}', shioriQueueIndex: [q.index], [q.index.key]: q.item },
+    { events: true },
+  );
+  const sent = [];
+  const { fetched } = loadCombinedSearch({
+    nativeReply: { serverURL: 'https://new.example' },
+    storage,
+    network: async (url, init) => {
+      if (url.startsWith('https://old.example/')) throw new TypeError('the old server is gone');
+      if (url === 'https://new.example/api/rules') return new Response('{"skip":["new"]}');
+      if (init && init.method === 'POST') sent.push(url);
+      return new Response('{}', { status: 201 });
+    },
+  });
+  for (let i = 0; i < 10 && !sent.length; i++) await settle();
+  assert.equal(storage.data.histerURL, 'https://new.example/');
+  assert.equal(storage.data.shioriCachedRules, '{"skip":["new"]}');
+  assert.ok(fetched.includes('https://new.example/api/rules'));
+  assert.deepEqual(sent, ['https://new.example/api/add']);
+  assert.equal(queued(storage).length, 0);
+});
+
+test('a fresh install fetches the rules once its server is stored, so the first offline capture is queued', async () => {
+  const storage = fakeStorage({}, { events: true });
+  const { ctx } = loadBackground({
+    storage,
+    network: async (url) => {
+      if (url === BASE + 'api/rules') return new Response('{"skip":[]}');
+      throw new TypeError('Load failed');
+    },
+  });
+  await settle();
+  assert.equal('shioriCachedRules' in storage.data, false);
+  await storage.set({ histerURL: BASE }); // upstream's default, written on install
+  await settle();
+  assert.equal(storage.data.shioriCachedRules, '{"skip":[]}');
+  const r = await ctx.fetch(BASE + 'api/add', addInit({ url: 'https://a.example/' }));
+  assert.equal(r.status, 201);
+  assert.equal(queued(storage).length, 1);
+});
+
+test('the same server written again changes nothing', async () => {
+  const storage = fakeStorage({ histerURL: BASE, ...RULES }, { events: true });
+  const { calls } = loadBackground({ storage, network: offline });
+  await settle();
+  const before = calls.length;
+  await storage.set({ histerURL: BASE.slice(0, -1) }); // without its slash
+  await settle();
+  assert.equal(storage.data.shioriCachedRules, RULES.shioriCachedRules);
+  assert.equal(calls.length, before);
+});
+
+test('a server moved inside the old address moves each queued page once', async () => {
+  const a = queuedItem('shioriQueueItem:1', 'https://h.example/api/add', 'https://a.example/');
+  const b = queuedItem('shioriQueueItem:2', 'https://h.example/x/api/add', 'https://b.example/');
+  const storage = fakeStorage(
+    { histerURL: 'https://h.example/', ...RULES, shioriQueueIndex: [a.index, b.index], [a.index.key]: a.item, [b.index.key]: b.item },
+    { events: true },
+  );
+  loadBackground({ storage, network: offline });
+  await settle();
+  await storage.set({ histerURL: 'https://h.example/x/' });
+  await settle();
+  assert.equal(storage.data[a.index.key].url, 'https://h.example/x/api/add');
+  assert.equal(storage.data[b.index.key].url, 'https://h.example/x/api/add');
+});
+
+test("Safari's whole background on the Mac: the badge counts the queue and the right-click menu is made", async () => {
+  const created = [];
+  const badge = [];
+  const ctx = {
+    chrome: {
+      storage: { local: fakeStorage({ histerURL: BASE, ...RULES, shioriQueueIndex: [{ key: 'k', pageURL: 'https://a.example/' }] }), onChanged: { addListener() {} } },
+      runtime: { getManifest: () => ({ version: '9.8.7' }), getURL: (p) => `safari-web-extension://x/${p}`, onMessage: { addListener() {} } },
+      action: {
+        setIcon: () => Promise.resolve(),
+        setBadgeText: (d) => (badge.push(d.text), Promise.resolve()),
+        setBadgeBackgroundColor: () => Promise.resolve(),
+        setTitle: () => Promise.resolve(),
+      },
+      contextMenus: { removeAll: (done) => void setTimeout(done), create: (item) => created.push(item.id), onClicked: { addListener() {} } },
+      commands: { onCommand: { addListener() {} } },
+      tabs: { update: async () => {}, onUpdated: { addListener() {} } },
+    },
+    fetch: async () => new Response('{}'),
+    Response, Headers, URL, URLSearchParams, TypeError, JSON, setTimeout, clearTimeout, console, Date, AbortController,
+  };
+  ctx.globalThis = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(backgroundShim, ctx);
+  await settle();
+  assert.deepEqual(badge, ['1']);
+  assert.deepEqual(created, ['shiori-search', 'shiori-save-link', 'shiori-save-page', 'shiori-never-page', 'shiori-never-site']);
+  assert.equal(typeof ctx.ShioriSearch.histerText, 'function');
 });
