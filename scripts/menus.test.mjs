@@ -109,6 +109,19 @@ test('never a page Hister holds: looked up first, and again after a redirect', a
   assert.equal(after.added.length, 0);
 });
 
+test("never a note: a work vault's, a Kura or Konbini page, or a link that redirects to one", async () => {
+  const settings = { niwaURL: 'https://kura.example/', konbiniURL: 'https://konbini.example/' };
+  const t = load({ settings });
+  for (const url of ['https://kura.example/v/work/n/plan', 'https://kura.example/n/Projects/Example', 'https://konbini.example/p/garden-plan']) {
+    assert.deepEqual(plain(await t.menus.saveLink(url)), { outcome: 'failed', reason: 'A note, which stays in Kura' });
+  }
+  assert.equal(t.fetched.length, 0, 'not looked up, not downloaded');
+
+  const moved = load({ settings, web: () => html(HTML, 'https://kura.example/v/work/n/plan') });
+  assert.equal((await moved.menus.saveLink('https://short.example/x')).reason, 'A note, which stays in Kura');
+  assert.equal(moved.added.length, 0);
+});
+
 test('never a file, never a page that is not HTML', async () => {
   const t = load({ web: () => new Response('%PDF', { headers: { 'Content-Type': 'application/pdf' } }) });
   assert.equal((await t.menus.saveLink('https://a.example/release.zip')).outcome, 'failed');

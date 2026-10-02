@@ -117,10 +117,15 @@
     if (!/^https?:\/\//i.test(url)) return { outcome: 'failed', reason: 'Not a web page' };
     if (S.linkLooksLikeFile(url)) return { outcome: 'failed', reason: 'A file, not a web page' };
     if (!base) return { outcome: 'failed', reason: 'No Hister server set (Shiori settings)' };
+    // Notes come only from Kura, and a work vault's never reach Hister.
+    const isNote = (u) => S.isOtherVault(u) || S.isNoteURL(u, settings.niwaURL || '', settings.konbiniURL || '');
+    const NOTE = { outcome: 'failed', reason: 'A note, which stays in Kura' };
+    if (isNote(url)) return NOTE;
     // Hister out of reach: not known to hold it; the save is then queued.
     if (await holds(base, [url]).catch(() => false)) return { outcome: 'held' };
     const page = await download(url);
     if (!page) return { outcome: 'failed', reason: "Couldn't download it, or it isn't a web page" };
+    if (page.url !== url && isNote(page.url)) return NOTE;
     if (page.url !== url && (await holds(base, [page.url]).catch(() => false))) return { outcome: 'held' };
     const body = { url: page.url, title: titleIn(page.html), html: page.html, metadata: { via: 'context-menu' } };
     let r;
