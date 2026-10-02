@@ -49,7 +49,7 @@ whatever the OS or architecture.
 |---|---|---|
 | Windows, macOS, Linux | Mozilla's builds (x86-64, arm64); Linux distributions add other CPUs | |
 | FreeBSD, OpenBSD, NetBSD | Ports and packages, including ESR | Hand-tested on the owner's BSD VMs |
-| Haiku | Firefox, per the R1/beta6 release notes (reported by the owner; not checked here) | Its Firefox version must meet the floor; check on install |
+| Haiku | Official Firefox in HaikuDepot since R1/beta6, plus LibreWolf, Floorp and Waterfox; **x86_64 only** (R1/beta6 release notes) | Its Firefox version must meet the floor; check on install. Haiku is beta: a Haiku-only fault goes to HaikuPorts, not Mozilla, once it's shown not to be Shiori's |
 | Android | Firefox for Android | See "Android" |
 
 Where the rule has to be kept:
@@ -78,8 +78,9 @@ for OpenBSD, NetBSD or Haiku, and FreeBSD on x64 only. So:
 ## Forks: LibreWolf, Zen, Floorp
 
 All three are Gecko with the WebExtensions API and accept add-ons signed by
-Mozilla, so the same `.xpi` installs. To check by hand on each (not
-verified):
+Mozilla, so the same `.xpi` installs. LibreWolf and Floorp also run on Haiku
+(HaikuDepot); Waterfox is there too, but isn't a target. To check by hand
+on each (not verified):
 
 - LibreWolf's hardening (resist-fingerprinting, strict privacy prefs) leaves
   `storage.local`, background fetches to the server and add-on updates
@@ -261,7 +262,7 @@ The rest of phase 5:
   has Chromium): a later step.
 - Hand-check before the first release:
   - Windows, macOS, Linux;
-  - the BSD VMs and Haiku;
+  - the BSD VMs, and Haiku x86_64 (Firefox, plus LibreWolf or Floorp there);
   - Android;
   - LibreWolf, Zen, Floorp.
 
