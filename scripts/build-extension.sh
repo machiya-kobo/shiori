@@ -145,10 +145,17 @@ prepend content.js patches/safari-content-shim.js
 cp -- patches/shiori/search.html patches/shiori/search.css patches/shiori/search.js \
     patches/shiori/search-core.js "$RESOURCES/"
 cp -- patches/shiori/redirect.js "$RESOURCES/shiori-redirect.js"
-# Shiori's settings page (Safari → Extensions → Shiori → Settings).
-cp -- patches/shiori/options.html "$RESOURCES/shiori-options.html"
-cp -- patches/shiori/options.css "$RESOURCES/shiori-options.css"
-cp -- patches/shiori/options.js "$RESOURCES/shiori-options.js"
+# Shiori's settings page. Safari's shows what the app set (Safari →
+# Extensions → Shiori → Settings); Firefox has no app, so its page sets them.
+if [[ "$TARGET" == safari ]]; then
+    cp -- patches/shiori/options.html "$RESOURCES/shiori-options.html"
+    cp -- patches/shiori/options.css "$RESOURCES/shiori-options.css"
+    cp -- patches/shiori/options.js "$RESOURCES/shiori-options.js"
+else
+    cp -- patches/ext/settings.html "$RESOURCES/shiori-settings.html"
+    cp -- patches/ext/settings.css "$RESOURCES/shiori-settings.css"
+    cp -- patches/ext/settings.js "$RESOURCES/shiori-settings.js"
+fi
 # Your server's status page, linked in the results page's footer.
 SHIORI_STATUS_URL="${SHIORI_STATUS_URL:-$(yml SHIORI_STATUS_URL)}"
 python3 scripts/status-link.py "$RESOURCES/search.html" "$SHIORI_STATUS_URL"
@@ -266,10 +273,10 @@ SHIORI_ROOMS="$SHIORI_ROOMS" SHIORI_NIWA_URL="$SHIORI_NIWA_URL" SHIORI_KONBINI_U
 SHIORI_SEARCH_PAGE_URL="${SHIORI_SEARCH_PAGE_URL:-$(yml SHIORI_SEARCH_PAGE_URL)}"
 if [[ -n "$SHIORI_SEARCH_PAGE_URL" && "$SHIORI_SEARCH_PAGE_URL" != */ ]]; then SHIORI_SEARCH_PAGE_URL="$SHIORI_SEARCH_PAGE_URL/"; fi
 [[ -z "$SHIORI_SEARCH_PAGE_URL" || "$SHIORI_SEARCH_PAGE_URL" =~ ^https?:// ]] || { echo "SHIORI_SEARCH_PAGE_URL must start with http:// or https://" >&2; exit 1; }
-python3 - "$RESOURCES" "$SHIORI_SEARCH_PAGE_URL" <<'PY'
+python3 - "$RESOURCES" "$SHIORI_SEARCH_PAGE_URL" "$TARGET" <<'PY'
 import os, sys
-root, url = sys.argv[1:]
-for name in ("background.js", "shiori-options.js"):
+root, url, target = sys.argv[1:]
+for name in ("background.js", "shiori-options.js") if target == "safari" else ("background.js",):
     p = os.path.join(root, name)
     s = open(p, encoding="utf-8").read()
     if "__SHIORI_SEARCH_PAGE_URL__" not in s:

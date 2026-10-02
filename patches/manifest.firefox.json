@@ -15,9 +15,9 @@
   },
   "$comment_incognito": "Never in private windows: not loaded there at all.",
   "incognito": "not_allowed",
-  "$comment_options": "Firefox opens the settings in a tab, not inside about:addons.",
+  "$comment_options": "Shiori's own settings page (ext/settings.html: there's no app to set them), opened in a tab, not inside about:addons.",
   "options_page": null,
-  "options_ui": { "page": "shiori-options.html", "open_in_tab": true },
+  "options_ui": { "page": "shiori-settings.html", "open_in_tab": true },
   "$comment_commands": "Control-Shift S, P and D are Firefox's own on Windows and Linux (screenshot, private window, bookmark all tabs), so Shiori's are Alt-Shift there; the Mac keeps Control-Shift, which Firefox leaves free. Firefox for Android has no keyboard shortcuts.",
   "commands": {
     "index-current-page": { "suggested_key": { "default": "Alt+Shift+S" } },

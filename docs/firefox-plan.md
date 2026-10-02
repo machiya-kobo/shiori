@@ -1,6 +1,6 @@
 # Plan: Shiori for Firefox
 
-Status: phases 0 (the spike), 1 (the split) and 2 (the Firefox build) done; phase 3 is next.
+Status: phases 0 to 3 done (spike, split, Firefox build, settings page); phase 4 is next.
 
 ## Decisions
 
@@ -343,29 +343,79 @@ node by node, and Firefox renders the same markup as before.
 The settings page is still Safari's read-only one ("set it in the Shiori
 app"). Phase 3 replaces it.
 
-### 3. The settings page
+### 3. The settings page (done)
 
-Firefox has no app behind it, so the read-only Safari page ("set it in the
-Shiori app") becomes an editor. One page for every OS.
+Firefox has no app behind it, so it gets a page that sets things:
+`patches/ext/settings.{html,css,js}`, shipped as `shiori-settings.html` (the
+manifest's `options_ui`). Safari keeps its read-only `shiori-options.html`;
+each build ships only its own. Chrome will use the Firefox page.
 
-- **Server**: the Hister address, with the existing connection test
-  (`api/stats`).
-- **Neighbours**: SearXNG, Kura, Niwa, Konbini, the small-web gateway, the
-  hosted search page. Each is optional and validated as `http(s)`.
-- **Results**: the settings the results page's gear already writes, through
-  the same whitelist (`SharedSettings.applyFromPage`'s keys, types and
-  values). **No AI settings**: a page must never turn AI on, and AI is
-  app-only.
-- **Site access**: a card that checks `permissions.contains(<all_urls>)`,
-  with a Grant button (`permissions.request` needs a click). Without it
-  nothing is captured.
-- **Queue**: how many pages are waiting, and Retry Now.
-- First install (`runtime.onInstalled`) opens the page.
-- Saving the server writes `histerURL` and fetches the skip rules at once,
-  so the queue has them before the first capture (phase 0, finding 3).
-- Build defaults (`SHIORI_SERVER_URL` and the rest, from `local.yml`) fill
-  the page only in a build that sets them. The published `.xpi` sets none,
-  so it starts empty and asks.
+| Card | What it does |
+|---|---|
+| Hister Server | The address (http(s), checked on the page), Save, and the status from `api/stats` ("Connected · N pages", "Can't reach it", or "Needs site access" when that's what's missing) |
+| Site Access | Allowed or not, for `*://*/*`; when not, a note and **Allow on All Websites** (`permissions.request` from the click) |
+| Waiting to Send | The queue's count and since when, and **Retry Now** |
+| Search | Take Over DuckDuckGo Searches, Web Results (greyed while the first is off), and a link to Shiori Search, whose gear holds the rest |
+| Neighbours | SearXNG, Kura, Konbini, the small-web gateway, the Obsidian vault (each optional, checked on the page) |
+
+How it's wired:
+
+- **The server** goes through a new message to the core, `set-server`. It
+  is accepted only from `shiori-settings.html` itself, only for an http(s)
+  address, and only where the host owns the server (`shioriHost.ownsServer`:
+  Firefox yes, Safari no, as the app owns it there). Saving:
+  - writes `histerURL`;
+  - drops the old server's cached rules and fetches the new one's at once,
+    so the queue has them before the first offline capture (phase 0,
+    finding 3);
+  - sends pages already queued to the new server, instead of leaving them
+    for 14 days at the old address.
+- **Everything else** goes through `set-settings`, the same whitelist the
+  gear uses (`host-local.js`). AI settings, the server and unknown keys are
+  refused there. The vault, as in the app, can be renamed but not blanked.
+- **The queue** answers `queue-status` and `retry-queue`.
+- **First install** (`runtime.onInstalled`, reason `install`) opens the
+  page. It's done in `host-local.js`, since only an app-less browser needs
+  it. Firefox opened it in the empty start tab.
+
+Changed from the earlier draft:
+
+- **The results options aren't repeated here.** Shiori Search's gear
+  already sets them through the same whitelist; the page links to it.
+- **The hosted search page isn't a setting.** It is a build-time address
+  (`SHIORI_SEARCH_PAGE_URL`). It exists for iOS suspending Safari, which
+  Firefox doesn't do.
+- **No published build starts empty.** Without `SHIORI_SERVER_URL`, the
+  address shown is upstream's default, `http://127.0.0.1:4433/` (right for
+  a Hister on the same machine). The page opens on install so it can be
+  changed.
+
+Found on the way: Firefox counts the content script's `<all_urls>` match
+as a host permission of its own. Revoking site access in about:addons
+removes both, and the page's check for `*://*/*` sees either.
+
+Proof:
+
+- **Unit tests:** 154 of 154 script tests pass. The new ones cover:
+  - `set-server`: rules swapped, queue moved, an unreachable server still
+    saved;
+  - refused from any other page, a content script, or a non-http(s)
+    address;
+  - refused on Safari even from that page's address;
+  - queue status and retry;
+  - opening on install but not on update.
+- **Spike on ESR 153:** 26 of 26 pass. A new session drives the page:
+  - it opens on install and finds the server and access;
+  - a bad address is refused;
+  - saving `http://localhost:8775` stores `http://localhost:8775/` and
+    fetches its rules before any capture;
+  - a switch and a neighbour are kept;
+  - with site access revoked, the page says so, offers Allow, and says the
+    server needs site access rather than blaming the network.
+- **Screenshots:** both themes at desktop width and phone width (16 px
+  gutters).
+- **Hand check left:** clicking Allow. Firefox's prompt can't be answered
+  from WebDriver.
 
 ### 4. Search integration
 

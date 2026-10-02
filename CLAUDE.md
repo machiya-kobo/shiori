@@ -108,6 +108,11 @@ holds the rules and the traps the code can't tell you.
   Firefox alike. It reaches settings only through `shioriHost`:
   `ext/host-native.js` (the app) on Safari, `ext/host-local.js`
   (`storage.local`) on Firefox (docs/firefox-plan.md).
+- Firefox's settings page is `patches/ext/settings.*` (Safari's,
+  `patches/shiori/options.*`, only shows what the app set). Only it may set
+  the server (`set-server`: from its own address, where
+  `shioriHost.ownsServer`); everything else goes through `set-settings`, the
+  gear's whitelist.
 - Settings reach the extension through the App Group: the background asks by
   `sendNativeMessage` on every search (400 ms budget, then its cache in
   `storage.local`). A setting the extension page shows must be in both

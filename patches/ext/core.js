@@ -403,16 +403,92 @@
     return originalFetch(input, init);
   };
 
+  /** The server's skip rules, remembered for the queue; whether it answered. */
+  async function fetchRules(base) {
+    try {
+      const r = await originalFetch(base + 'api/rules', { headers: {}, credentials: 'include' });
+      if (r.ok) await storage.set({ [RULES_KEY]: await r.text() });
+      return r.ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // Fetch the skip rules as soon as the worker starts, so the queue has
   // them before the first offline capture (enqueue fails closed without).
   (async () => {
     const base = await serverBase();
-    if (!base) return;
-    try {
-      const r = await originalFetch(base + 'api/rules', { headers: {}, credentials: 'include' });
-      if (r.ok) await storage.set({ [RULES_KEY]: await r.text() });
-    } catch (_) {}
+    if (base) await fetchRules(base);
   })().finally(() => void drain());
+
+  /** A new Hister server (the settings page, where the host owns it): the
+   *  old server's rules go, the new one's are fetched at once (so the queue
+   *  has them before the first offline capture), and pages already queued
+   *  are sent to the new server rather than waiting out their 14 days at
+   *  the old address. Returns whether the new server answered. */
+  async function setServer(url) {
+    const base = url.endsWith('/') ? url : url + '/';
+    const old = await serverBase();
+    if (base !== old) {
+      await withLock(async () => {
+        await storage.remove(RULES_KEY);
+        const index = await readIndex();
+        for (const e of index) {
+          const item = (await storage.get([e.key]))[e.key];
+          if (item && old && typeof item.url === 'string' && item.url.startsWith(old)) {
+            await storage.set({ [e.key]: { ...item, url: base + item.url.slice(old.length) } });
+          }
+        }
+        await storage.set({ histerURL: base });
+      });
+    }
+    const reachable = await fetchRules(base);
+    if (reachable) void drain();
+    return reachable;
+  }
+
+  async function queueStatus() {
+    const index = await readIndex();
+    return { count: index.length, oldest: index.length ? Math.min(...index.map((e) => e.queuedAt || Date.now())) : null };
+  }
+
+  // The settings page's questions about the server and the queue. Only an
+  // extension page may set the server, and only where the host owns it (on
+  // Safari the app does). Upstream's listeners never see these (section 2
+  // hides `shiori:` messages from them).
+  if (chrome.runtime && chrome.runtime.onMessage && chrome.runtime.onMessage.addListener) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (!request || typeof request.shiori !== 'string') return false;
+      const fromSettings =
+        !!sender && typeof sender.url === 'string' && typeof chrome.runtime.getURL === 'function' &&
+        sender.url.split(/[?#]/)[0] === chrome.runtime.getURL('shiori-settings.html');
+      if (request.shiori === 'set-server') {
+        let url = null;
+        try {
+          const u = new URL(String(request.url || '').trim());
+          if (u.protocol === 'http:' || u.protocol === 'https:') url = u.href;
+        } catch (_) {}
+        if (!shioriHost.ownsServer || !fromSettings || !url) {
+          sendResponse({ ok: false });
+          return false;
+        }
+        setServer(url).then(
+          (reachable) => sendResponse({ ok: true, reachable }),
+          () => sendResponse({ ok: false }),
+        );
+        return true;
+      }
+      if (request.shiori === 'queue-status' || request.shiori === 'retry-queue') {
+        const run = request.shiori === 'retry-queue' ? drain() : Promise.resolve();
+        run.then(queueStatus).then(
+          (status) => sendResponse({ ok: true, ...status }),
+          () => sendResponse({ ok: false }),
+        );
+        return true;
+      }
+      return false;
+    });
+  }
 })();
 
 // 2. Combined search. The duckduckgo.com content script (shiori/redirect.js)

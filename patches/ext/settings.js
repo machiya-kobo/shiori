@@ -1,0 +1,208 @@
+// Shiori's settings page where there is no app (Firefox): the Hister server,
+// site access, the offline queue, the search switches and the neighbours'
+// addresses. Every change goes through the background: the server through
+// `set-server` (it fetches the new server's rules and moves the queue), the
+// rest through `set-settings`, the same whitelist the results page's gear
+// uses (ext/host-local.js). Nothing here can turn AI on.
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  const HOSTS = ['*://*/*'];
+  const ROOM_KEYS = ['searxngURL', 'niwaURL', 'konbiniURL', 'smallwebURL', 'obsidianVault'];
+  const TOGGLES = ['combinedSearch', 'webResults'];
+
+  /** A message to the background; null when it didn't answer. */
+  const send = (message) =>
+    new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage(message, (reply) => resolve(chrome.runtime.lastError ? null : reply || null));
+      } catch (_) {
+        resolve(null);
+      }
+    });
+
+  /** An http(s) address with its trailing slash, '' for empty, null when it isn't one. */
+  function address(text) {
+    const value = String(text || '').trim();
+    if (!value) return '';
+    try {
+      const u = new URL(value);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+      return u.href.endsWith('/') ? u.href : u.href + '/';
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function showError(el, text) {
+    el.textContent = text || '';
+    el.hidden = !text;
+  }
+
+  // --- what's stored ---
+
+  await send({ shiori: 'refresh-settings' });
+  let { histerURL = '', shioriSettings: settings = {} } = await chrome.storage.local.get(['histerURL', 'shioriSettings']);
+
+  function look(s) {
+    if (s.theme === 'night' || s.theme === 'day') document.documentElement.dataset.theme = s.theme;
+    else delete document.documentElement.dataset.theme;
+  }
+  function fill(s) {
+    for (const key of TOGGLES) $(key).checked = s[key] !== false;
+    $('webResults').disabled = s.combinedSearch === false;
+    for (const key of ROOM_KEYS) $(key).value = typeof s[key] === 'string' ? s[key] : '';
+  }
+  look(settings);
+  fill(settings);
+  $('server').value = histerURL;
+
+  // --- the server ---
+
+  let checking = 0;
+  let allowed = null; // site access, from showAccess
+  async function checkServer() {
+    const run = ++checking;
+    const status = $('status');
+    const base = address(histerURL);
+    if (!base) {
+      status.textContent = 'Not set';
+      status.className = 'value bad';
+      return;
+    }
+    // Without site access this page can't reach the server either.
+    if (allowed === false) {
+      status.textContent = 'Needs site access (below)';
+      status.className = 'value bad';
+      return;
+    }
+    status.textContent = 'Checking…';
+    status.className = 'value';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    let text = "Can't reach it (check the address, your network or VPN)";
+    let ok = false;
+    try {
+      const reply = await fetch(base + 'api/stats', { headers: { Accept: 'application/json' }, signal: controller.signal });
+      if (!reply.ok) throw new Error(String(reply.status));
+      const count = Number((await reply.json().catch(() => ({}))).doc_count);
+      text = Number.isFinite(count) ? `Connected · ${count.toLocaleString()} pages` : 'Connected';
+      ok = true;
+    } catch (_) {
+    } finally {
+      clearTimeout(timer);
+    }
+    if (run !== checking) return;
+    status.textContent = text;
+    status.className = ok ? 'value ok' : 'value bad';
+  }
+
+  $('server-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const base = address($('server').value);
+    if (!base) {
+      showError($('server-error'), "That isn't an address: start it with https:// or http://.");
+      return;
+    }
+    showError($('server-error'), '');
+    const reply = await send({ shiori: 'set-server', url: base });
+    if (!reply || !reply.ok) {
+      showError($('server-error'), "Couldn't save it; try again.");
+      return;
+    }
+    histerURL = base;
+    $('server').value = base;
+    await checkServer();
+    void showQueue();
+  });
+
+  // --- site access ---
+
+  async function showAccess() {
+    const was = allowed;
+    try {
+      allowed = await chrome.permissions.contains({ origins: HOSTS });
+    } catch (_) {
+      allowed = null;
+    }
+    const access = $('access');
+    access.textContent = allowed === null ? 'Unknown' : allowed ? 'Allowed' : 'Not allowed';
+    access.className = allowed ? 'value ok' : 'value bad';
+    $('access-help').hidden = allowed !== false;
+    $('grant').hidden = allowed !== false;
+    if (was !== null && was !== allowed) void checkServer();
+  }
+  $('grant').addEventListener('click', async () => {
+    // Asked from the click itself: Firefox only asks in answer to the user.
+    try {
+      await chrome.permissions.request({ origins: HOSTS });
+    } catch (_) {}
+    await showAccess();
+  });
+  if (chrome.permissions && chrome.permissions.onAdded) chrome.permissions.onAdded.addListener(() => void showAccess());
+  if (chrome.permissions && chrome.permissions.onRemoved) chrome.permissions.onRemoved.addListener(() => void showAccess());
+
+  // --- the queue ---
+
+  function queueText(reply) {
+    if (!reply || !reply.ok) return 'Unknown';
+    if (!reply.count) return 'Nothing';
+    const pages = `${reply.count} ${reply.count === 1 ? 'page' : 'pages'}`;
+    return reply.oldest ? `${pages}, since ${new Date(reply.oldest).toLocaleString()}` : pages;
+  }
+  async function showQueue(kind = 'queue-status') {
+    const reply = await send({ shiori: kind });
+    $('queue').textContent = queueText(reply);
+    $('retry').disabled = !reply || !reply.count;
+  }
+  $('retry').addEventListener('click', async () => {
+    $('retry').disabled = true;
+    $('queue').textContent = 'Sending…';
+    await showQueue('retry-queue');
+  });
+
+  // --- search switches and neighbours, through the whitelist ---
+
+  async function save(values) {
+    const reply = await send({ shiori: 'set-settings', values });
+    if (!reply || !reply.ok || !reply.settings) return null;
+    settings = reply.settings;
+    look(settings);
+    return settings;
+  }
+
+  for (const key of TOGGLES) {
+    $(key).addEventListener('change', async () => {
+      const saved = await save({ [key]: $(key).checked });
+      fill(saved || settings);
+    });
+  }
+
+  $('rooms-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    showError($('rooms-error'), '');
+    $('rooms-saved').textContent = '';
+    const values = {};
+    for (const input of document.querySelectorAll('#rooms-form input[data-url]')) {
+      const value = address(input.value);
+      if (value === null) {
+        showError($('rooms-error'), `${input.labels[0].textContent} isn't an address: start it with https:// or http://.`);
+        input.focus();
+        return;
+      }
+      values[input.id] = value;
+    }
+    const vault = $('obsidianVault').value.trim();
+    // The app's rule: a vault is named, never blank (it can't be removed).
+    if (vault) values.obsidianVault = vault;
+    const saved = await save(values);
+    if (!saved) {
+      showError($('rooms-error'), "Couldn't save them; try again.");
+      return;
+    }
+    fill(saved);
+    $('rooms-saved').textContent = !vault && saved.obsidianVault ? 'Saved (the vault keeps its name)' : 'Saved';
+  });
+
+  await showAccess();
+  await Promise.all([checkServer(), showQueue()]);
+})();

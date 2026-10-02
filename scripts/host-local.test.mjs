@@ -85,9 +85,13 @@ const stored = (storage) => storage.data.shioriLocalSettings || {};
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
 // The core on this host, as a Firefox background would run it.
-function loadCore(storage = fakeStorage({})) {
+// network(url, init) answers the background's fetches (recorded in `fetched`).
+function loadCore(storage = fakeStorage({}), network = async () => new Response('{}')) {
   const listeners = [];
   const updates = [];
+  const fetched = [];
+  const installed = [];
+  const opened = [];
   const ctx = {
     chrome: {
       storage: { local: storage },
@@ -95,21 +99,30 @@ function loadCore(storage = fakeStorage({})) {
         getManifest: () => ({ version: '9.8.7' }),
         getURL: (p) => `moz-extension://x/${p}`,
         onMessage: { addListener: (l) => listeners.push(l) },
+        onInstalled: { addListener: (l) => installed.push(l) },
+        openOptionsPage: async () => opened.push(true),
       },
       tabs: { update: async (id, props) => updates.push([id, props.url]), onUpdated: { addListener() {} } },
     },
-    fetch: async () => new Response('{}'),
+    fetch: async (input, init) => {
+      const url = typeof input === 'string' ? input : input.url;
+      fetched.push(url);
+      return network(url, init);
+    },
     Response, Headers, URL, TypeError, JSON, setTimeout, clearTimeout, console, Date, AbortController, Promise,
   };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   vm.runInContext(hostSource + '\n' + coreSource, ctx);
-  const send = (request, tabId = 7) =>
+  // From a tab (a content script or the results page) unless `sender` says otherwise.
+  const send = (request, sender = { tab: { id: 7 } }) =>
     new Promise((resolve) => {
-      for (const l of listeners) if (l(request, { tab: { id: tabId } }, resolve) === true) return;
+      if (typeof sender === 'number') sender = { tab: { id: sender } };
+      for (const l of listeners) if (l(request, sender, resolve) === true) return;
       resolve(undefined);
     });
-  return { send, updates, storage };
+  const install = (reason) => installed.forEach((l) => l({ reason }));
+  return { send, updates, storage, fetched, install, opened, ctx };
 }
 
 // --- the app's rules ---
@@ -262,4 +275,87 @@ test("a search recorded from the results page reaches the page's settings", asyn
 test("the Firefox build prepends the host and the core in the order these tests load them", () => {
   const build = read('../scripts/build-extension.sh');
   assert.ok(build.includes('BACKGROUND=(patches/ext/host-local.js patches/ext/core.js)\n'));
+});
+
+// --- the settings page's messages ---
+
+const SETTINGS_PAGE = { url: 'moz-extension://x/shiori-settings.html', tab: { id: 9 } };
+const settle = () => new Promise((r) => setTimeout(r, 20));
+
+test('the settings page sets the server: new rules fetched, old ones gone, queued pages follow', async () => {
+  const storage = fakeStorage({
+    histerURL: 'https://old.example/',
+    shioriCachedRules: '{"skip":["old"]}',
+    shioriQueueIndex: [{ key: 'shioriQueueItem:1', pageURL: 'https://a.example/', bytes: 2, attempts: 0, queuedAt: Date.now() }],
+    'shioriQueueItem:1': { url: 'https://old.example/api/add', headers: {}, body: '{"url":"https://a.example/"}' },
+  });
+  const sent = [];
+  const { send } = loadCore(storage, async (url, init) => {
+    if (url.startsWith('https://old.example/')) throw new TypeError('the old server is gone');
+    if (url === 'https://new.example/api/rules') return new Response('{"skip":["new"]}');
+    if (init && init.method === 'POST') sent.push(url);
+    return new Response('{}', { status: 201 });
+  });
+  await settle();
+  const reply = await send({ shiori: 'set-server', url: 'https://new.example' }, SETTINGS_PAGE);
+  assert.equal(reply.ok, true);
+  assert.equal(reply.reachable, true);
+  assert.equal(storage.data.histerURL, 'https://new.example/');
+  assert.equal(storage.data.shioriCachedRules, '{"skip":["new"]}');
+  await settle();
+  assert.deepEqual(sent, ['https://new.example/api/add']);
+  assert.equal((storage.data.shioriQueueIndex || []).length, 0);
+});
+
+test('a server out of reach is still saved, its pages wait, and the old rules are gone', async () => {
+  const storage = fakeStorage({ histerURL: 'https://old.example/', shioriCachedRules: '{"skip":[]}' });
+  const { send } = loadCore(storage, async () => {
+    throw new TypeError('offline');
+  });
+  const reply = await send({ shiori: 'set-server', url: 'http://hister.lan:4433/' }, SETTINGS_PAGE);
+  assert.equal(reply.ok, true);
+  assert.equal(reply.reachable, false);
+  assert.equal(storage.data.histerURL, 'http://hister.lan:4433/');
+  assert.equal('shioriCachedRules' in storage.data, false);
+});
+
+test('only the settings page sets the server, and only to an http(s) address', async () => {
+  const storage = fakeStorage({ histerURL: 'https://kept.example/' });
+  const { send } = loadCore(storage);
+  const tries = [
+    [{ shiori: 'set-server', url: 'https://evil.example/' }, { tab: { id: 7 }, url: 'https://duckduckgo.com/?q=x' }],
+    [{ shiori: 'set-server', url: 'https://evil.example/' }, { url: 'moz-extension://x/search.html', tab: { id: 7 } }],
+    [{ shiori: 'set-server', url: 'javascript:alert(1)' }, SETTINGS_PAGE],
+    [{ shiori: 'set-server', url: 'ftp://hister.example/' }, SETTINGS_PAGE],
+    [{ shiori: 'set-server', url: '' }, SETTINGS_PAGE],
+  ];
+  for (const [request, sender] of tries) assert.equal((await send(request, sender)).ok, false, JSON.stringify([request, sender]));
+  assert.equal(storage.data.histerURL, 'https://kept.example/');
+});
+
+test('the queue is counted, and Retry sends it', async () => {
+  const queuedAt = Date.now() - 60_000;
+  const storage = fakeStorage({
+    histerURL: 'https://h.example/',
+    shioriCachedRules: '{"skip":[]}',
+    shioriQueueIndex: [{ key: 'shioriQueueItem:1', pageURL: 'https://a.example/', bytes: 2, attempts: 0, queuedAt }],
+    'shioriQueueItem:1': { url: 'https://h.example/api/add', headers: {}, body: '{}' },
+  });
+  let up = false;
+  const { send } = loadCore(storage, async () => {
+    if (!up) throw new TypeError('offline');
+    return new Response('{}', { status: 201 });
+  });
+  await settle();
+  assert.deepEqual(plain(await send({ shiori: 'queue-status' }, SETTINGS_PAGE)), { ok: true, count: 1, oldest: queuedAt });
+  up = true;
+  assert.deepEqual(plain(await send({ shiori: 'retry-queue' }, SETTINGS_PAGE)), { ok: true, count: 0, oldest: null });
+});
+
+test('the settings page opens on first install, not on an update', () => {
+  const { install, opened } = loadCore();
+  install('update');
+  assert.equal(opened.length, 0);
+  install('install');
+  assert.equal(opened.length, 1);
 });

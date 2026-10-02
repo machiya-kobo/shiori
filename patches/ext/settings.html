@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Shiori Settings</title>
+    <link rel="stylesheet" href="search.css" />
+    <link rel="stylesheet" href="shiori-settings.css" />
+  </head>
+  <body class="settings">
+    <header class="settings-head">
+      <img src="assets/icons/icon-128.png" alt="" width="56" height="56" />
+      <div>
+        <h1>Shiori</h1>
+        <p>Sends the pages you visit to your own Hister server, and puts them beside the web when you search.</p>
+      </div>
+    </header>
+    <main>
+      <section class="group" aria-labelledby="h-server">
+        <h2 id="h-server">Hister Server</h2>
+        <form id="server-form" class="field" novalidate>
+          <label for="server">Address</label>
+          <div class="inline">
+            <input id="server" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://hister.example/" />
+            <button type="submit">Save</button>
+          </div>
+          <p id="server-error" class="error" role="alert" hidden></p>
+        </form>
+        <div class="row"><span>Status</span><span id="status" class="value" aria-live="polite">Checking…</span></div>
+        <p class="note">Pages you visit go only to this server, and its rules decide which it keeps.</p>
+      </section>
+
+      <section class="group" aria-labelledby="h-access">
+        <h2 id="h-access">Site Access</h2>
+        <div class="row"><span>All Websites</span><span id="access" class="value" aria-live="polite">…</span></div>
+        <p id="access-help" class="note" hidden>Without it Shiori can't send the pages you visit or take over your searches.</p>
+        <p class="buttons"><button id="grant" type="button" hidden>Allow on All Websites</button></p>
+      </section>
+
+      <section class="group" aria-labelledby="h-queue">
+        <h2 id="h-queue">Waiting to Send</h2>
+        <div class="row"><span>Pages</span><span id="queue" class="value" aria-live="polite">…</span></div>
+        <p class="note">Pages visited while Hister was out of reach. They go out as soon as it answers.</p>
+        <p class="buttons"><button id="retry" type="button" class="secondary">Retry Now</button></p>
+      </section>
+
+      <section class="group" aria-labelledby="h-search">
+        <h2 id="h-search">Search</h2>
+        <label class="row toggle"><span>Take Over DuckDuckGo Searches</span><input id="combinedSearch" type="checkbox" /></label>
+        <label class="row toggle"><span>Web Results</span><input id="webResults" type="checkbox" /></label>
+        <p class="note">A DuckDuckGo search opens Shiori Search: your pages and notes, then the web. Its gear holds the rest: theme, text size, tabs and how many results.</p>
+        <p class="buttons"><a class="button secondary" href="search.html" target="_blank">Open Shiori Search</a></p>
+      </section>
+
+      <section class="group" aria-labelledby="h-rooms">
+        <h2 id="h-rooms">Neighbours</h2>
+        <form id="rooms-form" novalidate>
+          <div class="field">
+            <label for="searxngURL">Web Search (SearXNG)</label>
+            <input id="searxngURL" data-url type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://searx.example/" />
+          </div>
+          <div class="field">
+            <label for="niwaURL">Notes (Kura)</label>
+            <input id="niwaURL" data-url type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://kura.example/" />
+          </div>
+          <div class="field">
+            <label for="konbiniURL">Konbini</label>
+            <input id="konbiniURL" data-url type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://konbini.example/" />
+          </div>
+          <div class="field">
+            <label for="smallwebURL">Small-Web Gateway</label>
+            <input id="smallwebURL" data-url type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://smallweb.example/" />
+          </div>
+          <div class="field">
+            <label for="obsidianVault">Obsidian Vault</label>
+            <input id="obsidianVault" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="200" placeholder="Its exact name" />
+          </div>
+          <p id="rooms-error" class="error" role="alert" hidden></p>
+          <p class="buttons"><button type="submit">Save</button> <span id="rooms-saved" class="saved" role="status"></span></p>
+        </form>
+        <p class="note">All optional. Shiori Search shows what each one has beside your pages.</p>
+      </section>
+
+      <p class="note center">These settings stay on this device; nothing syncs them.</p>
+    </main>
+    <script src="shiori-settings.js"></script>
+  </body>
+</html>

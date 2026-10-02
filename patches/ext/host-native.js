@@ -11,6 +11,8 @@
 //   canReportQueue()    whether reportQueue can reach anything
 //   reportQueue(count, oldest)  the offline queue's size, for the app's
 //                       Settings → Waiting to Send
+//   ownsServer          whether the extension's own settings page may set
+//                       the Hister server (here no: the app sets it)
 const shioriHost = (() => {
   const APP_ID = '__SHIORI_APP_ID__';
   const canSend = () =>
@@ -28,5 +30,6 @@ const shioriHost = (() => {
     setSettings: (values) => send({ type: 'set-settings', values }),
     canReportQueue: canSend,
     reportQueue: (count, oldest) => send({ type: 'queue', count, oldest }),
+    ownsServer: false,
   };
 })();

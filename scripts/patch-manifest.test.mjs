@@ -114,7 +114,7 @@ test("Firefox's manifest: no messaging, never private, Alt-Shift keys (the Mac's
     assert.match(m.commands[name].suggested_key.mac, /^MacCtrl\+Shift\+/, name);
   }
   assert.equal(m.options_page, undefined);
-  assert.deepEqual(m.options_ui, { page: 'shiori-options.html', open_in_tab: true });
+  assert.deepEqual(m.options_ui, { page: 'shiori-settings.html', open_in_tab: true });
   const { gecko, gecko_android } = m.browser_specific_settings;
   assert.equal(gecko.id, 'shiori@machiya-kobo.github.io');
   assert.equal(gecko.strict_min_version, gecko_android.strict_min_version);

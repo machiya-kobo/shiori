@@ -19,6 +19,7 @@ const FILES = {
   'popup.js': '',
   'search.html': 'search-core.js search.js',
   'shiori-options.html': 'shiori-options.js search.css',
+  'shiori-settings.html': 'shiori-settings.js shiori-settings.css search.css',
   'search-core.js': '',
   'shiori-redirect.js': '',
   'assets/icons/icon-16.png': '',
@@ -41,7 +42,7 @@ function manifest(target) {
     m.options_page = 'shiori-options.html';
   } else {
     m.background = { scripts: ['background.js'] };
-    m.options_ui = { page: 'shiori-options.html', open_in_tab: true };
+    m.options_ui = { page: 'shiori-settings.html', open_in_tab: true };
     m.incognito = 'not_allowed';
     m.browser_specific_settings = {
       gecko: {
@@ -111,6 +112,7 @@ test("Firefox fails on each of its rules broken alone", () => {
     'event page': (m) => (m.background = { service_worker: 'background.js' }),
     'native messaging': (m, f) => (f['background.js'] += ' chrome.runtime.sendNativeMessage(__SHIORI_APP_ID__)'),
     'shioriLocalSettings': (m, f) => (f['background.js'] = BACKGROUND.safari),
+    'settings page': (m) => (m.options_ui.page = 'shiori-options.html'),
   };
   for (const [rule, change] of Object.entries(cases)) {
     const r = check('firefox', change);

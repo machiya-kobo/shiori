@@ -19,11 +19,14 @@ address. Ports 8775
 |---|---|
 | `run.sh` | Builds the Firefox target, serves `pages/`, runs `run.mjs` |
 | `fake-hister.py` | Skip rules (`skipme`), stats, profile, search; logs requests as JSON lines. Never a real Hister |
-| `run.mjs` | Three sessions: capture, private browsing, containers |
+| `run.mjs` | Four sessions: the settings page, capture, private browsing, containers |
 | `container-probe/` | A tiny add-on: what `contextualIdentities` gives without `cookies` |
 
 ## What it checks
 
+- The settings page opens on first install; a bad address is refused;
+  saving the server fetches its rules at once; a switch and a neighbour
+  are kept; without site access it says so and offers Allow.
 - No native messaging; a settings change is kept on the device (AI keys
   refused); the shortcuts Firefox assigned.
 - A visited page reaches `api/add` with Shiori's metadata, HTML and no text.
@@ -46,6 +49,12 @@ address. Ports 8775
 - **Firefox 140 and later** refuse the chrome context (and 153 refuses
   opening `moz-extension://` pages) unless geckodriver runs with
   `--allow-system-access`; `run.mjs` adds it from 140.
+- **Revoking site access takes two origins**: `*://*/*` and the content
+  script's `<all_urls>`, which Firefox counts as a host permission too.
+- **The settings page opens in the empty start tab** on install, so WebDriver
+  sees no new window; `run.mjs` reads the tabs from Firefox.
+- `SHOTS=<folder>` saves screenshots of the settings page (both themes,
+  desktop and phone width).
 - **Offline means stopped.** A fake that drops the socket mid-request makes
   Firefox retry idempotent GETs dozens of times on its own.
 - An older Firefox than the floor (153) still runs: `run.sh` lowers the

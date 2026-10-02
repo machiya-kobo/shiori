@@ -40,8 +40,14 @@ def problems(root, target):
         "content.js": ["installPageSizeCap"],
         "popup.html": ["safari-popup.css", "shiori-popup.js"],
         "search.html": ["search-core.js", "search.js"],
-        "shiori-options.html": ["shiori-options.js", "search.css"],
     }
+    # The settings page: Safari's shows what the app set, Firefox's sets them.
+    if target == "safari":
+        marks["shiori-options.html"] = ["shiori-options.js", "search.css"]
+    else:
+        marks["shiori-settings.html"] = ["shiori-settings.js", "shiori-settings.css", "search.css"]
+        if options != "shiori-settings.html":
+            out.append("Firefox's settings page must be shiori-settings.html (there's no app to set them)")
 
     if target == "safari":
         marks["background.js"].append("installIconShim")

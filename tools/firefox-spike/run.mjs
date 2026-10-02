@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Builder } from 'selenium-webdriver';
 import firefox from 'selenium-webdriver/firefox.js';
+import { By } from 'selenium-webdriver';
 import { Command } from 'selenium-webdriver/lib/command.js';
 
 const env = (name, fallback) => process.env[name] || fallback;
@@ -130,7 +131,7 @@ async function captureSession() {
     await install(driver, EXT);
     check('installs (background.scripts, incognito not_allowed)', true);
 
-    const perms = await inPage(driver, EXT_URL + 'shiori-options.html', async () => ({
+    const perms = await inPage(driver, EXT_URL + 'shiori-settings.html', async () => ({
       allUrls: await browser.permissions.contains({ origins: ['<all_urls>'] }),
       nativeMessaging: await browser.permissions.contains({ permissions: ['nativeMessaging'] }),
       histerURL: (await browser.storage.local.get('histerURL')).histerURL || null,
@@ -169,7 +170,7 @@ async function captureSession() {
     await hister(false);
     await driver.get(PAGES + 'page2.html');
     await sleep(4000);
-    const queued = await inPage(driver, EXT_URL + 'shiori-options.html', async () => (await browser.storage.local.get('shioriQueueIndex')).shioriQueueIndex || []);
+    const queued = await inPage(driver, EXT_URL + 'shiori-settings.html', async () => (await browser.storage.local.get('shioriQueueIndex')).shioriQueueIndex || []);
     check('offline: the capture is queued', queued.length === 1, JSON.stringify(queued.map((q) => q.pageURL)));
 
     setMark();
@@ -199,10 +200,10 @@ async function captureSession() {
     check('a PDF tab reaches api/add_pdf', !!pdf, pdf ? `title=${pdf.title} pdf=${pdf.pdf} chars` : '');
     if (pdf) check('  with metadata.source = shiori (prepPDF)', pdf.meta?.source === 'shiori', JSON.stringify(pdf.meta));
 
-    await driver.get(EXT_URL + 'shiori-options.html');
+    await driver.get(EXT_URL + 'shiori-settings.html');
     await sleep(3000);
     note('settings page', await driver.executeScript(
-      "return ['server', 'status', 'access', 'queue'].map((id) => id + ': ' + (document.getElementById(id)?.textContent || '?')).join(' | ')"));
+      "return ['status', 'access', 'queue'].map((id) => id + ': ' + (document.getElementById(id)?.textContent || '?')).join(' | ')"));
 
     setMark();
     await driver.get(EXT_URL + 'search.html?q=lantern');
@@ -213,6 +214,77 @@ async function captureSession() {
     await driver.get(EXT_URL + 'popup.html');
     await sleep(2000);
     note('popup', JSON.stringify((await driver.executeScript('return document.body.innerText')).replace(/\s+/g, ' ').slice(0, 160)));
+  } finally {
+    await driver.quit().catch(() => {});
+    await hister(false);
+  }
+}
+
+// The settings page, driven as a person would: it opens on first install;
+// saving a server fetches that server's rules at once; a bad address is
+// refused on the page; a switch and a neighbour's address are kept.
+async function settingsSession() {
+  const driver = await browser({ 'extensions.webextensions.uuids': JSON.stringify({ [ID]: UUID }) });
+  const text = async (id) => (await driver.findElement(By.id(id)).getText()).trim();
+  try {
+    await hister(true);
+    await install(driver, EXT);
+    await sleep(2500);
+    // Every tab's address, from Firefox itself: the page may open in the
+    // empty start tab, where WebDriver sees no new window.
+    const tabs = await chrome(driver,
+      'return [...Services.wm.getEnumerator("navigator:browser")].flatMap((w) => w.gBrowser.tabs.map((t) => t.linkedBrowser.currentURI.spec))');
+    check('first install opens the settings page', tabs.includes(EXT_URL + 'shiori-settings.html'), JSON.stringify(tabs));
+    await driver.get(EXT_URL + 'shiori-settings.html');
+    await sleep(2500);
+    check('  it finds the server and site access', /^Connected/.test(await text('status')) && (await text('access')) === 'Allowed',
+      `status=${await text('status')} access=${await text('access')}`);
+
+    // A server written another way (localhost, no trailing slash): same fake.
+    const server = driver.findElement(By.id('server'));
+    await server.clear();
+    await server.sendKeys('ftp://nope.example');
+    await driver.findElement(By.css('#server-form button')).click();
+    await sleep(500);
+    const refused = await text('server-error');
+    setMark();
+    await server.clear();
+    await server.sendKeys(`http://localhost:${HISTER_PORT}`);
+    await driver.findElement(By.css('#server-form button')).click();
+    const rules = await waitFor((r) => r.m === 'GET' && r.p.startsWith('/api/rules'), 5000);
+    await sleep(1500);
+    const stored = await driver.executeAsyncScript('const done = arguments[arguments.length - 1]; browser.storage.local.get(["histerURL", "shioriCachedRules"]).then(done)');
+    check('a bad address is refused on the page', /isn't an address/.test(refused), refused);
+    check('saving the server stores it and fetches its rules at once', stored.histerURL === `http://localhost:${HISTER_PORT}/` && !!rules && typeof stored.shioriCachedRules === 'string',
+      `histerURL=${stored.histerURL} rules=${!!rules} status=${await text('status')}`);
+
+    await driver.findElement(By.id('combinedSearch')).click();
+    await driver.findElement(By.id('searxngURL')).sendKeys('https://searx.example');
+    await driver.findElement(By.css('#rooms-form button[type=submit]')).click();
+    await sleep(1500);
+    const local = await driver.executeAsyncScript('const done = arguments[arguments.length - 1]; browser.storage.local.get("shioriLocalSettings").then((r) => done(r.shioriLocalSettings || {}))');
+    check('a switch and a neighbour are kept on this device', local.combinedSearch === false && local.searxngURL === 'https://searx.example/',
+      JSON.stringify(local) + ' ' + (await text('rooms-saved')));
+    check('  the web-results switch follows the take-over switch', !(await driver.findElement(By.id('webResults')).isEnabled()));
+
+    // Site access taken away, as about:addons does: both the host
+    // permission and the content script's <all_urls> (Firefox counts that
+    // as one too). The page says so and offers Grant; its click asks
+    // Firefox, which WebDriver can't answer, so that part is a hand check.
+    await driver.executeAsyncScript('const done = arguments[arguments.length - 1]; browser.permissions.remove({ origins: ["*://*/*", "<all_urls>"] }).then(() => done(), () => done())');
+    await driver.navigate().refresh();
+    await sleep(1500);
+    const grant = await driver.findElement(By.id('grant')).isDisplayed();
+    check('without site access the page says so and offers Grant', (await text('access')) === 'Not allowed' && grant, `access=${await text('access')} grant=${grant}`);
+    check("  and doesn't blame the network for the server", /site access/.test(await text('status')), await text('status'));
+    if (env('SHOTS')) {
+      for (const [theme, width] of [['night', 1000], ['day', 1000], ['night', 400]]) {
+        await driver.executeScript(`document.documentElement.dataset.theme = '${theme}'`);
+        await driver.manage().window().setRect({ width, height: 1400 });
+        await sleep(300);
+        fs.writeFileSync(path.join(env('SHOTS'), `settings-${theme}-${width}.png`), await driver.takeScreenshot(), 'base64');
+      }
+    }
   } finally {
     await driver.quit().catch(() => {});
     await hister(false);
@@ -254,7 +326,7 @@ async function containerSession() {
   }
 }
 
-for (const session of [captureSession, privateSession, containerSession]) {
+for (const session of [settingsSession, captureSession, privateSession, containerSession]) {
   try {
     await session();
   } catch (e) {

@@ -96,5 +96,17 @@ const shioriHost = (() => {
     // queue (docs/firefox-plan.md, feature B).
     canReportQueue: () => false,
     reportQueue: async () => {},
+
+    // No app to set the server: the settings page does (ext/settings.js).
+    ownsServer: true,
   };
+})();
+
+// No app to welcome you either: the settings page opens on first install,
+// where the server is set and site access granted.
+(function openSettingsOnInstall() {
+  if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.onInstalled) return;
+  chrome.runtime.onInstalled.addListener((details) => {
+    if (details && details.reason === 'install') void chrome.runtime.openOptionsPage();
+  });
 })();
