@@ -1,10 +1,11 @@
-// The right-click menu (Firefox's `menus`; Chrome's `contextMenus` later):
+// The right-click menu (Firefox's `menus`, Safari's `contextMenus` on the
+// Mac; iOS has none):
 // search Shiori for the selection; save this page, or never save it or its
 // site (upstream's own commands, the same ones its shortcuts run: the
 // server's rules stay the truth); save a link to Hister. Prepended to
-// background.js after search-core.js and ext/core.js (resultsBase), and
-// before upstream, whose command listeners it keeps so the menu can run
-// them.
+// background.js after search-core.js, ext/core.js (resultsBase) and
+// ext/badge.js (ShioriBadge), and before upstream, whose command listeners
+// it keeps so the menu can run them.
 //
 // A link is saved by Save This Note's Links' rules (CLAUDE.md): never one
 // Hister holds (looked up before, and again after redirects: api/add would
@@ -154,6 +155,7 @@
     if (chrome.action.setBadgeTextColor) quiet(chrome.action.setBadgeTextColor({ tabId, color: '#1a1b26' }));
     quiet(chrome.action.setTitle({ tabId, title: `Shiori · ${look.title}${result.reason ? `: ${result.reason}` : ''}` }));
     setTimeout(() => {
+      if (globalThis.ShioriBadge) return void globalThis.ShioriBadge.clearTab(tabId);
       quiet(chrome.action.setBadgeText({ tabId, text: null }));
       quiet(chrome.action.setTitle({ tabId, title: null }));
     }, SHOW_MS);
@@ -200,11 +202,17 @@
   globalThis.ShioriMenus = { saveLink, ITEMS };
 
   const menus = chrome.menus || chrome.contextMenus;
-  if (!menus || !menus.create) return; // Firefox for Android has none
+  if (!menus || !menus.create) return; // Firefox for Android and iOS have none
   // Made afresh each time the background starts, so a changed list never
-  // leaves an old item behind.
-  Promise.resolve(menus.removeAll())
-    .catch(() => {})
+  // leaves an old item behind. removeAll answers by promise or by callback.
+  new Promise((done) => {
+    try {
+      const p = menus.removeAll(() => done());
+      if (p && typeof p.then === 'function') p.then(done, done);
+    } catch (_) {
+      done();
+    }
+  })
     .then(() => {
       for (const item of ITEMS) menus.create(item, () => void (chrome.runtime && chrome.runtime.lastError));
     });

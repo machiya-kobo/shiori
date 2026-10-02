@@ -644,6 +644,41 @@ on the settings page)
 - the sidebar from View → Sidebar;
 - the file dialogs on Android.
 
+## Back to Safari (done)
+
+Three things built for Firefox now serve Safari too, and one Firefox
+behaviour was dropped:
+
+- **The queue follows a server change made anywhere.** `installCaptureQueue`
+  listens to `storage.onChanged` for `histerURL`. When the app changes the
+  server, queued pages go to the new address and its rules are fetched at
+  once, as `set-server` does on Firefox. It also fixes the fresh-install
+  rules timing (decision 3).
+- **The toolbar's waiting count** (`badge.js`), on the Mac beside the app's
+  Waiting to Send. A tab's badge goes back to the toolbar's through
+  `ShioriBadge.clearTab`. It sends `null`, and if the browser refuses that,
+  it copies the toolbar's badge onto the tab and keeps it in step. Safari's
+  answer to `null` hasn't been seen on a device.
+- **The right-click menu** (`menus.js`, with `contextMenus`), on the Mac.
+  iOS has no menu API, so the file only stops there. `removeAll` may
+  answer by callback.
+- **Not ported:** the DuckDuckGo hand-off goes the other way. Firefox adds
+  search engines, so it never takes one over. The hand-off stays Safari's
+  (`manifest.safari.json`), and `check-extension.py` refuses it in a
+  Firefox bundle.
+
+Safari's background is now `safari-shims`, `host-native`, `core`,
+`search-core`, `badge`, `menus`. A test loads the whole of it in a context
+with no `window` or `document` (a service worker).
+
+**Device checks left:**
+
+- whether iOS Safari loads the extension with `contextMenus` in its
+  manifest;
+- the badge, and a tab cleared after Save Link, on the Mac;
+- the menu's `%s` in "Search Shiori for…";
+- each menu item.
+
 ## Chrome, later
 
 Not scoped yet. What we already know, so the Firefox work doesn't close

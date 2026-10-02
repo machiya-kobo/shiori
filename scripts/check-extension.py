@@ -53,7 +53,9 @@ def problems(root, target):
             out.append("Firefox's settings page must be shiori-settings.html (there's no app to set them)")
 
     if target == "safari":
-        marks["background.js"].append("installIconShim")
+        marks["background.js"] += ["installIconShim", "root.ShioriSearch", "installQueueBadge", "installMenus"]
+        if "contextMenus" not in permissions:
+            out.append("Safari's right-click menu (ext/menus.js) needs contextMenus")
         # More than four suggested shortcuts and Safari drops the extension's
         # background without a word: nothing is captured and Safari's
         # searches stay on DuckDuckGo.

@@ -61,7 +61,7 @@ case "$TARGET" in
     safari)
         RESOURCES="ShioriExtension/Resources"
         UPSTREAM_MANIFEST="manifest.json"
-        BACKGROUND=(patches/safari-shims.js patches/ext/host-native.js patches/ext/core.js)
+        BACKGROUND=(patches/safari-shims.js patches/ext/host-native.js patches/ext/core.js patches/shiori/search-core.js patches/ext/badge.js patches/ext/menus.js)
         ;;
     firefox)
         RESOURCES="build/firefox"

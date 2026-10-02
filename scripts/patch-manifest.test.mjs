@@ -98,7 +98,7 @@ const UPSTREAM = {
 
 test("Safari's manifest: the app's messaging, Control-Shift keys, no cookies", () => {
   const m = merge(merge(UPSTREAM, overlay('shiori')), overlay('safari'));
-  assert.deepEqual(m.permissions, ['tabs', 'storage', 'nativeMessaging']);
+  assert.deepEqual(m.permissions, ['tabs', 'storage', 'nativeMessaging', 'contextMenus']);
   assert.deepEqual(m.commands['index-current-page'].suggested_key, { default: 'Ctrl+Shift+S', mac: 'MacCtrl+Shift+S' });
   assert.equal(m.options_page, 'shiori-options.html');
   assert.equal(m.key, undefined);

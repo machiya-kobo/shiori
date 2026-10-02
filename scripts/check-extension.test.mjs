@@ -34,7 +34,7 @@ function manifest(target) {
     commands: {},
   };
   if (target === 'safari') {
-    m.permissions.push('nativeMessaging');
+    m.permissions.push('nativeMessaging', 'contextMenus');
     m.content_scripts.push({ js: ['search-core.js', 'shiori-redirect.js'], matches: ['https://duckduckgo.com/*'] });
     m.background = { service_worker: 'background.js' };
     m.options_page = 'shiori-options.html';
@@ -58,7 +58,7 @@ function manifest(target) {
 }
 
 const BACKGROUND = {
-  safari: 'installIconShim const shioriHost installCaptureQueue installCombinedSearch',
+  safari: 'installIconShim const shioriHost installCaptureQueue installCombinedSearch root.ShioriSearch installQueueBadge installMenus',
   firefox: "const shioriHost 'shioriLocalSettings' installCaptureQueue installCombinedSearch root.ShioriSearch installOmnibox installQueueBadge installMenus installContainerRules",
 };
 
@@ -101,6 +101,20 @@ test('Safari fails with a fifth suggested shortcut', () => {
   });
   assert.equal(r.ok, false);
   assert.match(r.out, /at most 4/);
+});
+
+test('Safari fails without its badge, its menu or the permission the menu needs', () => {
+  const cases = {
+    installQueueBadge: (m, f) => (f['background.js'] = f['background.js'].replace('installQueueBadge', '')),
+    installMenus: (m, f) => (f['background.js'] = f['background.js'].replace('installMenus', '')),
+    'root.ShioriSearch': (m, f) => (f['background.js'] = f['background.js'].replace('root.ShioriSearch', '')),
+    contextMenus: (m) => (m.permissions = m.permissions.filter((p) => p !== 'contextMenus')),
+  };
+  for (const [rule, change] of Object.entries(cases)) {
+    const r = check('safari', change);
+    assert.equal(r.ok, false, rule);
+    assert.ok(r.out.includes(rule), `${rule}: ${r.out}`);
+  }
 });
 
 test("Firefox fails on each of its rules broken alone", () => {

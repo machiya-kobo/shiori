@@ -23,7 +23,9 @@ const html = (body = HTML, url) => {
 };
 
 // `web(url, init)` answers everything not Hister's search; `held` is what Hister holds.
-function load({ held = [], web = () => html(), settings = {}, stored } = {}) {
+// `safari`: a callback-only removeAll, ext/badge.js's ShioriBadge beside it,
+// and the answer's few seconds cut to none.
+function load({ held = [], web = () => html(), settings = {}, stored, safari = false } = {}) {
   const fetched = [];
   const added = [];
   const created = [];
@@ -34,8 +36,8 @@ function load({ held = [], web = () => html(), settings = {}, stored } = {}) {
     chrome: {
       storage: { local: { get: async (keys) => Object.fromEntries(keys.map((k) => [k, (stored || { histerURL: BASE, shioriSettings: settings })[k]])) } },
       commands: { onCommand: { addListener: () => {} } },
-      menus: {
-        removeAll: async () => {},
+      [safari ? 'contextMenus' : 'menus']: {
+        removeAll: safari ? (done) => void setTimeout(done) : async () => {},
         create: (item, done) => (created.push(item), done && done()),
         onClicked: { addListener: (l) => clicked.push(l) },
       },
@@ -64,6 +66,11 @@ function load({ held = [], web = () => html(), settings = {}, stored } = {}) {
     },
     Response, Headers, URL, URLSearchParams, JSON, Promise, Set, Map, setTimeout, clearTimeout, console,
   };
+  const cleared = [];
+  if (safari) {
+    ctx.ShioriBadge = { clearTab: async (tabId) => void cleared.push(tabId) };
+    ctx.setTimeout = (fn) => setTimeout(fn, 0);
+  }
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   // Upstream's command listener, added after the menu's code runs (as upstream's is).
@@ -73,7 +80,7 @@ function load({ held = [], web = () => html(), settings = {}, stored } = {}) {
     clicked.forEach((l) => l(info, tab));
     await new Promise((r) => setTimeout(r, 20));
   };
-  return { menus: ctx.ShioriMenus, fetched, added, created, commands, badges, click };
+  return { menus: ctx.ShioriMenus, fetched, added, created, commands, badges, click, cleared };
 }
 const noWait = { wait: async () => {} };
 
@@ -149,4 +156,14 @@ test('the menu has its items, and each does its part', async () => {
   assert.deepEqual(plain(t.commands), [['index-current-page', 4], ['disable-indexing-current-domain', 4]]);
   await t.click({ menuItemId: 'shiori-save-link', linkUrl: 'https://a.example/' });
   assert.deepEqual(plain(t.badges.slice(0, 2)), [{ tabId: 4, text: '✓' }, { tabId: 4, title: 'Shiori · Saved to Hister' }]);
+});
+
+test("on Safari: the menu is made after a callback-only removeAll, and the answer clears through the badge's clearTab", async () => {
+  const t = load({ safari: true, web: (url) => (url === BASE + 'api/add' ? new Response('{}', { status: 201 }) : html()) });
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(t.created.filter((c) => c.id).length, 5);
+  await t.click({ menuItemId: 'shiori-save-link', linkUrl: 'https://a.example/' });
+  assert.deepEqual(plain(t.badges.slice(0, 1)), [{ tabId: 4, text: '✓' }]);
+  assert.deepEqual(t.cleared, [4]);
+  assert.equal(t.badges.some((b) => b.text === null || b.title === null), false);
 });

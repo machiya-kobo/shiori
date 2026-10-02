@@ -178,6 +178,32 @@ async function captureSession() {
     const badge = () => inPage(driver, EXT_URL + 'shiori-settings.html', async () => ({ text: await browser.action.getBadgeText({}), title: await browser.action.getTitle({}) }));
     const waiting = await badge();
     check('  the toolbar badge counts it, and says so', waiting.text === '1' && /1 page waiting/.test(waiting.title), JSON.stringify(waiting));
+    // A tab's own mark, then back to the toolbar's: Firefox takes null for
+    // text, colour and tooltip, so clearTab never needs its copies.
+    const back = await inPage(driver, EXT_URL + 'shiori-settings.html', async () => {
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+      const a = browser.action;
+      await a.setBadgeText({ tabId: tab.id, text: '✓' });
+      await a.setBadgeBackgroundColor({ tabId: tab.id, color: '#9ece6a' });
+      await a.setTitle({ tabId: tab.id, title: 'Shiori · Saved to Hister' });
+      await (await browser.runtime.getBackgroundPage()).ShioriBadge.clearTab(tab.id);
+      // The tab follows a later change to the toolbar's own: not a copy.
+      const follows = async (what, key, value) => {
+        const set = (v) => a['set' + what]({ [key]: v });
+        const get = (d) => a['get' + what](d);
+        const before = await get({});
+        await set(value);
+        const ok = JSON.stringify(await get({ tabId: tab.id })) === JSON.stringify(await get({}));
+        await set(before);
+        return ok;
+      };
+      return {
+        text: await follows('BadgeText', 'text', '7'),
+        colour: await follows('BadgeBackgroundColor', 'color', '#123456'),
+        title: await follows('Title', 'title', 'probe'),
+      };
+    });
+    check("  a tab's own mark goes back to the toolbar's count, colour and tooltip", back.text && back.colour && back.title, JSON.stringify(back));
 
     setMark();
     await hister(true);

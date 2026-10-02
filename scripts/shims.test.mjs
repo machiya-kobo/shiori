@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 
 const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
 // What build-extension.sh prepends to Safari's background.js, in its order.
-const SAFARI_BACKGROUND = ['patches/safari-shims.js', 'patches/ext/host-native.js', 'patches/ext/core.js'];
+const SAFARI_BACKGROUND = ['patches/safari-shims.js', 'patches/ext/host-native.js', 'patches/ext/core.js', 'patches/shiori/search-core.js', 'patches/ext/badge.js', 'patches/ext/menus.js'];
 const backgroundShim = SAFARI_BACKGROUND.map((f) => read('../' + f)).join('\n');
 const contentShim = read('../patches/safari-content-shim.js');
 
@@ -788,4 +788,33 @@ test('a server moved inside the old address moves each queued page once', async 
   await settle();
   assert.equal(storage.data[a.index.key].url, 'https://h.example/x/api/add');
   assert.equal(storage.data[b.index.key].url, 'https://h.example/x/api/add');
+});
+
+test("Safari's whole background on the Mac: the badge counts the queue and the right-click menu is made", async () => {
+  const created = [];
+  const badge = [];
+  const ctx = {
+    chrome: {
+      storage: { local: fakeStorage({ histerURL: BASE, ...RULES, shioriQueueIndex: [{ key: 'k', pageURL: 'https://a.example/' }] }), onChanged: { addListener() {} } },
+      runtime: { getManifest: () => ({ version: '9.8.7' }), getURL: (p) => `safari-web-extension://x/${p}`, onMessage: { addListener() {} } },
+      action: {
+        setIcon: () => Promise.resolve(),
+        setBadgeText: (d) => (badge.push(d.text), Promise.resolve()),
+        setBadgeBackgroundColor: () => Promise.resolve(),
+        setTitle: () => Promise.resolve(),
+      },
+      contextMenus: { removeAll: (done) => void setTimeout(done), create: (item) => created.push(item.id), onClicked: { addListener() {} } },
+      commands: { onCommand: { addListener() {} } },
+      tabs: { update: async () => {}, onUpdated: { addListener() {} } },
+    },
+    fetch: async () => new Response('{}'),
+    Response, Headers, URL, URLSearchParams, TypeError, JSON, setTimeout, clearTimeout, console, Date, AbortController,
+  };
+  ctx.globalThis = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(backgroundShim, ctx);
+  await settle();
+  assert.deepEqual(badge, ['1']);
+  assert.deepEqual(created, ['shiori-search', 'shiori-save-link', 'shiori-save-page', 'shiori-never-page', 'shiori-never-site']);
+  assert.equal(typeof ctx.ShioriSearch.histerText, 'function');
 });

@@ -37,7 +37,9 @@ address. Ports 8775
   settings page has no take-over switch.
 - Settings to a file and back: the file holds no searches; opening one
   shows what it changes; Apply keeps only what the page takes.
-- The toolbar badge counts the queue and clears.
+- The toolbar badge counts the queue and clears; a tab's own mark goes
+  back to the count, colour and tooltip, following later changes (Firefox
+  takes `null`, so `ShioriBadge.clearTab` never copies).
 - The right-click menu's five items are registered; Save Link to Hister
   saves a page (marked `via: context-menu`) and refuses a file.
 - The sidebar searches as you type (marks only in snippets, one column);
@@ -45,6 +47,7 @@ address. Ports 8775
 - Container rules: what installing does to Firefox's containers (a note);
   the page with containers off and on; a Banking page not captured while a
   normal tab is.
+- A fresh install fetches the skip rules before its first capture.
 - A visited page reaches `api/add` with Shiori's metadata, HTML and no text.
 - A skip rule holds.
 - Offline (the fake stopped), a capture is queued and drains when Hister is
