@@ -46,9 +46,16 @@ holds the rules and the traps the code can't tell you.
   edits aliases only through Keep Collections Current (docs/ai.md).
 - **Settings are per device, never synced.** Anything on the network could
   write a shared document.
-- **A note from any vault but the default** (address `/v/<vault>/n/…`;
-  `Notes.isOtherVault` / `S.isOtherVault`) never goes to Hister, to any AI
-  engine (on-device included), a cache, an export or a feed.
+- **A note from a private vault** (address `/v/<vault>/n/…`, a vault Kura's
+  `/api/vaults` doesn't mark `private: false`; `Notes.isPrivateNote` /
+  `S.isPrivateNote`) never goes to Hister, to any AI engine (on-device
+  included), a cache, an export or a feed. Kura's config is the one switch
+  (a shared vault is treated like the default); clients fail closed: until
+  Kura answers, or when it can't be read, every vault but the default is
+  private. `useVaults` sets the list (apps and web app: re-read after ten
+  minutes away; the extension: at most a minute old, read before sending
+  another vault's note). `noteVault` / `Notes.otherVault(of:)` only say
+  which vault.
 - Never put `.searchSuggestions(.hidden, for: .content)` on a sheet's
   `.searchable`: on iOS 27 the sheet went blank.
 
@@ -273,7 +280,7 @@ holds the rules and the traps the code can't tell you.
 - Collapsible sections are a button and a grid-rows body, not `<details>`
   (which re-decoded images and flashed).
 - The search page caches each results page for Back (`shioriPageCache`), but
-  never one holding a work note.
+  never one holding a private vault's note.
 - Thumbnails load only from the SearXNG host's `/image_proxy`: anything else
   is dropped, so a broken plugin fails closed.
 - `sw.js` caches only the app's own files and only `ok` responses, and waits
@@ -288,10 +295,11 @@ holds the rules and the traps the code can't tell you.
 - **Notes come only from Kura** (`/api/search`, `/api/recent`, `/api/note`,
   `/api/vaults`, `feed.xml`); Hister still holds the default vault's notes for
   its own UI, but Shiori never lists them from Hister.
-- Work vaults: searchable only in Notes, through the vault filter (Kura's
-  `vault`); previewed from Kura's `/api/note` HTML, never cached; never
-  recorded as opened or deleted in Hister; no AI (`AIContent.workNote` makes
-  `EngineChain.eligible` empty).
+- Other vaults: searchable only in Notes, through the vault filter (Kura's
+  `vault`); previewed from Kura's `/api/note` HTML, never cached. A private
+  one's are never recorded as opened or deleted in Hister and get no AI
+  (`AIContent.workNote` makes `EngineChain.eligible` empty); a shared one's
+  are treated as the default vault's.
 - A note's chip names its vault (`Notes.vaultChip` / `S.vaultChip`); a tap
   shows Notes from that vault.
 - A note opens in Obsidian (the vault name must match exactly), with its Kura
@@ -327,7 +335,7 @@ holds the rules and the traps the code can't tell you.
 - Off by default; per device; keys in the Keychain. Engine order is fixed:
   Apple Intelligence, a local server, one cloud engine. Another engine tries
   only after "couldn't answer".
-- **A note never goes to a cloud engine**, a work note to none.
+- **A note never goes to a cloud engine**, a private vault's note to none.
 - Anthropic: never send `temperature` or a prefilled turn; JSON through
   `output_config.format`; a refusal is a 200 with `stop_reason: "refusal"`.
   OpenAI wants `max_completion_tokens`, local servers `max_tokens`.

@@ -206,14 +206,27 @@ final class AppState {
         konbiniCards = await Notes.fetchCards(base: searchPage.konbiniURL)
     }
 
-    /// Kura's vaults: the default one and the work vaults, for the Notes filter and a work note's place and links.
+    /// Kura's vaults: the default one and the others, for the Notes filter,
+    /// another vault's note's place and links, and which vaults are shared
+    /// (`Notes.useVaults`). Read again when older than ten minutes, so a
+    /// vault made private again counts; a failed read shares none.
     private(set) var kuraVaults: [KuraVault] = []
-    private var vaultsLoaded = false
+    private var vaultsReadAt: Date?
 
     func loadVaultsIfNeeded() async {
-        guard !vaultsLoaded, let kura = notesKura else { return }
-        vaultsLoaded = true
-        if let found = try? await kura.vaults() { kuraVaults = found }
+        guard let kura = notesKura else {
+            Notes.useVaults([])
+            return
+        }
+        if let at = vaultsReadAt, Date.now.timeIntervalSince(at) < 10 * 60 { return }
+        vaultsReadAt = .now
+        do {
+            let found = try await kura.vaults()
+            kuraVaults = found
+            Notes.useVaults(found)
+        } catch {
+            Notes.useVaults([])
+        }
     }
 
     /// Which vaults the Notes lists search: "all" (the default), or one
@@ -274,7 +287,7 @@ final class AppState {
 
     /// A work vault's note: never sent to Hister, never
     /// given to a model, never cached, exported or put in a feed.
-    func isWorkNote(_ url: String) -> Bool { Notes.isOtherVault(url) }
+    func isWorkNote(_ url: String) -> Bool { Notes.isPrivateNote(url) }
 
     func noteLinks(for document: StoredPage) -> NoteLinks? {
         guard label(of: document) == Notes.label || document.label == Notes.label,

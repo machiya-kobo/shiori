@@ -65,6 +65,7 @@ function loadBackground({ network, storage = fakeStorage({ histerURL: BASE, ...R
     setTimeout,
     clearTimeout,
     console,
+    AbortController,
   };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
@@ -107,6 +108,30 @@ test("a work vault's note is never sent or queued, however it's captured", async
     assert.equal(calls.some((c) => c.url === BASE + 'api/add'), false);
     assert.deepEqual(queued(storage), []);
   }
+});
+
+test('a shared vault\'s note is captured once Kura says so; a private one, or Kura out of reach, is refused', async () => {
+  const KURA = 'https://kura.example/';
+  const vaults = { vaults: [
+    { name: 'personal', default: true, private: false },
+    { name: 'work', default: false, private: false },
+    { name: 'client', default: false, private: true },
+  ] };
+  const settings = { shioriSettings: { niwaURL: KURA } };
+  const kuraUp = async (url) =>
+    url === KURA + 'api/vaults' ? new Response(JSON.stringify(vaults)) : new Response('{}', { status: 201 });
+  const up = loadBackground({ network: kuraUp, storage: fakeStorage({ histerURL: BASE, ...RULES, ...settings }) });
+  assert.equal((await up.ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/work/n/plan', html: '<p>x</p>' }))).status, 201);
+  assert.equal((await up.ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/client/n/plan', html: '<p>x</p>' }))).status, 406);
+  assert.equal(up.calls.filter((c) => c.url === KURA + 'api/vaults').length, 1, 'asked once a minute at most');
+
+  const kuraDown = async (url) => {
+    if (url.startsWith(KURA)) throw new TypeError('Load failed');
+    return new Response('{}', { status: 201 });
+  };
+  const down = loadBackground({ network: kuraDown, storage: fakeStorage({ histerURL: BASE, ...RULES, ...settings }) });
+  assert.equal((await down.ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/work/n/plan', html: '<p>x</p>' }))).status, 406);
+  assert.equal(down.calls.some((c) => c.url === BASE + 'api/add'), false);
 });
 
 test('a manual capture made offline is queued but still reports failure', async () => {

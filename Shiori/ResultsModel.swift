@@ -362,7 +362,7 @@ final class ResultsModel {
         repeat {
             let page = try await search(client, query, sort: sort, pageKey: key, limit: 100, options: range)
             // No work note leaves the device in an export.
-            out += page.documents.filter { !Notes.isOtherVault($0.url) && urls.insert($0.url).inserted }
+            out += page.documents.filter { !Notes.isPrivateNote($0.url) && urls.insert($0.url).inserted }
             key = page.nextPageKey
         } while key != nil && out.count < limit
         return Array(out.prefix(limit))

@@ -99,8 +99,8 @@ export function setLabel(url, label) {
  * one. `keepalive` lets both go out while the page is being left.
  */
 export async function deletePage(url, { keepalive = false } = {}) {
-  // Hister never has a work note, and must never be sent one's address.
-  if (globalThis.ShioriSearch.isOtherVault(url)) throw new HisterError("A work vault's note isn't in Hister.");
+  // Hister never has a private vault's note, and must never be sent one's address.
+  if (globalThis.ShioriSearch.isPrivateNote(url)) throw new HisterError("A private vault's note isn't in Hister.");
   const exact = `url:"${url.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   const dry = await request('api/delete', { method: 'POST', body: { query: exact, dry_run: true }, keepalive });
   const matched = (dry && dry.matched) || 0;
@@ -111,8 +111,8 @@ export async function deletePage(url, { keepalive = false } = {}) {
 /** Tells Hister `url` was opened from a search, so it ranks it first next time. */
 export function recordOpened(url, title, q) {
   const text = (q || '').trim();
-  // Never a work note's address or title to Hister.
-  if (!text || text === '*' || globalThis.ShioriSearch.isOtherVault(url)) return Promise.resolve();
+  // Never a private vault's note's address or title to Hister.
+  if (!text || text === '*' || globalThis.ShioriSearch.isPrivateNote(url)) return Promise.resolve();
   // As the search was sent: Hister matches the exact text.
   return request('api/history', { method: 'POST', body: { url, title, query: globalThis.ShioriSearch.histerText(text) } }).catch(() => {});
 }
@@ -145,7 +145,7 @@ export async function web(q, page = 1) {
   return response.json();
 }
 
-/** Kura's vaults (the default one and the work vaults), for the Notes filter; [] on failure. */
+/** Kura's vaults (the default one and the others, private or shared), for the Notes filter and S.useVaults; [] on failure. */
 export async function kuraVaults() {
   const reply = await request('kura/api/vaults').catch(() => null);
   return (reply && Array.isArray(reply.vaults) && reply.vaults) || [];

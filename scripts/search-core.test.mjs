@@ -600,11 +600,33 @@ test('Small Web: the gateway search, results and marks', () => {
 });
 
 // HisterKit's VaultTests, case for case.
+test("a vault is private until Kura marks it shared, and again when it can't be read", () => {
+  const work = 'https://kura.example/v/work/n/X';
+  const client = 'https://kura.example/v/client/n/X';
+  S.useVaults([]);
+  assert.equal(S.isPrivateNote(work), true);
+  assert.equal(S.isPrivateNote('https://kura.example/n/Projects/Example'), false);
+  assert.equal(S.isPrivateNote('https://example.com/'), false);
+  S.useVaults([
+    { name: 'personal', default: true, private: false },
+    { name: 'work', default: false, private: false },
+    { name: 'client', default: false, private: true },
+    { name: 'other', default: false },
+  ]);
+  assert.equal(S.isPrivateNote(work), false);
+  assert.equal(S.isPrivateNote(client), true);
+  assert.equal(S.isPrivateNote('https://kura.example/v/other/n/X'), true, 'no flag: private');
+  assert.equal(S.isPrivateNote('https://kura.example/v/new/n/X'), true, 'not listed: private');
+  S.useVaults(null);
+  assert.equal(S.isPrivateNote(work), true, 'a failed read shares nothing');
+});
+
+
 test('work vaults: known by the address alone', () => {
   assert.equal(S.noteVault('https://kura.example/v/work/n/Literature%20Notes/Weekly'), 'work');
   assert.equal(S.noteVault('https://kura.example/n/Projects/Example'), null);
   assert.equal(S.noteVault('https://example.com/v/x'), null);
-  assert.equal(S.isOtherVault('https://kura.example/v/client/n/X'), true);
+  assert.equal(S.isPrivateNote('https://kura.example/v/client/n/X'), true);
   assert.equal(S.notePath('https://kura.example/v/work/n/Literature%20Notes/Weekly', []), 'Literature Notes/Weekly.md');
   assert.equal(S.readerURL('https://kura.example/v/work/n/X', 'https://kura.example/', 'X.md'), 'https://kura.example/v/work/n/X');
   assert.equal(S.isNoteURL('https://kura.example/v/work/n/X', 'https://kura.example/'), true);

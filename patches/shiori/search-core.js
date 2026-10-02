@@ -208,11 +208,11 @@
   }
 
   /**
-   * The work vault a note belongs to ("work"), from its address: Kura keeps
+   * The vault a note belongs to ("work"), from its address: Kura keeps
    * the default vault's notes at /n/<slug> for good and every other one's
    * at /v/<vault>/n/<slug>. null for the default vault or a non-note.
-   * Everything that must not reach a work note (Hister, AI, caches,
-   * exports) asks this. HisterKit's Notes.otherVault is the twin.
+   * Which vault, not whether it's private: that's isPrivateNote.
+   * HisterKit's Notes.otherVault is the twin.
    */
   function noteVault(url) {
     try {
@@ -222,7 +222,27 @@
       return null;
     }
   }
-  const isOtherVault = (url) => noteVault(url) !== null;
+  // The vaults Kura marks shared (/api/vaults: not the default, `private:
+  // false`), from the last useVaults. Empty until then, so every other
+  // vault is private until Kura says otherwise.
+  let sharedVaults = new Set();
+  /** Kura's /api/vaults list, as last read; anything else (a failure: []) shares none. */
+  function useVaults(list) {
+    sharedVaults = new Set(
+      (Array.isArray(list) ? list : [])
+        .filter((v) => v && typeof v.name === 'string' && v.default !== true && v.private === false)
+        .map((v) => v.name),
+    );
+  }
+  /**
+   * A private vault's note: another vault's, unless Kura marks that vault
+   * shared. Everything that must not reach a private note (Hister, AI,
+   * caches, exports) asks this. HisterKit's Notes.isPrivateNote is the twin.
+   */
+  const isPrivateNote = (url) => {
+    const vault = noteVault(url);
+    return vault !== null && !sharedVaults.has(vault);
+  };
 
   /**
    * A note's chip, naming its vault ("Work vault"), since Notes mix
@@ -1502,7 +1522,8 @@
     feedURL,
     kuraFeedURL,
     noteVault,
-    isOtherVault,
+    isPrivateNote,
+    useVaults,
     smallwebSearchURL,
     smallwebResults,
     markRuns,

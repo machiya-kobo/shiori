@@ -255,7 +255,7 @@ struct DocumentItem: View {
                     // The theme's red: without it the app's accent tint (blue)
                     // wins over the destructive role. Not for a work note:
                     // Hister never has one.
-                    if !Notes.isOtherVault(document.url) {
+                    if !Notes.isPrivateNote(document.url) {
                         Button("Delete", systemImage: "trash", role: .destructive) { actions.delete(document) }
                             .tint(palette.danger)
                     }
@@ -346,7 +346,7 @@ struct DocumentMenu: View {
         if app.noteLinks(for: document) == nil {
             Button("Edit Label…", systemImage: "tag") { actions.label(document) }
         }
-        if !Notes.isOtherVault(document.url) {
+        if !Notes.isPrivateNote(document.url) {
             Button("Delete…", systemImage: "trash", role: .destructive) { actions.delete(document) }
         }
         Divider()
@@ -354,7 +354,7 @@ struct DocumentMenu: View {
             Button("Preview", systemImage: "doc.richtext") { actions.preview(document) }
         }
         // Save This Note's Links: the default vault's notes only.
-        if app.noteLinks(for: document) != nil, !Notes.isOtherVault(document.url),
+        if app.noteLinks(for: document) != nil, !Notes.isPrivateNote(document.url),
             let path = Notes.path(of: document.url, cards: app.konbiniCards)
         {
             Button("Save Links to Hister…", systemImage: "link.badge.plus") { app.saveLinksRequest = .note(path) }

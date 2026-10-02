@@ -61,7 +61,7 @@
   }
 
   function recordOpened(url, title, query) {
-    if (!base || !query || settings.rememberOpened === false || S.isOtherVault(url)) return;
+    if (!base || !query || settings.rememberOpened === false || S.isPrivateNote(url)) return;
     fetch(`${base}api/history`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

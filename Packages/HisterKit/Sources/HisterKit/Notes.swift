@@ -1,5 +1,6 @@
 import Foundation
 import os
+import Synchronization
 
 /// Vault notes: the Obsidian notes Hister indexes (label:vault), stored
 /// from their Niwa pages (/n/<path>) or Konbini cards (/p/<slug>).
@@ -46,12 +47,11 @@ public enum Notes {
         }
     }
 
-    /// The work vault a note belongs to ("work"), from its address: Kura
+    /// The vault a note belongs to ("work"), from its address: Kura
     /// keeps the default vault's notes at `/n/<slug>` for good and every
     /// other vault's at `/v/<vault>/n/<slug>`. Nil
     /// for the default vault, and for anything that isn't a note.
-    /// Everything that must not reach a work note (Hister, AI, caches,
-    /// exports) asks this.
+    /// Which vault, not whether it's private: that's `isPrivateNote`.
     public static func otherVault(of url: String) -> String? {
         guard let components = URLComponents(string: url) else { return nil }
         let parts = components.percentEncodedPath.split(separator: "/", omittingEmptySubsequences: false)
@@ -71,9 +71,25 @@ public enum Notes {
         return (name, "\(title) vault")
     }
 
-    /// A note in a vault other than the default: kept out of Hister, AI,
-    /// on-device caches, exports and feeds.
-    public static func isOtherVault(_ url: String) -> Bool { otherVault(of: url) != nil }
+    /// The vaults Kura marks shared (not the default, `private: false`),
+    /// from the last `useVaults`. Empty until then, so every other vault is
+    /// private until Kura says otherwise.
+    private static let sharedVaults = Mutex<Set<String>>([])
+
+    /// Kura's `/api/vaults` list, as last read; a failure passes `[]` and
+    /// shares none. search-core's `useVaults` is the twin.
+    public static func useVaults(_ vaults: [KuraVault]) {
+        let shared = Set(vaults.filter { !$0.isDefault && !$0.isPrivate }.map(\.name))
+        sharedVaults.withLock { $0 = shared }
+    }
+
+    /// A private vault's note: another vault's, unless Kura marks that vault
+    /// shared. Kept out of Hister, AI, on-device caches, exports and feeds.
+    /// search-core's `isPrivateNote` is the twin.
+    public static func isPrivateNote(_ url: String) -> Bool {
+        guard let vault = otherVault(of: url) else { return false }
+        return !sharedVaults.withLock { $0.contains(vault) }
+    }
 
     /// The vault path ("Projects/Example.md") of a note at this URL.
     public static func path(of url: String, cards: [Card]) -> String? {
@@ -112,7 +128,7 @@ public enum Notes {
     /// note's own address when that already is a reader page (/n/…), else
     /// one built on the reader's address (a Konbini project card's note).
     public static func readerURL(page: String, base: String, path: String) -> URL? {
-        if let components = URLComponents(string: page), components.percentEncodedPath.hasPrefix("/n/") || isOtherVault(page) {
+        if let components = URLComponents(string: page), components.percentEncodedPath.hasPrefix("/n/") || otherVault(of: page) != nil {
             return URL(string: page)
         }
         return niwaURL(base: base, path: path)

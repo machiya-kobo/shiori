@@ -14,8 +14,8 @@
 // - Every POST api/add gets metadata.client = "shiori" and
 //   metadata.client_version = the manifest version.
 //
-// - POST api/add for a work vault's note (/v/<vault>/n/…) is answered 406
-//   here and never sent or queued.
+// - POST api/add for a private vault's note (/v/<vault>/n/… that Kura
+//   doesn't mark shared) is answered 406 here and never sent or queued.
 // - POST api/add that fails at the network level is queued in
 //   storage.local, stamped with the visit time (`added`, unix seconds), and
 //   replayed later unchanged. An automatic capture then answers with a
@@ -375,11 +375,13 @@
 
     if (endpoint === 'api/add' && method === 'POST' && init && typeof init.body === 'string') {
       const prepared = prepAdd(init.body);
-      // A work vault's note never reaches Hister, whatever sent it (the
+      // A private vault's note never reaches Hister, whatever sent it (the
       // automatic capture, the shortcut, the menu): refused here as a skip
-      // rule would refuse it, and never queued.
+      // rule would refuse it, and never queued. Kura is asked which vaults
+      // are shared first; unanswered, every other vault is private.
       const S = globalThis.ShioriSearch;
-      if (prepared.pageURL && S && S.isOtherVault(prepared.pageURL)) {
+      if (prepared.pageURL && S && S.noteVault(prepared.pageURL) !== null) await readVaults(S);
+      if (prepared.pageURL && S && S.isPrivateNote(prepared.pageURL)) {
         return new Response('{}', {
           status: 406,
           headers: { 'Content-Type': 'application/json', 'X-Shiori-Refused': 'work-note' },
@@ -414,6 +416,37 @@
 
     return originalFetch(input, init);
   };
+
+  // Kura's vaults, for which are shared: read when another vault's note is
+  // about to be sent, at most once a minute (so a vault made private again
+  // counts within a minute), from the Kura address in the settings.
+  let vaultsAt = 0;
+  let vaultsRead = null;
+  function readVaults(S) {
+    if (vaultsRead && Date.now() - vaultsAt < 60_000) return vaultsRead;
+    vaultsAt = Date.now();
+    vaultsRead = (async () => {
+      let list = [];
+      try {
+        const settings = (await storage.get(['shioriSettings'])).shioriSettings || {};
+        const base = String(settings.niwaURL || '').trim();
+        if (/^https?:\/\//i.test(base)) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 4000);
+          try {
+            const r = await originalFetch(base.replace(/\/?$/, '/') + 'api/vaults', { signal: controller.signal, credentials: 'omit' });
+            if (r.ok) list = ((await r.json()) || {}).vaults || [];
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+      } catch (_) {
+        list = [];
+      }
+      S.useVaults(list);
+    })();
+    return vaultsRead;
+  }
 
   /** The server's skip rules, remembered for the queue; whether it answered. */
   async function fetchRules(base) {

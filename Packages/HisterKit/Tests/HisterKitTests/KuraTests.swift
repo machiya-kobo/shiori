@@ -163,6 +163,31 @@ struct KuraLiveTests {
             == "https://kura.example/v/work/n/X")
     }
 
+    @Test func aVaultIsPrivateUntilKuraMarksItShared() {
+        let work = "https://kura.example/v/work/n/X"
+        let client = "https://kura.example/v/client/n/X"
+        Notes.useVaults([])
+        #expect(Notes.isPrivateNote(work))
+        #expect(!Notes.isPrivateNote("https://kura.example/n/Projects/Example"))
+        #expect(!Notes.isPrivateNote("https://example.com/"))
+        Notes.useVaults([
+            KuraVault(name: "personal", title: "Personal", isDefault: true, isPrivate: false, obsidian: "personal"),
+            KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: false, obsidian: "work"),
+            KuraVault(name: "client", title: "Client", isDefault: false, isPrivate: true, obsidian: "client"),
+        ])
+        #expect(!Notes.isPrivateNote(work))
+        #expect(Notes.isPrivateNote(client))
+        #expect(Notes.isPrivateNote("https://kura.example/v/new/n/X"), "not listed: private")
+        Notes.useVaults([])
+        #expect(Notes.isPrivateNote(work), "a failed read shares nothing")
+    }
+
+    @Test func aVaultWithoutThePrivateFlagIsPrivate() throws {
+        let reply = Data(#"[{"name":"personal","default":true},{"name":"work"}]"#.utf8)
+        let vaults = try JSONDecoder().decode([KuraVault].self, from: reply)
+        #expect(vaults.map(\.isPrivate) == [false, true])
+    }
+
     @Test func aNotesChipNamesItsVault() {
         let vaults = [KuraVault(name: "personal", title: "Personal", isDefault: true, isPrivate: false, obsidian: "personal"),
                       KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: true, obsidian: "work")]

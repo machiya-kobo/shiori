@@ -36,6 +36,8 @@ struct ShioriApp: App {
                         #endif
                     }
                     if phase == .active {
+                        // Which vaults Kura shares, read again after a while away.
+                        Task { await app.loadVaultsIfNeeded() }
                         app.labeller.start(app: app)
                         app.reloadSharedSettings()
                         Task {

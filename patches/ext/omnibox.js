@@ -73,7 +73,7 @@
    *  page does), unless Remember What You Open is off. */
   async function recordOpened(url, title, query) {
     const { base, settings } = await stored();
-    if (!base || settings.rememberOpened === false || S.isOtherVault(url)) return;
+    if (!base || settings.rememberOpened === false || S.isPrivateNote(url)) return;
     await fetch(`${base}api/history`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
