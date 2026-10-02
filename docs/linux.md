@@ -86,7 +86,7 @@ a private vault is never cached, exported or sent to Hister.
 
 - `linux/src/`: pure ES modules (URL shim, save request, outbox, command
   line, provider rows) that GJS runs as they are, tested under Node by
-  `scripts/linux.test.mjs` (part of `node --test scripts/`).
+  `scripts/linux.test.mjs` (part of `node --test scripts/*.test.mjs`).
 - `linux/gjs/`: the application, windows, libsoup requests, the file store.
   Kept thin.
 - `linux/flatpak/`: the manifest, desktop file, launcher and `build.sh`

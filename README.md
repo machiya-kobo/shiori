@@ -307,7 +307,7 @@ cd shiori
 brew bundle
 cp local.yml.example local.yml   # your team, bundle prefix and servers
 cp local.env.example local.env   # your device name, for deploys
-node --test scripts/             # manifest + shim tests
+node --test scripts/*.test.mjs   # manifest + shim tests
 (cd Packages/HisterKit && swift test)
 scripts/build.sh ios             # or: scripts/build.sh macos
 ```
@@ -384,7 +384,7 @@ The search page (Shiori Search) and the web app are plain static files that any 
 ```bash
 git -C vendor/hister fetch --tags
 git -C vendor/hister checkout vX.Y.Z
-scripts/build-extension.sh && node --test scripts/
+scripts/build-extension.sh && node --test scripts/*.test.mjs
 git add vendor/hister
 ```
 

@@ -21,7 +21,7 @@ part you're changing.
 
 Run what covers your change before sending it:
 
-- `node --test scripts/`: the shared search logic, the extension's shims,
+- `node --test scripts/*.test.mjs`: the shared search logic, the extension's shims,
   the web pages' helpers and the Linux modules.
 - `swift test` in `Packages/HisterKit` (the client) and `Packages/ShioriAI`
   (the AI engines).
