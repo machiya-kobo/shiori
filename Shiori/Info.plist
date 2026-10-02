@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>shiori</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>ShioriAppGroup</key>
+	<string>$(SHIORI_APP_GROUP)</string>
+	<key>ShioriDefaultKonbiniURL</key>
+	<string>$(SHIORI_KONBINI_URL)</string>
+	<key>ShioriDefaultNeverSuggest</key>
+	<string>$(SHIORI_AI_NEVER_SUGGEST)</string>
+	<key>ShioriDefaultNiwaURL</key>
+	<string>$(SHIORI_NIWA_URL)</string>
+	<key>ShioriDefaultNotTopics</key>
+	<string>$(SHIORI_AI_NOT_TOPICS)</string>
+	<key>ShioriDefaultObsidianVault</key>
+	<string>$(SHIORI_OBSIDIAN_VAULT)</string>
+	<key>ShioriDefaultReservedCollections</key>
+	<string>$(SHIORI_RESERVED_COLLECTIONS)</string>
+	<key>ShioriDefaultSearxngURL</key>
+	<string>$(SHIORI_SEARXNG_URL)</string>
+	<key>ShioriDefaultServerURL</key>
+	<string>$(SHIORI_SERVER_URL)</string>
+	<key>ShioriDefaultSmallwebURL</key>
+	<string>$(SHIORI_SMALLWEB_URL)</string>
+	<key>ShioriSourceURL</key>
+	<string>$(SHIORI_SOURCE_URL)</string>
+</dict>
+</plist>

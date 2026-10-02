@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""screenshots - make the README's screenshots from invented sample data.
+
+    tools/screenshots [--kura URL] [out_dir]          # default: docs/screenshots
+
+Starts a throwaway Hister in a container (podman or docker) on a free port, fills it with the Quickstart's sample
+pages (tools/quickstart/seed-hister.py), builds the search page and the web app, serves them with web/dev-server.py
+(TZ=UTC), takes the shots with Playwright's Chromium, and removes it all. With --kura, Notes come from that Kura,
+which must serve Machiya's sample vault (the Machiya stack's Kura, e.g. http://127.0.0.1:8083/); without it the
+shots have no notes. The web search is a stand-in serving an invented Info card and web results (real ones would
+show real sites). Nothing but the sample pages, the sample vault and those invented results is ever shown.
+
+Shots, as <out_dir>/shiori-<what>-<light|dark>.png, squeezed to a small palette when over 200 KB:
+the web app's Library with a page open (1280x800, light and dark), Shiori Search for "lantern" (1280x800, light
+and dark), and the web app's Library at phone width (390x844, light). Dates in them ("2 days ago") are relative to
+the day of the capture: run it again to refresh them.
+
+Needs Playwright for Python with its Chromium (`pip install playwright pillow && playwright install chromium`, in
+any virtual environment); run it with that environment's python3. Standard library, Playwright and Pillow only.
+"""
+import argparse
+import os
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+
+from playwright.sync_api import sync_playwright
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LIMIT = 200 * 1024
+DESKTOP = {"width": 1280, "height": 800}
+PHONE = {"width": 390, "height": 844}
+HISTER_IMAGE = "ghcr.io/asciimoo/hister:v0.20.0"
+
+
+def free_port():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def wait(url, seconds=60):
+    for _ in range(seconds * 2):
+        try:
+            urllib.request.urlopen(url, timeout=2)
+            return
+        except Exception as exc:
+            if hasattr(exc, "code"):
+                return
+            time.sleep(0.5)
+    sys.exit("screenshots: %s didn't answer" % url)
+
+
+# A stand-in SearXNG for the shots: real web results would show real sites, so the Info card, the web results and
+# the related searches are invented too, on .example hosts, in the sample vault's theme.
+WEB = {
+    "infoboxes": [{
+        "infobox": "Paper lantern", "engine": "wikipedia",
+        "content": "A lantern of paper over a frame of bamboo or wire, lit by a candle or, now often, an LED. "
+                   "Folding kinds such as the chōchin collapse flat along a spiral rib.",
+        "attributes": [{"label": "Made of", "value": "Washi over a bamboo frame"},
+                       {"label": "Kinds", "value": "Chōchin, andon, tōrō"},
+                       {"label": "Lit by", "value": "Candle or LED"}],
+        "urls": [{"title": "Lantern makers' guild", "url": "https://guild.example/lanterns"},
+                 {"title": "Washi suppliers", "url": "https://washi.example/suppliers"}],
+    }],
+    "results": [
+        {"url": "https://guild.example/lanterns/first", "title": "Your first paper lantern: a weekend project",
+         "content": "Cut the ribs, steam and bend them, paste the washi with nori, and let it dry overnight.", "engines": ["sample"]},
+        {"url": "https://festival.example/kyoto", "title": "Lantern nights in Kyoto: when and where",
+         "content": "The lanes fill with lanterns after dark; the best views are from the river at dusk.", "engines": ["sample"]},
+        {"url": "https://light.example/led-inserts", "title": "Warm-white LED inserts for paper lanterns",
+         "content": "Battery inserts that stay cool behind washi, with a candle-like flicker mode.", "engines": ["sample"]},
+        {"url": "https://bamboo.example/ribs", "title": "Splitting bamboo into lantern ribs",
+         "content": "Split the culm into strips of even width, then shave each rib to the same thickness.", "engines": ["sample"]},
+    ],
+    "suggestions": ["paper lantern frame", "chochin lantern folding", "kyoto lantern festival", "washi lantern led"],
+    "number_of_results": 1240,
+}
+
+
+def stand_in_searxng():
+    """A tiny server answering SearXNG's JSON search with WEB, and empty autocompletes."""
+    import http.server
+    import json
+    import threading
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = json.dumps(WEB if self.path.startswith("/search") else []).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def squeeze(path):
+    if os.path.getsize(path) <= LIMIT:
+        return
+    from PIL import Image
+    im = Image.open(path).convert("RGB").quantize(colors=128, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+    im.save(path, optimize=True)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--kura", default="", help="a Kura serving Machiya's sample vault, for the notes")
+    ap.add_argument("--keep", action="store_true", help="leave Hister and the pages up afterwards, and say where")
+    ap.add_argument("out", nargs="?", default=os.path.join(ROOT, "docs", "screenshots"))
+    a = ap.parse_args()
+    engine = shutil.which("podman") or shutil.which("docker")
+    if not engine:
+        sys.exit("screenshots: needs podman or docker for Hister")
+
+    work = tempfile.mkdtemp(prefix="shiori-shots-", dir=os.environ.get("SHOTS_TMP", "/var/tmp"))
+    hister_port, site_port, app_port = free_port(), free_port(), free_port()
+    name = "shiori-shots-%d" % hister_port
+    servers = []
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("SHIORI_", "HISTER_", "KURA_", "SEARXNG_"))}
+    env["TZ"] = "UTC"
+    try:
+        subprocess.run([engine, "run", "-d", "--name", name, "-p", "127.0.0.1:%d:4433" % hister_port,
+                        "-e", "HISTER__SERVER__ADDRESS=0.0.0.0:4433",
+                        "-e", "HISTER__SERVER__BASE_URL=http://localhost:%d" % hister_port, HISTER_IMAGE],
+                       check=True, capture_output=True)
+        hister = "http://127.0.0.1:%d/" % hister_port
+        subprocess.run([os.path.join(ROOT, "tools", "quickstart", "seed-hister.py"), hister], check=True, env=env)
+        site, app = os.path.join(work, "site"), os.path.join(work, "app")
+        build_env = dict(env)
+        if a.kura:
+            build_env["SHIORI_NIWA_URL"] = a.kura
+        subprocess.run([os.path.join(ROOT, "scripts", "build-web.sh"), site, "http://localhost:%d/" % site_port],
+                       check=True, cwd=ROOT, env=build_env, capture_output=True)
+        subprocess.run([os.path.join(ROOT, "scripts", "build-pwa.sh"), app], check=True, cwd=ROOT, env=build_env,
+                       capture_output=True)
+        searx = stand_in_searxng()
+        for path, port in ((site, site_port), (app, app_port)):
+            serve_env = dict(env, HISTER_URL=hister, PORT=str(port), KURA_URL=a.kura,
+                             SEARXNG_URL="http://127.0.0.1:%d/" % searx.server_address[1])
+            servers.append(subprocess.Popen([sys.executable, os.path.join(ROOT, "web", "dev-server.py"), path],
+                                            cwd=ROOT, env=serve_env, stdout=subprocess.DEVNULL,
+                                            stderr=subprocess.DEVNULL, start_new_session=True))
+        wait("http://127.0.0.1:%d/" % site_port)
+        wait("http://127.0.0.1:%d/" % app_port)
+        time.sleep(2)  # Hister indexes the pages a moment after they're added
+
+        os.makedirs(a.out, exist_ok=True)
+        site_url, app_url = "http://localhost:%d" % site_port, "http://localhost:%d" % app_port
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+
+            def shot(what, url, viewport, scheme, ready, steps=()):
+                context = browser.new_context(viewport=viewport, color_scheme=scheme, device_scale_factor=1,
+                                              timezone_id="UTC", locale="en-US")
+                page = context.new_page()
+                page.goto(url)
+                page.get_by_text(ready).first.wait_for(timeout=30000)
+                for step in steps:
+                    step(page)
+                page.mouse.move(viewport["width"] - 2, viewport["height"] - 2)  # no hover underline
+                page.wait_for_timeout(1200)
+                out = os.path.join(a.out, "shiori-%s-%s.png" % (what, scheme))
+                page.screenshot(path=out)
+                context.close()
+                squeeze(out)
+                print("%s  %d KB" % (out, os.path.getsize(out) // 1024))
+
+            def open_page(page):
+                page.get_by_text("Folding a chōchin lantern").first.click()
+                page.get_by_text("A chōchin collapses flat").first.wait_for(timeout=15000)
+                page.evaluate("document.querySelectorAll('#list, main, body').forEach((e) => e.scrollTo(0, 0))")
+
+            def open_sections(page):
+                for heading in ("Your Pages", "Your Notes"):
+                    button = page.locator("button.fold-head", has_text=heading)
+                    if button.count() and button.first.get_attribute("aria-expanded") == "false":
+                        button.first.click()
+                page.wait_for_timeout(600)
+                page.evaluate("window.scrollTo(0, 0)")
+
+            for scheme in ("light", "dark"):
+                shot("library", app_url + "/", DESKTOP, scheme, "Folding a chōchin lantern", (open_page,))
+                shot("search", site_url + "/?q=lantern", DESKTOP, scheme, "Your Pages", (open_sections,))
+            shot("library-phone", app_url + "/", PHONE, "light", "Folding a chōchin lantern")
+            browser.close()
+    finally:
+        if a.keep:
+            print("kept: Shiori Search on http://localhost:%d/, the web app on http://localhost:%d/, Hister %s"
+                  % (site_port, app_port, name))
+            print("the stand-in SearXNG stops with this script; the pages' web results won't answer")
+        else:
+            for s in servers:
+                try:
+                    os.killpg(s.pid, signal.SIGTERM)
+                except OSError:
+                    pass
+            subprocess.run([engine, "rm", "-f", name], capture_output=True)
+            shutil.rmtree(work, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    main()

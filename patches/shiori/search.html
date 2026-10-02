@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Shiori Search</title>
+    <link rel="stylesheet" href="search.css" />
+  </head>
+  <body class="pending">
+    <header>
+      <!-- The start page (no search yet): the mark, then the field, then
+           recent searches as chips. -->
+      <div id="home-brand" class="home-brand" hidden>
+        <img src="assets/icons/icon-256.png" alt="" width="72" height="72" />
+        <h1>Shiori Search</h1>
+      </div>
+      <!-- A plain GET form (the script handles the submit): what Firefox's
+           "Add a Keyword for this Search" looks for. -->
+      <form id="search" role="search" method="get" action="">
+        <div class="field">
+          <input id="q" name="q" type="search" placeholder="Search pages, notes and the web" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search" enterkeyhint="search" />
+          <button id="clear" type="button" aria-label="Clear" title="Clear search">×</button>
+          <div id="recent" class="recent" hidden>
+            <p class="recent-head" id="recent-head">Recent</p>
+            <ul id="recent-list" aria-labelledby="recent-head"></ul>
+          </div>
+          <!-- Suggestions as you type: your pages and notes by title (a pick
+               opens it), then searches from the web's autocompleter. -->
+          <div id="suggest" class="recent suggest" role="listbox" aria-label="Suggestions" hidden></div>
+        </div>
+      </form>
+      <nav id="home-recent" class="home-recent" aria-label="Recent searches" hidden></nav>
+      <div class="tabs-row">
+      <nav id="categories" aria-label="Categories"></nav>
+      <div class="filters">
+        <label id="sort-label" hidden>
+          <span class="visually-hidden">Sort</span>
+          <select id="sort">
+            <option value="">Best match</option>
+            <option value="new">Newest</option>
+          </select>
+        </label>
+        <label id="time-label">
+          <span class="visually-hidden">Time range</span>
+          <select id="time">
+            <option value="">Anytime</option>
+            <option value="day">Past day</option>
+            <option value="week">Past week</option>
+            <option value="month">Past month</option>
+            <option value="year">Past year</option>
+          </select>
+        </label>
+        <button id="settings-open" class="icon-button" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog"></button>
+      </div>
+      </div>
+    </header>
+    <main>
+      <div id="skeleton" aria-hidden="true">
+        <div>
+          <div class="sk-heading"></div>
+          <div class="sk-card"><div class="sk-line title"></div><div class="sk-line url"></div><div class="sk-line"></div><div class="sk-line short"></div></div>
+          <div class="sk-card"><div class="sk-line title"></div><div class="sk-line url"></div><div class="sk-line"></div><div class="sk-line short"></div></div>
+          <div class="sk-card"><div class="sk-line title"></div><div class="sk-line url"></div><div class="sk-line"></div><div class="sk-line short"></div></div>
+        </div>
+        <div class="sk-info"><div class="sk-line title"></div><div class="sk-line"></div><div class="sk-line"></div><div class="sk-line short"></div></div>
+      </div>
+      <p id="correction" class="correction" hidden></p>
+      <section id="answer" class="fold panel" data-fold="answer" hidden>
+        <button class="fold-head" type="button" aria-expanded="false">
+          <span class="chevron" aria-hidden="true"></span><span>✦ AI Answer</span>
+        </button>
+        <div class="fold-body"><div id="answer-body" class="answer" aria-live="polite"></div></div>
+      </section>
+      <section id="infobox-slot"></section>
+      <section id="hister" class="fold" data-fold="hister" hidden>
+        <button class="fold-head" type="button" aria-expanded="true">
+          <span class="chevron" aria-hidden="true"></span><span id="hister-title">Your Pages</span>
+          <span id="hister-count" class="count"></span>
+        </button>
+        <div class="fold-body"><div>
+          <ol id="hister-results" class="results"></ol>
+          <p class="more"><a id="hister-more" href="#">More in Hister ›</a></p>
+        </div></div>
+      </section>
+      <section id="vault" class="fold" data-fold="vault" hidden>
+        <button class="fold-head" type="button" aria-expanded="true">
+          <span class="chevron" aria-hidden="true"></span><span id="vault-title">Your Notes</span>
+          <span id="vault-count" class="count"></span>
+        </button>
+        <div class="fold-body"><div>
+          <ol id="vault-results" class="results"></ol>
+          <p class="more"><a id="vault-more" href="#">All Your Notes ›</a></p>
+        </div></div>
+      </section>
+      <section id="web" aria-labelledby="web-title" hidden>
+        <h2 id="web-title">Web</h2>
+        <section id="suggestions" class="fold panel" data-fold="related" hidden>
+          <button class="fold-head" type="button" aria-expanded="false">
+            <span class="chevron" aria-hidden="true"></span><span>Related Searches</span>
+          </button>
+          <div class="fold-body"><div><ul id="suggestion-list"></ul></div></div>
+        </section>
+        <p id="web-status" class="status" role="status"></p>
+        <ol id="web-results" class="results"></ol>
+        <div id="images" class="image-grid" hidden></div>
+      </section>
+      <p class="more"><a id="hister-more-tab" href="#" hidden>Open in Hister ›</a></p>
+      <nav id="pages" class="pages" aria-label="Pages" hidden>
+        <a id="prev" class="page-button" href="#" hidden>‹ Previous page</a>
+        <a id="next" class="page-button primary" href="#">Next page ›</a>
+      </nav>
+    </main>
+    <dialog id="settings" aria-labelledby="settings-title">
+      <form method="dialog">
+        <div class="sheet-head">
+          <h2 id="settings-title" tabindex="-1" autofocus>Settings</h2>
+          <button class="done" value="done">Done</button>
+        </div>
+        <div id="settings-body"></div>
+        <p class="sheet-note">Kept on this device. The Shiori app has the rest (servers, the Safari switch).</p>
+      </form>
+    </dialog>
+    <aside id="preview-pane" aria-label="Preview" hidden>
+      <div class="preview-bar">
+        <a id="preview-open" class="preview-open" href="#" hidden>Open ›</a>
+        <button id="preview-close" class="icon-button" type="button" aria-label="Close preview" title="Close preview">×</button>
+      </div>
+      <section id="preview-summary" class="summary" aria-live="polite" hidden></section>
+      <p id="preview-empty" class="status">Select one of your pages or notes to preview it here.</p>
+      <iframe id="preview-frame" title="Preview" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" hidden></iframe>
+    </aside>
+    <footer>
+      <p><a id="ddg" href="#">Search DuckDuckGo instead</a></p>
+      <p id="timing" class="status"></p>
+      <p id="engines" class="status"></p>
+      <p class="status">Powered by <a href="https://github.com/asciimoo/hister">Hister</a>, <a href="https://obsidian.md">Obsidian</a> and <a href="https://github.com/searxng/searxng">SearXNG</a>.</p>
+      <p class="status" data-shiori-status><a href="__SHIORI_STATUS_URL__">Status</a></p>
+    </footer>
+    <script src="search-core.js"></script>
+    <script src="search.js"></script>
+  </body>
+</html>

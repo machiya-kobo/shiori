@@ -1,0 +1,50 @@
+# Xcode (the project is generated from project.yml by XcodeGen)
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+build/
+
+# Staged web-extension bundle: output of scripts/build-extension.sh
+ShioriExtension/Resources/
+
+node_modules/
+.DS_Store
+
+# Local, per-developer configuration and secrets (never committed)
+local.yml
+local.env
+.env
+.env.*
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.pem
+*.key
+AuthKey_*.p8
+
+# Release products
+*.xcarchive
+*.ipa
+*.dSYM/
+*.dSYM.zip
+*.flatpak
+.flatpak-builder/
+linux/flatpak/build/
+linux/flatpak/repo/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+scratch/
+
+# Local notes, never committed
+CLAUDE.local.md
+
+# A build's own files kept out of the repository (e.g. the neighbours' logos, SHIORI_ROOM_LOGOS)
+/.local/
+__pycache__/
+
+# The Quickstart's built pages
+/demo-site/
+/demo-app/

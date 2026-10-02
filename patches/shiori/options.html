@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Shiori</title>
+    <link rel="stylesheet" href="search.css" />
+    <link rel="stylesheet" href="shiori-options.css" />
+  </head>
+  <body class="options">
+    <header class="options-head">
+      <img src="assets/icons/icon-128.png" alt="" width="56" height="56" />
+      <div>
+        <h1>Shiori</h1>
+        <p>Sends the pages you visit to your Hister server, and puts your pages beside the web when you search.</p>
+      </div>
+    </header>
+    <main>
+      <section class="group">
+        <h2>Hister Server</h2>
+        <div class="row"><span>Address</span><span id="server" class="value mono">…</span></div>
+        <div class="row"><span>Status</span><span id="status" class="value">Checking…</span></div>
+      </section>
+      <section class="group">
+        <h2>Safari</h2>
+        <div class="row"><span>Website Access</span><span id="access" class="value">…</span></div>
+        <p id="access-help" class="note" hidden>Without it Shiori can't send pages or open your searches. On the Mac: Safari → Settings → Websites → Shiori → Allow. On iPhone and iPad: Settings → Apps → Safari → Extensions → Shiori → All Websites → Allow. Reinstalling Shiori resets it.</p>
+      </section>
+      <section class="group">
+        <h2>Waiting to Send</h2>
+        <div class="row"><span>Pages</span><span id="queue" class="value">…</span></div>
+        <p class="note">Pages visited while Hister was out of reach. They go out as you browse once it's back.</p>
+      </section>
+      <section class="group">
+        <h2>Search from Safari</h2>
+        <div class="row"><span>Combined Search</span><span id="combined" class="value">…</span></div>
+        <div class="row"><span>Results Open On</span><span id="results-at" class="value mono">…</span></div>
+        <div class="row"><span>Web Search (SearXNG)</span><span id="searxng" class="value mono">…</span></div>
+        <div class="row"><span>Web Results</span><span id="web" class="value">…</span></div>
+        <p class="note">A DuckDuckGo search opens Shiori's results: your pages and notes, then the web. They open on the hosted page when it answers, else on the extension's own page.</p>
+      </section>
+      <section class="group">
+        <h2>Results Page</h2>
+        <div class="row"><span>Your Pages in All</span><span data-flag="histerInGeneral" class="value">…</span></div>
+        <div class="row"><span>Your Notes in All</span><span data-flag="vaultInGeneral" class="value">…</span></div>
+        <div class="row"><span>Pages Tab</span><span data-flag="histerTab" class="value">…</span></div>
+        <div class="row"><span>Notes Tab</span><span data-flag="vaultTab" class="value">…</span></div>
+        <div class="row"><span>Info Box</span><span data-flag="showInfobox" class="value">…</span></div>
+        <div class="row"><span>Related Searches</span><span data-flag="showRelated" class="value">…</span></div>
+        <div class="row"><span>AI Answer (Hosted Page)</span><span data-flag="aiAnswer" class="value">…</span></div>
+        <div class="row"><span>Thumbnails</span><span data-flag="showThumbnails" class="value">…</span></div>
+        <div class="row"><span>Preview Pane</span><span data-flag="previewPane" class="value">…</span></div>
+        <div class="row"><span>Images in Previews</span><span data-flag="previewImages" class="value">…</span></div>
+        <div class="row"><span>Fold Repeated Sites</span><span data-flag="foldRepeats" class="value">…</span></div>
+        <div class="row"><span>Remember What You Open</span><span data-flag="rememberOpened" class="value">…</span></div>
+        <div class="row"><span>Show Opened</span><span data-flag="showOpened" class="value">…</span></div>
+        <div class="row"><span>Recent Searches</span><span data-flag="searchHistory" class="value">…</span></div>
+        <div class="row"><span>Result Style</span><span id="result-style" class="value">…</span></div>
+        <div class="row"><span>Theme</span><span id="theme" class="value">…</span></div>
+        <div class="row"><span>Text Size</span><span id="text-size" class="value">…</span></div>
+      </section>
+      <section class="group">
+        <h2>Notes</h2>
+        <div class="row"><span>Obsidian Vault</span><span id="vault" class="value">…</span></div>
+        <div class="row"><span>Kura</span><span id="niwa" class="value mono">…</span></div>
+        <div class="row"><span>Konbini</span><span id="konbini" class="value mono">…</span></div>
+      </section>
+      <p class="actions">
+        <a id="open-app" class="button" href="shiori://settings">Open Shiori Settings</a>
+      </p>
+      <p class="note center">Change these in the Shiori app, or with the gear on the results page. Each device keeps its own. Rules for which pages Hister keeps live on the server.</p>
+    </main>
+    <script src="shiori-options.js"></script>
+  </body>
+</html>

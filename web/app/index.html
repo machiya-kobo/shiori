@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#1a1b26" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e1e2e7" media="(prefers-color-scheme: light)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Shiori" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="shiori-status" content="__SHIORI_STATUS_URL__" />
+    <title>Shiori</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/_shiori/web-icon-64.png" />
+    <link rel="apple-touch-icon" href="/_shiori/icon-256.png" />
+    <link rel="stylesheet" href="/_shiori/theme.css" />
+    <link rel="stylesheet" href="/_shiori/app.css" />
+  </head>
+  <body>
+    <div id="app">
+      <nav id="sidebar" aria-label="Browse"></nav>
+      <section id="list-column" aria-label="Pages">
+        <header class="bar">
+          <button id="back" class="icon-button" type="button" aria-label="Back" title="Back" hidden></button>
+          <h1 id="title">Library</h1>
+          <button id="settings-button" class="icon-button" type="button" aria-label="Settings" title="Settings"></button>
+        </header>
+        <div id="search-top" hidden></div>
+        <div id="list-top"></div>
+        <main id="list"></main>
+      </section>
+      <section id="preview-column" aria-label="Preview">
+        <header class="bar" id="preview-bar"></header>
+        <div id="preview"></div>
+      </section>
+    </div>
+    <nav id="tabs" aria-label="Sections"></nav>
+    <dialog id="dialog"></dialog>
+    <script src="/_shiori/search-core.js"></script>
+    <script type="module" src="/_shiori/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,56 @@
+# Per-developer settings: copy to local.yml (gitignored) before running
+# xcodegen:
+#   cp local.yml.example local.yml
+settings:
+  base:
+    # Your Apple Developer team ID, for device builds (Xcode → Settings →
+    # Accounts). Empty is fine for simulator and ad-hoc Mac builds.
+    DEVELOPMENT_TEAM: ""
+    # Required: a reverse-DNS prefix of your own, e.g. "io.github.you".
+    # Bundle IDs are unique across Apple, so you can't reuse another
+    # build's. The app is <prefix>.shiori, its extensions .Extension and
+    # .Share, the App Group group.<prefix>.shiori (iOS) or
+    # <TeamID>.<prefix>.shiori (macOS).
+    SHIORI_BUNDLE_PREFIX: ""
+    # Your Hister server, with the trailing slash. It becomes the default
+    # in both the app and the Safari extension; both can still change it.
+    SHIORI_SERVER_URL: ""
+    # Your SearXNG instance, for combined search from Safari (optional).
+    SHIORI_SEARXNG_URL: ""
+    # Where notes live on the web (optional), so results can link them:
+    # SHIORI_NIWA_URL is your Kura (the notes' search and reader; the name is
+    # older than Kura), SHIORI_KONBINI_URL your Konbini board.
+    SHIORI_NIWA_URL: ""
+    SHIORI_KONBINI_URL: ""
+    # The Machiya rooms for the results page's Rooms switcher, as
+    # "key=url,…" (shiori, konbini, niwa, kura, hister, searxng); Kura,
+    # Konbini, Hister and SearXNG default to the addresses above.
+    SHIORI_ROOMS: ""
+    # A status page for your servers (optional): the search page links it.
+    SHIORI_STATUS_URL: ""
+    # Your hosted search page (optional, scripts/build-web.sh): Safari's
+    # address-bar searches open there when it answers, else in the
+    # extension's own page.
+    SHIORI_SEARCH_PAGE_URL: ""
+    # The small-web gateway (Gemini and Gopher search), e.g. https://smallweb.example/
+    SHIORI_SMALLWEB_URL: ""
+    # Your own conventions (optional; Settings changes them per device):
+    # the Obsidian vault notes open in (empty: notes link to Kura only),
+    SHIORI_OBSIDIAN_VAULT: ""
+    # and, comma-separated, labels the AI never applies or suggests,
+    SHIORI_AI_NEVER_SUGGEST: ""
+    # labels that mark where a page came from rather than its topic
+    # (e.g. an importer's), and names never proposed as a new collection.
+    SHIORI_AI_NOT_TOPICS: ""
+    SHIORI_RESERVED_COLLECTIONS: ""
+    # Where your build's source is, offered in About (AGPL-3.0 section 13:
+    # anyone using a modified Shiori over a network gets its source). A
+    # plain http(s) address; empty shows nothing. The web builds read it
+    # from the environment.
+    SHIORI_SOURCE_URL: ""
+    # The Rooms menu shows neutral glyphs for Hister and SearXNG. A folder
+    # (relative to the checkout, or absolute) holding their own logos,
+    # hister.png and searxng.svg, puts those in instead. Keep it out of the
+    # repository (.local/ is ignored), and check their trademark terms
+    # before you publish a build that shows them.
+    SHIORI_ROOM_LOGOS: ""

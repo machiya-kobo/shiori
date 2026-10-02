@@ -1,0 +1,301 @@
+#!/usr/bin/env bash
+# Build the upstream Hister extension and stage it, patched for Safari, in
+# ShioriExtension/Resources/ (gitignored). Every Xcode build copies that
+# directory into both the iOS and macOS appex.
+#
+# Stages:
+#   1. npm ci + build of the upstream extension inside vendor/hister.
+#   2. Copy dist/, merge patches/manifest.safari.json over its manifest.
+#   3. Prepend the Safari shims to background.js and content.js, and link
+#      the popup stylesheet override into popup.html.
+#   4. Point the default server URL at SHIORI_SERVER_URL (from local.yml).
+#   5. Copy the prebuilt icons, then check the bundle.
+#
+# Upstream source is never modified; only the built dist/ is patched.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd -- "$REPO_ROOT"
+
+[[ -f local.env ]] && source local.env
+# The server URL normally lives in local.yml, which the app build reads too;
+# the environment or local.env can override it.
+if [[ -z "${SHIORI_SERVER_URL:-}" && -f local.yml ]]; then
+    SHIORI_SERVER_URL="$(sed -n 's/^ *SHIORI_SERVER_URL: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' local.yml | head -1)"
+fi
+SHIORI_SERVER_URL="${SHIORI_SERVER_URL:-}"
+
+UPSTREAM_ROOT="vendor/hister"
+UPSTREAM_EXT="$UPSTREAM_ROOT/webui/ext"
+DIST="$UPSTREAM_EXT/dist"
+RESOURCES="ShioriExtension/Resources"
+UPSTREAM_DEFAULT_URL="http://127.0.0.1:4433/"
+
+if [[ ! -d "$UPSTREAM_EXT" ]]; then
+    echo "error: $UPSTREAM_EXT missing; run 'git submodule update --init'" >&2
+    exit 1
+fi
+
+echo "==> Building upstream extension ($(git -C "$UPSTREAM_ROOT" describe --tags --always))"
+# The extension is an npm workspace; install from the workspace root so
+# @hister/components resolves, then build only the extension.
+(
+    cd -- "$UPSTREAM_ROOT"
+    npm ci --no-audit --no-fund --loglevel=error
+    npm --workspace @hister/ext run build
+)
+
+echo "==> Staging into $RESOURCES"
+mkdir -p -- "$RESOURCES"
+# Source maps stay out: they only add weight to the appex.
+rsync -a --delete \
+    --exclude 'manifest.json' \
+    --exclude 'manifest_ff.json' \
+    --exclude '*.map' \
+    "$DIST/" "$RESOURCES/"
+
+# Upstream permissions this build accounts for. A new one fails the build
+# so a submodule bump cannot slip a permission past review.
+python3 - "$DIST/manifest.json" <<'PY'
+import json, sys
+known = {"tabs", "storage", "cookies"}
+m = json.load(open(sys.argv[1]))
+if m.get("content_scripts") != [{"js": ["content.js"], "matches": ["<all_urls>"]}]:
+    sys.exit("upstream content_scripts changed; update the copy in patches/manifest.safari.json")
+perms = set(json.load(open(sys.argv[1])).get("permissions", []))
+new = sorted(perms - known)
+if new:
+    sys.exit("upstream manifest asks for new permissions %s; review them and update "
+             "patches/manifest.safari.json and this check" % new)
+PY
+
+node scripts/patch-manifest.mjs \
+    "$DIST/manifest.json" \
+    patches/manifest.safari.json \
+    "$RESOURCES/manifest.json"
+
+# The manifest carries Shiori's version (project.yml MARKETING_VERSION),
+# which Safari shows and the background shim reports as metadata.client.
+SHIORI_VERSION="$(sed -n 's/^ *MARKETING_VERSION: *"\{0,1\}\([0-9.]*\)"\{0,1\}.*/\1/p' project.yml | head -1)"
+[[ -n "$SHIORI_VERSION" ]] || { echo "error: MARKETING_VERSION not found in project.yml" >&2; exit 1; }
+python3 - "$RESOURCES/manifest.json" "$SHIORI_VERSION" <<'PY'
+import json, sys
+p, version = sys.argv[1:]
+m = json.load(open(p))
+m["version"] = version
+json.dump(m, open(p, "w"), indent=2)
+open(p, "a").write("\n")
+PY
+echo "==> Shiori version $SHIORI_VERSION"
+
+prepend() { # <shim> <bundle file>
+    { cat -- "$1"; printf '\n'; cat -- "$DIST/$2"; } > "$RESOURCES/$2.tmp"
+    mv -- "$RESOURCES/$2.tmp" "$RESOURCES/$2"
+}
+prepend patches/safari-shims.js background.js
+prepend patches/safari-content-shim.js content.js
+
+# Shiori's own pages and scripts: the combined-search results page and the
+# duckduckgo.com redirect.
+cp -- patches/shiori/search.html patches/shiori/search.css patches/shiori/search.js \
+    patches/shiori/search-core.js "$RESOURCES/"
+cp -- patches/shiori/redirect.js "$RESOURCES/shiori-redirect.js"
+# Shiori's settings page (Safari → Extensions → Shiori → Settings).
+cp -- patches/shiori/options.html "$RESOURCES/shiori-options.html"
+cp -- patches/shiori/options.css "$RESOURCES/shiori-options.css"
+cp -- patches/shiori/options.js "$RESOURCES/shiori-options.js"
+# Your server's status page, linked in the results page's footer.
+SHIORI_STATUS_URL="${SHIORI_STATUS_URL:-$( [[ -f local.yml ]] && sed -n 's/^ *SHIORI_STATUS_URL: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' local.yml | head -1)}"
+python3 scripts/status-link.py "$RESOURCES/search.html" "$SHIORI_STATUS_URL"
+echo "==> Status page: ${SHIORI_STATUS_URL:-(none)}"
+
+# Popup stylesheet overrides, linked after upstream's style.css.
+cp -- patches/safari-popup.css "$RESOURCES/safari-popup.css"
+cp -- patches/shiori-popup.js "$RESOURCES/shiori-popup.js"
+python3 - "$RESOURCES/popup.html" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+anchor = '<link rel="stylesheet" href="style.css" />'
+if anchor not in s:
+    sys.exit("popup.html no longer links style.css as expected; update the popup patch")
+s = s.replace(anchor, anchor + '\n    <link rel="stylesheet" href="safari-popup.css" />\n    <script src="shiori-popup.js"></script>', 1)
+open(p, "w", encoding="utf-8").write(s)
+PY
+
+if [[ -z "${SHIORI_SEARXNG_URL:-}" && -f local.yml ]]; then
+    SHIORI_SEARXNG_URL="$(sed -n 's/^ *SHIORI_SEARXNG_URL: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' local.yml | head -1)"
+fi
+SHIORI_SEARXNG_URL="${SHIORI_SEARXNG_URL:-}"
+if [[ -n "$SHIORI_SEARXNG_URL" && "$SHIORI_SEARXNG_URL" != */ ]]; then SHIORI_SEARXNG_URL="$SHIORI_SEARXNG_URL/"; fi
+python3 - "$RESOURCES/background.js" "$SHIORI_SEARXNG_URL" <<'PY'
+import sys
+p, url = sys.argv[1:]
+s = open(p, encoding="utf-8").read()
+if "__SHIORI_SEARXNG_URL__" not in s:
+    sys.exit("background.js lost the SearXNG placeholder")
+open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_SEARXNG_URL__", url))
+PY
+echo "==> Default SearXNG URL: ${SHIORI_SEARXNG_URL:-(none)}"
+
+# Niwa and Konbini, where vault notes live on the web (optional).
+yml() { [[ -f local.yml ]] && sed -n "s/^ *$1: *\"\{0,1\}\([^\"]*\)\"\{0,1\} *\$/\1/p" local.yml | head -1; }
+SHIORI_NIWA_URL="${SHIORI_NIWA_URL:-$(yml SHIORI_NIWA_URL)}"
+SHIORI_KONBINI_URL="${SHIORI_KONBINI_URL:-$(yml SHIORI_KONBINI_URL)}"
+python3 - "$RESOURCES/background.js" "$SHIORI_NIWA_URL" "$SHIORI_KONBINI_URL" <<'PY'
+import sys
+p, niwa, konbini = sys.argv[1:]
+s = open(p, encoding="utf-8").read()
+for placeholder, value in (("__SHIORI_NIWA_URL__", niwa), ("__SHIORI_KONBINI_URL__", konbini)):
+    if placeholder not in s:
+        sys.exit("background.js lost the %s placeholder" % placeholder)
+    s = s.replace(placeholder, value)
+open(p, "w", encoding="utf-8").write(s)
+PY
+echo "==> Niwa: ${SHIORI_NIWA_URL:-(none)}   Konbini: ${SHIORI_KONBINI_URL:-(none)}"
+
+# The Obsidian vault's name (if the build sets one), the extension's
+# default before the app answers, and its results page's; none unset.
+SHIORI_OBSIDIAN_VAULT="${SHIORI_OBSIDIAN_VAULT:-$(yml SHIORI_OBSIDIAN_VAULT)}"
+python3 - "$RESOURCES" "$SHIORI_OBSIDIAN_VAULT" <<'PY'
+import os, sys
+root, vault = sys.argv[1:]
+for name in ("background.js", "search.js"):
+    p = os.path.join(root, name)
+    s = open(p, encoding="utf-8").read()
+    if "__SHIORI_OBSIDIAN_VAULT__" not in s:
+        sys.exit("%s lost the Obsidian vault placeholder" % name)
+    open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_OBSIDIAN_VAULT__", vault))
+PY
+echo "==> Obsidian vault: ${SHIORI_OBSIDIAN_VAULT:-(none)}"
+
+# Where the source is (AGPL-3.0 section 13), shown in the results page's
+# gear when set; none when unset.
+SHIORI_SOURCE_URL="${SHIORI_SOURCE_URL:-$(yml SHIORI_SOURCE_URL)}"
+python3 - "$RESOURCES/search.js" "$SHIORI_SOURCE_URL" <<'PY'
+import sys
+p, url = sys.argv[1:]
+s = open(p, encoding="utf-8").read()
+if "__SHIORI_SOURCE_URL__" not in s:
+    sys.exit("search.js lost the source placeholder")
+open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_SOURCE_URL__", url))
+PY
+
+# The neighbours' icons in the results page: neutral glyphs unless local.yml
+# (or the environment) names a folder holding their own logos (hister.png,
+# searxng.svg) in SHIORI_ROOM_LOGOS. The repository carries no other
+# project's logo.
+SHIORI_ROOM_LOGOS="${SHIORI_ROOM_LOGOS:-$(yml SHIORI_ROOM_LOGOS)}"
+if [[ -n "$SHIORI_ROOM_LOGOS" ]]; then
+  python3 scripts/room-icons.py --logos "$SHIORI_ROOM_LOGOS" "$RESOURCES/search.css" >/dev/null
+  echo "==> Room icons: the neighbours' logos"
+else
+  echo "==> Room icons: neutral glyphs"
+fi
+
+# The app's ID for sendNativeMessage, from the bundle prefix (local.yml).
+# Safari ignores it and answers from the containing app, so a build
+# without one names the placeholder Apple's samples use.
+SHIORI_BUNDLE_PREFIX="${SHIORI_BUNDLE_PREFIX:-$(yml SHIORI_BUNDLE_PREFIX)}"
+APP_ID="${SHIORI_BUNDLE_PREFIX:+$SHIORI_BUNDLE_PREFIX.shiori}"
+python3 - "$RESOURCES/background.js" "${APP_ID:-application.id}" <<'PY'
+import sys
+p, app = sys.argv[1:]
+s = open(p, encoding="utf-8").read()
+if "__SHIORI_APP_ID__" not in s:
+    sys.exit("background.js lost the app ID placeholder")
+open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_APP_ID__", app))
+PY
+echo "==> App ID: ${APP_ID:-(none: application.id)}"
+
+# The Machiya rooms for the results page's switcher (optional).
+SHIORI_ROOMS="${SHIORI_ROOMS:-$(yml SHIORI_ROOMS)}"
+SHIORI_ROOMS="$SHIORI_ROOMS" SHIORI_NIWA_URL="$SHIORI_NIWA_URL" SHIORI_KONBINI_URL="$SHIORI_KONBINI_URL" \
+  SHIORI_SERVER_URL="$SHIORI_SERVER_URL" SHIORI_SEARXNG_URL="$SHIORI_SEARXNG_URL" \
+  python3 scripts/rooms-stamp.py "$RESOURCES/search.js"
+
+# The hosted search page (web/), where Safari's searches open when it
+# answers: a web page survives iOS suspending and restoring Safari, an
+# extension page doesn't (optional; without it the extension's own page).
+SHIORI_SEARCH_PAGE_URL="${SHIORI_SEARCH_PAGE_URL:-$(yml SHIORI_SEARCH_PAGE_URL)}"
+if [[ -n "$SHIORI_SEARCH_PAGE_URL" && "$SHIORI_SEARCH_PAGE_URL" != */ ]]; then SHIORI_SEARCH_PAGE_URL="$SHIORI_SEARCH_PAGE_URL/"; fi
+[[ -z "$SHIORI_SEARCH_PAGE_URL" || "$SHIORI_SEARCH_PAGE_URL" =~ ^https?:// ]] || { echo "SHIORI_SEARCH_PAGE_URL must start with http:// or https://" >&2; exit 1; }
+python3 - "$RESOURCES" "$SHIORI_SEARCH_PAGE_URL" <<'PY'
+import os, sys
+root, url = sys.argv[1:]
+for name in ("background.js", "shiori-options.js"):
+    p = os.path.join(root, name)
+    s = open(p, encoding="utf-8").read()
+    if "__SHIORI_SEARCH_PAGE_URL__" not in s:
+        sys.exit(name + " lost the search page placeholder")
+    open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_SEARCH_PAGE_URL__", url))
+PY
+echo "==> Search page: ${SHIORI_SEARCH_PAGE_URL:-(extension page)}"
+
+if [[ -n "$SHIORI_SERVER_URL" ]]; then
+    [[ "$SHIORI_SERVER_URL" == */ ]] || SHIORI_SERVER_URL="$SHIORI_SERVER_URL/"
+    echo "==> Default server URL: $SHIORI_SERVER_URL"
+    python3 - "$RESOURCES" "$UPSTREAM_DEFAULT_URL" "$SHIORI_SERVER_URL" <<'PY'
+import os, sys
+root, old, new = sys.argv[1:]
+hits = []
+for name in os.listdir(root):
+    if not name.endswith(".js"):
+        continue
+    p = os.path.join(root, name)
+    s = open(p, encoding="utf-8").read()
+    if old in s:
+        open(p, "w", encoding="utf-8").write(s.replace(old, new))
+        hits.append(name)
+if "background.js" not in hits:
+    sys.exit("upstream default URL %s not found in background.js; "
+             "has modules/settings.ts changed?" % old)
+print("    replaced in " + ", ".join(sorted(hits)))
+PY
+else
+    echo "==> SHIORI_SERVER_URL unset; keeping upstream default $UPSTREAM_DEFAULT_URL"
+fi
+
+mkdir -p -- "$RESOURCES/assets/icons"
+for f in assets/icon-*.png; do
+    cp -- "$f" "$RESOURCES/assets/icons/"
+done
+# Upstream's own Hister images, replaced with Shiori's: icon128.png is
+# what upstream draws its toolbar icons from (the shim then swaps in the
+# files above, telling colour from grey by the drawn pixels), logo.png
+# is its logo.
+cp -- assets/icon-128.png "$RESOURCES/assets/icons/icon128.png"
+[[ -f "$RESOURCES/assets/logo.png" ]] && cp -- assets/icon-256.png "$RESOURCES/assets/logo.png"
+
+python3 - "$RESOURCES" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+m = json.load(open(os.path.join(root, "manifest.json")))
+paths = list((m.get("icons") or {}).values())
+paths += list(((m.get("action") or {}).get("default_icon") or {}).values())
+paths += [m["background"]["service_worker"], m["action"]["default_popup"], m["options_page"]]
+paths += [js for cs in m.get("content_scripts", []) for js in cs["js"]]
+missing = [p for p in paths if not os.path.isfile(os.path.join(root, p))]
+if missing:
+    sys.exit("bundle is missing files named by the manifest: " + ", ".join(missing))
+if "cookies" in m.get("permissions", []):
+    sys.exit("manifest still asks for cookies")
+# More than four suggested shortcuts and Safari drops the extension's
+# background without a word: nothing is captured and Safari's searches stay
+# on DuckDuckGo.
+suggested = [k for k, c in (m.get("commands") or {}).items() if c.get("suggested_key")]
+if len(suggested) > 4:
+    sys.exit("manifest suggests %d shortcuts (%s); Safari allows at most 4" % (len(suggested), ", ".join(suggested)))
+checks = {"background.js": ("installIconShim", "installCaptureQueue", "installCombinedSearch"),
+          "content.js": ("installPageSizeCap",),
+          "popup.html": ("safari-popup.css", "shiori-popup.js"),
+          "search.html": ("search-core.js", "search.js"),
+          "shiori-options.html": ("shiori-options.js", "search.css")}
+for name, marks in checks.items():
+    s = open(os.path.join(root, name), encoding="utf-8").read()
+    for mark in marks:
+        if mark not in s:
+            sys.exit("%s is missing the %s shim" % (name, mark))
+print("==> Bundle ok: manifest files present, shims in place")
+PY

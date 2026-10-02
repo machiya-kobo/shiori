@@ -1,0 +1,60 @@
+/* Safari-only popup styles, linked into popup.html after upstream's
+   style.css by scripts/build-extension.sh.
+
+   Upstream fixes the popup at w-80 (320px), which suits a desktop popup
+   that sizes itself to its content. On iPhone and iPad Safari shows the
+   popup as a sheet or popover of its own width, so fill it instead. The
+   Mac (fine pointer) keeps upstream's width. */
+@media (pointer: coarse) {
+  body > #app > main.w-80 {
+    width: 100%;
+  }
+}
+
+/* Shiori's look for upstream's popup (it read "HISTER" in Hister's purple
+   and heavy borders). Upstream colours through these
+   variables, so they're set to Tokyo Night / Tokyo Night Day, following
+   Shiori's theme (shiori-popup.js sets data-shiori-theme; "system" is
+   left to the media query). */
+html {
+  --shiori-bg: #1a1b26; --shiori-card: #24283b; --shiori-line: #3b4261;
+  --shiori-text: #c0caf5; --shiori-secondary: #a9b1d6; --shiori-accent: #7aa2f7; --shiori-danger: #f7768e;
+}
+@media (prefers-color-scheme: light) {
+  html:not([data-shiori-theme="night"]) {
+    --shiori-bg: #e1e2e7; --shiori-card: #f0f1f5; --shiori-line: #c4c8da;
+    --shiori-text: #3760bf; --shiori-secondary: #4c5a8f; --shiori-accent: #155fc5; --shiori-danger: #bd204c;
+  }
+}
+html[data-shiori-theme="day"] {
+  --shiori-bg: #e1e2e7; --shiori-card: #f0f1f5; --shiori-line: #c4c8da;
+  --shiori-text: #3760bf; --shiori-secondary: #4c5a8f; --shiori-accent: #155fc5; --shiori-danger: #bd204c;
+}
+html, html.dark, html .dark {
+  --background: var(--shiori-bg); --page-bg: var(--shiori-bg); --brutal-bg: var(--shiori-bg);
+  --card: var(--shiori-card); --brutal-card: var(--shiori-card); --card-surface: var(--shiori-card);
+  --popover: var(--shiori-card); --muted-surface: var(--shiori-card); --secondary: var(--shiori-card); --accent: var(--shiori-card);
+  --foreground: var(--shiori-text); --card-foreground: var(--shiori-text); --popover-foreground: var(--shiori-text);
+  --text-primary: var(--shiori-text); --text-primary-brand: var(--shiori-text); --primary: var(--shiori-text);
+  --text-secondary: var(--shiori-secondary); --text-secondary-brand: var(--shiori-secondary);
+  --text-muted-brand: var(--shiori-secondary); --muted-foreground: var(--shiori-secondary);
+  --border: var(--shiori-line); --input: var(--shiori-line); --brutal-border: var(--shiori-line);
+  --border-brand: var(--shiori-line); --border-muted-brand: var(--shiori-line);
+  --hister-indigo: var(--shiori-accent); --hister-coral: var(--shiori-accent); --ring: var(--shiori-accent);
+  --destructive: var(--shiori-danger); --brutal-shadow: transparent;
+  color-scheme: light dark;
+}
+body { background: var(--shiori-bg); color: var(--shiori-text); }
+/* The system's type, as the rest of Shiori; code stays monospaced. */
+.font-outfit, .font-inter { font-family: -apple-system, system-ui, sans-serif !important; letter-spacing: normal !important; }
+.font-fira { font-family: ui-monospace, SFMono-Regular, monospace !important; }
+/* Hairlines and rounded corners, not 3-point borders and hard shadows. */
+.border-\[3px\], .border-b-\[3px\], .border-l-\[4px\] { border-width: 1px !important; }
+.border-b-\[3px\] { border-width: 0 0 1px !important; }
+[class*="shadow-[3px"], [class*="shadow-[1px"], [class*="shadow-[6px"] { box-shadow: none !important; }
+main button, main input, main select, main a.border-\[3px\] { border-radius: 10px !important; }
+/* The header: Shiori's name in the accent on a card, not white on purple. */
+main > div:first-child { background: var(--shiori-card) !important; }
+main > div:first-child a { color: var(--shiori-accent) !important; text-transform: none; letter-spacing: normal; font-weight: 700; }
+main > div:first-child button { color: var(--shiori-secondary) !important; }
+main > div:first-child button:hover { color: var(--shiori-accent) !important; }

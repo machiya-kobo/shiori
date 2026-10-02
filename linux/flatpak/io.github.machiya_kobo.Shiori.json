@@ -1,0 +1,39 @@
+{
+  "id": "io.github.machiya_kobo.Shiori",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "49",
+  "sdk": "org.gnome.Sdk",
+  "command": "shiori",
+  "finish-args": [
+    "--share=network",
+    "--share=ipc",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--device=dri",
+    "--filesystem=xdg-config/shiori:ro"
+  ],
+  "modules": [
+    {
+      "name": "shiori",
+      "buildsystem": "simple",
+      "build-commands": [
+        "install -d /app/share/shiori/linux /app/share/shiori/patches/shiori",
+        "cp -R linux/src linux/gjs /app/share/shiori/linux/",
+        "install -m644 patches/shiori/search-core.js /app/share/shiori/patches/shiori/",
+        "install -Dm755 linux/flatpak/shiori.sh /app/bin/shiori",
+        "install -Dm644 linux/flatpak/io.github.machiya_kobo.Shiori.desktop /app/share/applications/io.github.machiya_kobo.Shiori.desktop",
+        "install -Dm644 assets/web-icon-512.png /app/share/icons/hicolor/512x512/apps/io.github.machiya_kobo.Shiori.png",
+        "install -Dm644 assets/web-icon-192.png /app/share/icons/hicolor/192x192/apps/io.github.machiya_kobo.Shiori.png"
+      ],
+      "sources": [
+        { "type": "dir", "path": "../src", "dest": "linux/src" },
+        { "type": "dir", "path": "../gjs", "dest": "linux/gjs" },
+        { "type": "file", "path": "shiori.sh", "dest": "linux/flatpak" },
+        { "type": "file", "path": "io.github.machiya_kobo.Shiori.desktop", "dest": "linux/flatpak" },
+        { "type": "file", "path": "../../patches/shiori/search-core.js", "dest": "patches/shiori" },
+        { "type": "file", "path": "../../assets/web-icon-512.png", "dest": "assets" },
+        { "type": "file", "path": "../../assets/web-icon-192.png", "dest": "assets" }
+      ]
+    }
+  ]
+}

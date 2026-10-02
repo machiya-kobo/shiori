@@ -1,0 +1,48 @@
+import Foundation
+import Testing
+
+@testable import HisterKit
+
+/// Read-only checks against a real server; skipped unless
+/// HISTER_LIVE_URL is set (e.g. from local.env's SHIORI_SERVER_URL).
+@Suite(.enabled(if: ProcessInfo.processInfo.environment["HISTER_LIVE_URL"] != nil))
+struct LiveServerTests {
+    let client = HisterClient(serverURL: ProcessInfo.processInfo.environment["HISTER_LIVE_URL"] ?? "")!
+
+    @Test func recentPagesDecodeAndPage() async throws {
+        let first = try await client.search("*", sort: .newest, limit: 10)
+        #expect(first.documents.count == 10)
+        let key = try #require(first.nextPageKey)
+        let second = try await client.search("*", sort: .newest, pageKey: key, limit: 10)
+        #expect(Set(first.documents.map(\.url)).isDisjoint(with: second.documents.map(\.url)))
+    }
+
+    /// The app's own paging: 30 at a time, three pages deep.
+    @Test func recentPagesThreeDeep() async throws {
+        var page = try await client.search("*", sort: .newest)
+        var seen = Set(page.documents.map(\.url))
+        for _ in 0..<2 {
+            let key = try #require(page.nextPageKey)
+            page = try await client.search("*", sort: .newest, pageKey: key)
+            #expect(page.documents.count == 30)
+            #expect(seen.isDisjoint(with: page.documents.map(\.url)))
+            seen.formUnion(page.documents.map(\.url))
+        }
+    }
+
+    @Test func aSearchHasHighlightedSnippets() async throws {
+        let page = try await client.search("concurrency", limit: 5)
+        #expect(page.documents.contains { Snippet(html: $0.snippetHTML).runs.contains(where: \.highlighted) })
+    }
+
+    @Test func previewAndRulesDecode() async throws {
+        let recent = try await client.search("*", sort: .newest, limit: 5)
+        for document in recent.documents {
+            let preview = try await client.preview(of: document.url)
+            #expect(preview.updated.timeIntervalSince1970 > 0)
+        }
+        let rules = try await client.rules()
+        #expect(rules.labels.count > 10)
+    }
+
+}

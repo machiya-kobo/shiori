@@ -1,0 +1,24 @@
+/* Safari → Settings → Extensions → Shiori → Settings: Shiori's page, in the
+   results page's colours (search.css holds the tokens), in place of
+   upstream's options (server, token, headers, browser-session sign-in),
+   which the Shiori app sets or the server has no use for. */
+body.options { max-width: 36rem; padding: 32px 16px 48px; }
+.options-head { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; }
+.options-head img { border-radius: 14px; flex: none; }
+.options-head h1 { margin: 0; font: -apple-system-title1; font-weight: 700; color: var(--text); }
+.options-head p { margin: 4px 0 0; color: var(--secondary); font: -apple-system-subheadline; }
+.options .group { background: var(--card); border-radius: 14px; padding: 4px 16px 10px; margin: 0 0 16px; }
+.options .group h2 { font: -apple-system-footnote; font-weight: 600; color: var(--secondary); text-transform: none; margin: 12px 0 4px; }
+.options .row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-top: 1px solid var(--line); color: var(--text); }
+.options .row:first-of-type { border-top: 0; }
+.options .value { color: var(--secondary); text-align: right; overflow-wrap: anywhere; }
+.options .value.ok { color: var(--kept); }
+.options .value.bad { color: var(--tab-videos); }
+.options .mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.9em; }
+.options .note { color: var(--secondary); font: -apple-system-footnote; margin: 6px 0 0; }
+.options .note.center { text-align: center; margin-top: 16px; }
+.options .actions { text-align: center; margin: 24px 0 0; }
+.options .button {
+  display: inline-block; padding: 8px 18px; border-radius: 999px; text-decoration: none; font-weight: 600;
+  color: var(--bg); background: var(--accent);
+}

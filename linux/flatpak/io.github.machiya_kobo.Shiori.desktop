@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Shiori
+Comment=Your Hister pages and Kura notes
+Exec=shiori %u
+Icon=io.github.machiya_kobo.Shiori
+Categories=Network;Utility;
+MimeType=x-scheme-handler/shiori;
+StartupWMClass=io.github.machiya_kobo.Shiori
+Actions=quick;
+
+[Desktop Action quick]
+Name=Quick Search
+Exec=shiori --quick

@@ -1,0 +1,732 @@
+import HisterKit
+import Observation
+import SwiftUI
+import os
+
+/// App-wide state: settings, the server client, what the server says about
+/// labels, and edits made in this session so every list reflects them.
+@Observable
+final class AppState {
+    private enum Keys {
+        static let serverURL = "serverURL"
+    }
+
+    /// The Hister server; empty until set. Defaults to the build-time URL.
+    var serverURL: String {
+        didSet {
+            UserDefaults.standard.set(serverURL, forKey: Keys.serverURL)
+            SharedSettings.defaults?.set(serverURL, forKey: SharedSettings.Key.serverURL)
+            client = HisterClient(serverURL: serverURL)
+            rules = Rules(aliases: [:])
+            rulesLoaded = false
+            capabilities = nil
+        }
+    }
+
+    /// Settings → Appearance → Text Size: the app's and Safari's results
+    /// page's, kept in the App Group so the page (and its own Settings) share it.
+    var textSize: TextSize {
+        didSet {
+            UserDefaults.standard.set(textSize.rawValue, forKey: TextSize.storageKey)
+            SharedSettings.defaults?.set(textSize.rawValue, forKey: SharedSettings.Key.textSize)
+        }
+    }
+
+    var theme: AppTheme {
+        didSet {
+            UserDefaults.standard.set(theme.rawValue, forKey: AppTheme.storageKey)
+            // The combined-search page follows the app's theme.
+            SharedSettings.defaults?.set(theme.rawValue, forKey: SharedSettings.Key.theme)
+        }
+    }
+
+    /// Safari searches (via DuckDuckGo) open Shiori's combined results.
+    var combinedSearch: Bool {
+        didSet {
+            SharedSettings.defaults?.set(combinedSearch, forKey: SharedSettings.Key.combinedSearch)
+        }
+    }
+
+    /// The SearXNG instance for the web half of combined search.
+    var searxngURL: String {
+        didSet {
+            SharedSettings.defaults?.set(searxngURL, forKey: SharedSettings.Key.searxngURL)
+        }
+    }
+
+    /// How the combined results page looks (Settings → Search from Safari).
+    var searchPage: SearchPageOptions {
+        didSet {
+            searchPage.save(to: SharedSettings.defaults)
+            // Off keeps nothing: what was there goes too.
+            if oldValue.searchHistory, !searchPage.searchHistory { clearRecentSearches() }
+            refreshListSettings()
+        }
+    }
+
+    /// The label suggestions' hints from the user's own filing (LabelHints).
+    var labelHints: LabelHints?
+    /// Label New Pages (Settings → AI): its queue, its log, its runs.
+    let labeller = AutoLabeller()
+
+    /// Settings → AI: per device (see AISettings).
+    var ai: AISettings {
+        didSet { ai.save(to: SharedSettings.defaults) }
+    }
+
+    /// Bumped by Find (⌘F) on the Mac: the search field takes focus.
+    var searchFocusRequests = 0
+    private static let log = Logger(subsystem: ShioriID.app, category: "app")
+
+    /// Safari's results page has its own Settings, which write the App
+    /// Group: coming to the foreground picks up what changed there.
+    func reloadSharedSettings() {
+        let shared = SharedSettings.defaults
+        if let value = shared?.object(forKey: SharedSettings.Key.combinedSearch) as? Bool, value != combinedSearch {
+            combinedSearch = value
+        }
+        if let stored = shared?.string(forKey: SharedSettings.Key.searxngURL), stored != searxngURL {
+            searxngURL = stored
+        }
+        let page = SearchPageOptions(from: shared)
+        if page != searchPage { searchPage = page }
+        if let raw = shared?.string(forKey: SharedSettings.Key.theme) {
+            let fromPage = AppTheme.resolve(raw)
+            if fromPage != theme { theme = fromPage }
+        }
+        if let raw = shared?.string(forKey: SharedSettings.Key.textSize) {
+            let fromPage = TextSize.resolve(raw)
+            if fromPage != textSize { textSize = fromPage }
+        }
+        reloadRecentSearches()
+    }
+
+    /// The last few searches, here and in Safari's results, newest first.
+    private(set) var recentSearches: [String] = []
+
+    func recordSearch(_ query: String) {
+        SharedSettings.recordSearch(query)
+        reloadRecentSearches()
+    }
+
+    /// Safari may have added some since.
+    func reloadRecentSearches() {
+        let latest = SharedSettings.recentSearches()
+        if latest != recentSearches { recentSearches = latest }
+    }
+
+    func clearRecentSearches() {
+        SharedSettings.clearRecentSearches()
+        recentSearches = []
+    }
+
+    private(set) var client: HisterClient?
+
+    /// The SearXNG instance, for the app's web search.
+    var searx: SearxClient? { SearxClient(serverURL: searxngURL) }
+    /// The last text's related searches from SearXNG, shared by the lists
+    /// that ask at once (Search → All's pages and notes).
+    @ObservationIgnored private var suggestionsFor: (text: String, task: Task<[String], Never>)?
+
+    /// SearXNG's related searches for `text`, for respelling a search that
+    /// found nothing; none without web results.
+    func webSuggestions(for text: String) async -> [String] {
+        guard allSearch.webResults, let searx else { return [] }
+        if let cached = suggestionsFor, cached.text == text { return await cached.task.value }
+        let task = Task { (try? await searx.search(text).suggestions) ?? [] }
+        suggestionsFor = (text, task)
+        return await task.value
+    }
+    private(set) var rules = Rules(aliases: [:])
+    /// Sites Hister has pages from, most first: `domain:` completions.
+    private(set) var domains: [String] = []
+    /// Bumped by File → Add Page… on the Mac: RootView shows the sheet.
+    var addPageRequests = 0
+    /// Bumped when a search is submitted (Return): the results list takes
+    /// the keyboard, for its vi keys.
+    /// Kura, where every notes list comes from (Settings → Notes → Kura);
+    /// nil without an address: then there are no notes.
+    var notesKura: KuraClient? {
+        KuraClient(serverURL: searchPage.niwaURL)
+    }
+
+    /// The pills over a list or search: Opened only while Show Opened is on.
+    var searchScopes: [SearchScope] {
+        SearchScope.allCases.filter {
+            switch $0 {
+            case .opened: searchPage.showOpened
+            case .smallweb: smallweb != nil
+            default: true
+            }
+        }
+    }
+
+    /// The small-web gateway, while its tab is on (Settings → Search).
+    var smallweb: SmallWebClient? {
+        searchPage.smallWebTab ? SmallWebClient(serverURL: searchPage.smallwebURL) : nil
+    }
+
+    /// A page opened directly in a Gemini app: the gateway fetches and
+    /// saves it to Hister, as it does what it shows. Best effort.
+    func saveSmallWebPage(_ url: String) async {
+        do {
+            try await smallweb?.save(url)
+        } catch {
+            Self.log.notice("Small web page not saved: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    var resultsFocusRequests = 0
+    /// Bumped by `shiori://settings` (the Safari extension's settings page):
+    /// each layout opens its Settings.
+    var settingsRequests = 0
+    /// Save This Note's Links, asked for by a note's ⋯ menu or a
+    /// `shiori://save-links?path=…` / `?folder=…` link (Kura's note view).
+    var saveLinksRequest: SaveLinksTarget?
+    /// The list last on screen, for Settings → Export & Feed on iOS (the
+    /// Mac has them in File, through the `listExport` focused value).
+    var shownList: ListExport?
+    private var rulesLoaded = false
+
+    /// Pages deleted in this session; lists hide them without refetching.
+    private(set) var deletedURLs: Set<String> = []
+    /// Labels changed in this session, by page URL.
+    private(set) var labelEdits: [String: String] = [:]
+
+    let favicons = FaviconCache()
+
+    /// Konbini's cards, for linking vault notes to their cards.
+    private(set) var konbiniCards: [Notes.Card] = []
+    private var cardsLoaded = false
+
+    func loadCardsIfNeeded() async {
+        await loadVaultsIfNeeded()
+        guard !cardsLoaded, !searchPage.konbiniURL.isEmpty else { return }
+        cardsLoaded = true
+        konbiniCards = await Notes.fetchCards(base: searchPage.konbiniURL)
+    }
+
+    /// Kura's vaults: the default one and the work vaults, for the Notes filter and a work note's place and links.
+    private(set) var kuraVaults: [KuraVault] = []
+    private var vaultsLoaded = false
+
+    func loadVaultsIfNeeded() async {
+        guard !vaultsLoaded, let kura = notesKura else { return }
+        vaultsLoaded = true
+        if let found = try? await kura.vaults() { kuraVaults = found }
+    }
+
+    /// Which vaults the Notes lists search: "all" (the default), or one
+    /// vault's name. Per device, never synced. All's Your Notes is always
+    /// the default vault only.
+    var notesVault: String = UserDefaults.standard.string(forKey: "notesVault") ?? "all" {
+        didSet { UserDefaults.standard.set(notesVault, forKey: "notesVault") }
+    }
+
+    /// A work vault by name, for a note's place and Obsidian vault.
+    func kuraVault(_ name: String) -> KuraVault? { kuraVaults.first { $0.name == name } }
+
+    /// Where a vault note opens: Obsidian, its Niwa page, its Konbini card.
+    struct NoteLinks {
+        /// Where the note sits: the vault, then its folders and name.
+        var place: String
+        var obsidian: URL?
+        var niwa: URL?
+        var konbini: URL?
+    }
+
+    /// Links for a vault note; nil for any other page.
+    /// What every result row reads (a note's links and place), apart from
+    /// the rest of `searchPage`: Observation tracks whole properties, so
+    /// rows reading `searchPage` redrew on every unrelated switch.
+    struct NoteSources: Equatable {
+        var vault = ""
+        var niwaURL = ""
+        var konbiniURL = ""
+    }
+    private(set) var noteSources = NoteSources()
+
+    /// What Search → All reads (how many, and whether the web shows).
+    struct AllSearchOptions: Equatable {
+        var histerCount = 5
+        var vaultCount = 3
+        var webResults = true
+    }
+    private(set) var allSearch = AllSearchOptions()
+
+    /// Copies the two out of `searchPage`, only when they changed.
+    private func refreshListSettings() {
+        let notes = NoteSources(vault: searchPage.obsidianVault, niwaURL: searchPage.niwaURL, konbiniURL: searchPage.konbiniURL)
+        if notes != noteSources { noteSources = notes }
+        let all = AllSearchOptions(
+            histerCount: searchPage.histerCount, vaultCount: searchPage.vaultCount, webResults: searchPage.webResults)
+        if all != allSearch { allSearch = all }
+    }
+
+    /// A vault note by its address alone (a Niwa page or Konbini card with
+    /// a place in the vault): opened results carry no label.
+    func isNotePage(_ url: String) -> Bool {
+        guard let host = URL(string: url)?.host()?.lowercased() else { return false }
+        let bases = [noteSources.niwaURL, noteSources.konbiniURL].compactMap { URL(string: $0)?.host()?.lowercased() }
+        let noteHost = bases.contains(host) || host.hasPrefix("niwa.") || host.hasPrefix("kura.") || host.hasPrefix("konbini.")
+        return noteHost && Notes.path(of: url, cards: konbiniCards) != nil
+    }
+
+    /// A work vault's note: never sent to Hister, never
+    /// given to a model, never cached, exported or put in a feed.
+    func isWorkNote(_ url: String) -> Bool { Notes.isOtherVault(url) }
+
+    func noteLinks(for document: StoredPage) -> NoteLinks? {
+        guard label(of: document) == Notes.label || document.label == Notes.label,
+            let path = Notes.path(of: document.url, cards: konbiniCards)
+        else { return nil }
+        let host = URL(string: document.url)?.host() ?? ""
+        let page = URL(string: document.url)
+        let crumbs = path.replacing(/\.md$/, with: "").split(separator: "/").joined(separator: " › ")
+        // A work vault's note: its own vault's name and Obsidian vault, read
+        // in Kura, never a Konbini card.
+        if let name = Notes.otherVault(of: document.url) {
+            let vault = kuraVault(name)
+            return NoteLinks(
+                place: "\(vault?.title ?? name) › \(crumbs)",
+                obsidian: Notes.obsidianURL(vault: vault?.obsidian ?? name, path: path),
+                niwa: page,
+                konbini: nil)
+        }
+        return NoteLinks(
+            place: "\(noteSources.vault) › \(crumbs)",
+            obsidian: Notes.obsidianURL(vault: noteSources.vault, path: path),
+            niwa: Notes.readerURL(page: document.url, base: noteSources.niwaURL, path: path),
+            konbini: Notes.konbiniURL(base: noteSources.konbiniURL, path: path, cards: konbiniCards)
+                ?? (host.hasPrefix("konbini.") ? page : nil))
+    }
+
+    /// Pages waiting to be sent: from the share sheet and shortcuts (the
+    /// outbox, which the app sends) and from Safari (the extension's queue,
+    /// which only browsing can send).
+    struct Waiting: Equatable {
+        var outbox = Outbox.Status(count: 0, oldest: nil)
+        var safari = 0
+        var safariOldest: Date?
+        var safariReportedAt: Date?
+    }
+
+    private(set) var waiting = Waiting()
+    private(set) var isSending = false
+
+    private var outbox: Outbox? { SharedSettings.outboxDirectory.map(Outbox.init(directory:)) }
+    /// Where a save waits when Hister is out of reach (Save This Note's Links).
+    var saveOutbox: Outbox? { outbox }
+
+    func refreshWaiting() {
+        var next = Waiting(outbox: outbox?.status() ?? .init(count: 0, oldest: nil))
+        if let report = SharedSettings.defaults?.dictionary(forKey: SharedSettings.Key.extensionQueue) {
+            next.safari = report["count"] as? Int ?? 0
+            next.safariOldest = (report["oldest"] as? Double).map { Date(timeIntervalSince1970: $0) }
+            next.safariReportedAt = (report["reportedAt"] as? Double).map { Date(timeIntervalSince1970: $0) }
+        }
+        waiting = next
+    }
+
+    /// Sends what the share sheet and shortcuts queued.
+    func sendWaiting() async {
+        guard !isSending, let outbox, let client else {
+            refreshWaiting()
+            return
+        }
+        isSending = true
+        let result = await outbox.drain(using: client)
+        isSending = false
+        sendStopped = if case .stopped = result { true } else { false }
+        refreshWaiting()
+    }
+
+    /// The last Send Now (or foreground send) stopped: Hister didn't answer.
+    private(set) var sendStopped = false
+
+    init(defaults: UserDefaults = .standard, bundle: Bundle = .main) {
+        let fallback = (bundle.object(forInfoDictionaryKey: "ShioriDefaultServerURL") as? String) ?? ""
+        let stored = defaults.string(forKey: Keys.serverURL)
+        serverURL = stored ?? fallback
+        // The App Group's copy first: Safari's results page can change it.
+        theme = AppTheme.resolve(
+            SharedSettings.defaults?.string(forKey: SharedSettings.Key.theme)
+                ?? defaults.string(forKey: AppTheme.storageKey))
+        textSize = TextSize.resolve(
+            SharedSettings.defaults?.string(forKey: SharedSettings.Key.textSize)
+                ?? defaults.string(forKey: TextSize.storageKey))
+        client = HisterClient(serverURL: stored ?? fallback)
+
+        let shared = SharedSettings.defaults
+        combinedSearch = shared?.object(forKey: SharedSettings.Key.combinedSearch) as? Bool ?? true
+        let defaultSearxng = (bundle.object(forInfoDictionaryKey: "ShioriDefaultSearxngURL") as? String) ?? ""
+        searxngURL = shared?.string(forKey: SharedSettings.Key.searxngURL) ?? defaultSearxng
+        ai = AISettings(from: shared)
+        searchPage = SearchPageOptions(from: shared)
+        searchPage.save(to: shared)
+        refreshListSettings()
+        recentSearches = SharedSettings.recentSearches(in: shared)
+        // Publish the effective values once, so the extension sees them even
+        // before anything is changed here.
+        shared?.set(combinedSearch, forKey: SharedSettings.Key.combinedSearch)
+        shared?.set(searxngURL, forKey: SharedSettings.Key.searxngURL)
+        shared?.set(theme.rawValue, forKey: SharedSettings.Key.theme)
+        shared?.set(textSize.rawValue, forKey: SharedSettings.Key.textSize)
+        shared?.set(serverURL, forKey: SharedSettings.Key.serverURL)
+    }
+
+    /// The server's aliases and labels, fetched once per server.
+    /// Again, even if loaded: coming back to the app (collections may have
+    /// been edited in Hister's web UI meanwhile) and pull to refresh.
+    func reloadRules() async {
+        rulesLoaded = false
+        await loadRulesIfNeeded()
+    }
+
+    func loadRulesIfNeeded() async {
+        guard !rulesLoaded, let client else { return }
+        do {
+            let fetched = try await client.rules()
+            rules = fetched
+            rulesLoaded = true
+            // The share sheet's label picker works from this copy.
+            SharedSettings.defaults?.set(fetched.labels, forKey: SharedSettings.Key.labels)
+            if let found = try? await client.topDomains() { domains = found }
+        } catch .cancelled {
+        } catch {
+            // Tried again on the next screen that needs them; say why here.
+            Self.log.notice("Rules not loaded: \(error.userMessage, privacy: .public)")
+        }
+    }
+
+    func label(of document: StoredPage) -> String {
+        labelEdits[document.url] ?? document.label
+    }
+
+    func setLabel(_ label: String, for document: StoredPage) async throws(HisterError) {
+        try await setLabel(label, url: document.url)
+    }
+
+    /// By address: automatic labelling and its Undo hold no StoredPage.
+    func setLabel(_ label: String, url: String) async throws(HisterError) {
+        guard let client else { throw .unreachable }
+        try await client.setLabel(label, for: url)
+        // Bounded: the lists refetch long before this many edits matter.
+        if labelEdits.count >= 2000 { labelEdits.removeAll() }
+        labelEdits[url] = label
+    }
+
+    func delete(_ document: StoredPage) async throws(HisterError) {
+        guard let client else { throw .unreachable }
+        try await client.delete(url: document.url)
+        if deletedURLs.count >= 2000 { deletedURLs.removeAll() }
+        deletedURLs.insert(document.url)
+    }
+
+    // MARK: Delete with Undo
+
+    /// A delete waiting out its Undo: the page is gone from every list at
+    /// once, and from Hister when the toast's time is up. Hister can't
+    /// bring a deleted page back, so the undo is the wait, not a restore.
+    struct PendingDelete: Identifiable, Equatable {
+        let id = UUID()
+        let document: StoredPage
+    }
+
+    private(set) var pendingDelete: PendingDelete?
+    /// Why the last delete failed (it's back in its list).
+    var deleteFailure: String?
+    @ObservationIgnored private var pendingTask: Task<Void, Never>?
+    static let undoWindow = Duration.seconds(6)
+
+    /// Every delete in the app goes this way: swipe, menu, the page's ⋯, dd.
+    func deleteWithUndo(_ document: StoredPage) {
+        // Hister never has a work note, and must never be sent one's address.
+        guard !isWorkNote(document.url) else { return }
+        commitPendingDelete()
+        deletedURLs.insert(document.url)
+        let pending = PendingDelete(document: document)
+        pendingDelete = pending
+        pendingTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.undoWindow)
+            guard !Task.isCancelled else { return }
+            await self?.finish(pending)
+        }
+    }
+
+    func undoDelete() {
+        guard let pending = pendingDelete else { return }
+        pendingTask?.cancel()
+        pendingDelete = nil
+        deletedURLs.remove(pending.document.url)
+    }
+
+    /// Sends a waiting delete now: another delete started, or the app is
+    /// going to the background (a delete is what was asked for).
+    func commitPendingDelete() {
+        guard let pending = pendingDelete else { return }
+        pendingTask?.cancel()
+        pendingDelete = nil
+        Task { await finish(pending) }
+    }
+
+    private func finish(_ pending: PendingDelete) async {
+        if pendingDelete?.id == pending.id { pendingDelete = nil }
+        do {
+            try await delete(pending.document)
+        } catch {
+            deletedURLs.remove(pending.document.url)
+            deleteFailure = error.userMessage
+        }
+    }
+
+    // MARK: Opened results (Settings → Remember What You Open)
+
+    /// Tells Hister `document` was opened from a search for `query`, so it
+    /// ranks it first the next time. Not for the Library's `*`, and quietly
+    /// best effort: nothing waits on it.
+    func recordOpened(_ document: StoredPage, query: String) {
+        recordOpened(url: document.url, title: document.title, query: query)
+    }
+
+    func recordOpened(url: String, title: String, query: String) {
+        // Never a work note's address or title to Hister.
+        guard searchPage.rememberOpened, let client, Self.remembers(query), !isWorkNote(url) else { return }
+        Task {
+            do {
+                try await client.recordOpened(url: url, title: title, query: query)
+            } catch {
+                Self.log.notice("Opened result not recorded: \(String(describing: error), privacy: .public)")
+            }
+        }
+    }
+
+    func forgetOpened(_ url: String, query: String) async throws(HisterError) {
+        guard let client else { throw .unreachable }
+        try await client.forgetOpened(url: url, query: query)
+    }
+
+    /// A real search, not a browse (the Library's `*`, a note list).
+    static func remembers(_ query: String) -> Bool {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        return !q.isEmpty && q != "*"
+    }
+
+    // MARK: What the server can do
+
+    /// Found once per server: whether meaning-based search is set up.
+    private(set) var capabilities: ServerCapabilities?
+
+    func loadCapabilitiesIfNeeded() async {
+        guard capabilities == nil, let client else { return }
+        capabilities = try? await client.capabilities()
+    }
+
+    /// Meaning-based search is on in Settings and set up on the server.
+    var semanticOn: Bool { searchPage.semanticSearch && capabilities?.semantic == true }
+}
+
+/// Favicons by key, fetched once each and kept for the session.
+@MainActor
+final class FaviconCache {
+    /// NSCache: bounded, and emptied under memory pressure (a Mac window
+    /// left open for days would otherwise keep every icon it ever showed).
+    private let images: NSCache<NSString, PlatformImage> = {
+        let cache = NSCache<NSString, PlatformImage>()
+        cache.countLimit = 300
+        return cache
+    }()
+    private var missing: Set<String> = []
+    private var inFlight: [String: Task<Fetch, Never>] = [:]
+
+    private enum Fetch {
+        case image(PlatformImage)
+        /// The server has no usable icon; don't ask again this session.
+        case none
+        /// Unreachable or similar; worth another try later.
+        case failed
+    }
+
+    func image(for key: String, using client: HisterClient?) async -> PlatformImage? {
+        guard !key.isEmpty, let client else { return nil }
+        if let image = images.object(forKey: key as NSString) { return image }
+        if missing.contains(key) { return nil }
+        let task = inFlight[key] ?? Task { () -> Fetch in
+            do {
+                let data = try await client.favicon(key: key)
+                return PlatformImage(data: data).map(Fetch.image) ?? .none
+            } catch HisterError.notFound {
+                return .none
+            } catch {
+                return .failed
+            }
+        }
+        inFlight[key] = task
+        let result = await task.value
+        inFlight[key] = nil
+        switch result {
+        case .image(let image):
+            images.setObject(image, forKey: key as NSString)
+            return image
+        case .none:
+            if missing.count > 2000 { missing.removeAll() }
+            missing.insert(key)
+            return nil
+        case .failed:
+            return nil
+        }
+    }
+}
+
+#if canImport(UIKit)
+import UIKit
+typealias PlatformImage = UIImage
+
+extension Image {
+    init(platformImage: PlatformImage) { self.init(uiImage: platformImage) }
+}
+#else
+import AppKit
+typealias PlatformImage = NSImage
+
+extension Image {
+    init(platformImage: PlatformImage) { self.init(nsImage: platformImage) }
+}
+#endif
+
+/// The combined results page's options, shared with the Safari extension.
+/// Each source can be switched off on its own: Hister and the vault each
+/// in General and as a tab, and the web results.
+struct SearchPageOptions: Equatable {
+    static let counts = [3, 5, 10, 20]
+
+    var showInfobox = true
+    var showRelated = true
+    var aiAnswer = true
+    var showThumbnails = true
+    var histerInGeneral = true
+    var histerTab = true
+    var histerCount = 5
+    var vaultInGeneral = true
+    var vaultTab = true
+    var vaultCount = 3
+    var webResults = true
+    var searchHistory = true
+    var previewPane = true
+    var previewImages = true
+    /// Tell Hister which result you opened for a search, so it ranks it
+    /// first next time (and show those first).
+    var rememberOpened = true
+    /// The filter bar (site, date, visits…) on search results.
+    var searchFilters = true
+    /// Meaning-based matches mixed in, where the server has them set up.
+    var semanticSearch = false
+    /// A run of pages from one site shows its first, then "N more".
+    var foldRepeats = true
+    /// Pages you opened, shown (lifted into Your Pages, "You Opened", the
+    /// Opened pill); off, they're left out and not counted. Off by default:
+    /// they mostly cluttered things.
+    var showOpened = false
+    /// "tint", "solid", "bar" or "none": how your pages, notes and opened pages
+    /// stand apart in lists (`ResultBar`).
+    var resultStyle = "tint"
+    /// Labels and collections lead the search field's suggestions.
+    var labelSuggestions = true
+    /// The user's NewsBlur, for "Subscribe in NewsBlur" (opened in the browser).
+    var newsBlurURL = ""
+    /// Obsidian matches vault names exactly. The default is the build's
+    /// `SHIORI_OBSIDIAN_VAULT` (local.yml), if a build sets one; empty,
+    /// notes link to Kura only until Settings → Notes names one.
+    var obsidianVault = ""
+    var niwaURL = ""
+    var konbiniURL = ""
+    /// The small-web gateway (Gemini and Gopher search), its tab, and
+    /// where a result opens: "gateway" (its HTML page, the default) or
+    /// "direct" (the gemini:// link, for an app such as Lagrange).
+    var smallwebURL = ""
+    var smallWebTab = true
+    var smallWebOpen = "gateway"
+
+    init() {}
+
+    init(from defaults: UserDefaults?, bundle: Bundle = .main) {
+        niwaURL = (bundle.object(forInfoDictionaryKey: "ShioriDefaultNiwaURL") as? String) ?? ""
+        konbiniURL = (bundle.object(forInfoDictionaryKey: "ShioriDefaultKonbiniURL") as? String) ?? ""
+        smallwebURL = (bundle.object(forInfoDictionaryKey: "ShioriDefaultSmallwebURL") as? String) ?? ""
+        obsidianVault = (bundle.object(forInfoDictionaryKey: "ShioriDefaultObsidianVault") as? String) ?? ""
+        guard let defaults else { return }
+        typealias K = SharedSettings.Key
+        func flag(_ key: String, _ value: inout Bool) {
+            if defaults.object(forKey: key) != nil { value = defaults.bool(forKey: key) }
+        }
+        func count(_ key: String, _ value: inout Int) {
+            let n = defaults.integer(forKey: key)
+            if Self.counts.contains(n) { value = n }
+        }
+        flag(K.showInfobox, &showInfobox)
+        flag(K.showRelated, &showRelated)
+        flag(K.aiAnswer, &aiAnswer)
+        flag(K.showThumbnails, &showThumbnails)
+        // The old "Hister Tab Only" choice means: not in General.
+        if defaults.string(forKey: K.histerPlacement) == "tab" { histerInGeneral = false }
+        flag(K.histerInGeneral, &histerInGeneral)
+        flag(K.histerTab, &histerTab)
+        count(K.histerCount, &histerCount)
+        flag(K.vaultInGeneral, &vaultInGeneral)
+        flag(K.vaultTab, &vaultTab)
+        count(K.vaultCount, &vaultCount)
+        flag(K.webResults, &webResults)
+        flag(K.searchHistory, &searchHistory)
+        flag(K.previewPane, &previewPane)
+        flag(K.previewImages, &previewImages)
+        flag(K.rememberOpened, &rememberOpened)
+        flag(K.searchFilters, &searchFilters)
+        flag(K.semanticSearch, &semanticSearch)
+        flag(K.foldRepeats, &foldRepeats)
+        flag(K.showOpened, &showOpened)
+        if let v = defaults.string(forKey: K.resultStyle), SharedSettings.resultStyles.contains(v) { resultStyle = v }
+        flag(K.labelSuggestions, &labelSuggestions)
+        if let v = defaults.string(forKey: K.newsBlurURL) { newsBlurURL = v }
+        if let v = defaults.string(forKey: K.obsidianVault), !v.isEmpty { obsidianVault = v }
+        if let v = defaults.string(forKey: K.niwaURL) { niwaURL = v }
+        if let v = defaults.string(forKey: K.konbiniURL) { konbiniURL = v }
+        if let v = defaults.string(forKey: K.smallwebURL), !v.isEmpty { smallwebURL = v }
+        flag(K.smallWebTab, &smallWebTab)
+        if let v = defaults.string(forKey: K.smallWebOpen), SharedSettings.smallWebOpens.contains(v) { smallWebOpen = v }
+    }
+
+    func save(to defaults: UserDefaults?) {
+        guard let defaults else { return }
+        typealias K = SharedSettings.Key
+        defaults.set(showInfobox, forKey: K.showInfobox)
+        defaults.set(showRelated, forKey: K.showRelated)
+        defaults.set(aiAnswer, forKey: K.aiAnswer)
+        defaults.set(showThumbnails, forKey: K.showThumbnails)
+        defaults.set(histerInGeneral, forKey: K.histerInGeneral)
+        defaults.set(histerTab, forKey: K.histerTab)
+        defaults.set(histerCount, forKey: K.histerCount)
+        defaults.set(vaultInGeneral, forKey: K.vaultInGeneral)
+        defaults.set(vaultTab, forKey: K.vaultTab)
+        defaults.set(vaultCount, forKey: K.vaultCount)
+        defaults.set(webResults, forKey: K.webResults)
+        defaults.set(searchHistory, forKey: K.searchHistory)
+        defaults.set(previewPane, forKey: K.previewPane)
+        defaults.set(previewImages, forKey: K.previewImages)
+        defaults.set(rememberOpened, forKey: K.rememberOpened)
+        defaults.set(searchFilters, forKey: K.searchFilters)
+        defaults.set(semanticSearch, forKey: K.semanticSearch)
+        defaults.set(foldRepeats, forKey: K.foldRepeats)
+        defaults.set(showOpened, forKey: K.showOpened)
+        defaults.set(resultStyle, forKey: K.resultStyle)
+        defaults.set(labelSuggestions, forKey: K.labelSuggestions)
+        defaults.set(newsBlurURL, forKey: K.newsBlurURL)
+        defaults.removeObject(forKey: K.pageTextSize)
+        defaults.set(obsidianVault, forKey: K.obsidianVault)
+        defaults.set(niwaURL, forKey: K.niwaURL)
+        defaults.set(konbiniURL, forKey: K.konbiniURL)
+        defaults.set(smallwebURL, forKey: K.smallwebURL)
+        defaults.set(smallWebTab, forKey: K.smallWebTab)
+        defaults.set(smallWebOpen, forKey: K.smallWebOpen)
+        defaults.removeObject(forKey: K.histerPlacement)
+    }
+}

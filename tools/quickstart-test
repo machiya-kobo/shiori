@@ -1,0 +1,333 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""quickstart-test - run the README's Quickstart exactly as written, from a fresh clone, and check what it says you
+should see.
+
+    tools/quickstart-test [--only standalone|pages|stack|all] [--worktree] [--with-packages] [--keep] [--dry-run]
+
+The README marks each runnable block with an HTML comment on the line above its fence:
+
+    <!-- quickstart: NAME [background] -->
+    ```bash
+    ...commands...
+    ```
+
+and the output it promises with `<!-- quickstart-expect: NAME -->` above a ```text fence (each non-empty line must
+appear, in order, in the output of the block NAME). The blocks run with `sh -e` in a throwaway directory under
+$QUICKSTART_TMP (default /var/tmp/shiori-quickstart), from a fresh `git clone --no-hardlinks` of this repository (or, with
+--worktree, a copy of the working tree, to test README changes before they're committed). Scenarios:
+
+    standalone  hister-podman (or -docker), seed, pages-build, serve-search, serve-app, pages-check, results-check,
+                then on Linux with Flatpak: linux-build, linux-check; stop-podman (or -docker)
+    pages       pages-build, serve-search, serve-app, pages-check: the web pages alone, where there's no container
+                engine (the BSDs)
+    stack       stack-pages-build, stack-serve-search, stack-serve-app, stack-check, [stack-linux-check]: needs the
+                Machiya stack already up (its own Quickstart) on its default ports
+
+With --with-packages, this system's package block (packages-debian, -openbsd, -freebsd or -netbsd) runs first,
+before anything is decided. `background` blocks are servers: started, waited for (their port answers), and killed at the end. The Linux blocks
+run inside `dbus-run-session` when there's no session bus (a headless machine), and the Linux app's config
+(~/.config/shiori/config.json) is put back afterwards. Where Playwright's Chromium is installed, the pages are also
+rendered and checked for the sample pages. A scenario this machine can't run (no podman or docker, no stack) is
+skipped with the reason; the exit code is 1 only if a step fails. Standard library only (Playwright optional);
+needs git, curl and python3.
+"""
+import argparse
+import os
+import platform
+import re
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+BLOCK_RE = re.compile(r"<!--\s*quickstart:\s*(\S+)((?:\s+\S+)*?)\s*-->\s*\n```[a-z]*\n(.*?)\n```", re.S)
+EXPECT_RE = re.compile(r"<!--\s*quickstart-expect:\s*(\S+)\s*-->\s*\n```[a-z]*\n(.*?)\n```", re.S)
+PORTS = {"serve-search": 8765, "serve-app": 8766, "stack-serve-search": 8765, "stack-serve-app": 8766}
+CONFIG = os.path.expanduser("~/.config/shiori/config.json")
+
+
+def parse(readme):
+    text = open(readme, encoding="utf-8").read()
+    blocks = {m.group(1): {"flags": m.group(2).split(), "code": m.group(3)} for m in BLOCK_RE.finditer(text)}
+    expects = {m.group(1): [l for l in m.group(2).splitlines() if l.strip()] for m in EXPECT_RE.finditer(text)}
+    return blocks, expects
+
+
+def engine():
+    for e in ("podman", "docker"):
+        if shutil.which(e):
+            return e
+    return None
+
+
+def answers(port, path="/"):
+    try:
+        import urllib.request
+        urllib.request.urlopen("http://127.0.0.1:%d%s" % (port, path), timeout=3)
+        return True
+    except Exception as exc:  # an HTTP error still means something answers
+        return hasattr(exc, "code")
+
+
+def port_free(port):
+    with socket.socket() as s:
+        s.settimeout(1)
+        return s.connect_ex(("127.0.0.1", port)) != 0
+
+
+def linux_app(with_packages):
+    """Why the Linux app's blocks can't run here, or None."""
+    if platform.system() != "Linux":
+        return "not Linux"
+    if not (shutil.which("flatpak") and shutil.which("flatpak-builder")):
+        return "flatpak and flatpak-builder aren't installed (--with-packages installs them on Debian)"
+    return None
+
+
+def packages_block():
+    """The README's package block for this system, or None."""
+    system = platform.system().lower()
+    if system in ("openbsd", "freebsd", "netbsd"):
+        return "packages-" + system
+    if system == "linux" and os.path.exists("/etc/debian_version"):
+        return "packages-debian"
+    return None
+
+
+def scenarios(only, with_packages):
+    """[(scenario name, [block names]) or (name, None, reason)] for this machine."""
+    out = []
+    eng = engine()
+    no_linux = linux_app(with_packages)
+    linux = [] if no_linux else ["linux-build", "linux-check"]
+    if only in ("all", "standalone"):
+        if eng:
+            out.append(("standalone", ["hister-" + eng, "seed", "pages-build", "serve-search", "serve-app",
+                                       "pages-check", "results-check"] + linux + ["stop-" + eng]))
+            if no_linux:
+                print("note: the Linux app's steps are skipped (%s)" % no_linux)
+        else:
+            out.append(("standalone", None, "neither podman nor docker is installed (try --only pages)"))
+    if only == "pages" or (only == "all" and not eng):
+        out.append(("pages", ["pages-build", "serve-search", "serve-app", "pages-check"]))
+    if only in ("all", "stack"):
+        if answers(8083, "/api/search?q=x") and answers(4433, "/api/config"):
+            out.append(("stack", ["stack-pages-build", "stack-serve-search", "stack-serve-app", "stack-check"]
+                        + ([] if no_linux else ["stack-linux-check"])))
+        else:
+            out.append(("stack", None, "the Machiya stack isn't up (Kura on 8083, Hister on 4433)"))
+    return out
+
+
+def fresh_copy(dest, worktree):
+    if worktree:
+        files = subprocess.run(["git", "-C", ROOT, "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+                               capture_output=True, check=True).stdout.split(b"\0")
+        for f in filter(None, files):
+            src = os.path.join(ROOT, f.decode())
+            if os.path.isfile(src):
+                os.makedirs(os.path.dirname(os.path.join(dest, f.decode())), exist_ok=True)
+                shutil.copy2(src, os.path.join(dest, f.decode()))
+    else:
+        # A copy, not hard links: /var/tmp can be another filesystem (OpenBSD), where git won't link.
+        subprocess.run(["git", "clone", "--quiet", "--no-hardlinks", ROOT, dest], check=True)
+
+
+def expect_ok(lines, output):
+    pos = 0
+    for line in lines:
+        i = output.find(line, pos)
+        if i < 0:
+            return False, line
+        pos = i + len(line)
+    return True, ""
+
+
+def command(name, code):
+    """How to run a block: the Linux ones get a session bus when there's none."""
+    cmd = ["sh", "-ec", code]
+    if "linux" in name and not os.environ.get("DBUS_SESSION_BUS_ADDRESS") and shutil.which("dbus-run-session"):
+        cmd = ["dbus-run-session", "--"] + cmd
+    return cmd
+
+
+def render_checks(scenario):
+    """[(what, ok)] from Playwright's Chromium, or None without it."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return None
+    if scenario == "stack":  # the stack's Hister holds the vault's notes, which come from Kura
+        wants = [("Shiori Search shows Your Notes from Kura", "http://localhost:8765/?q=lantern", "Your Notes"),
+                 ("the web app lists the vault's notes", "http://localhost:8766/#/library?s=notes", "Lantern festival kit")]
+    else:
+        wants = [("Shiori Search lists the sample pages for \"lantern\"", "http://localhost:8765/?q=lantern", "Folding a chōchin lantern"),
+                 ("the web app's Library lists the sample pages", "http://localhost:8766/", "Kyoto's summer lantern festival")]
+    results = []
+    with sync_playwright() as p:
+        try:
+            browser = p.chromium.launch()
+        except Exception as exc:  # Playwright without its browser: not checked, not failed
+            print("-- (Playwright can't start Chromium here: %s)" % str(exc).splitlines()[0][:120])
+            return []
+        page = browser.new_page(viewport={"width": 1400, "height": 900})
+        for what, url, text in wants:
+            try:
+                page.goto(url)
+                page.get_by_text(text).first.wait_for(timeout=20000)
+                results.append((what, True))
+            except Exception:
+                results.append((what, False))
+        browser.close()
+    return results
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--only", choices=["all", "standalone", "pages", "stack"], default="all")
+    ap.add_argument("--worktree", action="store_true", help="test a copy of the working tree instead of a fresh clone of HEAD")
+    ap.add_argument("--with-packages", action="store_true", help="also run the (privileged) package-install block")
+    ap.add_argument("--keep", action="store_true", help="keep the temporary directory, and leave Hister and the servers up")
+    ap.add_argument("--dry-run", action="store_true", help="list the steps and exit")
+    a = ap.parse_args()
+
+    blocks, expects = parse(os.path.join(ROOT, "README.md"))
+    # The packages come first, on this machine (they decide what can run), and only with --with-packages.
+    pkg = packages_block()
+    if a.with_packages:
+        if pkg is None or pkg not in blocks:
+            print("no package block for %s in the README" % platform.system())
+            return 1
+        print("-- %s%s" % (pkg, " (dry run: not installed)" if a.dry_run else ""), flush=True)
+        if not a.dry_run:
+            r = subprocess.run(["sh", "-ec", blocks[pkg]["code"]], capture_output=True, text=True, timeout=3000)
+            if r.returncode != 0:
+                print((r.stdout + r.stderr)[-1500:])
+                print("FAILED:\n  %s: exit %d" % (pkg, r.returncode))
+                return 1
+            print("   installed")
+    plan = scenarios(a.only, a.with_packages)
+    for sc in plan:
+        if sc[1] is None:
+            print("scenario %s: SKIPPED (%s)" % (sc[0], sc[2]))
+            continue
+        print("scenario %s:" % sc[0])
+        for name in sc[1]:
+            b = blocks.get(name)
+            if b is None:
+                print("  %-20s MISSING in the README" % name)
+                continue
+            first = b["code"].splitlines()[0]
+            print("  %-20s %s%s%s" % (name, "[background] " if "background" in b["flags"] else "", first,
+                                      "  (+expected output)" if name in expects else ""))
+    if a.dry_run:
+        return 0
+    runnable = [sc for sc in plan if sc[1] is not None]
+    if not runnable:
+        print("nothing to run on this machine")
+        return 0
+    missing = [n for sc in runnable for n in sc[1] if n not in blocks]
+    if missing:
+        print("README has no block named: " + ", ".join(sorted(set(missing))))
+        return 1
+
+    base = os.environ.get("QUICKSTART_TMP", "/var/tmp/shiori-quickstart")
+    os.makedirs(base, exist_ok=True)
+    failed = []
+    saved_config = open(CONFIG, "rb").read() if os.path.isfile(CONFIG) else None
+    for sc in runnable:
+        busy = [p for p in ([4433] if sc[0] == "standalone" else []) + [8765, 8766] if not port_free(p)]
+        if busy:
+            failed.append("%s: port %s in use; stop what listens there first" % (sc[0], ", ".join(map(str, busy))))
+            print("== scenario %s: FAIL (port %s in use)" % (sc[0], ", ".join(map(str, busy))))
+            continue
+        work = tempfile.mkdtemp(prefix=sc[0] + "-", dir=base)
+        repo = os.path.join(work, "shiori")
+        background = []
+        stops = [n for n in sc[1] if n.startswith("stop-")]
+        try:
+            print("\n== scenario %s (%s)" % (sc[0], work))
+            fresh_copy(repo, a.worktree)
+            env = {k: v for k, v in os.environ.items() if not k.startswith(("SHIORI_", "HISTER_", "KURA_", "SEARXNG_"))}
+            env["TMPDIR"] = work
+            for name in sc[1]:
+                if name in stops:
+                    continue
+                b = blocks[name]
+                print("-- %s" % name, flush=True)
+                if "background" in b["flags"]:
+                    log = open(os.path.join(work, name + ".log"), "w")
+                    background.append(subprocess.Popen(["sh", "-ec", b["code"]], cwd=repo, env=env, stdout=log,
+                                                       stderr=subprocess.STDOUT, start_new_session=True))
+                    port = PORTS.get(name)
+                    for _ in range(60):
+                        if port is None or not port_free(port):
+                            break
+                        time.sleep(0.5)
+                    else:
+                        failed.append("%s/%s: nothing listens on %d (see %s.log)" % (sc[0], name, port, name))
+                        break
+                    continue
+                r = subprocess.run(command(name, b["code"]), cwd=repo, env=env, capture_output=True, text=True, timeout=3000)
+                out = r.stdout + r.stderr
+                with open(os.path.join(work, name + ".log"), "w") as log:
+                    log.write(out)
+                if r.returncode != 0:
+                    print(out[-1500:])
+                    failed.append("%s/%s: exit %d" % (sc[0], name, r.returncode))
+                    break
+                if name in expects:
+                    ok, line = expect_ok(expects[name], out)
+                    if not ok:
+                        print(out[-1500:])
+                        failed.append("%s/%s: expected %r in the output" % (sc[0], name, line))
+                        break
+                    print("   output matches the README (%d lines)" % len(expects[name]))
+            else:
+                if sc[0] in ("standalone", "stack"):
+                    checks = render_checks(sc[0])
+                    if not checks:
+                        print("-- (the pages' rendering isn't checked: no working Playwright)")
+                    for what, ok in checks or []:
+                        print("-- rendered: %s: %s" % (what, "ok" if ok else "FAIL"))
+                        if not ok:
+                            failed.append("%s: rendered: %s" % (sc[0], what))
+            if not any(f.startswith(sc[0] + "/") or f.startswith(sc[0] + ":") for f in failed):
+                print("== scenario %s: PASS" % sc[0])
+        except Exception as exc:  # a crash is a failure, and the cleanup still runs
+            failed.append("%s: %s" % (sc[0], exc))
+        finally:
+            if not a.keep:
+                for p in background:
+                    try:
+                        os.killpg(p.pid, signal.SIGTERM)
+                    except OSError:
+                        pass
+                for name in stops:
+                    subprocess.run(["sh", "-c", blocks[name]["code"]], capture_output=True)
+                shutil.rmtree(work, ignore_errors=True)
+            if saved_config is not None:
+                with open(CONFIG, "wb") as f:
+                    f.write(saved_config)
+            for _ in range(20):  # the ports are free again before the next scenario
+                if a.keep or all(port_free(p) for p in (8765, 8766)):
+                    break
+                time.sleep(0.5)
+        if any(f.startswith(sc[0] + "/") or f.startswith(sc[0] + ":") for f in failed):
+            print("== scenario %s: FAIL" % sc[0])
+    print()
+    if failed:
+        print("FAILED:\n  " + "\n  ".join(failed))
+        return 1
+    print("quickstart test: all passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

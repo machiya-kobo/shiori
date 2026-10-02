@@ -1,0 +1,357 @@
+name: Shiori
+# local.yml (gitignored) carries per-developer settings: the signing
+# team, the bundle prefix, the servers. Required by xcodegen; create it once:
+#   cp local.yml.example local.yml
+# SHIORI_BUNDLE_PREFIX lives only there (an including file's value would
+# win over it): every bundle ID, the App Group and the keychain service
+# derive from it, so a fork builds under its own names.
+include:
+  - local.yml
+options:
+  bundleIdPrefix: $(SHIORI_BUNDLE_PREFIX)
+  deploymentTarget:
+    # 18.6, not 18.0: the preview uses WKWebView, and `import WebKit` from
+    # Swift needs libswiftWebKit.dylib, which first ships in iOS 18.6.
+    # Below that the app would install and then fail to launch (dyld).
+    iOS: "18.6"
+    macOS: "15.0"
+  createIntermediateGroups: true
+
+packages:
+  HisterKit:
+    path: Packages/HisterKit
+  ShioriAI:
+    path: Packages/ShioriAI
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    CODE_SIGN_STYLE: Automatic
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: "0.1.0"
+    # iOS App Groups are "group."-prefixed; macOS ones carry the team ID
+    # instead, which needs no provisioning (the macOS targets override this).
+    SHIORI_APP_GROUP: group.$(SHIORI_BUNDLE_PREFIX).shiori
+    # Xcode's recommended settings, kept here so a regenerate keeps them.
+    DEAD_CODE_STRIPPING: YES
+    STRING_CATALOG_GENERATE_SYMBOLS: YES
+
+# The two platforms share bundle IDs (they never meet on one device) and
+# all sources; only the host app's view differs, behind #if os(...).
+# Each appex copies the staged ShioriExtension/Resources tree with rsync
+# rather than a Copy Bundle Resources phase: Xcode flattens nested
+# folders, which breaks the manifest's assets/icons/ paths.
+targetTemplates:
+  HostApp:
+    type: application
+    sources:
+      - Shiori
+      - Shared
+    dependencies:
+      - package: HisterKit
+      # Optional AI (docs/ai.md): the app only, not the extensions.
+      - package: ShioriAI
+        product: ShioriAI
+      - package: ShioriAI
+        product: ShioriAIOnDevice
+    preBuildScripts:
+      - name: Check local.yml
+        basedOnDependencyAnalysis: false
+        shell: /bin/bash
+        script: |
+          if [[ -z "${SHIORI_BUNDLE_PREFIX:-}" ]]; then
+            echo "error: set SHIORI_BUNDLE_PREFIX in local.yml (see local.yml.example), then run xcodegen generate" >&2
+            exit 1
+          fi
+    info:
+      path: Shiori/Info.plist
+      properties:
+        # Defaults for the app's settings, from local.yml.
+        ShioriDefaultServerURL: $(SHIORI_SERVER_URL)
+        ShioriDefaultSearxngURL: $(SHIORI_SEARXNG_URL)
+        ShioriDefaultNiwaURL: $(SHIORI_NIWA_URL)
+        ShioriDefaultKonbiniURL: $(SHIORI_KONBINI_URL)
+        ShioriDefaultSmallwebURL: $(SHIORI_SMALLWEB_URL)
+        # A build's own conventions, from local.yml too, none in a public
+        # build: the Obsidian vault's name, and the AI's lists (comma-separated).
+        ShioriDefaultObsidianVault: $(SHIORI_OBSIDIAN_VAULT)
+        ShioriDefaultNeverSuggest: $(SHIORI_AI_NEVER_SUGGEST)
+        ShioriDefaultNotTopics: $(SHIORI_AI_NOT_TOPICS)
+        ShioriDefaultReservedCollections: $(SHIORI_RESERVED_COLLECTIONS)
+        # Where the source is (AGPL-3.0 section 13), for Settings → About;
+        # unset, no Source link is shown.
+        ShioriSourceURL: $(SHIORI_SOURCE_URL)
+        # The App Group the app shares with its extensions (see SHIORI_APP_GROUP).
+        ShioriAppGroup: $(SHIORI_APP_GROUP)
+        ITSAppUsesNonExemptEncryption: false
+        # shiori://settings opens Settings (the Safari extension's own
+        # settings page links it: everything is set here).
+        CFBundleURLTypes:
+          - CFBundleURLName: $(PRODUCT_BUNDLE_IDENTIFIER)
+            CFBundleURLSchemes: [shiori]
+    settings:
+      base:
+        PRODUCT_NAME: Shiori
+        PRODUCT_BUNDLE_IDENTIFIER: $(SHIORI_BUNDLE_PREFIX).shiori
+        PRODUCT_MODULE_NAME: Shiori
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Shiori
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+  WebExtension:
+    type: app-extension
+    sources:
+      - path: ShioriExtension
+        excludes:
+          - Resources
+          - Resources/**
+      # Settings only: the Safari extension doesn't link HisterKit.
+      - Shared/Settings
+    postCompileScripts:
+      - name: Copy web extension resources
+        basedOnDependencyAnalysis: false
+        shell: /bin/bash
+        script: |
+          set -euo pipefail
+          SRC="${SRCROOT}/ShioriExtension/Resources"
+          DEST="${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"
+          if [[ ! -f "$SRC/manifest.json" ]]; then
+            echo "error: $SRC is not staged; run scripts/build-extension.sh" >&2
+            exit 1
+          fi
+          mkdir -p "$DEST"
+          # No --delete: on iOS DEST is the appex root, where it would take
+          # the executable and Info.plist with it. A clean build clears
+          # files upstream stopped shipping.
+          rsync -a "$SRC/" "$DEST/"
+    settings:
+      base:
+        PRODUCT_NAME: ShioriExtension
+        PRODUCT_BUNDLE_IDENTIFIER: $(SHIORI_BUNDLE_PREFIX).shiori.Extension
+        PRODUCT_MODULE_NAME: ShioriExtension
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Shiori
+        # The rsync above reads a folder Xcode does not know about.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        SKIP_INSTALL: YES
+    info:
+      path: ShioriExtension/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.Safari.web-extension
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SafariWebExtensionHandler
+        ShioriAppGroup: $(SHIORI_APP_GROUP)
+
+targets:
+  Shiori:
+    templates: [HostApp]
+    platform: iOS
+    # The App Group carries the combined-search settings to the extension.
+    entitlements:
+      path: Shiori/Shiori.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(SHIORI_APP_GROUP)
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # Settings → App Icon; made by scripts/generate-shiori-icons.py.
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-Light"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: >-
+          UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
+          UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+    dependencies:
+      - target: ShioriExtension
+      - target: ShioriShare
+
+  # "Save to Shiori" in the share sheet (iPhone/iPad).
+  ShioriShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShioriShare
+        # Each platform's plist and entitlements belong to its own target.
+        excludes:
+          - "*.plist"
+          - "*.entitlements"
+      - Shared
+      # The palette plumbing and LabelChip, shared with the app.
+      - Shiori/Theming.swift
+      - Shiori/TextSize.swift
+    dependencies:
+      - package: HisterKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(SHIORI_BUNDLE_PREFIX).shiori.Share
+        PRODUCT_NAME: ShioriShare
+        # Code shared with the app skips app-only calls (UIApplication.shared).
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) SHIORI_EXTENSION
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Save to Shiori
+        SKIP_INSTALL: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: ShioriShare/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        ShioriAppGroup: $(SHIORI_APP_GROUP)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          # The rule MUST sit under NSExtensionAttributes: directly under
+          # NSExtension it is ignored and the extension never appears.
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsWebPageWithMaxCount: 1
+            # Safari runs this in the page and hands over its HTML and text.
+            NSExtensionJavaScriptPreprocessingFile: Preprocess
+    entitlements:
+      path: ShioriShare/ShioriShare.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(SHIORI_APP_GROUP)
+
+  # "Save to Shiori" in the Mac share menu.
+  ShioriShare-macOS:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: ShioriShare
+        # Each platform's plist and entitlements belong to its own target.
+        excludes:
+          - "*.plist"
+          - "*.entitlements"
+      - Shared
+      # The palette plumbing and LabelChip, shared with the app.
+      - Shiori/Theming.swift
+      - Shiori/TextSize.swift
+    dependencies:
+      - package: HisterKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(SHIORI_BUNDLE_PREFIX).shiori.Share
+        PRODUCT_NAME: ShioriShare
+        # Code shared with the app skips app-only calls (UIApplication.shared).
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) SHIORI_EXTENSION
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Save to Shiori
+        SKIP_INSTALL: YES
+        SHIORI_APP_GROUP: $(TeamIdentifierPrefix)$(SHIORI_BUNDLE_PREFIX).shiori
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_HARDENED_RUNTIME: YES
+    info:
+      path: ShioriShare/Info-macOS.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        ShioriAppGroup: $(SHIORI_APP_GROUP)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          # The rule MUST sit under NSExtensionAttributes: directly under
+          # NSExtension it is ignored and the extension never appears.
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsWebPageWithMaxCount: 1
+            # Safari runs this in the page and hands over its HTML and text.
+            NSExtensionJavaScriptPreprocessingFile: Preprocess
+    entitlements:
+      path: ShioriShare/ShioriShare-macOS.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.application-groups:
+          - $(SHIORI_APP_GROUP)
+
+  ShioriExtension:
+    templates: [WebExtension]
+    platform: iOS
+    entitlements:
+      path: ShioriExtension/ShioriExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(SHIORI_APP_GROUP)
+
+  Shiori-macOS:
+    templates: [HostApp]
+    platform: macOS
+    entitlements:
+      path: Shiori/Shiori-macOS.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        # Export's save dialog: the file the user picks, nothing else.
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.security.application-groups:
+          - $(SHIORI_APP_GROUP)
+    settings:
+      base:
+        SHIORI_APP_GROUP: $(TeamIdentifierPrefix)$(SHIORI_BUNDLE_PREFIX).shiori
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        # The app talks to the Hister server, and the preview loads images.
+        ENABLE_OUTGOING_NETWORK_CONNECTIONS: YES
+        # All three icon sets go in Assets.car, so the Dock can switch to
+        # them at runtime (NSImage(named:)); install-mac.sh picks the built-in one.
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
+    dependencies:
+      - target: ShioriExtension-macOS
+      - target: ShioriShare-macOS
+
+  ShioriExtension-macOS:
+    templates: [WebExtension]
+    platform: macOS
+    entitlements:
+      path: ShioriExtension/ShioriExtension-macOS.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.application-groups:
+          - $(SHIORI_APP_GROUP)
+    settings:
+      base:
+        SHIORI_APP_GROUP: $(TeamIdentifierPrefix)$(SHIORI_BUNDLE_PREFIX).shiori
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_OUTGOING_NETWORK_CONNECTIONS: YES
+
+  # Tests for Shared/ (the save path, the settings whitelist): a Mac
+  # bundle with no host app, so `xcodebuild test -scheme ShioriTests
+  # -destination platform=macOS` needs no simulator. HisterKit has its own.
+  ShioriTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Shared
+      - ShioriTests
+    dependencies:
+      - package: HisterKit
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  ShioriTests:
+    build:
+      targets:
+        ShioriTests: all
+    test:
+      targets:
+        - ShioriTests
+  Shiori:
+    build:
+      targets:
+        Shiori: all
+    run:
+      config: Debug
+  Shiori-macOS:
+    build:
+      targets:
+        Shiori-macOS: all
+    run:
+      config: Debug

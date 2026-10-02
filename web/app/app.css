@@ -1,0 +1,456 @@
+/* Shiori's web app: the Mac app's three columns (sidebar, list, preview)
+   on a wide screen, the iPhone's tabs on a narrow one. Colours come from
+   theme.css (the search page's Tokyo Night / Day tokens, label chips
+   included); tabs and tags look as they do on the search page. */
+
+:root { --danger: #f7768e; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="night"]) { --danger: #bd204c; }
+}
+:root[data-theme="day"] { --danger: #bd204c; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+a, button, select { -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-size: 1.0625rem; font: -apple-system-body; font-family: -apple-system, system-ui, sans-serif; line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--accent); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* One row, the window's height: an auto row grew with the list, so the
+   list never scrolled itself and its load-more trigger (an observer on
+   #list) fired once; long lists stopped after a page or two. */
+#app { display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); height: 100%; }
+#sidebar, #preview-column { display: none; }
+/* The list fills the column and the bars (title, search field, pills and
+   Sort · Group · Filter) sit over its top, frosted, so it scrolls under
+   them as in the apps (one look everywhere). #list
+   stays the scroller (the load-more observer's root); its top padding is
+   the bars' height (--bars, kept by app.js as they change). */
+#list-column { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr); min-width: 0; height: 100%; }
+#list-column > .bar { grid-row: 1; }
+#search-top { grid-row: 2; }
+#list-top { grid-row: 3; }
+#list-column > .bar, #search-top, #list-top {
+  grid-column: 1; position: relative; z-index: 2; align-self: start;
+  background: var(--frost); -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
+}
+/* Its scrollbar starts under the bars, not behind them (it was half
+   hidden): WebKit's track takes a top margin. Thin and in
+   the theme's colours; browsers without the pseudo-elements keep theirs. */
+#list::-webkit-scrollbar { width: 11px; }
+#list::-webkit-scrollbar-track { background: transparent; margin-top: var(--bars, 0px); }
+#list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--secondary) 45%, transparent); border-radius: 999px;
+  border: 3px solid transparent; background-clip: padding-box;
+}
+#list::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--secondary) 70%, transparent); }
+#list {
+  grid-row: 1 / -1; grid-column: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: var(--bars, 0px) 0 calc(80px + env(safe-area-inset-bottom)); scroll-padding-top: var(--bars, 0px);
+}
+#preview-column { flex-direction: column; min-width: 0; height: 100%; border-left: 1px solid var(--line); }
+#preview { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#preview iframe { width: 100%; flex: 1; min-height: 0; border: 0; display: block; background: var(--bg); }
+
+/* Summarize: the apps' card above the preview (a surface, "✦ Summary",
+   Copy, Regenerate and Close, the text, then who wrote it). */
+.summary { flex: none; max-height: 45%; overflow-y: auto; margin: 10px 12px; padding: 10px 14px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.summary-head { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.summary-title { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; font-weight: 600; font-size: 0.9375rem; color: var(--secondary); }
+.summary-title svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+.summary p { margin: 0 0 6px; line-height: 1.45; }
+.summary ul { margin: 0 0 6px; padding-left: 1.2em; line-height: 1.45; }
+.summary li { margin: 2px 0; }
+.summary-byline { font-size: 0.8125rem; color: var(--secondary); }
+.summary-working { display: flex; align-items: center; gap: 8px; color: var(--secondary); }
+.spinner.small { margin: 0; width: 14px; height: 14px; border-width: 2px; }
+/* The AI answer at the top of a search: a row that opens into the
+   search page's answer (citations, the cited results, who wrote it). */
+/* Tinted like the search page's: the All pill's colour, as the answer covers the whole search. */
+.answer-card { --tint: var(--tab-general); margin: 10px 12px 4px; background: color-mix(in srgb, var(--tint) 12%, var(--card)); border: 1px solid var(--tint); border-radius: 12px; }
+.answer-card .answer-head { color: var(--tint); }
+.answer-card .answer-head svg { stroke: var(--tint); }
+.answer-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; border: 0; background: none; cursor: pointer; font-weight: 600; color: var(--text); text-align: left; }
+.answer-head svg { width: 16px; height: 16px; stroke: var(--secondary); fill: none; stroke-width: 1.8; }
+.answer-head .chevron-icon { display: inline-flex; transition: transform 0.15s; }
+.answer-head[aria-expanded="true"] .chevron-icon { transform: rotate(90deg); }
+.answer { padding: 0 14px 10px; }
+.answer p { margin: 0 0 8px; line-height: 1.5; }
+.answer ul { margin: 0 0 8px; padding-left: 1.2em; line-height: 1.5; }
+.answer .cite { font-size: 0.7em; margin-left: 1px; }
+.answer .cite a { text-decoration: none; padding: 0 2px; border-radius: 4px; background: var(--highlight); color: var(--text); }
+.answer-sources { margin: 4px 0 8px; padding-left: 1.6em; font-size: 0.875rem; }
+.answer-sources .domain { color: var(--secondary); }
+.answer .summary-head { margin: 0; }
+/* "Did you mean …?" under the pills. */
+#list-top .correction { margin: 0 14px 8px; color: var(--secondary); }
+/* All's Your Pages and Your Notes: a row in the pill's colour (a faint
+   tint, the text and an outline), with the full count, as the search page. */
+.section-head.tinted {
+  --tint: var(--accent); display: flex; align-items: center; margin: 10px 12px 6px; padding: 7px 12px;
+  color: var(--tint); border: 1px solid var(--tint); border-radius: 10px;
+  background: color-mix(in srgb, var(--tint) 12%, var(--card));
+}
+.section-head.tinted[data-tint="orange"] { --tint: var(--notes); }
+.section-head.tinted .count { margin-left: auto; font-weight: 400; font-size: 0.8125rem; }
+.section-head.tinted a.count { color: inherit; text-decoration: none; font-weight: 600; }
+.text-button { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; }
+
+/* Wide: sidebar + list; wider still: + preview. */
+@media (min-width: 760px) {
+  #app { grid-template-columns: 240px minmax(0, 1fr); }
+  #sidebar { display: block; overflow-y: auto; padding: 12px 8px; background: var(--card); border-right: 1px solid var(--line); }
+  #tabs { display: none !important; }
+  #list { padding-bottom: 24px; }
+}
+@media (min-width: 1100px) {
+  /* The sidebar is the list's width over the golden ratio (440 / 1.618),
+     as the Mac app's default. */
+  #app { grid-template-columns: 272px minmax(380px, 440px) minmax(0, 1fr); }
+  #preview-column { display: flex; }
+  body.phone-preview #list-column { display: flex; }
+  /* The search field and the preview's bar are one row, as the Mac app's
+     toolbar, with no line under it; the divider between the list and the
+     preview runs the full height. */
+  #preview-column > #preview-bar { min-height: 62px; border-bottom: 0; }
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]) {
+    height: 62px;
+  }
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]) + #list-top { padding-top: 8px; }
+}
+/* A narrow screen shows the page in place of the list. */
+body.phone-preview #list-column { display: none; }
+body.phone-preview #preview-column { display: flex; border: 0; }
+@media (min-width: 760px) and (max-width: 1099px) {
+  body.phone-preview #app { grid-template-columns: 220px minmax(0, 1fr); }
+}
+
+.bar {
+  display: flex; align-items: center; gap: 8px; min-height: 52px;
+  padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
+  position: sticky; top: 0; z-index: 2;
+  background: var(--frost);
+  -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
+}
+.bar h1 { flex: 1; margin: 0; font-size: 1.75rem; font: -apple-system-title1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#preview-bar { justify-content: flex-end; border-bottom: 1px solid var(--line); }
+#preview-bar .where { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.icon-button {
+  width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--card);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none;
+}
+.icon-button svg { width: 19px; height: 19px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon-button:active { transform: scale(0.94); }
+
+/* Segments: All · Pages · Notes · Opened, the search scopes. */
+/* The choices above a list, as the search page's category pills: each its
+   colour, outlined, the chosen one filled. */
+.segments { display: flex; flex-wrap: nowrap; gap: 5px; margin: 0 12px 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+.segments::-webkit-scrollbar { display: none; }
+/* An end with more to scroll to fades out (fadeEdges() sets data-fade), as
+   the search page's tabs. */
+[data-fade] { --fade: 28px; }
+[data-fade="end"] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+}
+[data-fade="start"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade));
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade));
+}
+[data-fade="both"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+}
+.segments button {
+  --tab: var(--accent); flex: none; padding: 4px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  font-size: 0.8125rem; font: -apple-system-footnote; font-weight: 600;
+  color: var(--tab); border: 1.5px solid var(--tab); background: transparent;
+}
+.segments button[aria-pressed="true"] { color: var(--bg); background: var(--tab); }
+.segments button[data-tint="cyan"] { --tab: var(--tab-general); }
+.segments button[data-tint="blue"] { --tab: var(--accent); }
+.segments button[data-tint="orange"] { --tab: var(--notes); }
+.segments button[data-tint="purple"] { --tab: var(--tab-news); }
+.segments button[data-tint="yellow"] { --tab: var(--web); }
+.segments button[data-tint="teal"] { --tab: var(--smallweb); }
+
+.searchfield { margin: 0 12px 8px; position: relative; }
+/* Type-ahead: the typed text again, invisible, then the rest in grey, laid
+   over the field in its own type and padding. Only the grey takes a tap. */
+.searchfield .ghost { position: absolute; inset: 0; display: block; white-space: pre; overflow: hidden; pointer-events: none; }
+.searchfield .ghost[hidden] { display: none; }
+.searchfield .ghost .typed { color: transparent; }
+.searchfield .ghost .rest { color: var(--secondary); pointer-events: auto; cursor: pointer; }
+/* One line ends the bar (field, pills, Sort · Group · Filter), as the apps. */
+/* No line between Sort · Group · Filter and the results: the cards start
+   below them on their own. */
+/* Sort · Group · Filter: plain secondary text, the accent while one is on. */
+.controls { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: -2px 12px 6px; }
+.controls .quiet {
+  display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 4px 0; cursor: pointer;
+  font-size: 0.9375rem; font: -apple-system-subheadline; font-weight: 500; color: var(--secondary);
+}
+.controls .quiet svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.controls .quiet.active { color: var(--accent); }
+.controls .menu-list { left: 0; right: auto; }
+.menu-list .check { display: inline-block; width: 1.2em; color: var(--accent); }
+/* A folded run of one site (Fold Repeated Sites), as the apps' row. */
+.fold-row { list-style: none; border-bottom: 1px solid var(--line); }
+.fold-more {
+  display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: transparent; padding: 10px 16px 10px 50px; cursor: pointer;
+  font-size: 0.9375rem; font: -apple-system-subheadline; font-weight: 500; color: var(--accent); text-align: left;
+}
+.fold-more svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; transition: transform 160ms; }
+.fold-more[aria-expanded="true"] svg { transform: rotate(90deg); }
+.group-body { list-style: none; }
+/* The page's places: symbols in one group, as the apps' toolbar. */
+.icon-group { display: inline-flex; gap: 0; background: var(--card); border-radius: 999px; padding: 0 4px; }
+.icon-group .icon-button { background: transparent; }
+.link-button { border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--accent); text-decoration: none; font-size: 1.0625rem; font: -apple-system-body; }
+.link-button:disabled { color: var(--secondary); cursor: default; }
+.searchfield input {
+  width: 100%; font-size: 1.0625rem; font: -apple-system-body; color: var(--text); background: var(--card);
+  border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+}
+
+/* Rows */
+.rows { list-style: none; margin: 0; padding: 0; }
+.section-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin: 14px 16px 4px; font-size: 0.9375rem; font: -apple-system-subheadline; font-weight: 600; color: var(--secondary);
+}
+/* Section headings stay under the bars while their section scrolls by, as
+   the apps' list headers do: Your Pages, Your
+   Notes, Web, a day or a site when grouped. Each sits in its section's own
+   container, so the next one pushes it off. */
+/* (Sticky offsets count from inside #list's top padding, which is already
+   the bars' height.) */
+#list .section-head {
+  position: sticky; top: 0; z-index: 1;
+}
+#list .section-head:not(.tinted) {
+  margin: 0; padding: 10px 16px 6px;
+  background: var(--frost); -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
+}
+#list .section-head.tinted { top: 6px; }
+.row {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; padding: 12px 16px;
+  border-bottom: 1px solid var(--line); cursor: pointer; text-decoration: none; color: inherit;
+}
+/* Each result a card tinted in its pill's colour, blue for your pages,
+   orange for notes, purple for pages you opened, with an outline in it, as
+   the search page's. On the card colour, not the page's:
+   there any tint left the light theme's text under 4.5:1. */
+.doc-row {
+  --tint: var(--accent); margin: 5px 10px; border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--tint) 55%, transparent);
+  background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card));
+}
+.doc-row.note-row { --tint: var(--notes); }
+.doc-row.opened-row { --tint: var(--tab-news); }
+/* Settings → Result Style: a plain card with a hairline (Solid), a bar down
+   the leading edge, or plain rows. */
+body[data-result-style="solid"] .doc-row { background: var(--card); border-color: var(--line); }
+body[data-result-style="bar"] .doc-row { margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: inset 3px 0 0 var(--tint); }
+body[data-result-style="none"] .doc-row { margin: 0; border: 0; border-radius: 0; background: transparent; }
+.row:hover { background: color-mix(in srgb, var(--card) 55%, transparent); }
+.row[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.row .icon { width: 20px; height: 20px; margin-top: 2px; border-radius: 4px; }
+.row .icon svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.6; }
+.row .title { font-size: 1.0625rem; font-weight: 600; font: -apple-system-headline; color: var(--accent); overflow-wrap: anywhere; }
+.row .meta { font-size: 0.8125rem; font: -apple-system-footnote; color: var(--secondary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .meta .domain { font-family: ui-monospace, monospace; }
+.row .snippet {
+  font-size: 0.9375rem; font: -apple-system-subheadline; color: var(--secondary); margin-top: 4px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+mark { background: var(--highlight); color: inherit; border-radius: 2px; }
+.chip {
+  display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; font-size: 0.6875rem; font: -apple-system-caption2; line-height: 1.5;
+  color: var(--chip); border: 1px solid currentColor; background: transparent;
+}
+/* A result's label tag opens that label's pages. */
+button.chip.link-chip { cursor: pointer; font-family: inherit; }
+button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: color-mix(in srgb, var(--chip) 14%, transparent); }
+.web-row .thumb { width: 64px; height: 48px; object-fit: cover; border-radius: 6px; float: right; margin-left: 8px; }
+.more-row { display: block; padding: 12px 16px; color: var(--accent); text-decoration: none; cursor: pointer; }
+.status { padding: 32px 24px; text-align: center; color: var(--secondary); }
+.status h2 { color: var(--text); font-size: 1.25rem; font: -apple-system-title3; font-weight: 600; margin: 0 0 6px; }
+.status button, .button {
+  margin-top: 12px; border: 1px solid var(--line); background: var(--card); color: var(--accent);
+  border-radius: 10px; padding: 8px 14px; cursor: pointer;
+}
+.spinner { margin: 24px auto; width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Sidebar */
+/* Headings at the rows' size, in the text colour, as the Mac app's (its
+   small grey ones were hard to see). */
+#sidebar h2 { margin: 12px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); font: -apple-system-body; font-size: 1rem; font-weight: 600; color: var(--text); }
+/* The line between sections, as the Mac app's SidebarDivider. */
+#sidebar h2:empty { margin-bottom: 0; padding-top: 4px; }
+#sidebar button {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent;
+  padding: 7px 10px; border-radius: 8px; cursor: pointer; color: var(--text);
+}
+#sidebar button[aria-current="page"] { background: var(--accent); color: var(--bg); }
+#sidebar .status-link { display: block; padding: 7px 10px; color: var(--secondary); text-decoration: none; font-size: 0.8125rem; font: -apple-system-footnote; }
+#sidebar .status-link:hover { color: var(--accent); }
+/* Every icon, and a label's dot, in the same 18px square, so the names
+   line up (the Mac app's RowIcon/RowDot). */
+#sidebar .nav-icon { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+#sidebar .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--chip); flex: none; }
+/* Settings: a gear at the end of the Library row. */
+#sidebar .sidebar-top { display: flex; align-items: center; gap: 4px; }
+#sidebar .sidebar-top > button:first-child { flex: 1; min-width: 0; }
+#sidebar .sidebar-gear { width: 34px; height: 34px; padding: 0; justify-content: center; flex: none; border-radius: 50%; color: var(--accent); }
+#sidebar .sidebar-gear:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+#sidebar .sidebar-gear[aria-current="page"] { background: var(--accent); color: var(--bg); }
+/* Beside the sidebar, whose selected row already says Library. The gear is
+   in the sidebar there, so a bar with no title and no Back holds nothing:
+   it goes, and the search field is the column's top, level with the
+   sidebar's Library (as the Mac app's toolbar field). */
+@media (min-width: 760px) {
+  #title.sidebar-says { display: none; }
+  #settings-button { display: none; }
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) { display: none; }
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top .searchfield { margin-top: 12px; }
+}
+
+/* Bottom tabs (narrow) */
+#tabs {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 5;
+  display: flex; gap: 4px; padding: 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+#tabs button {
+  border: 0; background: transparent; border-radius: 999px; padding: 6px 18px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.6875rem; font: -apple-system-caption2; color: var(--text);
+}
+#tabs button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+#tabs button[aria-current="page"] { background: var(--raised); color: var(--accent); }
+body.phone-preview #tabs { display: none; }
+
+/* Menus and dialogs */
+.menu { position: relative; }
+.menu-list {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; min-width: 220px; padding: 4px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 28px rgb(0 0 0 / 0.3);
+}
+.menu-list button, .menu-list a {
+  display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 12px; border-radius: 8px;
+  cursor: pointer; color: var(--text); text-decoration: none; font-size: 1.0625rem; font: -apple-system-body;
+}
+.menu-list button:hover, .menu-list a:hover { background: var(--raised); }
+.menu-list .danger { color: var(--danger); }
+.menu-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+.menu-list .heading { padding: 6px 12px 2px; font-size: 0.75rem; font: -apple-system-caption1; color: var(--secondary); }
+/* "New Version · Reload" (the rooms' shared toast): above the tabs on a phone. */
+.smallweb-row .scheme { color: var(--smallweb); font-weight: 600; }
+.smallweb-row .chip-link { color: var(--smallweb); text-decoration: none; }
+.smallweb-row mark { background: var(--highlight); color: var(--text); border-radius: 3px; padding: 0 1px; }
+.more-button { display: block; margin: 12px auto 24px; }
+.update-toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 50;
+  display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: 0 8px 24px rgb(0 0 0 / 0.3); color: var(--text); font-size: 0.875rem;
+}
+.update-toast button { border: 0; border-radius: 999px; padding: 6px 12px; background: var(--accent); color: var(--bg); font: inherit; font-weight: 600; cursor: pointer; }
+@media (max-width: 759px) { .update-toast { bottom: calc(72px + env(safe-area-inset-bottom)); } }
+/* The Machiya rooms' switcher, as the search page's (search.css): a house
+   before the sidebar's gear, its menu, and on phones a Rooms tab's sheet. */
+.rooms { position: relative; display: flex; flex: none; }
+#sidebar .rooms-open { width: 34px; height: 34px; padding: 0; justify-content: center; border-radius: 50%; background: transparent; }
+#sidebar .rooms-open:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.rooms-open svg { width: 19px; height: 19px; fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rooms-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 200px; padding: 6px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.rooms-menu[hidden] { display: none; }
+.rooms-menu hr, .rooms-sheet hr { border: 0; border-top: 1px solid var(--line); margin: 6px 4px; }
+.rooms-sheet { padding: 4px 8px; }
+#sidebar a.room, a.room {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px;
+  color: var(--text); text-decoration: none; font-weight: 400;
+}
+a.room svg { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--room); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+a.room:hover, a.room:focus-visible { background: color-mix(in srgb, var(--room) 14%, transparent); }
+a.room[aria-current="page"] { font-weight: 600; }
+a.room.neighbour { color: var(--secondary); }
+/* A room's home-screen icon, a neighbour's logo (their data URIs below,
+   ROOM ICONS): a neighbour's at 20px in the same 24px slot, no tile. */
+.room-icon { width: 24px; height: 24px; flex: none; border-radius: 6px; background: center / contain no-repeat; }
+a.room.neighbour .room-icon { border-radius: 0; background-size: 20px 20px; }
+dialog {
+  width: min(460px, calc(100vw - 24px)); max-height: 80vh; padding: 0; border: 1px solid var(--line); border-radius: 16px;
+  background: var(--bg); color: var(--text); box-shadow: 0 20px 50px rgb(0 0 0 / 0.4);
+}
+dialog::backdrop { background: rgb(0 0 0 / 0.4); }
+dialog .dialog-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+dialog .dialog-head h2 { flex: 1; margin: 0; font-size: 1.0625rem; font-weight: 600; font: -apple-system-headline; }
+dialog .dialog-body { padding: 8px 0 16px; overflow-y: auto; max-height: calc(80vh - 56px); }
+dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
+
+/* Settings */
+.settings { padding: 0 12px 24px; }
+.settings h2 { font-size: 0.8125rem; font: -apple-system-footnote; font-weight: 600; color: var(--secondary); margin: 18px 6px 6px; text-transform: uppercase; }
+.settings .group { background: var(--card); border-radius: 12px; overflow: hidden; }
+.settings .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+.settings .item:last-child { border-bottom: 0; }
+.settings input[type="text"], .settings input[type="url"], .settings select {
+  font-size: 1.0625rem; font: -apple-system-body; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; max-width: 60%;
+}
+.settings .footnote { font-size: 0.8125rem; font: -apple-system-footnote; color: var(--secondary); margin: 6px 6px 0; }
+.switch { appearance: none; width: 46px; height: 28px; border-radius: 999px; background: var(--raised); position: relative; cursor: pointer; flex: none; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
+.switch:checked { background: var(--accent); }
+.switch:checked::after { transform: translateX(18px); }
+
+/* vi keys: the current row, the key list (?), and the toast with Undo. */
+.row.kbd-current { outline: 2px solid var(--accent); outline-offset: -2px; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30;
+  display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px);
+  background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 10px 16px;
+  font-size: 0.875rem; font: -apple-system-subheadline; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.toast > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast-action { border: 0; background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; padding: 4px 6px; flex: none; }
+.kbd-help {
+  position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 30; width: min(22rem, calc(100vw - 40px));
+  background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px 14px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.kbd-help h2 { margin: 0 0 8px; font-size: 0.9375rem; font: -apple-system-subheadline; font-weight: 600; color: var(--secondary); }
+.kbd-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 0.8125rem; font: -apple-system-footnote; }
+.kbd-help dt, .kbd-help dd { margin: 0; }
+.kbd-help dd { color: var(--secondary); }
+.kbd-help kbd {
+  font: 0.85em ui-monospace, SFMono-Regular, monospace; padding: 1px 6px; border-radius: 5px;
+  border: 1px solid var(--line); background: var(--raised); color: var(--text);
+}
+
+/* Search within a label's or collection's list. */
+.list-search {
+  width: 100%; font-size: 1rem; font: -apple-system-body; color: var(--text); background: var(--card);
+  border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px;
+}
+
+/* ROOM ICONS (scripts/room-icons.py from assets/rooms/; don't edit by hand) */
+.room-icon[data-room="shiori"] { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+CjwhLS0gU2hpb3JpICjmoJ4pOiBhIGJvb2ttYXJrIHJpYmJvbiB1bmRlciBhIGxlbnMgdGhhdCBlbmxhcmdlcyBpdC4gU1ZHIHR3aW4gb2Ygc2NyaXB0cy9nZW5lcmF0ZS1zaGlvcmktaWNvbnMucHkgKE5pZ2h0KS4gLS0+CjxkZWZzPjxjbGlwUGF0aCBpZD0ibGVucyI+PGNpcmNsZSBjeD0iMjcxLjQiIGN5PSIyOTcuMCIgcj0iOTIuMiIvPjwvY2xpcFBhdGg+PC9kZWZzPgo8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzFhMWIyNiIvPgo8cG9seWdvbiBwb2ludHM9IjExMi42LDAuMCAyNjYuMiwwLjAgMjY2LjIsMzY4LjYgMTg5LjQsMzAyLjEgMTEyLjYsMzY4LjYiIGZpbGw9IiM3YWEyZjciLz4KPGcgY2xpcC1wYXRoPSJ1cmwoI2xlbnMpIj4KPHJlY3QgeD0iMTc5LjIiIHk9IjIwNC44IiB3aWR0aD0iMTg0LjMiIGhlaWdodD0iMTg0LjMiIGZpbGw9IiMxYTFiMjYiLz4KPHBvbHlnb24gcG9pbnRzPSIxMTIuNiwwLjAgMjY2LjIsMC4wIDI2Ni4yLDM2OC42IDE4OS40LDMwMi4xIDExMi42LDM2OC42IiBmaWxsPSIjN2FhMmY3IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyNzEuNCAyOTcuMCkgc2NhbGUoMS40KSB0cmFuc2xhdGUoLTI3MS40IC0yOTcuMCkiLz4KPGNpcmNsZSBjeD0iMjcxLjQiIGN5PSIyOTcuMCIgcj0iOTIuMiIgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuMTEiLz4KPC9nPgo8bGluZSB4MT0iMzM2LjUiIHkxPSIzNjIuMSIgeDI9IjM5OC4xIiB5Mj0iNDIzLjciIHN0cm9rZT0iI2UwYWY2OCIgc3Ryb2tlLXdpZHRoPSIzOC40IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPGNpcmNsZSBjeD0iMjcxLjQiIGN5PSIyOTcuMCIgcj0iNzkuNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTBhZjY4IiBzdHJva2Utd2lkdGg9IjI1LjYiLz4KPHBhdGggZD0iTTIxOC40IDI3Ny43IEE1Ni4zIDU2LjMgMCAwIDEgMjYxLjYgMjQxLjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9Ii41OSIgc3Ryb2tlLXdpZHRoPSIxMS4zIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+Cg=="); }
+.room-icon[data-room="konbini"] { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTEyIiBmaWxsPSIjMWExYjI2Ii8+CjxyZWN0IHg9Ijg4IiB5PSI4NCIgd2lkdGg9IjMzNiIgaGVpZ2h0PSI0NCIgcng9IjE0IiBmaWxsPSIjN2FhMmY3Ii8+CjxyZWN0IHg9IjIwMCIgeT0iODQiIHdpZHRoPSIxMTIiIGhlaWdodD0iNDQiIGZpbGw9IiNmZjllNjQiLz4KPHJlY3QgeD0iMzEyIiB5PSI4NCIgd2lkdGg9IjExMiIgaGVpZ2h0PSI0NCIgcng9IjE0IiBmaWxsPSIjOWVjZTZhIi8+CjxyZWN0IHg9IjMxMiIgeT0iODQiIHdpZHRoPSIyMCIgaGVpZ2h0PSI0NCIgZmlsbD0iIzllY2U2YSIvPgo8cmVjdCB4PSI4OCIgeT0iMTYwIiB3aWR0aD0iOTYiIGhlaWdodD0iMjU2IiByeD0iMjIiIGZpbGw9IiMyOTJlNDIiLz4KPHJlY3QgeD0iMjA4IiB5PSIxNjAiIHdpZHRoPSI5NiIgaGVpZ2h0PSIyNTYiIHJ4PSIyMiIgZmlsbD0iIzI5MmU0MiIvPgo8cmVjdCB4PSIzMjgiIHk9IjE2MCIgd2lkdGg9Ijk2IiBoZWlnaHQ9IjI1NiIgcng9IjIyIiBmaWxsPSIjMjkyZTQyIi8+CjxyZWN0IHg9IjEwNCIgeT0iMTgwIiB3aWR0aD0iNjQiIGhlaWdodD0iNDQiIHJ4PSIxMiIgZmlsbD0iIzdhYTJmNyIvPgo8cmVjdCB4PSIxMDQiIHk9IjIzOCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjQ0IiByeD0iMTIiIGZpbGw9IiM3YWEyZjciIG9wYWNpdHk9Ii41NSIvPgo8cmVjdCB4PSIyMjQiIHk9IjE4MCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjQ0IiByeD0iMTIiIGZpbGw9IiNmZjllNjQiLz4KPHJlY3QgeD0iMjI0IiB5PSIyMzgiIHdpZHRoPSI2NCIgaGVpZ2h0PSI0NCIgcng9IjEyIiBmaWxsPSIjZmY5ZTY0IiBvcGFjaXR5PSIuNTUiLz4KPHJlY3QgeD0iMjI0IiB5PSIyOTYiIHdpZHRoPSI2NCIgaGVpZ2h0PSI0NCIgcng9IjEyIiBmaWxsPSIjZmY5ZTY0IiBvcGFjaXR5PSIuMyIvPgo8cmVjdCB4PSIzNDQiIHk9IjE4MCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjQ0IiByeD0iMTIiIGZpbGw9IiM5ZWNlNmEiLz4KPC9zdmc+Cg=="); }
+.room-icon[data-room="niwa"] { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTEyIiBmaWxsPSIjMWExYjI2Ii8+CjxwYXRoIGQ9Ik0yNTYgNDIwIEwyNTYgMjUwIiBzdHJva2U9IiM5ZWNlNmEiIHN0cm9rZS13aWR0aD0iMjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSIvPgo8cGF0aCBkPSJNMjU2IDMwMCBDIDI1NiAyMjAsIDIwMCAxNzAsIDEyMCAxNzYgQyAxMTggMjYwLCAxNzYgMzA2LCAyNTYgMzAwIFoiIGZpbGw9IiM5ZWNlNmEiLz4KPHBhdGggZD0iTTI1NiAyNTAgQyAyNTYgMTcwLCAzMTIgMTIwLCAzOTIgMTI2IEMgMzk0IDIxMCwgMzM2IDI1NiwgMjU2IDI1MCBaIiBmaWxsPSIjNzNkYWNhIi8+CjxwYXRoIGQ9Ik0xNTAgNDIwIEwzNjIgNDIwIiBzdHJva2U9IiM1NjVmODkiIHN0cm9rZS13aWR0aD0iMjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K"); }
+.room-icon[data-room="kura"] { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTEyIiBmaWxsPSIjMWExYjI2Ii8+CjxyZWN0IHg9IjE0NCIgeT0iMTIwIiB3aWR0aD0iMjI0IiBoZWlnaHQ9IjMwMCIgcng9IjIyIiBmaWxsPSIjMjkyZTQyIi8+CjxyZWN0IHg9IjE0NCIgeT0iMjYyIiB3aWR0aD0iMjI0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWExYjI2Ii8+CjxnPgo8cmVjdCB4PSIxNjQiIHk9IjE0NiIgd2lkdGg9IjM2IiBoZWlnaHQ9IjEwOCIgcng9IjEwIiBmaWxsPSIjN2FhMmY3Ii8+PHJlY3QgeD0iMjA4IiB5PSIxNjYiIHdpZHRoPSIzMiIgaGVpZ2h0PSI4OCIgcng9IjEwIiBmaWxsPSIjN2FhMmY3IiBvcGFjaXR5PSIuNTUiLz48cmVjdCB4PSIyNDgiIHk9IjE0MCIgd2lkdGg9IjM4IiBoZWlnaHQ9IjExNCIgcng9IjEwIiBmaWxsPSIjZmY5ZTY0Ii8+PHJlY3QgeD0iMjk0IiB5PSIxNjAiIHdpZHRoPSIzNCIgaGVpZ2h0PSI5NCIgcng9IjEwIiBmaWxsPSIjOWVjZTZhIi8+CjxyZWN0IHg9IjE2NCIgeT0iMjk2IiB3aWR0aD0iMzQiIGhlaWdodD0iMTA4IiByeD0iMTAiIGZpbGw9IiM5ZWNlNmEiIG9wYWNpdHk9Ii41NSIvPjxyZWN0IHg9IjIwNiIgeT0iMjgwIiB3aWR0aD0iMzgiIGhlaWdodD0iMTI0IiByeD0iMTAiIGZpbGw9IiM3YWEyZjciLz48cmVjdCB4PSIyNTIiIHk9IjMwMCIgd2lkdGg9IjMyIiBoZWlnaHQ9IjEwNCIgcng9IjEwIiBmaWxsPSIjZmY5ZTY0IiBvcGFjaXR5PSIuNTUiLz48cmVjdCB4PSIyOTIiIHk9IjI4NiIgd2lkdGg9IjM2IiBoZWlnaHQ9IjExOCIgcng9IjEwIiBmaWxsPSIjOWVjZTZhIi8+CjwvZz4KPHBhdGggZD0iTTEzNiAxMjggTDkyIDExMCBRODQgMTA3IDg0IDExNiBMODQgNDEyIFE4NCA0MjEgOTIgNDE5IEwxMzYgNDA4IFoiIGZpbGw9IiM0MTQ4NjgiLz4KPHBhdGggZD0iTTM3NiAxMjggTDQyMCAxMTAgUTQyOCAxMDcgNDI4IDExNiBMNDI4IDQxMiBRNDI4IDQyMSA0MjAgNDE5IEwzNzYgNDA4IFoiIGZpbGw9IiM0MTQ4NjgiLz4KPHBhdGggZD0iTTEwNCA0MzYgTDQwOCA0MzYiIHN0cm9rZT0iIzU2NWY4OSIgc3Ryb2tlLXdpZHRoPSIyMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo="); }
+.room-icon[data-room="hister"] { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2FhMmY3IiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI1IiB5PSIzIiB3aWR0aD0iMTQiIGhlaWdodD0iMTgiIHJ4PSIyIi8+PHBhdGggZD0iTTggOGg4TTggMTJoOE04IDE2aDUiLz48L3N2Zz4K"); }
+.room-icon[data-room="searxng"] { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2FhMmY3IiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI5Ii8+PHBhdGggZD0iTTMgMTJoMThNMTIgM2MzIDMgMyAxNSAwIDE4TTEyIDNjLTMgMy0zIDE1IDAgMTgiLz48L3N2Zz4K"); }
+/* END ROOM ICONS */

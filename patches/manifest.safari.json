@@ -1,0 +1,63 @@
+{
+  "$comment": "Safari-only overrides merged over vendor/hister/webui/ext/dist/manifest.json by scripts/patch-manifest.mjs. Keys starting with $ are dropped, null deletes a key, objects merge recursively, arrays and scalars replace whole.",
+  "key": null,
+  "name": "Shiori",
+  "description": "Sends the pages you visit to your own Hister server.",
+  "$comment_permissions": "Upstream also asks for 'cookies', which only serves 'Authenticate with Browser Session'. Shiori talks to a token-less server gated by the network, so it is dropped. nativeMessaging reads the app's combined-search setting. scripts/build-extension.sh fails if upstream adds a permission this list does not account for.",
+  "permissions": ["tabs", "storage", "nativeMessaging"],
+  "$comment_content_scripts": "Upstream's content script (build-extension.sh checks it is unchanged), plus Shiori's combined-search redirect on duckduckgo.com.",
+  "content_scripts": [
+    { "js": ["content.js"], "matches": ["<all_urls>"] },
+    {
+      "js": ["search-core.js", "shiori-redirect.js"],
+      "matches": ["https://duckduckgo.com/*", "https://www.duckduckgo.com/*"],
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "64": "assets/icons/icon-64.png",
+    "96": "assets/icons/icon-96.png",
+    "128": "assets/icons/icon-128.png",
+    "256": "assets/icons/icon-256.png",
+    "512": "assets/icons/icon-512.png"
+  },
+  "$comment_options": "Shiori's settings page in place of upstream's (server, token, headers, browser-session sign-in: the app sets the server, and the rest has no use here).",
+  "options_page": "shiori-options.html",
+  "action": {
+    "default_title": "Shiori",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "64": "assets/icons/icon-64.png",
+      "128": "assets/icons/icon-128.png"
+    }
+  },
+  "$comment_commands": "Safari does apply suggested_key (it showed upstream's as ⇧⌘I/B/Y, and ⇧⌘Y is macOS's New Sticky Note). So all of Shiori's are Control-Shift, which Safari and macOS leave free; the user can change them in Safari → Settings → Extensions. _execute_action is the toolbar button's menu, with no default key: more than four suggested shortcuts and Safari drops the background silently (it broke Safari's search; build-extension.sh checks). iOS has none.",
+  "commands": {
+    "_execute_action": {
+      "description": "Open the Shiori menu"
+    },
+    "index-current-page": {
+      "suggested_key": { "default": "Ctrl+Shift+S", "mac": "MacCtrl+Shift+S" },
+      "description": "Save this page to Hister"
+    },
+    "disable-indexing-current-page": {
+      "suggested_key": { "default": "Ctrl+Shift+P", "mac": "MacCtrl+Shift+P" },
+      "description": "Never save this page"
+    },
+    "disable-indexing-current-domain": {
+      "suggested_key": { "default": "Ctrl+Shift+D", "mac": "MacCtrl+Shift+D" },
+      "description": "Never save this site"
+    },
+    "open-shiori-search": {
+      "suggested_key": { "default": "Ctrl+Shift+F", "mac": "MacCtrl+Shift+F" },
+      "description": "Open Shiori Search"
+    }
+  },
+  "$comment_war": "Upstream exposes assets/* to no page (empty matches), which Safari rejects. Nothing in the content script loads extension files, so drop the key rather than widen it: exposing assets to every page lets any site detect the extension.",
+  "web_accessible_resources": null
+}

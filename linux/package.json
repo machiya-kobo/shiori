@@ -1,0 +1,6 @@
+{
+  "name": "shiori-linux",
+  "private": true,
+  "type": "module",
+  "description": "Shiori for Linux (GJS). Its pure modules run under Node for tests: node --test scripts/"
+}

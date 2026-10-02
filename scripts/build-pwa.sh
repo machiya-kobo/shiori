@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Builds Shiori as a web app (an installable PWA): web/app/, plus the
+# search page's theme tokens and search-core.js, which it shares.
+#
+#   scripts/build-pwa.sh OUT_DIR [STATUS_URL]
+#
+# STATUS_URL, optional, is your server's status page (linked in the
+# sidebar and Settings); the server passes it in, as it does for the
+# search page.
+#
+# OUT_DIR/index.html is the app, OUT_DIR/manifest.webmanifest and sw.js sit
+# at the root (a service worker only covers its own directory and below),
+# and everything else is under OUT_DIR/_shiori/. The host routes as
+# web/README.md says, the same as the search page's host.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+out=${1:?usage: build-pwa.sh OUT_DIR [STATUS_URL]}
+status=${2:-}
+
+rm -rf -- "$out"
+mkdir -p -- "$out/_shiori"
+cp -- web/app/index.html web/app/manifest.webmanifest "$out/"
+cp -- web/app/app.js web/app/api.js web/app/app.css patches/shiori/search-core.js "$out/_shiori/"
+# The neighbours' icons (Hister, SearXNG): neutral glyphs unless the build
+# names a folder holding their own logos (hister.png, searxng.svg) in
+# SHIORI_ROOM_LOGOS. The repository carries no other project's logo.
+if [ -n "${SHIORI_ROOM_LOGOS:-}" ]; then
+  python3 scripts/room-icons.py --logos "$SHIORI_ROOM_LOGOS" "$out/_shiori/app.css" >/dev/null
+fi
+# The rounded web icons and the maskable one (scripts/generate-shiori-icons.py);
+# the apple-touch icon stays square, since iOS rounds it itself.
+cp -- assets/icon-32.png assets/icon-256.png assets/web-icon-64.png assets/web-icon-192.png assets/web-icon-512.png assets/web-maskable-512.png "$out/_shiori/"
+
+# The colours: search.css's tokens (its :root blocks, up to the first rule
+# that isn't one), so the app and the search page never drift apart.
+awk '/^\* \{ box-sizing/ { exit } { print }' patches/shiori/search.css >"$out/_shiori/theme.css"
+grep -q -- '--accent' "$out/_shiori/theme.css" || { echo "build-pwa: no theme tokens found in search.css" >&2; exit 1; }
+
+# A new cache name per build, so an installed app picks up the new files,
+# and each file's address carries the build (they're cached for minutes).
+version=$(git rev-parse --short HEAD 2>/dev/null || date +%s)
+stamp() { sed -i.bak -E "s#(/_shiori/(app|api|search-core)\.js|/_shiori/(app|theme)\.css)([\"'])#\1?v=$version\4#g" "$1" && rm -f -- "$1.bak"; }
+sed "s/__VERSION__/$version/" web/app/sw.js >"$out/sw.js"
+python3 scripts/status-link.py "$out/index.html" "$status"
+# The Machiya rooms for the switcher: SHIORI_ROOMS (and the notes' homes
+# above) from the environment, as the server passes them.
+python3 scripts/rooms-stamp.py "$out/_shiori/app.js"
+set -- "$out/_shiori/app.js"
+# The notes' homes (Kura, Konbini) and the Obsidian vault's name, from the environment as for the
+# extension (the server passes them in); unset leaves them for Settings.
+python3 - "$@" <<'PY'
+import os, sys
+for path in sys.argv[1:]:
+    with open(path) as f:
+        text = f.read()
+    for placeholder, name in (("__SHIORI_NIWA_URL__", "SHIORI_NIWA_URL"), ("__SHIORI_KONBINI_URL__", "SHIORI_KONBINI_URL"),
+                              ("__SHIORI_OBSIDIAN_VAULT__", "SHIORI_OBSIDIAN_VAULT"),
+                              ("__SHIORI_SOURCE_URL__", "SHIORI_SOURCE_URL")):
+        value = os.environ.get(name, "")
+        if value:
+            text = text.replace(placeholder, value)
+    with open(path, "w") as f:
+        f.write(text)
+PY
+stamp "$out/index.html"
+stamp "$out/sw.js"
+sed -i.bak "s#from './api.js'#from './api.js?v=$version'#" "$out/_shiori/app.js" && rm -f -- "$out/_shiori/app.js.bak"
+
+echo "==> Web app in $out ($version)"
