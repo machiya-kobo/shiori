@@ -18,6 +18,7 @@ export WORK="${WORK:-$(mktemp -d)}" EXT="$WORK/ext" PROBE="$HERE/container-probe
 echo "==> Work dir: $WORK"
 
 version="$("$FIREFOX" --version | sed -n 's/.* \([0-9][0-9]*\)\..*/\1/p')"
+export FIREFOX_MAJOR="$version"
 floor=140.0
 if [[ -n "$version" && "$version" -lt 140 ]]; then
     floor="$version.0"

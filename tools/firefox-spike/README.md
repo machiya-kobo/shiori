@@ -41,7 +41,10 @@ server's address (the build and install scripts restage it). Ports 8775
   content script never loads: "IPDL protocol Error: Received an invalid file
   descriptor", then "Unable to load script: …/content.js". Plain upstream
   fails the same way there. `run.mjs` installs the folder through
-  geckodriver's `path`.
+  geckodriver's `path`. Seen on Firefox 136 and ESR 140, not on ESR 153.
+- **Firefox 140 and later** refuse the chrome context (and 153 refuses
+  opening `moz-extension://` pages) unless geckodriver runs with
+  `--allow-system-access`; `run.mjs` adds it from 140.
 - **Offline means stopped.** A fake that drops the socket mid-request makes
   Firefox retry idempotent GETs dozens of times on its own.
 - An older Firefox than the floor (140) still runs: `run.sh` lowers the

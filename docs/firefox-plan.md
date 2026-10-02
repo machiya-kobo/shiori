@@ -149,9 +149,9 @@ Firefox CSP (`script-src 'self'`).
 its manifest loadable in Firefox and nothing more, and drives headless
 Firefox through geckodriver against a fake Hister.
 
-It ran on Firefox 136, the newest reachable from the build container
-(Mozilla's servers were blocked), with the floor lowered to match. Rerun
-it on the real floor before phase 2 ships.
+It passes in full on **Firefox ESR 140.17 and ESR 153.4**, the two ESR
+branches current at the time, and on Ubuntu's Firefox 136 with the floor
+lowered.
 
 **Works unchanged.** The Safari shims need no Firefox changes:
 
@@ -189,10 +189,11 @@ it on the real floor before phase 2 ships.
      readable with `tabs`.
    - Only opening a tab in a container needs `cookies`, and Shiori never
      does that.
-   - But installing `contextualIdentities` silently switches Firefox's
-     containers on (`privacy.userContext.enabled` false → true). So it is
-     an optional permission, requested when the user turns on container
-     rules (feature E).
+   - On Firefox 140 (and 136), installing `contextualIdentities` silently
+     switches Firefox's containers on (`privacy.userContext.enabled` false
+     → true). On 153 they were already on before the install. So with a
+     floor below 153 it is an optional permission, requested when the user
+     turns on container rules (feature E).
 5. **`web-ext lint`** returns 0 errors and 6 warnings:
    - the two floor warnings above;
    - `UNSAFE_VAR_ASSIGNMENT` in upstream's `shared.js` (×3);
@@ -209,13 +210,17 @@ it on the real floor before phase 2 ships.
 - the DuckDuckGo hand-off (needs duckduckgo.com);
 - Android;
 - the forks;
-- a signed `.xpi` install.
+- a signed `.xpi` install, on 140 especially: in this container a
+  zipped install's content script fails to load on 136 and 140 but works on
+  153 (see the harness traps).
 
 **Harness traps** (in its README):
 
 - In some containers, a zipped temporary add-on's content script never
   loads, upstream's too ("invalid file descriptor"), so it installs
-  unpacked.
+  unpacked. Seen here on 136 and 140, not on 153.
+- Firefox 140 and later need geckodriver's `--allow-system-access` for the
+  chrome context (and 153 for opening `moz-extension://` pages).
 - A fake server that drops sockets makes Firefox retry GETs on its own.
 
 ### 1. Split the shims (no Safari behaviour change)

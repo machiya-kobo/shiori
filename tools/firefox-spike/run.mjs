@@ -2,9 +2,9 @@
 // Firefox, against fake-hister.py. One line per check; exits 1 if any fails.
 // Started by run.sh, which builds the bundle and serves the pages.
 //
-// Environment: FIREFOX (binary), GECKODRIVER (default: on PATH), EXT (the
-// Firefox bundle), PROBE (container-probe/), WORK (logs), HISTER_PORT,
-// PAGES_PORT.
+// Environment: FIREFOX (binary), FIREFOX_MAJOR (its version), GECKODRIVER
+// (default: on PATH), EXT (the Firefox bundle), PROBE (container-probe/),
+// WORK (logs), HISTER_PORT, PAGES_PORT.
 //
 // Extensions are installed unpacked (geckodriver's `path`), not as a zip:
 // in some containers Firefox can't hand a zipped add-on's content script
@@ -84,6 +84,9 @@ async function browser(prefs = {}) {
   for (const [k, v] of Object.entries(prefs)) opts.setPreference(k, v);
   const out = fs.openSync(path.join(WORK, 'firefox.log'), 'a');
   const service = new firefox.ServiceBuilder(GECKODRIVER).setStdio(['ignore', out, out]);
+  // Firefox 140 and later refuse the chrome context (and 153 navigating
+  // WebDriver to moz-extension:// pages) unless geckodriver passes this on.
+  if (Number(env('FIREFOX_MAJOR', '0')) >= 140) service.addArguments('--allow-system-access');
   return new Builder().forBrowser('firefox').setFirefoxOptions(opts).setFirefoxService(service).build();
 }
 const install = (driver, dir) =>
