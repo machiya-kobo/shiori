@@ -24,6 +24,10 @@
   // browser's own choice wins.
   const NOTE_HOMES = { niwaURL: '__SHIORI_NIWA_URL__', konbiniURL: '__SHIORI_KONBINI_URL__' };
   const RECENT_LIMIT = 5;
+  // The companion AI service (/shiori/ai/*), only when the build says it's
+  // there (SHIORI_AI=1): without it the page never asks, so a host without
+  // one logs no 404s.
+  const AI_BUILD = '__SHIORI_AI__';
 
   function load() {
     try {
@@ -44,7 +48,7 @@
   function withAddresses(settings) {
     const homes = {};
     for (const [key, value] of Object.entries(NOTE_HOMES)) if (!value.startsWith('__')) homes[key] = value;
-    return { ...homes, ...(settings || {}), searxngURL: ROOT + 'searx/', konbiniAPIURL: ROOT + 'konbini/', aiURL: ROOT + 'shiori/ai/', kuraAPIURL: ROOT + 'kura/', smallwebAPIURL: ROOT + 'smallweb/' };
+    return { ...homes, ...(settings || {}), searxngURL: ROOT + 'searx/', konbiniAPIURL: ROOT + 'konbini/', aiURL: AI_BUILD === '1' ? ROOT + 'shiori/ai/' : '', kuraAPIURL: ROOT + 'kura/', smallwebAPIURL: ROOT + 'smallweb/' };
   }
 
   const storage = {

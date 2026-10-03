@@ -66,8 +66,9 @@ says so ("Summarized by Claude").
   most, never in Hister (its metadata is last-writer-wins).
 - **On the web** the hosted pages can use a companion service on the
   Hister host (`/shiori/ai/*`, same origin only). It is not part of this
-  repository; without it the pages simply don't offer Summarize or AI
-  Answer. Its contract, for anyone who builds one: `GET /shiori/ai/status`
+  repository; the pages ask for it only when built with `SHIORI_AI=1`
+  (web/README.md), and without it they simply don't offer Summarize or AI
+  Answer (nor log a 404 for its status). Its contract, for anyone who builds one: `GET /shiori/ai/status`
   → `{enabled, answer, engine, model, remaining}`; `POST
   /shiori/ai/summarize {url, refresh}` → `{summary, engine, model,
   partial, cached, updated}` (web pages only, never notes); `POST

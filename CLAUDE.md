@@ -20,7 +20,8 @@ holds the rules and the traps the code can't tell you.
 - **No new network endpoints** without discussion. Shiori talks to the
   configured Hister server (and on its host the optional companion
   services, not in this repository: the feed service `/shiori/feed` and the
-  AI endpoint `/shiori/ai/*`, hosted pages only), Kura (notes), the
+  AI endpoint `/shiori/ai/*`, hosted pages only, and only in a build with
+  `SHIORI_AI=1`), Kura (notes), the
   small-web gateway, SearXNG, the visited site's favicon and PDFs (upstream
   behaviour). With Machiya's identity file, Kura's `POST /api/pair`
   (pairing a device) and, from the web app, Kura's `/api/prefs` (theme and
@@ -108,7 +109,9 @@ holds the rules and the traps the code can't tell you.
   outside the repository holding `hister.png` and `searxng.svg`) swaps the
   neutral Hister/SearXNG glyphs for their logos; the repository carries no
   other project's logo.
-- The web builds take the same names from their environment.
+- The web builds take the same names from their environment, plus
+  `SHIORI_AI=1` (the host has the AI companion; else no `/shiori/ai/`
+  request at all).
 
 ## The Safari extension
 

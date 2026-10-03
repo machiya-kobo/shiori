@@ -31,7 +31,7 @@ origin):
 | `/konbini/*` | Konbini, `/konbini` removed (only `api/cards`) |
 | `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/api/prefs`, `/kura/feed.xml` | Kura, `/kura` removed: your notes, and (signed in) your theme and text size. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
 | `/smallweb/*` | the small-web gateway, `/smallweb` removed (`api/search`, `api/save`): Gemini and Gopher, and the web app's Add Page (any http(s), gemini or gopher page; its `SMALLWEB_ORIGINS` must include this host's origin) |
-| anything else | the Hister host as it is: Hister's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (companion services, not part of this repository: README) |
+| anything else | the Hister host as it is: Hister's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (companion services, not part of this repository: README; the pages ask for `/shiori/ai/*` only when built with `SHIORI_AI=1`) |
 
 Pass requests through **unchanged**. Do not add `Origin: hister://`: Hister
 lets a same-origin browser write (`Sec-Fetch-Site: same-origin`) and
@@ -109,6 +109,10 @@ is dropped at once, so a reload never shares again. Without
   - `SHIORI_SOURCE_URL`: where your build's source is, linked in About
     (AGPL-3.0 section 13: if you change Shiori and serve it to others, they
     get its source). A plain http(s) address; anything else shows nothing.
+  - `SHIORI_AI=1`: the host has the AI companion service (`/shiori/ai/*`,
+    docs/ai.md), so the pages ask its status and offer Summarize and AI
+    Answer when it says it's on. Unset (or anything but `1`), they never
+    request `/shiori/ai/` and show no AI.
 - Recent searches and the page's back/forward cache: this browser's
   localStorage.
 - No extension means no DuckDuckGo hand-off: it's opened directly

@@ -15,7 +15,8 @@ Routes (the same as web/README.md asks of the real host):
   anything else        the Hister host (Hister's API, /shiori/feed,
                        /shiori/ai/*)
 
-AI_STUB=1 answers /shiori/ai/* here instead, with a canned summary or
+AI_STUB=1 answers /shiori/ai/* here instead (for a build made with
+SHIORI_AI=1: without it the pages never ask), with a canned summary or
 answer (a URL or query containing "fail-<code>", e.g. fail-cap, answers
 that error), since the real endpoint refuses a localhost origin.
 

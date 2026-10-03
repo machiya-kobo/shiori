@@ -1262,7 +1262,10 @@ async function markSaved(list, urls) {
 
 let aiOn = false;
 let aiAnswers = false;
-api.aiStatus().then((status) => {
+// Only a build with the companion service (SHIORI_AI=1) asks for it: without
+// it every /shiori/ai/ request would be a 404 in the console.
+const AI_BUILT = fromBuild('__SHIORI_AI__') === '1';
+(AI_BUILT ? api.aiStatus() : Promise.resolve(null)).then((status) => {
   aiOn = !!(status && status.enabled);
   aiAnswers = aiOn && !!status.answer;
   if (aiOn && selected) showPreview(selected);

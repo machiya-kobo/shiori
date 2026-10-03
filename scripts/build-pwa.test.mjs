@@ -1,7 +1,9 @@
 // Tests for the web app's manifest and head (web/app/) and its build
-// (scripts/build-pwa.sh). Run: node --test scripts/*.test.mjs
+// (scripts/build-pwa.sh), and the build setting both web builds share
+// (SHIORI_AI). Run: node --test scripts/*.test.mjs
 
 import { execFileSync } from 'node:child_process';
+import vm from 'node:vm';
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -69,6 +71,71 @@ test("the service worker's cache name is a hash of the built files: other settin
   } finally {
     for (const out of outs) rmSync(out, { recursive: true, force: true });
   }
+});
+
+// --- SHIORI_AI: the companion AI service (/shiori/ai/*), only when the build says so ---
+
+function buildWeb(env = {}) {
+  const out = mkdtempSync(join(tmpdir(), 'shiori-web-'));
+  execFileSync('bash', ['scripts/build-web.sh', out, 'https://shiori.example/'], { cwd: repo, env: { ...process.env, SHIORI_ROOM_LOGOS: '', SHIORI_AI: '', ...env }, stdio: 'pipe' });
+  return out;
+}
+
+/** The hosted search page's settings, as its built shim hands them over. */
+async function shimSettings(out) {
+  const window = {};
+  vm.runInNewContext(read(join(out, '_shiori', 'web-shim.js')), {
+    window,
+    location: { origin: 'https://shiori.example', hostname: 'shiori.example' },
+    document: { cookie: '' },
+    localStorage: { getItem: () => null, setItem: () => {} },
+  });
+  return (await window.chrome.storage.local.get(['shioriSettings'])).shioriSettings;
+}
+
+test('the search page asks for /shiori/ai/ only when built with SHIORI_AI=1', async () => {
+  const off = buildWeb();
+  const on = buildWeb({ SHIORI_AI: '1' });
+  const other = buildWeb({ SHIORI_AI: 'yes' });
+  try {
+    assert.equal((await shimSettings(off)).aiURL, '', 'unset: no AI address');
+    assert.equal((await shimSettings(other)).aiURL, '', 'only "1" turns it on');
+    assert.equal((await shimSettings(on)).aiURL, 'https://shiori.example/shiori/ai/');
+  } finally {
+    for (const out of [off, on, other]) rmSync(out, { recursive: true, force: true });
+  }
+  // The page reaches the service only through aiBase (settings.aiURL), and
+  // never without one: no status request, no Summarize, no AI Answer.
+  const page = read('../patches/shiori/search.js');
+  assert.doesNotMatch(page, /['"`]\/?shiori\/ai/, 'no address of its own (comments aside)');
+  assert.match(page, /const aiBase = withSlash\(settings\.aiURL \|\| ''\);/);
+  assert.match(page, /const aiStatus = aiBase \? fetchJSON\(`\$\{aiBase\}status`/);
+  assert.equal(page.match(/\$\{aiBase\}/g).length, 2, 'status, and aiPost');
+  assert.match(page, /aiBase && S\.summarizable\(/);
+  assert.match(page, /if \(!aiBase \|\| category !== 'general'/);
+});
+
+test('the web app asks for /shiori/ai/ only when built with SHIORI_AI=1', () => {
+  const off = build();
+  const on = build({ SHIORI_AI: '1' });
+  try {
+    const flag = (out) => read(join(out, '_shiori', 'app.js')).match(/const AI_BUILT = fromBuild\('([^']*)'\) === '1';/)[1];
+    assert.equal(flag(off), '__SHIORI_AI__', 'unset: the placeholder, which reads as empty');
+    assert.equal(flag(on), '1');
+  } finally {
+    for (const out of [off, on]) rmSync(out, { recursive: true, force: true });
+  }
+  // Every AI request goes through api.js's three calls, and the app makes
+  // them only behind the flag: the status first, the others only once it
+  // said the service is on.
+  const apiSource = read('../web/app/api.js');
+  assert.equal(apiSource.match(/shiori\/ai\//g).length, 3);
+  const app = read('../web/app/app.js');
+  assert.doesNotMatch(app, /['"`]\/?shiori\/ai/, 'no address of its own');
+  assert.deepEqual(app.match(/api\.(aiStatus|answer|summarize)\(/g), ['api.aiStatus(', 'api.answer(', 'api.summarize(']);
+  assert.match(app, /\(AI_BUILT \? api\.aiStatus\(\) : Promise\.resolve\(null\)\)\.then\(\(status\) => \{\s*aiOn = !!\(status && status\.enabled\);\s*aiAnswers = aiOn && !!status\.answer;/);
+  assert.match(app, /if \(!aiAnswers \|\| !settings\.webResults/, 'the answer only when the status said so');
+  assert.match(app, /const canSummarize = \(doc, n\) => aiOn && /, 'Summarize only when the status said so');
 });
 
 // --- Add Page and the share target: only with the small-web gateway ---

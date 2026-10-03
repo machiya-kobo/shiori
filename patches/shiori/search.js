@@ -152,7 +152,8 @@
   // Where the card list is fetched: Konbini itself, or (the web page,
   // which can't read another site's replies) a path on its own host.
   const konbiniAPIBase = withSlash(settings.konbiniAPIURL || '') || konbiniBase;
-  // The AI endpoint: set only on the hosted page (web/shim.js).
+  // The AI endpoint: set only on the hosted page (web/shim.js), and only
+  // when its build has one (SHIORI_AI=1).
   const aiBase = withSlash(settings.aiURL || '');
   // Notes come only from Kura:
   // its API on the page's own host for the hosted page (/kura/), else on
@@ -697,8 +698,8 @@
 
   // --- Summarize (docs/ai.md) ------------------------------------
   // The AI endpoint, on this page's own host: only the hosted
-  // page has one (web/shim.js sets aiURL), so the extension page never
-  // offers it. Web pages only, never notes (the server refuses them too).
+  // page has one (web/shim.js sets aiURL, when built with SHIORI_AI=1), so
+  // the extension page never offers it, nor a build without it. Web pages only, never notes (the server refuses them too).
   // The summary goes above the preview in the pane, or under its card
   // without one, as the apps' card sits above theirs: Copy, Regenerate, ×.
   /** The AI endpoint's status, once per page: null when there's none (or it's down). */

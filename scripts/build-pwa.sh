@@ -42,10 +42,10 @@ python3 scripts/status-link.py "$out/index.html" "$status"
 # above) from the environment, as the server passes them.
 python3 scripts/rooms-stamp.py "$out/_shiori/app.js"
 set -- "$out/_shiori/app.js"
-# The notes' homes (Kura, Konbini), the Obsidian vault's name and whether
-# there's a small-web gateway (SHIORI_SMALLWEB_URL: Add Page), from the
-# environment as for the extension (the server passes them in); unset
-# leaves them for Settings.
+# The notes' homes (Kura, Konbini), the Obsidian vault's name, whether the host has the
+# AI companion (SHIORI_AI=1) and whether there's a small-web gateway
+# (SHIORI_SMALLWEB_URL: Add Page), from the environment as for the extension
+# (the server passes them in); unset leaves them for Settings.
 python3 - "$@" <<'PY'
 import os, sys
 for path in sys.argv[1:]:
@@ -53,7 +53,8 @@ for path in sys.argv[1:]:
         text = f.read()
     for placeholder, name in (("__SHIORI_NIWA_URL__", "SHIORI_NIWA_URL"), ("__SHIORI_KONBINI_URL__", "SHIORI_KONBINI_URL"),
                               ("__SHIORI_OBSIDIAN_VAULT__", "SHIORI_OBSIDIAN_VAULT"),
-                              ("__SHIORI_SOURCE_URL__", "SHIORI_SOURCE_URL"), ("__SHIORI_SMALLWEB_URL__", "SHIORI_SMALLWEB_URL")):
+                              ("__SHIORI_SOURCE_URL__", "SHIORI_SOURCE_URL"), ("__SHIORI_AI__", "SHIORI_AI"),
+                              ("__SHIORI_SMALLWEB_URL__", "SHIORI_SMALLWEB_URL")):
         value = os.environ.get(name, "")
         if value:
             text = text.replace(placeholder, value)
