@@ -36,6 +36,9 @@ small-web gateway (TLGS, Kennedy and Veronica-2).
 - Remember What You Open records the canonical `gemini://` address.
 - `gemini://` and `gopher://` links are only handed to the system, never
   fetched by Shiori.
+- **The web app's Add Page and share target** save any http(s), gemini
+  or gopher page through the same `POST /api/save` (web/README.md); only
+  in a build with `SHIORI_SMALLWEB_URL`. Never a note.
 - Settings: `smallwebURL` (the build's `SHIORI_SMALLWEB_URL` by default),
   `smallWebTab`, `smallWebOpen`; the hosted pages use `/smallweb/` on their
   own host.

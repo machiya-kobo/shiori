@@ -355,7 +355,12 @@ holds the rules and the traps the code can't tell you.
 ## Small Web
 
 - Searched on submit only (the engines are volunteers'); one engine failing
-  is a line above the results. Where a result opens is a setting (the
+  is a line above the results.
+- The web app's Add Page and share target (`SHIORI_SMALLWEB_URL` builds
+  only) save through `POST /smallweb/api/save`, after `api.checkPageURL`
+  refuses any note (`/v/<vault>/` by `S.kuraPath`, and `isNoteDoc`). The
+  202 means queued: say "Saving…", never "Saved". A share never saves
+  without a tap on Save. Where a result opens is a setting (the
   gateway's page, or the `gemini://` link for an app such as Lagrange). A
   direct open asks the gateway to save it. `marks` are code-point offsets.
 

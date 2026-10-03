@@ -70,3 +70,44 @@ test("the service worker's cache name is a hash of the built files: other settin
     for (const out of outs) rmSync(out, { recursive: true, force: true });
   }
 });
+
+// --- Add Page and the share target: only with the small-web gateway ---
+
+test("the manifest's share target lands on the app's own page, as GET url, title and text", () => {
+  const manifest = JSON.parse(read('../web/app/manifest.webmanifest'));
+  assert.deepEqual(manifest.share_target, { action: '/', method: 'GET', params: { url: 'url', title: 'title', text: 'text' } });
+  assert.ok(manifest.share_target.action.startsWith(manifest.scope), 'inside the scope');
+  // From a cold start: the worker serves the app for / with any query.
+  const sw = read('../web/app/sw.js');
+  assert.match(sw, /const shell = url\.pathname === '\/' \|\|/);
+  assert.match(sw, /caches\.match\(url\.pathname === '\/' \? '\/' : event\.request\)/);
+  // The app reads the share once, drops the query, and opens the sheet;
+  // only its Save button sends.
+  const app = read('../web/app/app.js');
+  assert.match(app, /const shared = api\.sharedPage\(new URLSearchParams\(location\.search\)\);\s*if \(shared\) history\.replaceState\(null, '', '\/' \+ location\.hash\);/);
+  assert.match(app, /render\(\);\s*if \(shared\) addPage\(shared\);/);
+  assert.equal(app.match(/api\.savePage\(/g).length, 1);
+  assert.match(app, /form\.addEventListener\('submit', async \(event\) => \{[\s\S]*?api\.savePage\(/);
+});
+
+test('without SHIORI_SMALLWEB_URL the build offers no Add Page and no share target', () => {
+  const off = build();
+  const on = build({ SHIORI_SMALLWEB_URL: 'https://smallweb.example/' });
+  try {
+    const manifest = (out) => JSON.parse(read(join(out, 'manifest.webmanifest')));
+    assert.equal('share_target' in manifest(off), false);
+    assert.deepEqual(manifest(on).share_target, JSON.parse(read('../web/app/manifest.webmanifest')).share_target);
+    assert.deepEqual(manifest(off).shortcuts, manifest(on).shortcuts, 'the rest as it was');
+    const flag = (out) => read(join(out, '_shiori', 'app.js')).match(/const SMALLWEB = fromBuild\('([^']*)'\) !== '';/)[1];
+    assert.equal(flag(off), '__SHIORI_SMALLWEB_URL__', 'unset: reads as empty');
+    assert.equal(flag(on), 'https://smallweb.example/');
+  } finally {
+    for (const out of [off, on]) rmSync(out, { recursive: true, force: true });
+  }
+  // Every way in goes through SMALLWEB: the sheet, the sidebar's +, the tab.
+  const app = read('../web/app/app.js');
+  assert.match(app, /function addPage\(prefill = \{\}\) \{\s*if \(!SMALLWEB\) return;/);
+  assert.match(app, /const add = SMALLWEB \? h\('button', \{ type: 'button', class: 'sidebar-gear sidebar-add'/);
+  assert.match(app, /const add = SMALLWEB \? h\('button', \{ type: 'button', class: 'add-tab'/);
+  assert.equal(app.match(/addPage\(/g).length, 4, 'defined, the +, the tab, the share');
+});

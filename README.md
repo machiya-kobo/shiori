@@ -398,6 +398,8 @@ Then tell it where your servers are, in `~/.config/shiori/config.json`:
 
 Shiori's search page and the web app are plain static files that any browser can use and install. Build them with `scripts/build-web.sh` and `scripts/build-pwa.sh`, and serve them from one host that also routes, on the same origin, to your Hister server, SearXNG, and optionally Kura, Konbini, the small-web gateway and the AI endpoint. Pass requests through unchanged, keep the host reachable only by you (your network or VPN is the gate: Hister has no login), and set the build's environment for the options you use. [web/README.md](web/README.md) has the routing table and the variables.
 
+**Add Page and sharing to the web app.** Built with `SHIORI_SMALLWEB_URL` (the small-web gateway, routed at `/smallweb/`), the web app has **Add Page** (the + beside Library in the sidebar, or the Add Page tab on a phone): an address (http, https, gemini or gopher) and an optional title, sent to the gateway's `POST /api/save`, which fetches the page and saves it in Hister. Installed from a browser that supports it (Chrome or Edge, on Android or a computer), the app also appears in the system's share menu: sharing a link opens Add Page filled in, and nothing is saved until you tap Save. The gateway answers before it fetches, so the app says "Saving…", not "Saved". Kura's notes are never sent (notes live in Kura, and a private vault's `/v/<vault>/` address is refused in every form). The gateway must accept this host's origin: put the web app's address in its `SMALLWEB_ORIGINS`. Without the gateway there is no Add Page and no share target.
+
 ## Updating upstream
 
 ```bash

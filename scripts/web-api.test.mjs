@@ -23,9 +23,16 @@ const S = core.ShioriSearch;
 
 // The fake server: `vaults` is Kura's answer (null: Kura is down); every
 // request is recorded.
-const server = { vaults: null, calls: [] };
+const server = { vaults: null, calls: [], save: { status: 202 } };
 globalThis.fetch = async (url, init = {}) => {
   server.calls.push({ url, init });
+  // The small-web gateway's save: a status, or `down` (no answer).
+  if (url === '/smallweb/api/save') {
+    if (server.save.down) throw new TypeError('Load failed');
+    const { status } = server.save;
+    const body = status === 202 ? { queued: true, url: JSON.parse(init.body).url } : { error: 'nope' };
+    return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  }
   if (url === '/kura/api/vaults') {
     if (!server.vaults) throw new TypeError('Load failed');
     return new Response(JSON.stringify({ vaults: server.vaults }));
@@ -238,4 +245,101 @@ test("Hister's preview is never asked for another vault's note, shared or not", 
 test("the web app's page view, given only a note's address, previews it as a note", () => {
   const app = read('../web/app/app.js');
   assert.match(app, /\{ url, title: '', domain: hostOf\(url\), \.\.\.\(isNoteDoc\(\{ url \}\) \? \{ label: 'vault' \} : \{\}\) \}/);
+});
+
+// --- Add Page and the share target (the small-web gateway's POST /api/save) ---
+
+const KURA = 'https://kura.example/';
+const KONBINI = 'https://konbini.example/';
+// As the app's isNoteDoc reads a bare address.
+const isNote = (url) => S.noteVault(url) !== null || S.isNoteURL(url, KURA, KONBINI);
+const check = (text) => api.checkPageURL(text, { isNote });
+
+test('Add Page takes http, https, gemini and gopher addresses, and adds https:// to a bare one', () => {
+  for (const [text, url] of [
+    ['https://example.com/a?b=1#c', 'https://example.com/a?b=1#c'],
+    ['  http://example.com/  ', 'http://example.com/'],
+    ['gemini://geminiprotocol.net/docs/', 'gemini://geminiprotocol.net/docs/'],
+    ['gopher://gopher.example/1/phlog', 'gopher://gopher.example/1/phlog'],
+    ['example.com/article', 'https://example.com/article'],
+  ]) assert.deepEqual(check(text), { url }, text);
+  for (const text of ['', '   ', 'ftp://example.com/f', 'file:///etc/passwd', 'javascript:alert(1)', 'data:text/html,x', 'mailto:a@example.com', 'two words', 'gemini:nohost', 'https://']) {
+    assert.ok(check(text).error, `refused: ${JSON.stringify(text)}`);
+  }
+});
+
+test('Add Page refuses a user name or password in the address', () => {
+  for (const text of ['https://user@example.com/', 'https://user:pw@example.com/', 'gemini://me@example.org/', 'https://:pw@example.com/']) {
+    assert.match(check(text).error, /user name and password/, text);
+  }
+});
+
+test("Add Page never takes a note: a private vault's /v/ path in any form, on any host, or any Kura note", () => {
+  for (const text of [
+    'https://kura.example/v/work/n/Plan',
+    'https://anywhere.example/v/work/n/Plan',
+    'https://anywhere.example/v/work/',
+    'https://anywhere.example/v/work',
+    'https://anywhere.example//v/work/n/Plan',
+    'https://anywhere.example///v/work/x',
+    'https://anywhere.example/%76/work/n/Plan',
+    'https://anywhere.example/%2fv/work/n/Plan',
+    'https://anywhere.example/a/../v/work/n/Plan',
+    'https://anywhere.example/a/%2e%2e/v/work/n/Plan',
+    'https://anywhere.example/v/%2577ork/n/Plan',
+    'gemini://capsule.example/v/work/n/Plan',
+    'gopher://hole.example//v/work/0/Plan',
+    'kura.example/v/work/n/Plan',
+    // The default vault's notes and Konbini's cards, by their homes or hosts.
+    'https://kura.example/n/Plan',
+    'https://konbini.example/p/plan',
+    'https://niwa.other.example/n/Plan',
+    'https://kura.other.example/n/Plan',
+  ]) assert.match(check(text).error || '', /note/, text);
+  // A /v/ that doesn't start the path is just a page.
+  assert.deepEqual(check('https://example.com/docs/v/work/'), { url: 'https://example.com/docs/v/work/' });
+  assert.deepEqual(check('https://example.com/vv/work/'), { url: 'https://example.com/vv/work/' });
+});
+
+test("the share target's url, title and text: the url, else the first http(s) link in the text", () => {
+  const shared = (qs) => api.sharedPage(new URLSearchParams(qs));
+  assert.equal(shared(''), null, 'not a share');
+  assert.equal(shared('q=lantern'), null, 'not a share');
+  assert.deepEqual(shared('url=https%3A%2F%2Fexample.com%2Fa&title=A%20page&text=ignored'), { url: 'https://example.com/a', title: 'A page' });
+  assert.deepEqual(shared('title=Lanterns&text=Read%20this%3A%20https%3A%2F%2Fexample.com%2Flantern%3Fx%3D1.%20So%20good'), { url: 'https://example.com/lantern?x=1', title: 'Lanterns' });
+  assert.deepEqual(shared('url=&text=(see%20https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FLantern_(disambiguation))'), { url: 'https://en.wikipedia.org/wiki/Lantern_(disambiguation)', title: '' });
+  assert.deepEqual(shared('text=%22http%3A%2F%2Fexample.com%2Fq%22!'), { url: 'http://example.com/q', title: '' });
+  assert.deepEqual(shared('text=gemini%3A%2F%2Fcapsule.example%2F%20only'), { url: '', title: '' }, 'only http(s) is looked for in text');
+  assert.deepEqual(shared('text=nothing%20here&title=%20T%20'), { url: '', title: 'T' });
+  assert.equal(shared(`title=${'x'.repeat(400)}`).title.length, 300);
+});
+
+test("Add Page's save: the body, and what each answer says", async () => {
+  reset(null);
+  server.save = { status: 202 };
+  const ok = await api.savePage('gemini://capsule.example/', 'A capsule');
+  assert.deepEqual(ok, { ok: true, message: 'Saving… it’ll be in your pages shortly.' });
+  assert.doesNotMatch(ok.message, /^Saved/);
+  const [call] = server.calls;
+  assert.equal(call.url, '/smallweb/api/save');
+  assert.equal(call.init.method, 'POST');
+  assert.equal(call.init.credentials, 'same-origin');
+  assert.equal(call.init.headers['Content-Type'], 'application/json');
+  assert.equal('Origin' in call.init.headers, false, 'same-origin: no Origin of its own');
+  assert.deepEqual(JSON.parse(call.init.body), { url: 'gemini://capsule.example/', title: 'A capsule' });
+  reset(null);
+  await api.savePage('https://example.com/');
+  assert.deepEqual(JSON.parse(server.calls[0].init.body), { url: 'https://example.com/' }, 'no title, none sent');
+  const said = async (save) => {
+    server.save = save;
+    const reply = await api.savePage('https://example.com/');
+    assert.equal(reply.ok, false);
+    return reply.message;
+  };
+  assert.match(await said({ status: 400 }), /can’t save that address/);
+  assert.match(await said({ status: 403 }), /doesn’t take saves from here/);
+  assert.match(await said({ status: 429 }), /20 pages waiting/);
+  assert.match(await said({ status: 500 }), /answered 500/);
+  assert.match(await said({ down: true }), /didn’t answer/);
+  server.save = { status: 202 };
 });

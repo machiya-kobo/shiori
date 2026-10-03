@@ -223,6 +223,90 @@ export function smallwebSave(url) {
   return request('smallweb/api/save', { method: 'POST', body: { url }, keepalive: true }).catch(() => {});
 }
 
+// --- Add Page: a page saved through the small-web gateway -----------------------
+
+const ADDABLE = new Set(['http:', 'https:', 'gemini:', 'gopher:']);
+
+/**
+ * Add Page's address check, before anything is sent: `{url}` (an address
+ * without a scheme gets https://), or `{error}` in the app's words. Only
+ * http, https, gemini and gopher; no user name or password; never a note:
+ * an address whose path, read as Kura reads it (S.kuraPath: `//` folded,
+ * `%XX` decoded, so `/%76/` too), starts with `/v/<name>/` is a private
+ * vault's, on any host, and `isNote` (the app's isNoteDoc) catches the
+ * rest. Notes live in Kura, not Hister.
+ */
+export function checkPageURL(text, { isNote = () => false } = {}) {
+  let raw = String(text || '').trim();
+  if (!raw) return { error: 'Type or paste an address.' };
+  if (/\s/.test(raw)) return { error: 'That isn’t an address.' };
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(raw)) raw = `https://${raw.replace(/^\/+/, '')}`;
+  let u;
+  try {
+    u = new URL(raw);
+  } catch (_) {
+    return { error: 'That isn’t an address.' };
+  }
+  if (!ADDABLE.has(u.protocol)) return { error: 'Only http, https, gemini and gopher pages can be saved.' };
+  if (!u.hostname) return { error: 'That isn’t an address.' };
+  if (u.username || u.password) return { error: 'Leave the user name and password out of the address.' };
+  const path = globalThis.ShioriSearch.kuraPath(u.href);
+  if (path === null || /^\/v\/[^/]+(\/|$)/.test(path) || isNote(u.href)) return { error: 'That’s a note: notes stay in Kura, not in your pages.' };
+  return { url: u.href };
+}
+
+/**
+ * What the share target was handed (`?url=&title=&text=`, from the
+ * manifest's share_target): `{url, title}`, or null when it wasn't a
+ * share. An empty `url` takes the first http(s) address in `text`
+ * (Android often puts the link there), less trailing punctuation and
+ * unbalanced closing brackets. Nothing is checked or saved here: the
+ * sheet opens with it, and only Save sends it.
+ */
+export function sharedPage(params) {
+  const get = (k) => (params.get(k) || '').trim();
+  const [url, title, text] = ['url', 'title', 'text'].map(get);
+  if (!params.has('url') && !params.has('title') && !params.has('text')) return null;
+  return { url: url || firstLink(text), title: title.slice(0, 300) };
+}
+
+function firstLink(text) {
+  const m = String(text || '').match(/https?:\/\/[^\s<>"]+/i);
+  if (!m) return '';
+  let link = m[0];
+  for (;;) {
+    const last = link.slice(-1);
+    const open = { ')': '(', ']': '[', '}': '{' }[last];
+    const count = (c) => link.split(c).length - 1;
+    if ('.,;:!?\'"’”»'.includes(last)) link = link.slice(0, -1);
+    else if (open && count(last) > count(open)) link = link.slice(0, -1);
+    else return link;
+  }
+}
+
+/**
+ * Asks the gateway to save a page (`POST /smallweb/api/save`): it answers
+ * 202 at once and fetches in the background, where a refusal (a private
+ * address, a note) can still happen, so success says "Saving…", never
+ * "Saved". `{ok, message}` in the app's words.
+ */
+export async function savePage(url, title = '') {
+  const body = { url };
+  if (title) body.title = title;
+  try {
+    await request('smallweb/api/save', { method: 'POST', body, timeout: 15000 });
+    return { ok: true, message: 'Saving… it’ll be in your pages shortly.' };
+  } catch (error) {
+    return { ok: false, message: SAVE_ERRORS[error.status] || (error.status ? `The gateway answered ${error.status}.` : 'The gateway didn’t answer. Check your network or VPN, then try again.') };
+  }
+}
+
+const SAVE_ERRORS = {
+  400: 'The gateway can’t save that address.',
+  403: 'The gateway doesn’t take saves from here.',
+  429: 'The gateway has 20 pages waiting. Try again in a minute.',
+};
+
 /** SearXNG's image-proxy links, moved under /searx/; anything else, nothing. */
 export function proxiedImage(raw) {
   if (typeof raw !== 'string' || !raw) return '';

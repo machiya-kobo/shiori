@@ -73,6 +73,7 @@ const ICONS = {
   chevron: '<path d="M9 6l6 6-6 6"/>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
   sparkles: '<path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/>',
 };
 function icon(name) {
@@ -187,6 +188,13 @@ let recents = readLocal('shioriAppRecents') || [];
 /** A value the build stamps in, or '' when it wasn't. */
 /** Where this build's source is (SHIORI_SOURCE_URL), if it says. */
 const SOURCE_URL = S.sourceLink(fromBuild('__SHIORI_SOURCE_URL__'));
+
+/**
+ * Whether the build has the small-web gateway (SHIORI_SMALLWEB_URL; the
+ * hosted pages reach it at /smallweb/): Add Page and the share target save
+ * through it, so without it neither is offered.
+ */
+const SMALLWEB = fromBuild('__SHIORI_SMALLWEB_URL__') !== '';
 
 function fromBuild(value) {
   return value.startsWith('__') ? '' : value;
@@ -1544,6 +1552,54 @@ function labelPicker(doc) {
 }
 
 /**
+ * Add Page, as the apps' (the iPhone's + tab, the iPad's sidebar, the
+ * Mac's File menu): an address and an optional title, saved in Hister
+ * through the small-web gateway (POST /smallweb/api/save). Checked here
+ * first (api.checkPageURL: http, https, gemini and gopher, no user name,
+ * never a note). The gateway answers before it fetches, so a good answer
+ * is "Saving…", not "Saved". The share target opens it filled in; only
+ * Save sends anything.
+ */
+function addPage(prefill = {}) {
+  if (!SMALLWEB) return;
+  const field = (attrs) => h('input', { autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', ...attrs });
+  const address = field({ id: 'add-url', type: 'url', inputmode: 'url', placeholder: 'https://example.com/article', autocomplete: 'off', value: prefill.url || '' });
+  const title = field({ id: 'add-title', type: 'text', placeholder: 'Optional', autocomplete: 'off', value: prefill.title || '' });
+  const message = h('p', { class: 'add-message', role: 'status', 'aria-live': 'polite' });
+  const save = h('button', { type: 'submit', class: 'add-save' }, 'Save');
+  const say = (text, bad = false) => {
+    message.textContent = text;
+    message.classList.toggle('bad', bad);
+  };
+  if ('url' in prefill && !prefill.url) say('No address came with what was shared: paste one here.', true);
+  const form = h(
+    'form',
+    { class: 'add-page', novalidate: true },
+    h('div', { class: 'group' },
+      h('label', { class: 'item', for: 'add-url' }, h('span', {}, 'Address'), address),
+      h('label', { class: 'item', for: 'add-title' }, h('span', {}, 'Title'), title)),
+    h('p', { class: 'footnote' }, 'The small-web gateway fetches the page and saves it in your pages: web, Gemini and Gopher alike. Notes stay in Kura.'),
+    message,
+    h('div', { class: 'add-actions' }, h('button', { type: 'button', class: 'button', onclick: () => $('dialog').close() }, 'Cancel'), save),
+  );
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const checked = api.checkPageURL(address.value, { isNote: (url) => isNoteDoc({ url }) });
+    if (checked.error) return say(checked.error, true);
+    address.value = checked.url;
+    save.disabled = true;
+    say('Sending…');
+    const reply = await api.savePage(checked.url, title.value.trim());
+    save.disabled = false;
+    if (!reply.ok) return say(reply.message, true);
+    $('dialog').close();
+    toast(reply.message);
+  });
+  dialog('Add Page', form);
+  (prefill.url ? save : address).focus();
+}
+
+/**
  * Delete with undo, for dd and the ⋯ menu alike: the row goes at once and
  * a toast offers Undo for 6 s; only then is the page deleted (the dry run
  * still checks it's exactly one). A second delete while one waits sends
@@ -1655,13 +1711,14 @@ function viewSettings() {
       group('Notes', [text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/'), machiyaRow()],
         settings.niwaURL ? 'Signed in, your theme and text size follow you to the Machiya rooms. Signing in and out happen on Kura’s own pages.' : ''),
       group('About', [
-        h('div', { class: 'item' }, h('span', {}, 'Saving pages'), h('span', { style: 'color:var(--secondary);text-align:right' }, 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
+        h('div', { class: 'item' }, h('span', {}, 'Saving pages'), h('span', { style: 'color:var(--secondary);text-align:right' },
+          SMALLWEB ? 'Add Page, or share a link to Shiori where your browser lists it (installed from Chrome or Edge). Safari’s extension is in the Shiori app.' : 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
         statusURL ? h('div', { class: 'item' }, h('span', {}, 'Server'), statusLink()) : null,
         // The source (AGPL-3.0 section 13), only when the build names it.
         SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'Source'), h('a', { href: SOURCE_URL, target: '_blank', rel: 'noopener noreferrer' }, 'View the source')) : null,
         SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'Licence'), h('span', { style: 'color:var(--secondary)' }, S.LICENCE)) : null,
       ],
-        'Install this as an app: Share → Add to Home Screen (iPhone, iPad), or File → Add to Dock (Safari on the Mac).'),
+        'Install this as an app: Share → Add to Home Screen (iPhone, iPad), File → Add to Dock (Safari on the Mac), or Install in the browser’s menu (Chrome, Edge).'),
     ),
   );
 }
@@ -1908,9 +1965,11 @@ function sidebar(current) {
   // the top of the column.
   const gear = h('button', { type: 'button', class: 'sidebar-gear', 'aria-label': 'Settings', title: 'Settings',
     'aria-current': view === 'settings' ? 'page' : undefined, onclick: () => go('settings') }, icon('gear'));
+  // Add Page beside them, as the iPad app's + on its sidebar.
+  const add = SMALLWEB ? h('button', { type: 'button', class: 'sidebar-gear sidebar-add', 'aria-label': 'Add Page', title: 'Add Page', onclick: () => addPage() }, icon('plus')) : null;
   fill(nav, 
     // The Machiya rooms' switcher before the gear.
-    h('div', { class: 'sidebar-top' }, item('Library', 'library', {}, 'library', view === 'library'), S.roomsSwitcher(ROOMS), gear),
+    h('div', { class: 'sidebar-top' }, item('Library', 'library', {}, 'library', view === 'library'), add, S.roomsSwitcher(ROOMS), gear),
     // The search on screen, then the recent ones, five in all, as the Mac's
     // sidebar has them: the history, now there's no list under the field.
     ...sidebarSearches(view === 'search' ? q : null).map((text) =>
@@ -1939,12 +1998,13 @@ function sidebar(current) {
 function tabs(view) {
   const tab = (name, title, iconName, target) =>
     h('button', { type: 'button', 'aria-current': view === target || (target === 'labels' && view === 'list') ? 'page' : undefined, onclick: () => go(target) }, icon(iconName), title);
-  // As the iPhone app's Library · Labels (its + saves pages, which this
-  // can't), then the Machiya rooms, a sheet.
+  // As the iPhone app's Library · Labels · + (Add Page, with the
+  // small-web gateway), then the Machiya rooms, a sheet.
+  const add = SMALLWEB ? h('button', { type: 'button', class: 'add-tab', onclick: () => addPage() }, icon('plus'), 'Add Page') : null;
   const rooms = ROOMS.length > 1
     ? h('button', { type: 'button', onclick: () => dialog('Rooms', h('div', { class: 'rooms-sheet', role: 'menu' }, S.roomLinks(ROOMS))) }, S.roomGlyph('house'), 'Rooms')
     : null;
-  $('tabs').replaceChildren(tab('library', 'Library', 'library', 'library') , tab('labels', 'Labels', 'tag', 'labels'), ...(rooms ? [rooms] : []));
+  fill($('tabs'), tab('library', 'Library', 'library', 'library'), tab('labels', 'Labels', 'tag', 'labels'), add, rooms);
   $('tabs').querySelector('button').setAttribute('aria-current', view === 'library' || view === 'search' ? 'page' : 'false');
 }
 
@@ -2129,8 +2189,15 @@ function watchBars() {
   update();
 }
 
+// The share target (manifest.webmanifest's share_target): /?url=&title=&text=
+// opens Add Page filled in, from a cold start too (sw.js serves / for any
+// query). The query goes at once, so a reload or Back never shares again.
+const shared = api.sharedPage(new URLSearchParams(location.search));
+if (shared) history.replaceState(null, '', '/' + location.hash);
+
 watchBars();
 render();
+if (shared) addPage(shared);
 // Kura's vaults also say which are shared (S.useVaults): read again when
 // the app comes back after a while, so a vault made private again counts.
 // Until they answer, every vault but the default is private.

@@ -1813,6 +1813,7 @@
     feedURL,
     kuraFeedURL,
     noteVault,
+    kuraPath,
     isPrivateNote,
     isPrivateNoteNow,
     loadVaults,
