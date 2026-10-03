@@ -837,3 +837,15 @@ test("a note's gemini and gopher links are offered, compared conservatively (Sav
   assert.equal(S.smallWebKey('gemini://Example.org:1965/Log/'), 'gemini://example.org/Log/');
   assert.equal(S.smallWebKey('gopher://h:7070/x'), 'gopher://h:7070/x');
 });
+
+test("a preview's dates: the preview's, else the row's; never a bare \"Added\"", () => {
+  const f = (s) => `<${s}>`;
+  assert.equal(S.previewDates({ added: 10, updated: 20, details: { visits: 3 } }, {}, f), 'Added <10> · updated <20> · 3 visits');
+  assert.equal(S.previewDates({ added: 10, updated: 10 }, {}, f), 'Added <10>');
+  // A note: Kura's preview has no dates; the row has created and changed.
+  assert.equal(S.previewDates({ content: 'x' }, { added: 10, updated: 20 }, f), 'Added <10> · updated <20>');
+  // No created date (Kura's `created: null`): only when it changed.
+  assert.equal(S.previewDates({ content: 'x' }, { added: 0, updated: 20 }, f), 'Updated <20>');
+  assert.equal(S.previewDates({ content: 'x' }, { url: 'u' }, f), '');
+  assert.equal(S.previewDates(null, null, f), '');
+});

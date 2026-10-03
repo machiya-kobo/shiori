@@ -48,6 +48,9 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(url.pathname === '/' ? '/' : event.request)),
+      // Offline and never cached (a first visit, a file added since):
+      // a network error, as without the worker. `respondWith(undefined)`
+      // would throw instead.
+      .catch(() => caches.match(url.pathname === '/' ? '/' : event.request).then((cached) => cached || Response.error())),
   );
 });

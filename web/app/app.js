@@ -300,6 +300,15 @@ function note(doc) {
   };
 }
 
+/**
+ * Whether a page is a note (Kura's, by label or by address): for the
+ * phone's page view, which may know only the address, and for what must
+ * never ask Hister about a note.
+ */
+function isNoteDoc(doc, n = note(doc)) {
+  return !!n || doc.label === 'vault' || S.noteVault(doc.url) !== null || S.isNoteURL(doc.url, settings.niwaURL, settings.konbiniURL);
+}
+
 // --- Routing: #/view?params, so Back works in the installed app ----------------
 
 function route() {
@@ -1320,7 +1329,8 @@ function previewHTML(doc, p, n) {
   const labelColor = label ? v(`--chip${S.labelChipIndex(label)}`) : '';
   const tags = (d.metadata && Array.isArray(d.metadata.tags) ? d.metadata.tags : []).filter((t) => typeof t === 'string');
   const date = (s) => (s ? new Date(s * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '');
-  const dates = [`Added ${date(p.added)}`, p.updated && p.updated !== p.added ? `updated ${date(p.updated)}` : '', d.visits > 1 ? `${d.visits} visits` : ''].filter(Boolean).join(' · ');
+  // A Kura note's dates are its row's (the preview has none); none, no line.
+  const dates = S.previewDates(p, doc, date);
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${images}; style-src 'unsafe-inline'; font-src data:">
 <meta name="referrer" content="no-referrer"><base target="_blank">
@@ -1337,9 +1347,9 @@ blockquote{margin:1em 0;padding-left:1em;border-left:3px solid ${v('--line')};co
 table{border-collapse:collapse;display:block;overflow-x:auto}td,th{border:1px solid ${v('--line')};padding:4px 8px}
 .chip{display:inline-block;margin-top:.5em;padding:1px 9px;border-radius:999px;border:1px solid currentColor;background:transparent;font-size:.8em;color:${labelColor || v('--kept')}}
 </style></head><body><header>
-<h1>${escapeHTML(p.title || doc.title || doc.url)}</h1>
+<h1>${escapeHTML(p.title || doc.title || (n && n.path ? n.path.replace(/\.md$/, '').split('/').pop() : '') || doc.url)}</h1>
 <p class="meta">${escapeHTML(n && n.place ? n.place : doc.domain || hostOf(doc.url))}</p>
-<p class="meta">${escapeHTML(dates)}</p>
+${dates ? `<p class="meta">${escapeHTML(dates)}</p>` : ''}
 ${p.meta && p.meta.author ? `<p class="meta">${escapeHTML(p.meta.author)}</p>` : ''}
 ${label ? `<span class="chip">${escapeHTML(label)}</span>` : ''}
 ${tags.length ? `<p class="meta">${tags.map((t) => { const u = S.kuraTagURL(settings.niwaURL, t); return u ? `<a href="${escapeHTML(u)}">#${escapeHTML(t)}</a>` : '#' + escapeHTML(t); }).join(' ')}</p>` : ''}
@@ -1357,15 +1367,18 @@ function pageMenu(doc, n) {
     if (!n) items.push(item('Edit Label…', () => labelPicker(doc)));
     if (canSummarize(doc, n)) items.push(item('Summarize', () => summarize(doc, false)));
     items.push(item('Copy Link', () => copy(doc.url)));
+    // Show As goes here, before Delete, once Hister names the extractors.
+    const showAs = h('div', { class: 'show-as', role: 'none' });
     // No Delete for a work note: Hister never has one.
-    fill(listEl, ...items, ...(n && n.vault ? [] : [h('hr'), item('Delete', () => deleteWithUndo(doc), 'danger')]));
+    fill(listEl, ...items, showAs, ...(n && n.vault ? [] : [h('hr'), item('Delete', () => deleteWithUndo(doc), 'danger')]));
+    // Show As is for web pages only: a note's address is never sent to
+    // Hister's extractors (a private vault's must never reach Hister at all).
+    if (isNoteDoc(doc, n)) return;
     try {
       const names = await api.extractors(doc.url);
       if (names.length > 1) {
-        listEl.insertBefore(h('div', { class: 'heading' }, 'Show As'), listEl.querySelector('.danger').previousSibling);
-        for (const name of ['Default', ...names]) {
-          listEl.insertBefore(item(name, () => showPreview(doc, { extractor: name === 'Default' ? '' : name })), listEl.querySelector('.danger').previousSibling);
-        }
+        fill(showAs, h('div', { class: 'heading' }, 'Show As'),
+          ['Default', ...names].map((name) => item(name, () => showPreview(doc, { extractor: name === 'Default' ? '' : name }))));
       }
     } catch (_) {}
   };
@@ -1798,7 +1811,9 @@ function render() {
     // A narrow screen: the page in place of the list.
     document.body.classList.add('phone-preview');
     const url = params.get('url') || '';
-    const doc = lastPage && lastPage.url === url ? lastPage : { url, title: '', domain: hostOf(url) };
+    // Only the address (a reload, a link): a note's is known by it, so it
+    // previews from Kura as from a list, never from Hister.
+    const doc = lastPage && lastPage.url === url ? lastPage : { url, title: '', domain: hostOf(url), ...(isNoteDoc({ url }) ? { label: 'vault' } : {}) };
     showPreview(doc);
     return;
   }

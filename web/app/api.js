@@ -74,15 +74,28 @@ export async function search(text, { sort = '', pageKey = '', limit = 30 } = {})
   };
 }
 
-export function preview(url, extractor = '') {
+/**
+ * Hister's readable copy of a page. Never another vault's note (Kura
+ * previews those, and Hister must never be sent one's address): refused
+ * without a request, as is an address that can't be parsed.
+ */
+export async function preview(url, extractor = '') {
+  if (globalThis.ShioriSearch.noteVault(url) !== null || globalThis.ShioriSearch.isPrivateNote(url)) throw new HisterError(PRIVATE);
   const params = { url };
   if (extractor) params.extractor = extractor;
   return request(`api/preview?${query(params)}`);
 }
 
+/**
+ * Hister's extractors for a page (Show As). Never asked about a note: the
+ * apps' Show As is for web pages, and another vault's note's address must
+ * never reach Hister (any `/v/<vault>/n/` address, on any host: over-
+ * inclusive, so safe).
+ */
 export async function extractors(url) {
-  const list = (await request(`api/extractors?${query({ url })}`)) || [];
-  return list.filter((e) => e && e.enabled !== false && (!e.capabilities || e.capabilities.preview !== false)).map((e) => e.name);
+  if (globalThis.ShioriSearch.noteVault(url) !== null || globalThis.ShioriSearch.isPrivateNote(url)) return [];
+  const list = await request(`api/extractors?${query({ url })}`);
+  return (Array.isArray(list) ? list : []).filter((e) => e && e.enabled !== false && (!e.capabilities || e.capabilities.preview !== false)).map((e) => e.name);
 }
 
 export async function rules() {

@@ -551,6 +551,24 @@
     return `${all} ${noun}`;
   }
 
+  /**
+   * A preview's dates line: "Added 3 May 2026 · updated 9 May 2026 · 4
+   * visits". Each date from the preview (`p`), else the list's row (`doc`:
+   * a note from Kura has its `created` and `changed` there and none in the
+   * preview); a note with no created date says only when it changed, and
+   * with neither the line is empty. `format` turns unix seconds into text.
+   */
+  function previewDates(p, doc, format) {
+    const added = Number((p && p.added) || (doc && doc.added)) || 0;
+    const updated = Number((p && p.updated) || (doc && doc.updated)) || 0;
+    const visits = Number(p && p.details && p.details.visits) || 0;
+    return [
+      added ? `Added ${format(added)}` : '',
+      updated && updated !== added ? `${added ? 'updated' : 'Updated'} ${format(updated)}` : '',
+      visits > 1 ? `${visits} visits` : '',
+    ].filter(Boolean).join(' · ');
+  }
+
   /** Edits between two words: insert, delete, change, or swap two neighbours. */
   function editDistance(a, b) {
     const x = [...a], y = [...b];
@@ -1766,6 +1784,7 @@
     newsBlurSubscribeURL,
     labelChipIndex,
     countText,
+    previewDates,
     collectionIcon,
     collectionTitle,
     labelsFromAliases,

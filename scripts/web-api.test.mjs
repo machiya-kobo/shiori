@@ -100,3 +100,40 @@ test('the search page and the web app read the vaults through S.loadVaults, and 
   assert.match(app, /Promise\.all\(\[[^\]]*loadVaults\(\)/, 'read at start');
   assert.doesNotMatch(app, /S\.useVaults\(/, 'only through api.kuraVaults');
 });
+
+test("a note's address never goes to Hister's extractors (the ⋯ menu's Show As)", async () => {
+  for (const url of [WORK, 'https://kura.example//v/work/n/Plan', 'https://kura.example/%76/work/n/Plan', 'not a url']) {
+    reset(vaults(false));
+    assert.deepEqual(await api.extractors(url), [], url);
+    assert.deepEqual(server.calls, [], `nothing sent for ${url}`);
+  }
+  reset(null);
+  await api.extractors('https://example.com/page');
+  assert.deepEqual(server.calls.map((c) => c.url), ['/api/extractors?url=https%3A%2F%2Fexample.com%2Fpage'], 'a web page still asks');
+});
+
+test("the web app's ⋯ menu asks for Show As only for a web page, and places it without Delete", () => {
+  const app = read('../web/app/app.js');
+  const menu = app.slice(app.indexOf('function pageMenu('), app.indexOf('// --- Dialogs'));
+  assert.ok(menu.length > 100);
+  assert.match(menu, /if \(isNoteDoc\(doc, n\)\) return;\s*try \{\s*const names = await api\.extractors\(doc\.url\)/, 'notes return before asking');
+  assert.doesNotMatch(menu, /querySelector\('\.danger'\)/, 'Show As has its own place, Delete or not');
+  assert.match(app, /function isNoteDoc\(doc, n = note\(doc\)\) \{\s*return !!n \|\| doc\.label === 'vault' \|\| S\.noteVault\(doc\.url\) !== null \|\| S\.isNoteURL\(/);
+});
+
+test("Hister's preview is never asked for another vault's note, shared or not", async () => {
+  for (const url of [WORK, 'https://kura.example//v/team/n/Plan', 'not a url']) {
+    reset(vaults(false));
+    await assert.rejects(api.preview(url), url);
+    assert.deepEqual(server.calls, [], `nothing sent for ${url}`);
+  }
+  reset(null);
+  await api.preview('https://example.com/page');
+  await api.preview('https://kura.example/n/Plan');
+  assert.equal(server.calls.length, 2, "a page and the default vault's note still ask");
+});
+
+test("the web app's page view, given only a note's address, previews it as a note", () => {
+  const app = read('../web/app/app.js');
+  assert.match(app, /\{ url, title: '', domain: hostOf\(url\), \.\.\.\(isNoteDoc\(\{ url \}\) \? \{ label: 'vault' \} : \{\}\) \}/);
+});
