@@ -3,14 +3,25 @@
   "name": "Shiori",
   "short_name": "Shiori",
   "description": "Your Hister pages and notes, labels and search",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities", "books"],
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#1a1b26",
-  "theme_color": "#1a1b26",
+  "theme_color": "#16161e",
   "icons": [
     { "src": "/_shiori/web-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/_shiori/web-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/_shiori/web-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Search", "description": "Search your pages, notes and the web", "url": "/#/search",
+      "icons": [{ "src": "/_shiori/web-icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Labels", "description": "Your collections and labels", "url": "/#/labels",
+      "icons": [{ "src": "/_shiori/web-icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Notes", "description": "Your notes from Kura", "url": "/#/library?s=notes",
+      "icons": [{ "src": "/_shiori/web-icon-192.png", "sizes": "192x192", "type": "image/png" }] }
   ]
 }

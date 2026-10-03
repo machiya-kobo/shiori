@@ -29,7 +29,7 @@ origin):
 | `/` (with any `?q=…`), `/_shiori/*`, and for the web app `/sw.js` and `/manifest.webmanifest` | the built files (`/` is `index.html`) |
 | `/searx/*` | SearXNG, `/searx` removed (the page asks for `search?format=json` and `image_proxy`) |
 | `/konbini/*` | Konbini, `/konbini` removed (only `api/cards`) |
-| `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/feed.xml` | Kura, `/kura` removed: your notes. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
+| `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/api/prefs`, `/kura/feed.xml` | Kura, `/kura` removed: your notes, and (signed in) your theme and text size. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
 | `/smallweb/*` | the small-web gateway, `/smallweb` removed (`api/search`, `api/save`): Gemini and Gopher |
 | anything else | the Hister host as it is: Hister's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (companion services, not part of this repository: README) |
 
@@ -56,9 +56,17 @@ this host too. So the host must:
 - take `machiya_session` out of the `Cookie` header on every other route
   (Hister, SearXNG, the gateway): only the rooms read it.
 
-The pages only read the rooms, so the rooms' same-origin rule for changes
-never applies. When Kura answers 401, the Notes list says so with a Sign
-In link to Kura's own sign-in page.
+The pages only read the rooms, with one exception: signed in, the web app
+keeps your theme and text size in step with the rooms through Kura's
+`/api/prefs` (read on launch, `PUT` on a change, as the rooms' machiya.js
+does; any failure is silent and the device's own choice stays). Kura
+accepts that `PUT` only from its own origin (`KURA_PUBLIC_URL`), so through
+this host it is refused (403) unless Kura accepts this host's origin too;
+reading still works. When Kura answers 401, the Notes list (and All) says
+so with a Sign In link to Kura's own sign-in page, and the web app's
+Settings → Notes → Machiya shows whether you're signed in, with Sign In
+(Kura's `/signin`) or Sign Out (Kura's Settings: its sign-out is a form
+on Kura's own origin).
 
 `web/dev-server.py` does exactly this routing locally, for testing.
 

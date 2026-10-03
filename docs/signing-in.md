@@ -41,7 +41,7 @@ search-core's `machiyaRooms` / `mayCarryMachiyaToken` and HisterKit's
 | iPhone, iPad, Mac | Settings → Notes → Sign in to Machiya: a code or a token | The Keychain, service `Machiya` (`MachiyaKeychain`); on iOS this device only, never in a backup, shared with the Safari extension through the App Group; on the Mac the login keychain. Never UserDefaults. |
 | Safari extension | In the app | Asked from the app over native messaging (`machiya`), kept in the background's memory a minute, never stored. |
 | Firefox | Shiori's settings page → Sign in to Machiya | `storage.local` under its own key (`machiyaSignIn`): never synced, never in a settings file, never logged. |
-| Hosted search page and web app | Kura's own `/signin` | No token: the browser's `machiya_session` cookie (with `MACHIYA_COOKIE_DOMAIN` covering Shiori's host), passed on only to `/kura/` and `/konbini/` (web/README.md). A 401 shows a Sign In link. |
+| Hosted search page and web app | Kura's own `/signin` (the web app: Settings → Notes → Machiya) | No token: the browser's `machiya_session` cookie (with `MACHIYA_COOKIE_DOMAIN` covering Shiori's host), passed on only to `/kura/` and `/konbini/` (web/README.md). A 401 shows a Sign In link. |
 | Linux | `"machiyaToken"` in `~/.config/shiori/config.json`; `shiori pair <code>` prints it | That file, `chmod 600` (docs/linux.md). |
 
 The extension's fetches keep `credentials: 'omit'`; the token is a header.

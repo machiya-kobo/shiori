@@ -78,3 +78,50 @@ for (const [name, selector] of [['night', ':root {'], ['day', ':root[data-theme=
     }
   });
 }
+
+// The web app's own surfaces (web/app/app.css, the Machiya rooms' over the
+// search page's tokens): the same rule on its cards, tinted or not.
+const appCSS = readFileSync(new URL('../web/app/app.css', import.meta.url), 'utf8');
+function appBlock(selector) {
+  const start = appCSS.indexOf(selector);
+  assert.ok(start >= 0, `no ${selector} block in app.css`);
+  const body = appCSS.slice(appCSS.indexOf('{', start) + 1, appCSS.indexOf('}', start));
+  return Object.fromEntries([...body.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})/gi)].map((m) => [m[1], m[2]]));
+}
+const appThemes = {
+  night: { ...themes.night, ...appBlock(':root {') },
+  day: { ...themes.day, ...appBlock(':root[data-theme="day"]') },
+};
+
+test("the web app's two copies of Day (system light, and chosen) are the same", () => {
+  assert.deepEqual(appBlock(':root:not([data-theme="night"])'), appBlock(':root[data-theme="day"]'));
+});
+
+for (const [name, selector] of [['night', ':root {'], ['day', ':root[data-theme="day"]']]) {
+  test(`web app, ${name}: every text colour is at least 4.5:1 on the page, on cards and on tinted cards`, () => {
+    const v = appThemes[name];
+    const p = tintMix(selector);
+    for (const fg of [...TEXT, 'danger']) {
+      for (const bg of [v.bg, v.card, ...['accent', 'notes', 'tab-news'].map((t) => mix(v[t], v.card, p))]) {
+        const r = ratio(v[fg], bg);
+        assert.ok(r >= 4.5, `--${fg} ${v[fg]} on ${bg} is ${r.toFixed(2)}:1`);
+      }
+    }
+  });
+}
+
+test("the web app's Night surfaces are the rooms' Tokyo Night", () => {
+  const n = appThemes.night;
+  assert.deepEqual([n.bg, n.card, n.raised, n.line, n.line2, n.obsidian], ['#1a1b26', '#16161e', '#292e42', '#232433', '#33395a', '#73daca']);
+  const d = appThemes.day;
+  assert.deepEqual([d.bg, d.raised, d.line, d.line2], ['#e1e2e7', '#d0d5e3', '#c4c8da', '#aab1cb']);
+});
+
+test("the installed app's bar colours are the rooms' (#16161e Night, #d0d5e3 Day)", () => {
+  const html = readFileSync(new URL('../web/app/index.html', import.meta.url), 'utf8');
+  assert.match(html, /<meta name="theme-color" content="#16161e" media="\(prefers-color-scheme: dark\)" \/>/);
+  assert.match(html, /<meta name="theme-color" content="#d0d5e3" media="\(prefers-color-scheme: light\)" \/>/);
+  const manifest = JSON.parse(readFileSync(new URL('../web/app/manifest.webmanifest', import.meta.url), 'utf8'));
+  assert.equal(manifest.theme_color, '#16161e');
+  assert.equal(manifest.background_color, '#1a1b26');
+});

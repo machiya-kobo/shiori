@@ -23,7 +23,8 @@ holds the rules and the traps the code can't tell you.
   AI endpoint `/shiori/ai/*`, hosted pages only), Kura (notes), the
   small-web gateway, SearXNG, the visited site's favicon and PDFs (upstream
   behaviour). With Machiya's identity file, Kura's `POST /api/pair`
-  (pairing a device). Firefox itself fetches the add-on's `updates.json` from this
+  (pairing a device) and, from the web app, Kura's `/api/prefs` (theme and
+  text size, as the rooms keep them). Firefox itself fetches the add-on's `updates.json` from this
   repository's GitHub Releases (its `update_url`); the extension's code
   never does. NewsBlur, status pages and the Wayback Machine and archive.is
   copies are only ever opened as links.
@@ -292,7 +293,8 @@ holds the rules and the traps the code can't tell you.
   contracts are in README and docs/ai.md). **Never add `Origin:
   hister://` there**: Hister accepts same-origin browser writes and refuses
   cross-site ones, and that check protects it.
-- Asset addresses carry the build (`?v=<commit>`); unstamped placeholders
+- Asset addresses carry the build (`?v=<commit>`; the web app's, and its
+  service worker's cache name, a hash of the built files); unstamped placeholders
   read as empty (`S.fromBuild`).
 - **`replaceChildren`/`append` write a `null` child out as the text "null"**:
   filter first.

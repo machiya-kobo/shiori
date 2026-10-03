@@ -48,7 +48,7 @@ UPSTREAMS = {
 # What Shiori asks Kura for. Kura's reader pages stay at Kura's own address:
 # under /kura/ a work vault's note would have an address Shiori can't tell
 # from any other page's (it looks for /v/ at the start of the path).
-KURA_PATHS = {"api/search", "api/recent", "api/note", "api/vaults", "feed.xml"}
+KURA_PATHS = {"api/search", "api/recent", "api/note", "api/vaults", "api/prefs", "feed.xml"}
 NOT_ROUTED = ""  # route()'s answer for a path no one serves here
 HISTER = os.environ.get("HISTER_URL", "")
 AI_STUB = os.environ.get("AI_STUB") == "1"

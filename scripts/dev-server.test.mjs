@@ -23,18 +23,19 @@ print(json.dumps([m.Handler.route(types.SimpleNamespace(path=p)) for p in json.l
 }
 
 test('Kura: only the API paths Shiori asks for, never its reader', () => {
-  const asked = ['/kura/api/search?q=x&limit=5', '/kura/api/recent?limit=5', '/kura/api/note?path=a.md', '/kura/api/vaults', '/kura/feed.xml?q=x'];
+  const asked = ['/kura/api/search?q=x&limit=5', '/kura/api/recent?limit=5', '/kura/api/note?path=a.md', '/kura/api/vaults', '/kura/api/prefs', '/kura/feed.xml?q=x'];
   assert.deepEqual(routes(asked), [
     'https://kura.example/api/search?q=x&limit=5',
     'https://kura.example/api/recent?limit=5',
     'https://kura.example/api/note?path=a.md',
     'https://kura.example/api/vaults',
+    'https://kura.example/api/prefs',
     'https://kura.example/feed.xml?q=x',
   ]);
   // A work note's reader page (and every way Kura would reach it), the
   // default vault's, and Kura's other pages and API: a 404 here.
   const refused = ['/kura/v/work/n/Plan', '/kura//v/work/n/Plan', '/kura/%76/work/n/Plan', '/kura/n/Plan', '/kura/', '/kura/search?q=x',
-    '/kura/api/links?path=a.md', '/kura/api/offline', '/kura/api/note/../../v/work/n/Plan', '/kura/%61pi/note?path=a.md'];
+    '/kura/api/links?path=a.md', '/kura/api/offline', '/kura/signin', '/kura/signout', '/kura/api/pair', '/kura/api/note/../../v/work/n/Plan', '/kura/%61pi/note?path=a.md'];
   const targets = routes(refused);
   refused.forEach((path, i) => assert.equal(targets[i], '', path));
 });

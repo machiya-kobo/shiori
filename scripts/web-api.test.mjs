@@ -101,6 +101,108 @@ test('the search page and the web app read the vaults through S.loadVaults, and 
   assert.doesNotMatch(app, /S\.useVaults\(/, 'only through api.kuraVaults');
 });
 
+test("the web app's look sets the theme-color metas from S.themeColorMetas", () => {
+  const app = read('../web/app/app.js');
+  const look = app.slice(app.indexOf('function applyLook()'), app.indexOf('function recordSearch('));
+  assert.match(look, /S\.themeColorMetas\(theme\)/);
+  assert.match(look, /meta\[name="theme-color"\]/);
+});
+
+test("the web app's type is rem-sized, so Text Size scales it in Safari too", () => {
+  const css = read('../web/app/app.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(css, /font:\s*-apple-system-/, 'a system font keyword sets an absolute size in WebKit');
+  const app = read('../web/app/app.js');
+  assert.match(app, /style\.fontSize = `\$\{Math\.round\(100 \* \(TEXT_SCALE\[settings\.textSize\] \|\| systemTextScale\(\)\)\)\}%`/);
+});
+
+test("Kura's preferences: read with where you stand, written as the rooms write them, never throwing", async () => {
+  const real = globalThis.fetch;
+  const sent = [];
+  let answer = () => new Response(JSON.stringify({ prefs: { theme: 'day', text_size: 'large' } }));
+  globalThis.fetch = async (url, init = {}) => {
+    sent.push({ url, init });
+    return answer();
+  };
+  try {
+    assert.deepEqual(await api.kuraPrefs(), { status: 200, prefs: { theme: 'day', text_size: 'large' } });
+    answer = () => new Response('{"error":"sign in first"}', { status: 401 });
+    assert.deepEqual(await api.kuraPrefs(), { status: 401, prefs: {} });
+    answer = () => new Response('', { status: 404 });
+    assert.equal((await api.kuraPrefs()).status, 404);
+    answer = () => { throw new TypeError('Load failed'); };
+    assert.equal((await api.kuraPrefs()).status, 0);
+    assert.equal(await api.putKuraPrefs({ theme: 'night', text_size: 'standard' }), false, 'silent');
+    answer = () => new Response(JSON.stringify({ prefs: {} }));
+    sent.length = 0;
+    assert.equal(await api.putKuraPrefs({ theme: 'night', text_size: 'standard' }), true);
+    const [put] = sent;
+    assert.equal(put.url, '/kura/api/prefs');
+    assert.equal(put.init.method, 'PUT');
+    assert.equal(put.init.credentials, 'same-origin');
+    assert.equal(put.init.headers['Content-Type'], 'application/json');
+    assert.deepEqual(JSON.parse(put.init.body), { prefs: { theme: 'night', text_size: 'standard' } });
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('the web app reads Kura’s preferences on launch and writes them only when signed in', () => {
+  const app = read('../web/app/app.js');
+  assert.match(app, /Promise\.all\(\[[^\]]*loadKuraAccount\(\)/);
+  assert.match(app, /if \(!fromKura && kuraAccount\.status === 200\) pushPrefs\(\);/);
+  assert.match(app, /if \(status !== 200 \|\| lookChangedHere\) return;/);
+  assert.match(app, /\['system', 'night', 'day'\]\.includes\(theme\)/, 'only known values');
+});
+
+test("the web app's Settings say whether Kura knows you, and All says when it asks", () => {
+  const app = read('../web/app/app.js');
+  const row = app.slice(app.indexOf('function machiyaRow()'), app.indexOf('/** Settings → Export & Feed'));
+  assert.match(row, /200: \['Signed in'/);
+  assert.match(row, /401: \['Not signed in', link\(signIn, 'Sign In'\)\]/);
+  assert.match(row, /loadKuraAccount\(\)\.then/, 'asked afresh');
+  assert.match(app, /group\('Notes', \[[^\n]*machiyaRow\(\)\]/);
+  // All: a 401 from Kura is the Notes pill's notice, not silence.
+  assert.match(app, /error\.status === 401 \? \{ signIn: true/);
+  assert.match(app, /if \(notes && notes\.signIn\) container\.append\(h\('section', \{ class: 'list-section' \}, signInStatus\(/);
+  assert.match(app, /if \(error\.status === 401\) notesWantSignIn = true;/);
+});
+
+test("the web app marks web results you already have, with the search page's lookup", () => {
+  const app = read('../web/app/app.js');
+  assert.match(app, /markSaved\(list, shown\.map\(\(r\) => r\.url\)\);/);
+  const fn = app.slice(app.indexOf('async function markSaved('), app.indexOf('// --- Preview -----'));
+  assert.match(fn, /S\.urlLookupQuery\(urls\)/);
+  assert.match(fn, /S\.savedLabels\(known\.documents\)/);
+  assert.match(read('../patches/shiori/search.js'), /const labels = S\.savedLabels\(known\.documents\);/);
+});
+
+test("the web app's Settings hide their own gear (Back is the way out)", () => {
+  const app = read('../web/app/app.js');
+  assert.match(app.slice(app.indexOf('function setTitle('), app.indexOf('function viewLibrary(')), /\$\('settings-button'\)\.hidden = text === 'Settings';/);
+});
+
+test("the web app's sidebar has no empty heading", () => {
+  const app = read('../web/app/app.js');
+  assert.doesNotMatch(app, /h\('h2', \{\}, ''\)/);
+  assert.match(app, /statusURL \? h\('div', \{ class: 'sidebar-rule', role: 'separator' \}\) : null/);
+});
+
+test("the web app's Obsidian Vault field takes a name, not an address", () => {
+  const app = read('../web/app/app.js');
+  assert.match(app, /text\('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'\)/);
+  assert.match(app, /const text = \(key, title, placeholder, type = 'url'\) => \{\s*const input = h\('input', \{ type,/);
+});
+
+test("the web app's preview empties when the list beside it no longer has its page", () => {
+  const app = read('../web/app/app.js');
+  const fn = app.slice(app.indexOf('function dropStaleSelection('), app.indexOf('function status('));
+  assert.match(fn, /if \(!wide\(\) \|\| !selected \|\| !container\.isConnected\) return;/);
+  assert.match(fn, /r\._doc && r\._doc\.url === selected\.url/);
+  assert.match(fn, /selected = null;/);
+  // Every list calls it once it's drawn: Hister's and Kura's, All, Opened, the web, the small web.
+  assert.equal((app.match(/dropStaleSelection\(container\);/g) || []).length, 5);
+});
+
 test("a note's address never goes to Hister's extractors (the ⋯ menu's Show As)", async () => {
   for (const url of [WORK, 'https://kura.example//v/work/n/Plan', 'https://kura.example/%76/work/n/Plan', 'not a url']) {
     reset(vaults(false));

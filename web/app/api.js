@@ -182,6 +182,27 @@ export function kuraVaults() {
   return globalThis.ShioriSearch.loadVaults(readVaults);
 }
 
+/**
+ * Kura's preferences for whoever is signed in (/api/prefs, with Machiya's
+ * identity file): `{status, prefs}`. The status also says where you stand:
+ * 200 signed in, 401 not, 404 no sign-in there (or the host doesn't pass
+ * the path), 0 Kura out of reach. Never throws.
+ */
+export async function kuraPrefs() {
+  try {
+    const reply = await request('kura/api/prefs', { timeout: 6000 });
+    const prefs = reply && reply.prefs && typeof reply.prefs === 'object' ? reply.prefs : {};
+    return { status: 200, prefs };
+  } catch (error) {
+    return { status: error.status || 0, prefs: {} };
+  }
+}
+
+/** Stores theme and text size (the house's words) in Kura, as the rooms do; silent on any failure. */
+export function putKuraPrefs(prefs) {
+  return request('kura/api/prefs', { method: 'PUT', body: { prefs }, timeout: 6000 }).then(() => true, () => false);
+}
+
 /** A note's sanitized HTML from Kura (a work note's preview: Hister never has one). Not cached. */
 export async function kuraNote(path, vault) {
   const reply = await request(`kura/api/note?${query({ path, vault })}`);

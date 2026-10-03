@@ -1,13 +1,33 @@
 /* Shiori's web app: the Mac app's three columns (sidebar, list, preview)
    on a wide screen, the iPhone's tabs on a narrow one. Colours come from
    theme.css (the search page's Tokyo Night / Day tokens, label chips
-   included); tabs and tags look as they do on the search page. */
+   included); tabs and tags look as they do on the search page.
 
-:root { --danger: #f7768e; }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="night"]) { --danger: #bd204c; }
+   The surfaces below are the Machiya rooms' (machiya.css), so the web app
+   sits with Kura, Niwa and Konbini: Night's cards, sidebar and menus are
+   the rooms' --dark, hover and the chosen tab their --hl, dividers their
+   --line and fields and menus their --line2; Obsidian and the small web
+   their teal. Day keeps its cards light (the rooms' --hl): their --dark
+   (#d0d5e3, Day's --raised here) leaves text under 4.5:1
+   (scripts/theme-contrast.test.mjs holds both). */
+
+:root {
+  --card: #16161e; --raised: #292e42; --line: #232433; --line2: #33395a;
+  --obsidian: #73daca; --smallweb: #73daca; --chip7: #73daca;
+  --danger: #f7768e;
 }
-:root[data-theme="day"] { --danger: #bd204c; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="night"]) {
+    --card: #eef0f6; --raised: #d0d5e3; --line: #c4c8da; --line2: #aab1cb;
+    --obsidian: #0d6e5c; --smallweb: #0d6e5c; --chip7: #0d6e5c;
+    --danger: #bd204c;
+  }
+}
+:root[data-theme="day"] {
+  --card: #eef0f6; --raised: #d0d5e3; --line: #c4c8da; --line2: #aab1cb;
+  --obsidian: #0d6e5c; --smallweb: #0d6e5c; --chip7: #0d6e5c;
+  --danger: #bd204c;
+}
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -15,7 +35,10 @@ a, button, select { -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
-  font-size: 1.0625rem; font: -apple-system-body; font-family: -apple-system, system-ui, sans-serif; line-height: 1.4;
+  /* Sizes are rem, so Settings → Text Size (the root's size, app.js)
+     scales everything; Safari's system font keywords (-apple-system-body
+     and the rest) set absolute sizes and defeated it. Standard follows the system's text size there. */
+  font-size: 1.0625rem; font-family: -apple-system, system-ui, sans-serif; line-height: 1.4;
   -webkit-text-size-adjust: 100%;
 }
 a { color: var(--accent); }
@@ -138,7 +161,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
   background: var(--frost);
   -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
 }
-.bar h1 { flex: 1; margin: 0; font-size: 1.75rem; font: -apple-system-title1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar h1 { flex: 1; margin: 0; font-size: 1.75rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #preview-bar { justify-content: flex-end; border-bottom: 1px solid var(--line); }
 #preview-bar .where { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -171,7 +194,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 }
 .segments button {
   --tab: var(--accent); flex: none; padding: 4px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap;
-  font-size: 0.8125rem; font: -apple-system-footnote; font-weight: 600;
+  font-size: 0.8125rem; font-weight: 600;
   color: var(--tab); border: 1.5px solid var(--tab); background: transparent;
 }
 .segments button[aria-pressed="true"] { color: var(--bg); background: var(--tab); }
@@ -196,7 +219,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 .controls { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: -2px 12px 6px; }
 .controls .quiet {
   display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 4px 0; cursor: pointer;
-  font-size: 0.9375rem; font: -apple-system-subheadline; font-weight: 500; color: var(--secondary);
+  font-size: 0.9375rem; font-weight: 500; color: var(--secondary);
 }
 .controls .quiet svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .controls .quiet.active { color: var(--accent); }
@@ -206,7 +229,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 .fold-row { list-style: none; border-bottom: 1px solid var(--line); }
 .fold-more {
   display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: transparent; padding: 10px 16px 10px 50px; cursor: pointer;
-  font-size: 0.9375rem; font: -apple-system-subheadline; font-weight: 500; color: var(--accent); text-align: left;
+  font-size: 0.9375rem; font-weight: 500; color: var(--accent); text-align: left;
 }
 .fold-more svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; transition: transform 160ms; }
 .fold-more[aria-expanded="true"] svg { transform: rotate(90deg); }
@@ -214,18 +237,18 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 /* The page's places: symbols in one group, as the apps' toolbar. */
 .icon-group { display: inline-flex; gap: 0; background: var(--card); border-radius: 999px; padding: 0 4px; }
 .icon-group .icon-button { background: transparent; }
-.link-button { border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--accent); text-decoration: none; font-size: 1.0625rem; font: -apple-system-body; }
+.link-button { border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--accent); text-decoration: none; font-size: 1.0625rem; }
 .link-button:disabled { color: var(--secondary); cursor: default; }
 .searchfield input {
-  width: 100%; font-size: 1.0625rem; font: -apple-system-body; color: var(--text); background: var(--card);
-  border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+  width: 100%; font-family: inherit; font-size: 1.0625rem; color: var(--text); background: var(--card);
+  border: 1px solid var(--line2); border-radius: 12px; padding: 10px 12px;
 }
 
 /* Rows */
 .rows { list-style: none; margin: 0; padding: 0; }
 .section-head {
   display: flex; justify-content: space-between; align-items: baseline;
-  margin: 14px 16px 4px; font-size: 0.9375rem; font: -apple-system-subheadline; font-weight: 600; color: var(--secondary);
+  margin: 14px 16px 4px; font-size: 0.9375rem; font-weight: 600; color: var(--secondary);
 }
 /* Section headings stay under the bars while their section scrolls by, as
    the apps' list headers do: Your Pages, Your
@@ -265,16 +288,17 @@ body[data-result-style="none"] .doc-row { margin: 0; border: 0; border-radius: 0
 .row[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .row .icon { width: 20px; height: 20px; margin-top: 2px; border-radius: 4px; }
 .row .icon svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.6; }
-.row .title { font-size: 1.0625rem; font-weight: 600; font: -apple-system-headline; color: var(--accent); overflow-wrap: anywhere; }
-.row .meta { font-size: 0.8125rem; font: -apple-system-footnote; color: var(--secondary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .title { font-size: 1.0625rem; font-weight: 600; color: var(--accent); overflow-wrap: anywhere; }
+.row .meta { font-size: 0.8125rem; color: var(--secondary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .meta .domain { font-family: ui-monospace, monospace; }
 .row .snippet {
-  font-size: 0.9375rem; font: -apple-system-subheadline; color: var(--secondary); margin-top: 4px;
+  font-size: 0.9375rem; color: var(--secondary); margin-top: 4px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 mark { background: var(--highlight); color: inherit; border-radius: 2px; }
+.meta .saved-chip { margin-top: 0; vertical-align: 1px; }
 .chip {
-  display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; font-size: 0.6875rem; font: -apple-system-caption2; line-height: 1.5;
+  display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; font-size: 0.6875rem; line-height: 1.5;
   color: var(--chip); border: 1px solid currentColor; background: transparent;
 }
 /* A result's label tag opens that label's pages. */
@@ -283,9 +307,9 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 .web-row .thumb { width: 64px; height: 48px; object-fit: cover; border-radius: 6px; float: right; margin-left: 8px; }
 .more-row { display: block; padding: 12px 16px; color: var(--accent); text-decoration: none; cursor: pointer; }
 .status { padding: 32px 24px; text-align: center; color: var(--secondary); }
-.status h2 { color: var(--text); font-size: 1.25rem; font: -apple-system-title3; font-weight: 600; margin: 0 0 6px; }
+.status h2 { color: var(--text); font-size: 1.25rem; font-weight: 600; margin: 0 0 6px; }
 .status button, .button {
-  margin-top: 12px; border: 1px solid var(--line); background: var(--card); color: var(--accent);
+  margin-top: 12px; border: 1px solid var(--line2); background: var(--card); color: var(--accent);
   border-radius: 10px; padding: 8px 14px; cursor: pointer;
 }
 .spinner { margin: 24px auto; width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
@@ -294,15 +318,15 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 /* Sidebar */
 /* Headings at the rows' size, in the text colour, as the Mac app's (its
    small grey ones were hard to see). */
-#sidebar h2 { margin: 12px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); font: -apple-system-body; font-size: 1rem; font-weight: 600; color: var(--text); }
+#sidebar h2 { margin: 12px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 1rem; font-weight: 600; color: var(--text); }
 /* The line between sections, as the Mac app's SidebarDivider. */
-#sidebar h2:empty { margin-bottom: 0; padding-top: 4px; }
+#sidebar .sidebar-rule { margin: 12px 10px 0; padding-top: 4px; border-top: 1px solid var(--line); }
 #sidebar button {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent;
   padding: 7px 10px; border-radius: 8px; cursor: pointer; color: var(--text);
 }
 #sidebar button[aria-current="page"] { background: var(--accent); color: var(--bg); }
-#sidebar .status-link { display: block; padding: 7px 10px; color: var(--secondary); text-decoration: none; font-size: 0.8125rem; font: -apple-system-footnote; }
+#sidebar .status-link { display: block; padding: 7px 10px; color: var(--secondary); text-decoration: none; font-size: 0.8125rem; }
 #sidebar .status-link:hover { color: var(--accent); }
 /* Every icon, and a label's dot, in the same 18px square, so the names
    line up (the Mac app's RowIcon/RowDot). */
@@ -329,12 +353,12 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 #tabs {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 5;
   display: flex; gap: 4px; padding: 6px; border-radius: 999px;
-  background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid var(--line2);
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
 }
 #tabs button {
   border: 0; background: transparent; border-radius: 999px; padding: 6px 18px; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.6875rem; font: -apple-system-caption2; color: var(--text);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.6875rem; color: var(--text);
 }
 #tabs button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7; }
 #tabs button[aria-current="page"] { background: var(--raised); color: var(--accent); }
@@ -344,16 +368,16 @@ body.phone-preview #tabs { display: none; }
 .menu { position: relative; }
 .menu-list {
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; min-width: 220px; padding: 4px;
-  background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 28px rgb(0 0 0 / 0.3);
+  background: var(--card); border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 10px 28px rgb(0 0 0 / 0.3);
 }
 .menu-list button, .menu-list a {
   display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 12px; border-radius: 8px;
-  cursor: pointer; color: var(--text); text-decoration: none; font-size: 1.0625rem; font: -apple-system-body;
+  cursor: pointer; color: var(--text); text-decoration: none; font-size: 1.0625rem;
 }
 .menu-list button:hover, .menu-list a:hover { background: var(--raised); }
 .menu-list .danger { color: var(--danger); }
 .menu-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
-.menu-list .heading { padding: 6px 12px 2px; font-size: 0.75rem; font: -apple-system-caption1; color: var(--secondary); }
+.menu-list .heading { padding: 6px 12px 2px; font-size: 0.75rem; color: var(--secondary); }
 /* "New Version · Reload" (the rooms' shared toast): above the tabs on a phone. */
 .smallweb-row .scheme { color: var(--smallweb); font-weight: 600; }
 .smallweb-row .chip-link { color: var(--smallweb); text-decoration: none; }
@@ -362,7 +386,7 @@ body.phone-preview #tabs { display: none; }
 .update-toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 50;
   display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 999px;
-  background: var(--card); border: 1px solid var(--line); box-shadow: 0 8px 24px rgb(0 0 0 / 0.3); color: var(--text); font-size: 0.875rem;
+  background: var(--card); border: 1px solid var(--line2); box-shadow: 0 8px 24px rgb(0 0 0 / 0.3); color: var(--text); font-size: 0.875rem;
 }
 .update-toast button { border: 0; border-radius: 999px; padding: 6px 12px; background: var(--accent); color: var(--bg); font: inherit; font-weight: 600; cursor: pointer; }
 @media (max-width: 759px) { .update-toast { bottom: calc(72px + env(safe-area-inset-bottom)); } }
@@ -374,7 +398,7 @@ body.phone-preview #tabs { display: none; }
 .rooms-open svg { width: 19px; height: 19px; fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .rooms-menu {
   position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 200px; padding: 6px;
-  background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  background: var(--card); border: 1px solid var(--line2); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
 }
 .rooms-menu[hidden] { display: none; }
 .rooms-menu hr, .rooms-sheet hr { border: 0; border-top: 1px solid var(--line); margin: 6px 4px; }
@@ -392,25 +416,26 @@ a.room.neighbour { color: var(--secondary); }
 .room-icon { width: 24px; height: 24px; flex: none; border-radius: 6px; background: center / contain no-repeat; }
 a.room.neighbour .room-icon { border-radius: 0; background-size: 20px 20px; }
 dialog {
-  width: min(460px, calc(100vw - 24px)); max-height: 80vh; padding: 0; border: 1px solid var(--line); border-radius: 16px;
+  width: min(460px, calc(100vw - 24px)); max-height: 80vh; padding: 0; border: 1px solid var(--line2); border-radius: 16px;
   background: var(--bg); color: var(--text); box-shadow: 0 20px 50px rgb(0 0 0 / 0.4);
 }
 dialog::backdrop { background: rgb(0 0 0 / 0.4); }
 dialog .dialog-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-dialog .dialog-head h2 { flex: 1; margin: 0; font-size: 1.0625rem; font-weight: 600; font: -apple-system-headline; }
+dialog .dialog-head h2 { flex: 1; margin: 0; font-size: 1.0625rem; font-weight: 600; }
 dialog .dialog-body { padding: 8px 0 16px; overflow-y: auto; max-height: calc(80vh - 56px); }
 dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
 
 /* Settings */
 .settings { padding: 0 12px 24px; }
-.settings h2 { font-size: 0.8125rem; font: -apple-system-footnote; font-weight: 600; color: var(--secondary); margin: 18px 6px 6px; text-transform: uppercase; }
+.settings h2 { font-size: 0.8125rem; font-weight: 600; color: var(--secondary); margin: 18px 6px 6px; text-transform: uppercase; }
 .settings .group { background: var(--card); border-radius: 12px; overflow: hidden; }
 .settings .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 .settings .item:last-child { border-bottom: 0; }
 .settings input[type="text"], .settings input[type="url"], .settings select {
-  font-size: 1.0625rem; font: -apple-system-body; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; max-width: 60%;
+  font-family: inherit; font-size: 1.0625rem; color: var(--text); background: var(--bg); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 8px; max-width: 60%;
 }
-.settings .footnote { font-size: 0.8125rem; font: -apple-system-footnote; color: var(--secondary); margin: 6px 6px 0; }
+.settings .machiya-account { display: inline-flex; align-items: baseline; gap: 12px; color: var(--secondary); text-align: right; }
+.settings .footnote { font-size: 0.8125rem; color: var(--secondary); margin: 6px 6px 0; }
 .switch { appearance: none; width: 46px; height: 28px; border-radius: 999px; background: var(--raised); position: relative; cursor: pointer; flex: none; }
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
 .switch:checked { background: var(--accent); }
@@ -421,29 +446,29 @@ dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
 .toast {
   position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30;
   display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px);
-  background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 10px 16px;
-  font-size: 0.875rem; font: -apple-system-subheadline; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  background: var(--card); color: var(--text); border: 1px solid var(--line2); border-radius: 12px; padding: 10px 12px 10px 16px;
+  font-size: 0.875rem; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
 }
 .toast > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toast-action { border: 0; background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; padding: 4px 6px; flex: none; }
 .kbd-help {
   position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 30; width: min(22rem, calc(100vw - 40px));
-  background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px 14px;
+  background: var(--card); color: var(--text); border: 1px solid var(--line2); border-radius: 14px; padding: 12px 16px 14px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
 }
-.kbd-help h2 { margin: 0 0 8px; font-size: 0.9375rem; font: -apple-system-subheadline; font-weight: 600; color: var(--secondary); }
-.kbd-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 0.8125rem; font: -apple-system-footnote; }
+.kbd-help h2 { margin: 0 0 8px; font-size: 0.9375rem; font-weight: 600; color: var(--secondary); }
+.kbd-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 0.8125rem; }
 .kbd-help dt, .kbd-help dd { margin: 0; }
 .kbd-help dd { color: var(--secondary); }
 .kbd-help kbd {
   font: 0.85em ui-monospace, SFMono-Regular, monospace; padding: 1px 6px; border-radius: 5px;
-  border: 1px solid var(--line); background: var(--raised); color: var(--text);
+  border: 1px solid var(--line2); background: var(--raised); color: var(--text);
 }
 
 /* Search within a label's or collection's list. */
 .list-search {
-  width: 100%; font-size: 1rem; font: -apple-system-body; color: var(--text); background: var(--card);
-  border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px;
+  width: 100%; font-family: inherit; font-size: 1rem; color: var(--text); background: var(--card);
+  border: 1px solid var(--line2); border-radius: 999px; padding: 8px 14px;
 }
 
 /* ROOM ICONS (scripts/room-icons.py from assets/rooms/; don't edit by hand) */

@@ -179,7 +179,7 @@ const DEFAULTS = {
 let settings = { ...DEFAULTS, ...readLocal('shioriAppSettings') };
 // The house's shared choices: theme and text size set in
 // any Machiya room on this device count here too, and ours count there.
-const HOUSE = S.houseSettings(document.cookie, { mine: settings.textSize });
+const HOUSE = S.houseSettings(document.cookie, { mine: settings.textSize, steps: 'rooms' });
 if (HOUSE.theme) settings.theme = HOUSE.theme;
 if (HOUSE.textSize) settings.textSize = HOUSE.textSize;
 let recents = readLocal('shioriAppRecents') || [];
@@ -205,27 +205,85 @@ function writeLocal(key, value) {
   } catch (_) {}
 }
 
-function changeSetting(key, value) {
+function changeSetting(key, value, { fromKura = false } = {}) {
   settings = { ...settings, [key]: value };
   writeLocal('shioriAppSettings', settings);
   // Theme and text size are the house's too (the other rooms read them).
-  const shared = S.houseCookie(key, value, location.hostname);
+  const shared = S.houseCookie(key, value, location.hostname, { steps: 'rooms' });
   if (shared) document.cookie = shared;
   applyLook();
+  // Signed in to Machiya: the rooms' copy follows (a choice made here wins
+  // over Kura's answer still on its way).
+  if (key === 'theme' || key === 'textSize') {
+    if (!fromKura) lookChangedHere = true;
+    if (!fromKura && kuraAccount.status === 200) pushPrefs();
+  }
   if (key === 'searchHistory' && value === false) {
     recents = [];
     writeLocal('shioriAppRecents', recents);
   }
 }
 
-const TEXT_SCALE = { xSmall: 0.82, small: 0.88, medium: 0.94, large: 1, xLarge: 1.1, xxLarge: 1.2, xxxLarge: 1.32 };
+// The rooms' steps (machiya.css: 12, 13, 14, 15 and 16 px for Extra Small to
+// Extra Large), so a size chosen here or in Kura looks the same in both and
+// reads back as itself (S.houseSettings' `rooms` steps); Medium and the two
+// largest are Shiori's own, between and beyond them.
+const TEXT_SCALE = { xSmall: 12 / 14, small: 13 / 14, medium: 0.96, large: 15 / 14, xLarge: 16 / 14, xxLarge: 1.24, xxxLarge: 1.36 };
+/**
+ * Standard's scale: 1, or in Safari the system's text size (Dynamic Type)
+ * over its default body size (17 px), read from the system body font. The
+ * app's sizes are rem, so the root's size scales them all.
+ */
+function systemTextScale() {
+  if (!(window.CSS && CSS.supports && CSS.supports('font', '-apple-system-body'))) return 1;
+  const probe = h('span', { style: 'font: -apple-system-body; position: absolute; visibility: hidden' }, 'x');
+  document.body.append(probe);
+  const px = parseFloat(getComputedStyle(probe).fontSize) || 17;
+  probe.remove();
+  return px / 17;
+}
 function applyLook() {
   const theme = settings.theme === 'day' || settings.theme === 'night' ? settings.theme : '';
   if (theme) document.documentElement.dataset.theme = theme;
   else delete document.documentElement.dataset.theme;
+  // The browser's (and the installed app's) bar follows the chosen theme:
+  // one colour for Night or Day, the system's pair for System.
+  const metas = S.themeColorMetas(theme);
+  const shown = [...document.querySelectorAll('meta[name="theme-color"]')];
+  if (shown.length !== metas.length || metas.some((m, i) => shown[i].content !== m.content || (shown[i].media || '') !== m.media)) {
+    shown.forEach((m) => m.remove());
+    const at = document.querySelector('meta[name="color-scheme"]');
+    for (const m of metas.slice().reverse()) at.after(h('meta', { name: 'theme-color', content: m.content, media: m.media || undefined }));
+  }
   // How your pages, notes and opened pages stand apart: app.css keys off it.
   document.body.dataset.resultStyle = ['tint', 'solid', 'bar', 'none'].includes(settings.resultStyle) ? settings.resultStyle : 'tint';
-  document.documentElement.style.fontSize = `${Math.round(100 * (TEXT_SCALE[settings.textSize] || 1))}%`;
+  document.documentElement.style.fontSize = `${Math.round(100 * (TEXT_SCALE[settings.textSize] || systemTextScale()))}%`;
+}
+
+// --- Theme and text size with the rooms (Kura's /api/prefs) ------------------------
+// Signed in to Machiya, the rooms keep your theme and text size on the
+// server (machiya.js): read on launch, replacing this device's when they
+// differ and are values the house knows, and written on a change here.
+// Any failure is silent; the cookies and this browser's copy stay.
+
+/** Where you stand with Kura's sign-in: {status} from api.kuraPrefs (-1: not asked yet). */
+let kuraAccount = { status: -1 };
+let lookChangedHere = false;
+
+function pushPrefs() {
+  void api.putKuraPrefs({ theme: S.houseValue('theme', settings.theme) || 'system', text_size: S.houseValue('textSize', settings.textSize, 'rooms') || 'standard' });
+}
+
+async function loadKuraAccount() {
+  const { status, prefs } = await api.kuraPrefs();
+  kuraAccount = { status };
+  if (status !== 200 || lookChangedHere) return;
+  const theme = prefs.theme === 'auto' ? 'system' : prefs.theme;
+  if (['system', 'night', 'day'].includes(theme) && theme !== settings.theme) changeSetting('theme', theme, { fromKura: true });
+  const size = typeof prefs.text_size === 'string' && /^[a-z]+$/.test(prefs.text_size)
+    ? S.houseSettings(`machiya_textSize=${prefs.text_size}`, { mine: settings.textSize, steps: 'rooms' }).textSize
+    : undefined;
+  if (size && size !== settings.textSize) changeSetting('textSize', size, { fromKura: true });
 }
 
 function recordSearch(q) {
@@ -383,6 +441,18 @@ function openDoc(doc, row) {
   }
 }
 
+/**
+ * A list drawn without the page in the preview beside it (another list, a
+ * search that doesn't find it): the preview empties, as the Mac app's
+ * selection does, rather than keep a page the list no longer shows.
+ */
+function dropStaleSelection(container) {
+  if (!wide() || !selected || !container.isConnected) return;
+  if ([...container.querySelectorAll('.row')].some((r) => r._doc && r._doc.url === selected.url)) return;
+  selected = null;
+  $('preview').replaceChildren(status('No Page Selected', 'Select a page to preview it.'));
+}
+
 function status(title, text, retry, link = null) {
   return h(
     'div',
@@ -491,12 +561,17 @@ function resultsList(container, options) {
   const merging = source === 'all' && merge;
   const merger = S.newestFirstMerge();
   let mergedTotal = 0;
+  let notesWantSignIn = false;
   /** One page of this list, in api.search's shape. */
   async function fetchPage(first) {
     // A Notes list searches the vaults its filter names (All, or one).
     if (source === 'notes') return api.kura(query, { sort, pageKey: first ? '' : next, vault: settings.notesVault || 'all' });
     if (!merging) return api.search(query, { sort, pageKey: first ? '' : next });
-    const notesPage = (key) => api.kura('*', { sort: 'date', pageKey: key }).catch(() => null);
+    // Kura asking who you are (401) leaves the notes out, and says so.
+    const notesPage = (key) => api.kura('*', { sort: 'date', pageKey: key }).catch((error) => {
+      if (error.status === 401) notesWantSignIn = true;
+      return null;
+    });
     const addNotes = (n) => (n ? merger.addNotes(n.documents, n.next) : merger.endNotes());
     if (first) {
       const [pages, notes] = await Promise.all([api.search(query, { sort }), notesPage('')]);
@@ -553,6 +628,7 @@ function resultsList(container, options) {
       }
       if (first) {
         container.replaceChildren();
+        if (notesWantSignIn) container.append(signInStatus(() => resultsList(container, options)));
         if (heading) container.append(h('div', { class: 'section-head' }, heading));
         if (opened && settings.showOpened === true && reply.opened.length) {
           container.append(h('div', { class: 'section-head' }, 'You Opened'));
@@ -575,7 +651,8 @@ function resultsList(container, options) {
         plain.flush();
         for (const f of groups.values()) f.flush();
       }
-      if (first && !seen.size && !reply.opened.length) container.replaceChildren(status('Nothing Found', empty));
+      if (first) dropStaleSelection(container);
+      if (first && !seen.size && !reply.opened.length) container.replaceChildren(...[notesWantSignIn ? signInStatus(() => resultsList(container, options)) : null, status('Nothing Found', empty)].filter(Boolean));
       loading = false;
       // A short page (all seen, or a merge waiting on the other list): keep going.
       if (!done && (added === 0 || list.querySelectorAll('.row').length < 15)) page(false);
@@ -728,6 +805,8 @@ function setTitle(text, back = false) {
   $('title').classList.toggle('sidebar-says', !back);
   document.title = text === 'Library' ? 'Shiori' : `${text} – Shiori`;
   $('back').hidden = !back;
+  // In Settings, its own gear would do nothing: Back is the way out.
+  $('settings-button').hidden = text === 'Settings';
 }
 
 function viewLibrary(params) {
@@ -785,6 +864,7 @@ async function viewOpened(container, filter = '') {
       list.append(row);
     }
     container.replaceChildren(list);
+    dropStaleSelection(container);
   } catch (error) {
     container.replaceChildren(status("Can't Reach Hister", error.message, () => viewOpened(container, filter)));
   }
@@ -889,7 +969,12 @@ function viewSearch(params) {
   const scope = scopeOf(params);
   setTitle('Search');
   searchInput.placeholder = PROMPTS[scope];
-  if (!q) return go('library', { s: scope }, { replace: true });
+  // No words (the installed app's Search shortcut, #/search): the
+  // Library, its field ready to type in.
+  if (!q) {
+    go('library', { s: scope }, { replace: true });
+    return searchInput.focus();
+  }
   const keep = (next) => ({ q, ...next });
   const listed = scope === 'hister' || scope === 'notes';
   fill($('list-top'), 
@@ -945,7 +1030,8 @@ async function searchAll(container, q) {
   // Pages from Hister (which sends no notes), notes from Kura.
   const both = (text) => Promise.all([
     api.search(text, { limit: ALL_COUNT }).catch(() => null),
-    api.kura(text, { limit: ALL_COUNT }).catch(() => null),
+    // Kura asking who you are (401): a Sign In notice where the notes go.
+    api.kura(text, { limit: ALL_COUNT }).catch((error) => (error.status === 401 ? { signIn: true, total: 0, documents: [], opened: [] } : null)),
   ]);
   let [pages, notes] = await both(q);
   const found = (r) => r && (r.total || r.documents.length || r.opened.length);
@@ -1001,7 +1087,9 @@ async function searchAll(container, q) {
   // no notes: Kura has them.)
   const hiddenOpened = settings.showOpened === true ? 0 : ((pages && pages.opened) || []).filter((o) => !S.isNoteURL(o.url, settings.niwaURL, settings.konbiniURL)).length;
   section('Your Pages' + suffix, pages, 'hister', pages && (pages.total || 0) - hiddenOpened);
-  section('Your Notes' + suffix, notes, 'notes');
+  if (notes && notes.signIn) container.append(h('section', { class: 'list-section' }, signInStatus(() => searchAll(container, q))));
+  else section('Your Notes' + suffix, notes, 'notes');
+  dropStaleSelection(container);
   if (!settings.webResults) {
     if (!container.children.length) container.replaceChildren(status('Nothing Found', `Nothing matches “${q}”.`));
     return;
@@ -1059,6 +1147,7 @@ async function smallwebList(container, q) {
       if (page === 1) {
         if (!reply.results.length) return container.replaceChildren(status('No Small Web Results', reply.failures.join(' · ')));
         container.replaceChildren(reply.failures.length ? h('p', { class: 'correction' }, reply.failures.join(' · ')) : '', list, more);
+        dropStaleSelection(container);
       }
       for (const r of reply.results) if (!seen.has(r.url)) (seen.add(r.url), list.append(row(r)));
       more.hidden = !reply.more;
@@ -1106,12 +1195,13 @@ async function webList(container, q, { embedded = false } = {}) {
     const results = (await wikipediaFirst(data.results || [], wq)).filter((r) => typeof r.url === 'string' && /^https?:/.test(r.url));
     if (!results.length) return container.replaceChildren(status('No Web Results', ''));
     const list = h('ul', { class: 'rows' });
-    for (const r of results.slice(0, embedded ? 10 : 30)) {
+    const shown = results.slice(0, embedded ? 10 : 30);
+    for (const r of shown) {
       const thumb = api.proxiedImage(r.thumbnail || r.thumbnail_src || r.img_src);
       list.append(
         h(
           'li',
-          { class: 'row web-row' },
+          { class: 'row web-row', 'data-url': r.url },
           h('span', { class: 'icon' }, icon('globe')),
           h(
             'a',
@@ -1127,9 +1217,33 @@ async function webList(container, q, { embedded = false } = {}) {
     // Not `null` as a child: replaceChildren writes it out as the text "null"
     // (it showed under All's Web heading).
     container.replaceChildren(...[embedded ? null : answerCard(q), list].filter(Boolean));
+    if (!embedded) dropStaleSelection(container);
+    markSaved(list, shown.map((r) => r.url));
   } catch (error) {
     container.replaceChildren(status("The Web Search Didn't Answer", '', () => webList(container, q, { embedded })));
   }
+}
+
+/**
+ * Web results you already have, marked as the search page marks them: the
+ * page's label as its chip, or "visited" for one with none (one Hister
+ * lookup, S.urlLookupQuery and S.savedLabels). Best effort.
+ */
+async function markSaved(list, urls) {
+  const lookup = S.urlLookupQuery(urls);
+  if (!lookup) return;
+  try {
+    const known = await api.search(lookup, { limit: 100 });
+    const labels = S.savedLabels(known.documents);
+    for (const row of list.querySelectorAll('.web-row')) {
+      const key = S.normalizeURL(row.dataset.url || '');
+      if (!labels.has(key)) continue;
+      const label = labels.get(key);
+      const meta = row.querySelector('.meta');
+      if (!meta || meta.querySelector('.saved-chip')) continue;
+      meta.prepend(h('span', { class: 'chip saved-chip', style: `--chip: ${label ? chipVar(label) : 'var(--visited)'}`, title: label ? `In your pages, labelled ${label}` : 'In your pages' }, label || 'visited'), ' ');
+    }
+  } catch (_) {}
 }
 
 // --- Preview -----------------------------------------------------------------------
@@ -1508,8 +1622,8 @@ function viewSettings() {
     select.addEventListener('change', () => changeSetting(key, typeof settings[key] === 'number' ? Number(select.value) : select.value));
     return h('label', { class: 'item' }, h('span', {}, title), select);
   };
-  const text = (key, title, placeholder) => {
-    const input = h('input', { type: 'url', value: settings[key] || '', placeholder, 'aria-label': title, autocapitalize: 'off', spellcheck: 'false' });
+  const text = (key, title, placeholder, type = 'url') => {
+    const input = h('input', { type, value: settings[key] || '', placeholder, 'aria-label': title, autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false' });
     input.addEventListener('change', () => changeSetting(key, input.value.trim()));
     return h('label', { class: 'item' }, h('span', {}, title), input);
   };
@@ -1520,8 +1634,9 @@ function viewSettings() {
       { class: 'settings' },
       group('Appearance', [
         choice('theme', 'Theme', [['system', 'System'], ['night', 'Tokyo Night'], ['day', 'Tokyo Night Day']]),
-        // The app's names and steps (TextSize), as Shiori offers them.
-        choice('textSize', 'Text Size', [['system', 'Standard'], ['xSmall', 'Extra Small'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large'], ['xLarge', 'Extra Large'], ['xxLarge', 'Extra Extra Large'], ['xxxLarge', 'Largest']]),
+        // The rooms' five sizes by their names (Standard is the system's),
+        // with Medium and the two largest of the app's.
+        choice('textSize', 'Text Size', [['xSmall', 'Extra Small'], ['small', 'Small'], ['medium', 'Medium'], ['system', 'Standard'], ['large', 'Large'], ['xLarge', 'Extra Large'], ['xxLarge', 'Extra Extra Large'], ['xxxLarge', 'Largest']]),
         toggle('previewImages', 'Images in Previews'),
       ]),
       exportGroup(group),
@@ -1537,7 +1652,8 @@ function viewSettings() {
         toggle('searchHistory', 'Recent Searches'),
         h('div', { class: 'item' }, h('button', { type: 'button', class: 'button', style: 'margin:0;color:var(--danger)', onclick: () => ((recents = []), writeLocal('shioriAppRecents', []), toast('Cleared')) }, 'Clear Recent Searches')),
       ], 'Kept in this browser only.'),
-      group('Notes', [text('obsidianVault', 'Obsidian Vault', 'Your vault’s name'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/')]),
+      group('Notes', [text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/'), machiyaRow()],
+        settings.niwaURL ? 'Signed in, your theme and text size follow you to the Machiya rooms. Signing in and out happen on Kura’s own pages.' : ''),
       group('About', [
         h('div', { class: 'item' }, h('span', {}, 'Saving pages'), h('span', { style: 'color:var(--secondary);text-align:right' }, 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
         statusURL ? h('div', { class: 'item' }, h('span', {}, 'Server'), statusLink()) : null,
@@ -1548,6 +1664,35 @@ function viewSettings() {
         'Install this as an app: Share → Add to Home Screen (iPhone, iPad), or File → Add to Dock (Safari on the Mac).'),
     ),
   );
+}
+
+/**
+ * Settings → Notes → Machiya, as the apps' Sign in to Machiya: whether
+ * Kura knows you (its /api/prefs answering 200, 401 or 404), with Sign In
+ * (Kura's /signin) or Sign Out (Kura's Settings: its sign-out is a form
+ * on Kura's own origin, which this host doesn't pass). Asked afresh each
+ * time Settings opens. Only with Kura's address set.
+ */
+function machiyaRow() {
+  if (!settings.niwaURL) return null;
+  const state = h('span', { class: 'machiya-state' });
+  const action = h('span', {});
+  const row = h('div', { class: 'item' }, h('span', {}, 'Machiya'), h('span', { class: 'machiya-account' }, state, action));
+  const draw = () => {
+    const signIn = S.machiyaSignInURL(settings.niwaURL);
+    const link = (href, text) => (href ? h('a', { class: 'link-button', href }, text) : null);
+    const [text, a] = {
+      200: ['Signed in', link(signIn && signIn.replace(/signin$/, 'settings'), 'Sign Out…')],
+      401: ['Not signed in', link(signIn, 'Sign In')],
+      404: ['Kura doesn’t ask who you are', null],
+      0: ['Kura didn’t answer', null],
+    }[kuraAccount.status] || ['Checking…', null];
+    state.textContent = text;
+    fill(action, a);
+  };
+  draw();
+  loadKuraAccount().then(() => row.isConnected && draw());
+  return row;
 }
 
 /** Settings → Export & Feed, for the list last on screen (as iOS; File on the Mac). */
@@ -1779,7 +1924,8 @@ function sidebar(current) {
     }),
     labels.length ? h('h2', {}, 'Labels') : null,
     ...labels.map((l) => item(l, 'list', { q: `label:${l}`, t: l }, null, view === 'list' && q === `label:${l}`, chipVar(l))),
-    statusURL ? h('h2', {}, '') : null,
+    // A rule above the status link, not an empty heading.
+    statusURL ? h('div', { class: 'sidebar-rule', role: 'separator' }) : null,
     statusLink(),
   );
   // Not the rooms' glyphs: they wear their room's colour (app.css).
@@ -1998,8 +2144,10 @@ const loadVaults = () => {
 };
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && Date.now() - vaultsAt > 10 * 60_000) void loadVaults();
+  // Back from signing in on Kura's page: Settings says so.
+  if (!document.hidden && route().view === 'settings') render();
 });
-Promise.all([loadRules(), api.cards().then((c) => (konbiniCards = c)), loadVaults()]).then(render);
+Promise.all([loadRules(), api.cards().then((c) => (konbiniCards = c)), loadVaults(), loadKuraAccount()]).then(render);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(watchForUpdates).catch(() => {});

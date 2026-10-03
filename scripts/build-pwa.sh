@@ -30,18 +30,13 @@ if [ -n "${SHIORI_ROOM_LOGOS:-}" ]; then
 fi
 # The rounded web icons and the maskable one (scripts/generate-shiori-icons.py);
 # the apple-touch icon stays square, since iOS rounds it itself.
-cp -- assets/icon-32.png assets/icon-256.png assets/web-icon-64.png assets/web-icon-192.png assets/web-icon-512.png assets/web-maskable-512.png "$out/_shiori/"
+cp -- assets/icon-256.png assets/web-icon-64.png assets/web-icon-192.png assets/web-icon-512.png assets/web-maskable-512.png "$out/_shiori/"
 
 # The colours: search.css's tokens (its :root blocks, up to the first rule
 # that isn't one), so the app and the search page never drift apart.
 awk '/^\* \{ box-sizing/ { exit } { print }' patches/shiori/search.css >"$out/_shiori/theme.css"
 grep -q -- '--accent' "$out/_shiori/theme.css" || { echo "build-pwa: no theme tokens found in search.css" >&2; exit 1; }
 
-# A new cache name per build, so an installed app picks up the new files,
-# and each file's address carries the build (they're cached for minutes).
-version=$(git rev-parse --short HEAD 2>/dev/null || date +%s)
-stamp() { sed -i.bak -E "s#(/_shiori/(app|api|search-core)\.js|/_shiori/(app|theme)\.css)([\"'])#\1?v=$version\4#g" "$1" && rm -f -- "$1.bak"; }
-sed "s/__VERSION__/$version/" web/app/sw.js >"$out/sw.js"
 python3 scripts/status-link.py "$out/index.html" "$status"
 # The Machiya rooms for the switcher: SHIORI_ROOMS (and the notes' homes
 # above) from the environment, as the server passes them.
@@ -63,6 +58,26 @@ for path in sys.argv[1:]:
     with open(path, "w") as f:
         f.write(text)
 PY
+
+# The build's version is a hash of what it built (every file, with the
+# settings stamped in, and the service worker), not the commit: a rebuild
+# with other settings or room logos gets a new cache name, so an installed
+# app picks up the new files, and each file's address carries it (they're
+# cached for minutes). The same files give the same version.
+version=$(python3 - "$out" web/app/sw.js <<'PY'
+import hashlib, os, sys
+out, worker = sys.argv[1], sys.argv[2]
+h = hashlib.sha256()
+for rel in sorted(os.path.relpath(os.path.join(d, f), out) for d, _, fs in os.walk(out) for f in fs):
+    with open(os.path.join(out, rel), "rb") as f:
+        h.update(rel.encode() + b"\0" + hashlib.sha256(f.read()).digest())
+with open(worker, "rb") as f:
+    h.update(b"sw.js\0" + hashlib.sha256(f.read()).digest())
+print(h.hexdigest()[:12])
+PY
+)
+stamp() { sed -i.bak -E "s#(/_shiori/(app|api|search-core)\.js|/_shiori/(app|theme)\.css)([\"'])#\1?v=$version\4#g" "$1" && rm -f -- "$1.bak"; }
+sed "s/__VERSION__/$version/" web/app/sw.js >"$out/sw.js"
 stamp "$out/index.html"
 stamp "$out/sw.js"
 sed -i.bak "s#from './api.js'#from './api.js?v=$version'#" "$out/_shiori/app.js" && rm -f -- "$out/_shiori/app.js.bak"

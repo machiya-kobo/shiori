@@ -838,6 +838,51 @@ test("a note's gemini and gopher links are offered, compared conservatively (Sav
   assert.equal(S.smallWebKey('gopher://h:7070/x'), 'gopher://h:7070/x');
 });
 
+test("the browser bar's colours follow the theme, as the rooms set them", () => {
+  const plain = (x) => JSON.parse(JSON.stringify(x));
+  assert.deepEqual(plain(S.themeColorMetas('night')), [{ content: '#16161e', media: '' }]);
+  assert.deepEqual(plain(S.themeColorMetas('day')), [{ content: '#d0d5e3', media: '' }]);
+  assert.deepEqual(plain(S.themeColorMetas('system')), [
+    { content: '#16161e', media: '(prefers-color-scheme: dark)' },
+    { content: '#d0d5e3', media: '(prefers-color-scheme: light)' },
+  ]);
+  assert.equal(S.themeColorMetas('').length, 2);
+});
+
+test("the web app's text sizes round-trip with the rooms' (the `rooms` steps)", () => {
+  const rooms = { steps: 'rooms' };
+  // Each of the house's five reads back as the one written, both ways.
+  for (const [house, size] of [['xsmall', 'xSmall'], ['small', 'small'], ['standard', 'system'], ['large', 'large'], ['xlarge', 'xLarge']]) {
+    assert.equal(S.houseSettings(`machiya_textSize=${house}`, rooms).textSize, size, `house ${house}`);
+    assert.equal(S.houseValue('textSize', size, 'rooms'), house, `Shiori ${size}`);
+    assert.match(S.houseCookie('textSize', size, 'localhost', rooms), new RegExp(`^machiya_textSize=${house};`));
+  }
+  // Shiori's own steps round to the nearest, and keep themselves.
+  assert.equal(S.houseValue('textSize', 'xxxLarge', 'rooms'), 'xlarge');
+  assert.equal(S.houseSettings('machiya_textSize=xlarge', { mine: 'xxxLarge', steps: 'rooms' }).textSize, undefined);
+  assert.equal(S.houseSettings('machiya_textSize=small', { mine: 'medium', steps: 'rooms' }).textSize, undefined);
+  // The search page keeps Apple's (its Large is Apple's default size).
+  assert.equal(S.houseValue('textSize', 'large'), 'standard');
+  assert.equal(S.houseSettings('machiya_textSize=large').textSize, 'xLarge');
+  assert.equal(S.houseValue('theme', 'night'), 'night');
+  assert.equal(S.houseValue('resultStyle', 'tint'), '');
+});
+
+test("web results you already have: Hister's answer by normalised URL, notes never", () => {
+  const m = S.savedLabels([
+    { url: 'https://www.example.com/a/', label: 'paper' },
+    { url: 'https://example.org/b', label: '' },
+    { url: 'https://kura.example/n/Plan', label: 'vault' },
+    { url: 'https://example.org/c' },
+    null,
+  ]);
+  assert.equal(m.get(S.normalizeURL('https://example.com/a')), 'paper');
+  assert.equal(m.get(S.normalizeURL('https://example.org/b')), '');
+  assert.equal(m.get(S.normalizeURL('https://example.org/c')), '');
+  assert.equal(m.has(S.normalizeURL('https://kura.example/n/Plan')), false);
+  assert.equal(S.savedLabels(undefined).size, 0);
+});
+
 test("a preview's dates: the preview's, else the row's; never a bare \"Added\"", () => {
   const f = (s) => `<${s}>`;
   assert.equal(S.previewDates({ added: 10, updated: 20, details: { visits: 3 } }, {}, f), 'Added <10> · updated <20> · 3 visits');

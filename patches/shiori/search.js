@@ -2453,7 +2453,7 @@
     if (!lookup || !histerBase) return;
     try {
       const known = await histerSearch(lookup, 100);
-      const labels = new Map((known.documents || []).map((d) => [S.normalizeURL(d.url), d.label || '']));
+      const labels = S.savedLabels(known.documents);
       for (const [r, card] of cards) {
         const key = S.normalizeURL(r.url);
         if (!labels.has(key)) continue;

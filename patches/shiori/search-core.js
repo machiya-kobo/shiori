@@ -55,6 +55,21 @@
     return unique.length ? `url:(${unique.join('|')})` : '';
   }
 
+  /**
+   * Which web results you already have (Hister's answer to urlLookupQuery):
+   * normalised URL → its label ('' for a page with none, "visited").
+   * Notes never count: Hister's own copy of one isn't yours to mark.
+   */
+  function savedLabels(documents) {
+    const out = new Map();
+    for (const d of Array.isArray(documents) ? documents : []) {
+      if (!d || typeof d.url !== 'string' || d.label === 'vault') continue;
+      const key = normalizeURL(d.url);
+      if (key && !out.has(key)) out.set(key, typeof d.label === 'string' ? d.label : '');
+    }
+    return out;
+  }
+
   /** Where to go when the web search can't be reached: plain DuckDuckGo. */
   function fallbackURL(q) {
     return 'https://duckduckgo.com/?q=' + encodeURIComponent(q || '') + '&shiori=off';
@@ -891,10 +906,23 @@
   // covers every room on a device (settings stay per device). Shiori's
   // hosted pages read them as their defaults and write them on a change.
 
-  // The house's five text sizes, and the nearest of Shiori's eight (Apple's
-  // Dynamic Type names; "system" is Standard).
-  const HOUSE_TO_SIZE = { xsmall: 'xSmall', small: 'small', standard: 'system', large: 'xLarge', xlarge: 'xxLarge' };
-  const SIZE_TO_HOUSE = { xSmall: 'xsmall', small: 'small', medium: 'small', system: 'standard', large: 'standard', xLarge: 'large', xxLarge: 'xlarge', xxxLarge: 'xlarge' };
+  // The house's five text sizes, and the nearest of Shiori's eight, in two
+  // sets of steps. `apple` (the search page, whose sizes are the apps'
+  // Dynamic Type: "large" is Apple's default, the same as Standard) and
+  // `rooms` (the web app, whose steps are the rooms' own: its Large is the
+  // house's large, so each of the five reads back as the one written).
+  // "system" is Standard in both.
+  const HOUSE_STEPS = {
+    apple: {
+      toSize: { xsmall: 'xSmall', small: 'small', standard: 'system', large: 'xLarge', xlarge: 'xxLarge' },
+      toHouse: { xSmall: 'xsmall', small: 'small', medium: 'small', system: 'standard', large: 'standard', xLarge: 'large', xxLarge: 'xlarge', xxxLarge: 'xlarge' },
+    },
+    rooms: {
+      toSize: { xsmall: 'xSmall', small: 'small', standard: 'system', large: 'large', xlarge: 'xLarge' },
+      toHouse: { xSmall: 'xsmall', small: 'small', medium: 'small', system: 'standard', large: 'large', xLarge: 'xlarge', xxLarge: 'xlarge', xxxLarge: 'xlarge' },
+    },
+  };
+  const houseSteps = (steps) => HOUSE_STEPS[steps] || HOUSE_STEPS.apple;
 
   function readCookies(text) {
     const out = {};
@@ -912,19 +940,37 @@
    * The house's settings from `document.cookie`, in Shiori's terms:
    * { theme, textSize, hidden: [room keys] }, each only when set. `mine`
    * is Shiori's own text size: a cookie that's just its house rounding
-   * ("medium" is written as "small") doesn't replace it.
+   * ("medium" is written as "small") doesn't replace it. `steps`: 'apple'
+   * (the search page) or 'rooms' (the web app), HOUSE_STEPS.
    */
-  function houseSettings(cookieText, { mine = '' } = {}) {
+  function houseSettings(cookieText, { mine = '', steps = 'apple' } = {}) {
+    const { toSize, toHouse } = houseSteps(steps);
     const c = readCookies(cookieText);
     const out = { hidden: [] };
     const theme = c.machiya_theme === 'auto' ? 'system' : c.machiya_theme;
     if (['system', 'night', 'day'].includes(theme)) out.theme = theme;
     const size = c.machiya_textSize;
-    if (HOUSE_TO_SIZE[size] && SIZE_TO_HOUSE[mine] !== size) out.textSize = HOUSE_TO_SIZE[size];
+    if (toSize[size] && toHouse[mine] !== size) out.textSize = toSize[size];
     for (const [name, value] of Object.entries(c)) {
       if (name.startsWith('machiya_show_') && value === 'false') out.hidden.push(name.slice('machiya_show_'.length));
     }
     return out;
+  }
+
+  /**
+   * The browser bar's colours for a theme, as the rooms set them
+   * (vaultkit's shell): one for Night or Day, else a pair the system's
+   * light or dark picks. [{content, media}], media '' for none.
+   */
+  function themeColorMetas(theme) {
+    const NIGHT = '#16161e';
+    const DAY = '#d0d5e3';
+    if (theme === 'night') return [{ content: NIGHT, media: '' }];
+    if (theme === 'day') return [{ content: DAY, media: '' }];
+    return [
+      { content: NIGHT, media: '(prefers-color-scheme: dark)' },
+      { content: DAY, media: '(prefers-color-scheme: light)' },
+    ];
   }
 
   /** The domain the rooms share: the host less its first label ("shiori.x.ts.net" → "x.ts.net"); '' for an IP or a bare name. */
@@ -937,15 +983,22 @@
 
   /**
    * The cookie that shares a Shiori setting with the other rooms (theme or
-   * textSize), or null for a setting the house doesn't share.
+   * textSize), or null for a setting the house doesn't share. `steps` as
+   * for houseSettings.
    */
-  function houseCookie(key, value, hostname) {
-    let house;
-    if (key === 'theme' && ['system', 'night', 'day'].includes(value)) house = value;
-    else if (key === 'textSize' && SIZE_TO_HOUSE[value]) house = SIZE_TO_HOUSE[value];
-    else return null;
+  function houseCookie(key, value, hostname, { steps = 'apple' } = {}) {
+    const house = houseValue(key, value, steps);
+    if (!house) return null;
     const domain = houseDomain(hostname);
     return `machiya_${key}=${encodeURIComponent(house)}; path=/; max-age=31536000; samesite=lax${domain ? `; domain=${domain}` : ''}`;
+  }
+
+  /** A Shiori theme or text size in the house's words ("night", "large"), or '' for one it doesn't share. */
+  function houseValue(key, value, steps = 'apple') {
+    let house;
+    if (key === 'theme' && ['system', 'night', 'day'].includes(value)) house = value;
+    else if (key === 'textSize' && houseSteps(steps).toHouse[value]) house = houseSteps(steps).toHouse[value];
+    return house || '';
   }
 
   // --- Notes from Kura -------------------------------------------------------------
@@ -1771,6 +1824,8 @@
     rooms,
     houseSettings,
     houseCookie,
+    houseValue,
+    themeColorMetas,
     houseDomain,
     roomLinks,
     roomsSwitcher,
@@ -1784,6 +1839,7 @@
     newsBlurSubscribeURL,
     labelChipIndex,
     countText,
+    savedLabels,
     previewDates,
     collectionIcon,
     collectionTitle,
