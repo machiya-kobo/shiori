@@ -82,12 +82,13 @@ export function variant(room, mode) {
     .forEach((t, i) => { v[`chip${i}`] = v[t]; });
   // The Rooms menu, as the rooms draw it (vaultkit's switcher): their --dark
   // panel, the current row on their --hl, in either variant. Its text is
-  // Shiori's, moved in lightness only where it would be under 4.5:1 there
-  // (the rooms' own is 3.99:1 in Tokyo Night Day).
+  // the rooms' --fg and its roles their --muted, each moved in lightness
+  // only until 4.5:1 on both (vaultkit's --menu-fg is the same: the rooms'
+  // own fg is 3.99:1 in Tokyo Night Day).
   v['rooms-bg'] = room.dark;
   v['rooms-on'] = room.hl;
-  v['rooms-text'] = readableOn(v.text, [room.dark, room.hl], light);
-  v['rooms-muted'] = readableOn(v.secondary, [room.dark, room.hl], light);
+  v['rooms-text'] = readableOn(room.fg, [room.dark, room.hl], light);
+  v['rooms-muted'] = readableOn(room.muted, [room.dark, room.hl], light);
   return v;
 }
 

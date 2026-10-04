@@ -26,8 +26,8 @@
   /* Label colours, one of eight by the app's hash of the label (S.labelChipIndex). */
   --chip0: #7aa2f7; --chip1: #7dcfff; --chip2: #bb9af7; --chip3: #9ece6a;
   --chip4: #ff9e64; --chip5: #f7768e; --chip6: #e0af68; --chip7: #1abc9c;
-  /* The Rooms menu, as the rooms draw it (scripts/palettes.mjs's rooms-* for Tokyo Night). */
-  --rooms-bg: #16161e; --rooms-on: #292e42; --rooms-text: #c0caf5; --rooms-muted: #a9b1d6;
+  /* The Rooms menu, as the rooms draw it (scripts/palettes.mjs's rooms-* for Tokyo Night: vaultkit's --menu-fg). */
+  --rooms-bg: #16161e; --rooms-on: #292e42; --rooms-text: #c0caf5; --rooms-muted: #8d94b8;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   color-scheme: dark;
 }
