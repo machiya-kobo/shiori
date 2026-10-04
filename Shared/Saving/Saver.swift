@@ -37,7 +37,7 @@ nonisolated enum Saver {
         let defaults = SharedSettings.defaults
         let serverURL = defaults?.string(forKey: SharedSettings.Key.serverURL) ?? ""
         // Hister's token from the Keychain, when this device has one.
-        guard let client = HisterClient(serverURL: serverURL, token: HisterKeychain.token) else {
+        guard let client = HisterClient(serverURL: serverURL, token: HisterKeychain.token, histerSession: HisterKeychain.session) else {
             return .failed("Set your Hister server in Shiori's Settings first.")
         }
         return await save(input, label: label, via: via, client: client, outbox: SharedSettings.outboxDirectory.map(Outbox.init))
@@ -74,6 +74,9 @@ nonisolated enum Saver {
         } catch .unreachable, .untrusted, .cancelled {
             return queue(page, in: outbox)
         } catch .server(let status, _) where status >= 500 || status == 429 {
+            return queue(page, in: outbox)
+        } catch .signedOut {
+            // Kept until this device signs in again (the outbox waits too).
             return queue(page, in: outbox)
         } catch {
             return .failed(error.saveMessage)
@@ -236,6 +239,7 @@ extension HisterError {
         case .invalidQuery(let message): message.isEmpty ? "Hister couldn't read that page." : message
         case .server(let status, let message): message.isEmpty ? "The server answered \(status)." : "The server answered \(status): \(message)"
         case .badResponse: "The server's reply didn't make sense."
+        case .signedOut: "Hister wants you to sign in: sign in again in Shiori's Settings → Server."
         default: localizedDescription
         }
     }

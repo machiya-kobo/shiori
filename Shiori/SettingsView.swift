@@ -177,6 +177,9 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.surface)
 
+            HisterSignInSection()
+                .listRowBackground(palette.surface)
+
             HisterTokenSection()
                 .listRowBackground(palette.surface)
 

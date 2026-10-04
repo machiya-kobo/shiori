@@ -98,7 +98,8 @@ public enum Machiya {
     /// else as it was (any Authorization it had removed).
     public static func authorize(_ request: URLRequest, token: String, rooms: [String]) -> URLRequest {
         var request = request
-        let clean = Self.token(token)
+        // The identity file's token, or the Hister sign-in's id (`mhs_…`).
+        let clean = Self.token(token).isEmpty ? (HisterAccount.sessionID(token) ?? "") : Self.token(token)
         guard !clean.isEmpty, let url = request.url, mayCarryToken(to: url, rooms: rooms) else {
             request.setValue(nil, forHTTPHeaderField: "Authorization")
             return request
@@ -254,6 +255,15 @@ public struct MachiyaSignIn: Sendable, Equatable {
         let clean = Machiya.token(token)
         guard !clean.isEmpty else { return nil }
         self.token = clean
+        self.rooms = rooms
+    }
+
+    /// Signed in through Hister (`HisterAccount`): the helper's id, which
+    /// rooms in Hister sign-in mode take as `Bearer mhs_…`, under the same
+    /// host rule. nil without one that looks like one.
+    public init?(sessionID: String, rooms: [String]) {
+        guard let sid = HisterAccount.sessionID(sessionID) else { return nil }
+        self.token = sid
         self.rooms = rooms
     }
 

@@ -23,6 +23,9 @@ public enum HisterError: Error, Equatable, Sendable {
     case cancelled
     /// Hister refused a page for good (skip rule, too large, sensitive).
     case rejected(Rejection)
+    /// Hister wants a sign-in (403, or 401): no credential, or one it no
+    /// longer takes (signed out elsewhere, a token made anew). Never retried.
+    case signedOut
 }
 
 /// The orders Hister sorts in itself (its `api/config` lists them). Title
@@ -43,12 +46,17 @@ public enum SearchSort: String, Sendable, CaseIterable {
 /// Every request carries `Origin: hister://`, which Hister requires of
 /// non-browser clients (without it searches fail with 500 and writes with
 /// 403). With a token (`HisterToken`) every request also carries
-/// `X-Access-Token`; without one, nothing more is sent.
+/// `X-Access-Token`, and signed in (`HisterAccount`) `Cookie: hister=…`
+/// (cookies are otherwise off: the session never sets one itself); without
+/// them, nothing more is sent.
 public struct HisterClient: Sendable {
     public let baseURL: URL
     private let session: URLSession
     /// Hister's token, checked; nil sends none. Never logged.
     private let token: String?
+    /// The app's own Hister session (`HisterAccount.session`), checked; nil
+    /// sends none. Never logged.
+    private let histerSession: String?
 
     /// For the package's network code; replies that don't decode are
     /// logged here rather than vanishing into `.badResponse`.
@@ -67,7 +75,9 @@ public struct HisterClient: Sendable {
     }()
 
     /// Returns nil unless `serverURL` is an absolute http(s) URL.
-    public init?(serverURL: String, token: String? = nil, session: URLSession = HisterClient.defaultSession) {
+    public init?(
+        serverURL: String, token: String? = nil, histerSession: String? = nil, session: URLSession = HisterClient.defaultSession
+    ) {
         var s = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return nil }
         if !s.hasSuffix("/") { s += "/" }
@@ -77,10 +87,13 @@ public struct HisterClient: Sendable {
         self.baseURL = url
         self.session = session
         self.token = HisterToken.clean(token)
+        self.histerSession = HisterAccount.session(histerSession)
     }
 
     /// Whether requests carry a token (for Settings; never the token itself).
     public var sendsToken: Bool { token != nil }
+    /// Whether requests carry a Hister session.
+    public var sendsSession: Bool { histerSession != nil }
 
     // MARK: Reads
 
@@ -216,6 +229,7 @@ public struct HisterClient: Sendable {
         request.httpMethod = method
         request.setValue("hister://", forHTTPHeaderField: "Origin")
         if let token { request.setValue(token, forHTTPHeaderField: HisterToken.header) }
+        if let histerSession { request.setValue("\(HisterAccount.cookieName)=\(histerSession)", forHTTPHeaderField: "Cookie") }
         if let accept { request.setValue(accept, forHTTPHeaderField: "Accept") }
         if let body {
             request.httpBody = body
@@ -229,7 +243,8 @@ public struct HisterClient: Sendable {
         let response: URLResponse
         do {
             // A redirect elsewhere never takes the token along.
-            (data, response) = try await session.data(for: request, delegate: token == nil ? nil : TokenKeepingRedirects())
+            let carries = token != nil || histerSession != nil
+            (data, response) = try await session.data(for: request, delegate: carries ? TokenKeepingRedirects() : nil)
         } catch let error as URLError where error.code == .cancelled {
             throw .cancelled
         } catch is CancellationError {
@@ -245,6 +260,8 @@ public struct HisterClient: Sendable {
             throw .notFound
         case 400:
             throw .invalidQuery(Self.message(from: data))
+        case 401, 403:
+            throw .signedOut
         default:
             throw .server(status: http.statusCode, message: Self.message(from: data))
         }

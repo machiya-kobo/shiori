@@ -235,6 +235,14 @@ holds the rules and the traps the code can't tell you.
   (drain re-reads it), and follows no redirect elsewhere. Unset, nothing
   is sent. `HisterToken` / `S.histerToken` are twins. The hosted pages
   never hold it.
+- **Signing in to Hister** (the apps, `HisterAccount`, docs/signing-in.md):
+  the app holds a Hister session of its own (`Cookie: hister=…`, HisterKit
+  keeps cookies off and sets it) and the sign-in helper's id (`Bearer
+  mhs_…` to the rooms, never to Hister), both in the Keychain. The helper
+  is on Hister's host under `/machiya/`. Inert: offered only while the
+  helper says Hister has users. A 401/403 from Hister is `signedOut`,
+  never retried; the outbox keeps its pages until sign-in. Test a sign-in
+  only against a throwaway Hister with users (`HISTER_USERS_URL`).
 - Every request needs `Origin: hister://`. `limit`, `sort` and `highlight`
   only work inside the JSON `query=` parameter. `*` with sort `date` is
   "recent".

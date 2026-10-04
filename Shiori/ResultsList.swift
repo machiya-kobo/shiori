@@ -451,6 +451,8 @@ extension HisterError {
             "Cancelled."
         case .rejected(let rejection):
             rejection.reason
+        case .signedOut:
+            "Hister wants you to sign in: sign in again in Settings → Server (or check the access token there)."
         }
     }
 }

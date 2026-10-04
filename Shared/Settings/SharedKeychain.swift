@@ -61,21 +61,55 @@ nonisolated enum SharedKeychain {
     }
 }
 
-/// Hister's access token (Settings → Server → Access Token): the owner's
-/// one token per user, entered once per device, in the Keychain under the
-/// service "Hister". Sent as `X-Access-Token` by the app, the share
-/// extension and (through the `hister` native message) Safari's extension.
+/// Hister's credentials, in the Keychain under the service "Hister":
+/// - the access token (Settings → Server → Access Token): the owner's one
+///   token per user, entered once per device, sent as `X-Access-Token` by
+///   the app, the share extension and (through the `hister` native
+///   message) Safari's extension;
+/// - the app's own sign-in (Settings → Server → Sign in to Hister): its
+///   Hister session (`Cookie: hister=…` to Hister, the app and the share
+///   extension only), the sign-in helper's id (`Bearer mhs_…` to the
+///   rooms) and who it is.
 /// Empty: nothing is sent.
 nonisolated enum HisterKeychain {
     static let service = "Hister"
     static let account = "token"
 
+    enum Account: String {
+        case token, session, sessionID, username
+    }
+
     /// The token, or "" when there's none.
-    static var token: String { SharedKeychain.read(service: service, account: account) }
+    static var token: String { read(.token) }
+    static var session: String { read(.session) }
+    static var sessionID: String { read(.sessionID) }
+    static var username: String { read(.username) }
+
+    static func read(_ account: Account) -> String {
+        SharedKeychain.read(service: service, account: account.rawValue)
+    }
 
     /// Keeps a token, or removes it when empty. False when the Keychain refused.
     @discardableResult
     static func save(_ token: String) -> Bool {
-        SharedKeychain.save(token, service: service, account: account)
+        SharedKeychain.save(token, service: service, account: Account.token.rawValue)
+    }
+
+    /// Keeps a sign-in (all three or none). False when the Keychain refused.
+    @discardableResult
+    static func saveSignIn(session: String, sessionID: String, username: String) -> Bool {
+        let kept = SharedKeychain.save(session, service: service, account: Account.session.rawValue)
+            && SharedKeychain.save(sessionID, service: service, account: Account.sessionID.rawValue)
+            && SharedKeychain.save(username, service: service, account: Account.username.rawValue)
+        if !kept { signOut() }
+        return kept
+    }
+
+    /// Forgets the sign-in (the token stays).
+    @discardableResult
+    static func signOut() -> Bool {
+        [Account.session, .sessionID, .username]
+            .map { SharedKeychain.save("", service: service, account: $0.rawValue) }
+            .allSatisfy { $0 }
     }
 }

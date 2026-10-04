@@ -10,6 +10,12 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var handlers: [String: Handler] = [:]
     nonisolated(unsafe) private static var recorded: [String: [URLRequest]] = [:]
+    nonisolated(unsafe) private static var replyHeaders: [String: [String: String]] = [:]
+
+    /// Headers every reply from `host` carries (Set-Cookie, say).
+    static func headers(_ host: String, _ fields: [String: String]) {
+        lock.withLock { replyHeaders[host] = fields }
+    }
 
     static func handle(_ host: String, _ handler: @escaping Handler) {
         lock.withLock { handlers[host] = handler }
@@ -23,6 +29,7 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
         lock.withLock {
             recorded[host] = []
             handlers[host] = nil
+            replyHeaders[host] = nil
         }
     }
 
@@ -44,14 +51,14 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
             request.httpBody = data
         }
         let host = request.url?.host() ?? ""
-        let handler = Self.lock.withLock { () -> Handler? in
+        let (handler, fields) = Self.lock.withLock { () -> (Handler?, [String: String]?) in
             Self.recorded[host, default: []].append(request)
-            return Self.handlers[host]
+            return (Self.handlers[host], Self.replyHeaders[host])
         }
         do {
             guard let handler else { throw URLError(.cannotFindHost) }
             let (status, body) = try handler(request)
-            let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
+            let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: fields)!
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: body)
             client?.urlProtocolDidFinishLoading(self)

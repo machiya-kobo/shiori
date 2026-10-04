@@ -16,7 +16,7 @@ final class AppState {
         didSet {
             UserDefaults.standard.set(serverURL, forKey: Keys.serverURL)
             SharedSettings.defaults?.set(serverURL, forKey: SharedSettings.Key.serverURL)
-            client = HisterClient(serverURL: serverURL, token: histerToken)
+            client = makeClient()
             rules = Rules(aliases: [:])
             rulesLoaded = false
             capabilities = nil
@@ -182,10 +182,57 @@ final class AppState {
         if !trimmed.isEmpty && token == nil { return "That isn't a token: it's 8 to 512 characters with no spaces." }
         guard HisterKeychain.save(token ?? "") else { return "The Keychain didn't keep it. Try again." }
         histerToken = HisterKeychain.token
-        client = HisterClient(serverURL: serverURL, token: histerToken)
+        credentialsChanged()
+        return nil
+    }
+
+    /// The client for the server, with this device's token and sign-in.
+    private func makeClient() -> HisterClient? {
+        HisterClient(serverURL: serverURL, token: histerToken, histerSession: histerAccount?.session)
+    }
+
+    /// A new credential: a new client, and what came from the old one asked again.
+    private func credentialsChanged() {
+        client = makeClient()
         rulesLoaded = false
         capabilities = nil
+        vaultsReadAt = nil
+        cardsLoaded = false
+    }
+
+    // MARK: Signing in to Hister (docs/signing-in.md)
+
+    /// This device's own sign-in (Settings → Server → Sign in to Hister):
+    /// its Hister session, the sign-in helper's id and who, from the
+    /// Keychain (`HisterKeychain`). nil when signed out. Never logged.
+    private(set) var histerAccount: HisterAccount.SignedIn? = AppState.storedAccount()
+
+    private static func storedAccount() -> HisterAccount.SignedIn? {
+        guard let session = HisterAccount.session(HisterKeychain.session),
+            let sid = HisterAccount.sessionID(HisterKeychain.sessionID)
+        else { return nil }
+        return HisterAccount.SignedIn(session: session, sessionID: sid, username: HisterKeychain.username)
+    }
+
+    /// Keeps a sign-in. Nil when kept, else what to tell the person.
+    func keepHisterSignIn(_ signedIn: HisterAccount.SignedIn) -> String? {
+        guard HisterKeychain.saveSignIn(session: signedIn.session, sessionID: signedIn.sessionID, username: signedIn.username) else {
+            return "The Keychain didn't keep the sign-in. Try again."
+        }
+        histerAccount = Self.storedAccount()
+        credentialsChanged()
         return nil
+    }
+
+    /// Signs out through the helper (the Hister session and its id end
+    /// everywhere), then forgets both here whatever it answered.
+    func signOutOfHister() async {
+        if let account = histerAccount, let server = client?.baseURL {
+            await HisterAccount.signOut(server: server, sessionID: account.sessionID)
+        }
+        HisterKeychain.signOut()
+        histerAccount = nil
+        credentialsChanged()
     }
 
     // MARK: Machiya sign-in
@@ -201,9 +248,12 @@ final class AppState {
     /// Hister's and SearXNG's origins). Hister's and SearXNG's clients never
     /// take it. nil when signed out.
     var machiyaSignIn: MachiyaSignIn? {
-        MachiyaSignIn(
-            token: machiyaToken,
-            rooms: Machiya.rooms([searchPage.niwaURL, searchPage.konbiniURL], excluding: [serverURL, searxngURL]))
+        let rooms = Machiya.rooms([searchPage.niwaURL, searchPage.konbiniURL], excluding: [serverURL, searxngURL])
+        // Signed in through Hister, the rooms get the helper's id (rooms in
+        // Hister sign-in mode refuse the identity file's tokens); else the
+        // Machiya token, as before.
+        if let account = histerAccount, let signIn = MachiyaSignIn(sessionID: account.sessionID, rooms: rooms) { return signIn }
+        return MachiyaSignIn(token: machiyaToken, rooms: rooms)
     }
 
     /// Signs in with what was typed: a pairing code (paired against Kura,
@@ -504,7 +554,7 @@ final class AppState {
         palette = AppPalette.resolve(
             SharedSettings.defaults?.string(forKey: SharedSettings.Key.palette)
                 ?? defaults.string(forKey: AppPalette.storageKey))
-        client = HisterClient(serverURL: stored ?? fallback, token: HisterKeychain.token)
+        client = HisterClient(serverURL: stored ?? fallback, token: HisterKeychain.token, histerSession: HisterKeychain.session)
 
         let shared = SharedSettings.defaults
         pills = PillOrder.clean(shared?.array(forKey: SharedSettings.Key.pills))

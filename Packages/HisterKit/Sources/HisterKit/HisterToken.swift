@@ -19,8 +19,8 @@ public enum HisterToken {
     }
 }
 
-/// Follows a redirect only on the same scheme, host and port while the
-/// request carries the token; anywhere else the token is dropped first.
+/// Follows a redirect with the token and the Hister session only on the
+/// same scheme, host and port; anywhere else both are dropped first.
 final class TokenKeepingRedirects: NSObject, URLSessionTaskDelegate, Sendable {
     func urlSession(
         _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
@@ -31,6 +31,7 @@ final class TokenKeepingRedirects: NSObject, URLSessionTaskDelegate, Sendable {
         let to = request.url
         if from?.scheme != to?.scheme || from?.host() != to?.host() || from?.port != to?.port {
             next.setValue(nil, forHTTPHeaderField: HisterToken.header)
+            next.setValue(nil, forHTTPHeaderField: "Cookie")
         }
         completionHandler(next)
     }

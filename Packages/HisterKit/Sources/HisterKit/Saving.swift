@@ -256,6 +256,9 @@ public struct Outbox: Sendable {
                 try? FileManager.default.removeItem(at: file)
             } catch .rejected, .invalidQuery, .notFound, .badResponse {
                 try? FileManager.default.removeItem(at: file)
+            } catch .signedOut {
+                // Kept, no try counted: it goes once this device signs in again.
+                return .stopped(sent: sent)
             } catch .server(let status, _) where status < 500 && status != 429 {
                 try? FileManager.default.removeItem(at: file)
             } catch .server {
