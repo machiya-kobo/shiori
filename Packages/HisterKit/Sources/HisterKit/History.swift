@@ -295,7 +295,7 @@ extension HisterClient {
 
     /// The sites Hister has the most pages from, most first.
     public func topDomains(limit: Int = 200) async throws(HisterError) -> [String] {
-        let items = [URLQueryItem(name: "q", value: Notes.excluding("*")), URLQueryItem(name: "size_domains", value: String(limit))]
+        let items = [URLQueryItem(name: "q", value: SearchText.forHister("*")), URLQueryItem(name: "size_domains", value: String(limit))]
         let facets: Facets = try await decode(send(makeRequest("api/facets", query: items, accept: "application/json")))
         return (facets.terms["domains"]?.terms ?? []).map(\.term)
     }

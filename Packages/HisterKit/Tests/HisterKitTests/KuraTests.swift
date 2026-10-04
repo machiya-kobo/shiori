@@ -102,12 +102,36 @@ struct KuraLiveTests {
         #expect(SearchText.prefixLastWord("町家") == "町家*")
     }
 
-    @Test func histerNeverGetsTheNotes() {
-        #expect(SearchText.forHister("hist") == "hist* -label:vault -metadata.source:vault")
-        #expect(SearchText.forHister("*") == "* -label:vault -metadata.source:vault")
-        #expect(SearchText.forHister("") == "-label:vault -metadata.source:vault")
-        #expect(SearchText.forHister("x -label:vault -metadata.source:vault") == "x -label:vault -metadata.source:vault")
-        #expect(Notes.withoutExclusion("rust* -label:vault -metadata.source:vault") == "rust*")
+    @Test func histerNeverGetsTheNotesOrTheFiles() {
+        #expect(SearchText.forHister("hist") == "hist* -label:vault -metadata.source:vault -type:local")
+        #expect(SearchText.forHister("*") == "* -label:vault -metadata.source:vault -type:local")
+        #expect(SearchText.forHister("") == "-label:vault -metadata.source:vault -type:local")
+        // Once, however often it's applied.
+        #expect(SearchText.forHister("x -label:vault -metadata.source:vault") == "x -label:vault -metadata.source:vault -type:local")
+        #expect(SearchText.forHister(SearchText.forHister("x")) == SearchText.forHister("x"))
+        #expect(Notes.withoutExclusion("rust* -label:vault -metadata.source:vault -type:local") == "rust*")
+    }
+
+    @Test func theFilesPillAsksForTheFilesAndOnlyThem() {
+        #expect(LocalFiles.query("pi setup") == "type:local pi setup")
+        #expect(LocalFiles.query("") == "type:local *")
+        // The last typed word still a prefix; the notes still left out; no -type:local.
+        #expect(SearchText.forHister(LocalFiles.query("pi set")) == "type:local pi set* -label:vault -metadata.source:vault")
+        #expect(SearchText.forHister(LocalFiles.query("")) == "type:local * -label:vault -metadata.source:vault")
+        #expect(LocalFiles.asked(in: "a type:local b"))
+        #expect(!LocalFiles.asked(in: "a -type:local"))
+        #expect(!LocalFiles.asked(in: "type:locally"))
+    }
+
+    @Test func aFileIsKnownByItsAddressAndOpensFromHister() {
+        #expect(LocalFiles.isLocalFile("file:///home/u/notes/pi.md"))
+        #expect(LocalFiles.isLocalFile("FILE:///x"))
+        #expect(!LocalFiles.isLocalFile("https://example.org/file:///x"))
+        let server = URL(string: "https://hister.example/")!
+        #expect(LocalFiles.servedURL(for: "file:///home/u/a b+c.md", server: server)?.absoluteString
+            == "https://hister.example/api/file?id=file:///home/u/a%20b%2Bc.md")
+        #expect(LocalFiles.servedURL(for: "https://example.org/", server: server) == nil)
+        #expect(LocalFiles.path(of: "file:///home/u/a%20b.md") == "/home/u/a b.md")
     }
 
     private func page(_ url: String, _ at: TimeInterval) -> StoredPage {

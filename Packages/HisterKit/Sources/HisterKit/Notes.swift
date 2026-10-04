@@ -25,7 +25,8 @@ public enum Notes {
     /// `text` with the notes left out (once).
     public static func excluding(_ text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
-        if trimmed.hasSuffix(exclusion) { return trimmed }
+        let words = trimmed.split(whereSeparator: \.isWhitespace).map(String.init)
+        if exclusionTerms.allSatisfy(words.contains) { return trimmed }
         return trimmed.isEmpty ? exclusion : "\(trimmed) \(exclusion)"
     }
 
@@ -33,7 +34,7 @@ public enum Notes {
     /// list says what each page was opened from).
     public static func withoutExclusion(_ text: String) -> String {
         text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
-            .filter { !exclusionTerms.contains($0) }.joined(separator: " ")
+            .filter { !exclusionTerms.contains($0) && $0 != LocalFiles.exclusion }.joined(separator: " ")
     }
 
     /// A Konbini card: its slug and its note's path in the vault.

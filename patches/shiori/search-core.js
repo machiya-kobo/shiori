@@ -679,18 +679,54 @@
   const EXCLUSION_TERMS = NOTES_EXCLUSION.split(' ');
   function excludingNotes(text) {
     const t = String(text || '').trim();
-    if (t.endsWith(NOTES_EXCLUSION)) return t;
+    const words = t.split(/\s+/);
+    if (EXCLUSION_TERMS.every((term) => words.includes(term))) return t;
     return t ? `${t} ${NOTES_EXCLUSION}` : NOTES_EXCLUSION;
   }
 
-  /** A Hister search as sent: the last word a prefix, never the notes. */
+  // --- Files: the folders Hister watches ---------------------------------------------
+  // Documents of type `local` (Hister's indexer.directories), with a file://
+  // address, served by Hister (/api/file). Only the Files tab shows them:
+  // every other Hister query leaves them out. HisterKit's LocalFiles is the
+  // twin, with the same tests.
+  const FILES_TERM = 'type:local';
+  const FILES_EXCLUSION = '-type:local';
+  /** A query that asks for files: `type:local` among its words. */
+  function asksForFiles(text) {
+    return String(text || '').split(/\s+/).includes(FILES_TERM);
+  }
+  /** The Files tab's query from what was typed; the term leads, so the last word stays a prefix. */
+  function filesQuery(typed) {
+    const words = String(typed || '').trim();
+    return `${FILES_TERM} ${words || '*'}`;
+  }
+  /** A watched file, known by its address. */
+  function isLocalFile(url) {
+    return /^file:\/\//i.test(String(url || ''));
+  }
+  /** Hister's served copy of a file (/api/file?id=<its address>), or '' for anything else. */
+  function localFileURL(base, url) {
+    if (!isLocalFile(url)) return '';
+    const root = String(base || '').endsWith('/') ? base : `${base}/`;
+    return `${root}api/file?id=${encodeURIComponent(url)}`;
+  }
+  /** Where a file lives: the path without file://. */
+  function localFilePath(url) {
+    if (!isLocalFile(url)) return String(url || '');
+    const rest = String(url).slice('file://'.length);
+    try { return decodeURIComponent(rest); } catch (_) { return rest; }
+  }
+
+  /** A Hister search as sent: the last word a prefix, never the notes, and never the files unless it asks. */
   function histerText(text) {
-    return excludingNotes(prefixLastWord(String(text || '').trim()));
+    const sent = excludingNotes(prefixLastWord(String(text || '').trim()));
+    if (asksForFiles(sent) || sent.split(/\s+/).includes(FILES_EXCLUSION)) return sent;
+    return `${sent} ${FILES_EXCLUSION}`;
   }
 
   /** A query as typed, from one sent (the Opened list shows it). */
   function typedQuery(text) {
-    const shown = String(text || '').split(/\s+/).filter((w) => w && !EXCLUSION_TERMS.includes(w)).join(' ');
+    const shown = String(text || '').split(/\s+/).filter((w) => w && !EXCLUSION_TERMS.includes(w) && w !== FILES_EXCLUSION).join(' ');
     return shown.endsWith('*') ? shown.slice(0, -1) : shown;
   }
 
@@ -1191,12 +1227,12 @@
   /**
    * A list with runs of one site folded, as the app's SiteRuns: a run of
    * `minimum` or more pages from one site in a row shows its first page,
-   * then one item that holds the rest. Notes (label vault) never fold.
+   * then one item that holds the rest. Notes (label vault) and files never fold.
    * Items: {page} or {folded: site, pages}.
    */
   function siteRuns(docs, minimum = 3) {
     const items = [];
-    const key = (d) => (d.label === 'vault' ? null : siteOf(d) || null);
+    const key = (d) => (d.label === 'vault' || isLocalFile(d.url) ? null : siteOf(d) || null);
     let i = 0;
     while (i < docs.length) {
       const site = key(docs[i]);
@@ -1860,6 +1896,11 @@
     prefixLastWord,
     excludingNotes,
     histerText,
+    asksForFiles,
+    filesQuery,
+    isLocalFile,
+    localFileURL,
+    localFilePath,
     typedQuery,
     newestFirstMerge,
     newsBlurSubscribeURL,

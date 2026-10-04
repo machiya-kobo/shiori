@@ -20,9 +20,13 @@ public enum SearchText {
         return text + "*"
     }
 
-    /// A Hister search: the last word a prefix, and never the notes
-    /// (Shiori reads those from Kura, `Notes.exclusion`).
+    /// A Hister search: the last word a prefix, never the notes (Shiori
+    /// reads those from Kura, `Notes.exclusion`), and never the watched
+    /// files unless it asks for them (the Files pill, `LocalFiles`).
     public static func forHister(_ text: String) -> String {
-        Notes.excluding(prefixLastWord(text.trimmingCharacters(in: .whitespaces)))
+        let sent = Notes.excluding(prefixLastWord(text.trimmingCharacters(in: .whitespaces)))
+        let words = sent.split(whereSeparator: \.isWhitespace)
+        if LocalFiles.asked(in: sent) || words.contains(where: { $0 == LocalFiles.exclusion }) { return sent }
+        return "\(sent) \(LocalFiles.exclusion)"
     }
 }

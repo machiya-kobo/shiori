@@ -298,6 +298,9 @@ test('site runs: three or more from one site in a row show the first, then the r
   // No site, no fold.
   const files = [1, 2, 3].map((n) => ({ url: `file:///doc${n}.pdf`, domain: '' }));
   assert.deepEqual(shape(S.siteRuns(files)), files.map((p) => p.url));
+  // Files never fold, though Hister gives them all the domain `local`.
+  const local = [1, 2, 3, 4].map((n) => ({ url: `file:///home/u/doc${n}.md`, domain: 'local' }));
+  assert.deepEqual(shape(S.siteRuns(local)), local.map((p) => p.url));
 });
 
 test('a note by its URL: Niwa pages and Konbini cards, for lists without labels', () => {
@@ -515,12 +518,33 @@ test('the last plain word is a prefix', () => {
   for (const [typed, sent] of cases) assert.equal(S.prefixLastWord(typed), sent, typed);
 });
 
-test('Hister never gets the notes', () => {
-  assert.equal(S.histerText('hist'), 'hist* -label:vault -metadata.source:vault');
-  assert.equal(S.histerText('*'), '* -label:vault -metadata.source:vault');
-  assert.equal(S.histerText(''), '-label:vault -metadata.source:vault');
-  assert.equal(S.histerText('x -label:vault -metadata.source:vault'), 'x -label:vault -metadata.source:vault');
-  assert.equal(S.typedQuery('rust* -label:vault -metadata.source:vault'), 'rust');
+test('Hister never gets the notes or the files', () => {
+  assert.equal(S.histerText('hist'), 'hist* -label:vault -metadata.source:vault -type:local');
+  assert.equal(S.histerText('*'), '* -label:vault -metadata.source:vault -type:local');
+  assert.equal(S.histerText(''), '-label:vault -metadata.source:vault -type:local');
+  // Once, however often it's applied.
+  assert.equal(S.histerText('x -label:vault -metadata.source:vault'), 'x -label:vault -metadata.source:vault -type:local');
+  assert.equal(S.histerText(S.histerText('x')), S.histerText('x'));
+  assert.equal(S.typedQuery('rust* -label:vault -metadata.source:vault -type:local'), 'rust');
+});
+
+test('the Files tab asks for the files and only them (LocalFiles twins)', () => {
+  assert.equal(S.filesQuery('pi setup'), 'type:local pi setup');
+  assert.equal(S.filesQuery(''), 'type:local *');
+  assert.equal(S.histerText(S.filesQuery('pi set')), 'type:local pi set* -label:vault -metadata.source:vault');
+  assert.equal(S.histerText(S.filesQuery('')), 'type:local * -label:vault -metadata.source:vault');
+  assert.ok(S.asksForFiles('a type:local b'));
+  assert.ok(!S.asksForFiles('a -type:local'));
+  assert.ok(!S.asksForFiles('type:locally'));
+});
+
+test('a file is known by its address and opens from Hister (LocalFiles twins)', () => {
+  assert.ok(S.isLocalFile('file:///home/u/notes/pi.md'));
+  assert.ok(S.isLocalFile('FILE:///x'));
+  assert.ok(!S.isLocalFile('https://example.org/file:///x'));
+  assert.equal(S.localFileURL('https://hister.example/', 'file:///home/u/a b+c.md'), 'https://hister.example/api/file?id=file%3A%2F%2F%2Fhome%2Fu%2Fa%20b%2Bc.md');
+  assert.equal(S.localFileURL('https://hister.example', 'https://example.org/'), '');
+  assert.equal(S.localFilePath('file:///home/u/a%20b.md'), '/home/u/a b.md');
 });
 
 test('merges newest first and waits for the other list', () => {

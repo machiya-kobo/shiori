@@ -35,7 +35,7 @@ struct HistoryTests {
         let sent = try body(request)
         #expect(sent["url"] as? String == "https://a.example/")
         // As the search was sent (Hister matches the exact text).
-        #expect(sent["query"] as? String == "rust* -label:vault -metadata.source:vault")
+        #expect(sent["query"] as? String == "rust* -label:vault -metadata.source:vault -type:local")
         #expect(sent["delete"] == nil)
     }
 

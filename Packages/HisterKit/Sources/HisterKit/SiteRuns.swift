@@ -4,8 +4,8 @@ import Foundation
 /// visit, so a session on one site (a sign-in, its settings, a dashboard)
 /// fills a screen with it. A run of `minimum` or more pages from one site
 /// in a row shows its first page, then one row that holds the rest.
-/// Notes (`label:vault`) never fold: each is its own document, though
-/// they share Niwa's or Konbini's host.
+/// Notes (`label:vault`) and files never fold: each is its own document,
+/// though notes share Niwa's or Konbini's host and files Hister's `local`.
 public enum SiteRuns {
     public enum Item: Sendable, Equatable, Identifiable {
         case page(StoredPage)
@@ -46,7 +46,7 @@ public enum SiteRuns {
     /// The site a page counts under ("www." aside), or nil for one that
     /// never folds.
     static func key(_ page: StoredPage) -> String? {
-        guard page.label != "vault" else { return nil }
+        guard page.label != "vault", !LocalFiles.isLocalFile(page.url) else { return nil }
         let host = page.domain.isEmpty ? (URL(string: page.url)?.host() ?? "") : page.domain
         let site = host.lowercased().hasPrefix("www.") ? String(host.dropFirst(4)) : host.lowercased()
         return site.isEmpty ? nil : site
