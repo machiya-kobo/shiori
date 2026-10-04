@@ -41,6 +41,7 @@ struct ShioriApp: App {
                         app.labeller.start(app: app)
                         app.reloadSharedSettings()
                         Task {
+                            await app.checkHisterSignIn()
                             await app.sendWaiting()
                             await app.reloadRules()
                         }

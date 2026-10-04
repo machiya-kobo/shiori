@@ -204,7 +204,8 @@
   /** A room's fetch options: the hosted page's cookie, or the extension's token where the rule allows. */
   async function roomInit(url, init) {
     if (sameOrigin(url)) return { ...init, credentials: 'same-origin' };
-    return S.machiyaFetchOptions(url, await machiyaTokenReady, machiyaRooms, init);
+    // Hister's token too (the extension's): rooms in Hister sign-in mode take it.
+    return S.machiyaFetchOptions(url, await machiyaTokenReady, machiyaRooms, init, { histerToken: stored.histerToken });
   }
   /** What to say when a room answers 401: sign in (the room's own page here, Settings in the extension). */
   function signInNote(room) {

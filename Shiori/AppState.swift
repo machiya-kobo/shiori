@@ -17,6 +17,7 @@ final class AppState {
             UserDefaults.standard.set(serverURL, forKey: Keys.serverURL)
             SharedSettings.defaults?.set(serverURL, forKey: SharedSettings.Key.serverURL)
             client = makeClient()
+            Task { await checkHisterSignIn() }
             rules = Rules(aliases: [:])
             rulesLoaded = false
             capabilities = nil
@@ -215,6 +216,23 @@ final class AppState {
         return HisterAccount.SignedIn(session: session, sessionID: sid, username: HisterKeychain.username)
     }
 
+    /// Whether to offer signing in (Settings → Server → Sign in to Hister):
+    /// the sign-in helper on the server's host says Hister has users
+    /// (`HisterAccount.available`). Checked at launch, on every return to
+    /// the foreground and when the server changes; here, not in the view,
+    /// whose body is empty until it's true (SwiftUI never runs an empty
+    /// view's `.task`: it never showed).
+    private(set) var histerSignInOffered = false
+
+    func checkHisterSignIn() async {
+        guard let server = client?.baseURL else {
+            histerSignInOffered = false
+            return
+        }
+        let offered = await HisterAccount.available(server: server)
+        if offered != histerSignInOffered { histerSignInOffered = offered }
+    }
+
     /// Keeps a sign-in. Nil when kept, else what to tell the person.
     func keepHisterSignIn(_ signedIn: HisterAccount.SignedIn) -> String? {
         guard HisterKeychain.saveSignIn(session: signedIn.session, sessionID: signedIn.sessionID, username: signedIn.username) else {
@@ -254,7 +272,9 @@ final class AppState {
         // Hister sign-in mode refuse the identity file's tokens); else the
         // Machiya token, as before.
         if let account = histerAccount, let signIn = MachiyaSignIn(sessionID: account.sessionID, rooms: rooms) { return signIn }
-        return MachiyaSignIn(token: machiyaToken, rooms: rooms)
+        // Not signed in: the identity token, and Hister's token, which rooms
+        // in Hister sign-in mode take (X-Access-Token, read first there).
+        return MachiyaSignIn(token: machiyaToken, rooms: rooms, histerToken: histerToken)
     }
 
     /// Signs in with what was typed: a pairing code (paired against Kura,

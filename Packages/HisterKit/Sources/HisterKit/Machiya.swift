@@ -94,17 +94,25 @@ public enum Machiya {
         return rooms.contains(o)
     }
 
-    /// The request with the token's header when the host rule allows it,
-    /// else as it was (any Authorization it had removed).
-    public static func authorize(_ request: URLRequest, token: String, rooms: [String]) -> URLRequest {
+    /// The request with the credentials' headers when the host rule allows
+    /// them, else as it was (any it had removed). `token`: the identity
+    /// file's, or the Hister sign-in's id (`mhs_…`), as `Authorization`.
+    /// `histerToken`: Hister's token too, as `X-Access-Token`, but never
+    /// beside an `mhs_` id (rooms read it first, and the device's own
+    /// session is the one to use); rooms in Hister sign-in mode take it,
+    /// rooms on the identity file ignore it.
+    public static func authorize(_ request: URLRequest, token: String, rooms: [String], histerToken: String? = nil) -> URLRequest {
         var request = request
-        // The identity file's token, or the Hister sign-in's id (`mhs_…`).
-        let clean = Self.token(token).isEmpty ? (HisterAccount.sessionID(token) ?? "") : Self.token(token)
-        guard !clean.isEmpty, let url = request.url, mayCarryToken(to: url, rooms: rooms) else {
+        request.setValue(nil, forHTTPHeaderField: HisterToken.header)
+        let sid = HisterAccount.sessionID(token)
+        let clean = Self.token(token).isEmpty ? (sid ?? "") : Self.token(token)
+        let hister = sid == nil ? HisterToken.clean(histerToken) : nil
+        guard !clean.isEmpty || hister != nil, let url = request.url, mayCarryToken(to: url, rooms: rooms) else {
             request.setValue(nil, forHTTPHeaderField: "Authorization")
             return request
         }
-        request.setValue(authHeader(clean), forHTTPHeaderField: "Authorization")
+        request.setValue(clean.isEmpty ? nil : authHeader(clean), forHTTPHeaderField: "Authorization")
+        if let hister { request.setValue(hister, forHTTPHeaderField: HisterToken.header) }
         return request
     }
 
@@ -113,11 +121,13 @@ public enum Machiya {
     /// (URLSession would otherwise copy the header to wherever it leads.)
     public static func redirected(_ new: URLRequest, from original: URLRequest?, rooms: [String]) -> URLRequest {
         var new = new
-        guard new.value(forHTTPHeaderField: "Authorization") != nil else { return new }
+        guard new.value(forHTTPHeaderField: "Authorization") != nil || new.value(forHTTPHeaderField: HisterToken.header) != nil
+        else { return new }
         let from = original?.url.flatMap { origin(of: $0) }
         let to = new.url.flatMap { origin(of: $0) }
         if from == nil || from != to || !rooms.contains(to ?? "") {
             new.setValue(nil, forHTTPHeaderField: "Authorization")
+            new.setValue(nil, forHTTPHeaderField: HisterToken.header)
         }
         return new
     }
@@ -249,13 +259,18 @@ public enum Machiya {
 public struct MachiyaSignIn: Sendable, Equatable {
     public var token: String
     public var rooms: [String]
+    /// Hister's token, for rooms in Hister sign-in mode (`X-Access-Token`).
+    public var histerToken: String?
 
-    /// nil without a token that looks like one.
-    public init?(token: String, rooms: [String]) {
+    /// nil without a token that looks like one (the identity file's, or
+    /// Hister's for rooms in Hister sign-in mode).
+    public init?(token: String, rooms: [String], histerToken: String? = nil) {
         let clean = Machiya.token(token)
-        guard !clean.isEmpty else { return nil }
+        let hister = HisterToken.clean(histerToken)
+        guard !clean.isEmpty || hister != nil else { return nil }
         self.token = clean
         self.rooms = rooms
+        self.histerToken = hister
     }
 
     /// Signed in through Hister (`HisterAccount`): the helper's id, which
@@ -269,7 +284,7 @@ public struct MachiyaSignIn: Sendable, Equatable {
 
     /// The request with the header where the host rule allows.
     public func authorize(_ request: URLRequest) -> URLRequest {
-        Machiya.authorize(request, token: token, rooms: rooms)
+        Machiya.authorize(request, token: token, rooms: rooms, histerToken: histerToken)
     }
 }
 

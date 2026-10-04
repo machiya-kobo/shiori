@@ -51,8 +51,10 @@ export function requestJSON(
     const headers = message.get_request_headers();
     headers.append('Accept', 'application/json');
     if (hister) headers.append('Origin', 'hister://');
-    const auth = signIn && !hister ? roomHeaders(config, url, globalThis.ShioriSearch).Authorization : undefined;
-    if (auth) headers.append('Authorization', auth);
+    const room = signIn && !hister ? roomHeaders(config, url, globalThis.ShioriSearch) : {};
+    const auth = room.Authorization || room['X-Access-Token'];
+    if (room.Authorization) headers.append('Authorization', room.Authorization);
+    if (room['X-Access-Token']) headers.append('X-Access-Token', room['X-Access-Token']);
     const token = hister && credentials ? histerHeaders(config, url, globalThis.ShioriSearch)['X-Access-Token'] : undefined;
     if (token) headers.append('X-Access-Token', token);
     const cookie = hister && credentials ? histerCookie(config, url) : '';

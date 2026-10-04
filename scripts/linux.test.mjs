@@ -242,7 +242,7 @@ test('the token goes to the configured Kura only, read with the shim as GJS read
 
 test("Hister's requests never carry the token, and a signed-in request follows no redirect", () => {
   const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
-  assert.match(http, /const auth = signIn && !hister \? roomHeaders\(config, url, globalThis\.ShioriSearch\)\.Authorization : undefined;/);
+  assert.match(http, /const room = signIn && !hister \? roomHeaders\(config, url, globalThis\.ShioriSearch\) : \{\};/);
   assert.match(http, /if \(auth \|\| token \|\| cookie \|\| Object\.keys\(extra\)\.length \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
 });
 
@@ -266,6 +266,16 @@ test("Hister's token goes to the configured server only, as X-Access-Token", () 
   const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
   assert.match(http, /const token = hister && credentials \? histerHeaders\(config, url, globalThis\.ShioriSearch\)\['X-Access-Token'\] : undefined;/);
   assert.match(http, /if \(auth \|\| token \|\| cookie \|\| Object\.keys\(extra\)\.length \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
+});
+
+test("rooms get Hister's token as X-Access-Token beside the identity token, never the id's place", () => {
+  const S = shimmedCore();
+  const HISTER = 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, histerToken: HISTER }, 'https://kura.example/api/search', S)), { Authorization: 'Bearer ' + TOKEN, 'X-Access-Token': HISTER });
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, machiyaToken: '', histerToken: HISTER }, 'https://kura.example/api/search', S)), { 'X-Access-Token': HISTER });
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, histerToken: HISTER }, 'https://hister.example/search', S)), {});
+  const sid = 'mhs_' + 'Z'.repeat(43);
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, histerToken: HISTER, histerSignIn: { sid } }, 'https://kura.example/api/search', S)), { Authorization: 'Bearer ' + sid });
 });
 
 test("status says who can read the token, and pair prints the line to add", () => {

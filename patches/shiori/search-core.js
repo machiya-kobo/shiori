@@ -2063,14 +2063,22 @@
   }
 
   /**
-   * A fetch's options for `url`: with the token's header when the host rule
-   * allows it, and then `redirect: 'error'`, so it never follows a
-   * redirect anywhere. Everything else (credentials included) as given.
+   * A fetch's options for `url`: with the credentials' headers when the
+   * host rule allows them, and then `redirect: 'error'`, so it never
+   * follows a redirect anywhere. Everything else (credentials included) as
+   * given. `histerToken`: Hister's token too, as `X-Access-Token`, which
+   * rooms in Hister sign-in mode read first (they refuse the identity
+   * file's tokens) and rooms on the identity file ignore: so both go,
+   * whichever mode a room is in.
    */
-  function machiyaFetchOptions(url, token, rooms, init = {}) {
+  function machiyaFetchOptions(url, token, rooms, init = {}, { histerToken: hister = '' } = {}) {
     const clean = machiyaToken(token);
-    if (!clean || !mayCarryMachiyaToken(url, rooms)) return init;
-    return { ...init, headers: { ...(init.headers || {}), Authorization: machiyaAuthHeader(clean) }, redirect: 'error' };
+    const histerClean = histerToken(hister);
+    if ((!clean && !histerClean) || !mayCarryMachiyaToken(url, rooms)) return init;
+    const headers = { ...(init.headers || {}) };
+    if (clean) headers.Authorization = machiyaAuthHeader(clean);
+    if (histerClean) headers['X-Access-Token'] = histerClean;
+    return { ...init, headers, redirect: 'error' };
   }
 
   /** What a pairing answer means for a person: [kind, message] by status. */

@@ -17,7 +17,6 @@ struct HisterSignInSection: View {
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
     @Environment(\.webAuthenticationSession) private var webAuthenticationSession
-    @State private var available = false
     @State private var username = ""
     @State private var password = ""
     @State private var working = false
@@ -35,12 +34,12 @@ struct HisterSignInSection: View {
     }
 
     var body: some View {
-        Group {
-            if app.histerAccount != nil || available {
-                section
-            }
+        // AppState checks whether to offer it (`histerSignInOffered`): a
+        // `.task` here would never run while this is empty.
+        if app.histerAccount != nil || app.histerSignInOffered {
+            section
+                .task(id: app.serverURL) { await check() }
         }
-        .task(id: app.serverURL) { await check() }
     }
 
     private var section: some View {
@@ -99,13 +98,10 @@ struct HisterSignInSection: View {
         .buttonStyle(.borderless)
     }
 
-    /// Whether to offer sign-in, and whether this device's session still holds.
+    /// Whether to offer sign-in again, and whether this device's session still holds.
     private func check() async {
-        guard let server = app.client?.baseURL else {
-            available = false
-            return
-        }
-        available = await HisterAccount.available(server: server)
+        await app.checkHisterSignIn()
+        guard let server = app.client?.baseURL else { return }
         if let account = app.histerAccount {
             stillSignedIn = (try? await HisterAccount.username(server: server, hister: account.session)).map { $0 != nil }
         }

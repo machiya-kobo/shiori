@@ -162,3 +162,47 @@ struct HisterUsersLiveTests {
         }
     }
 }
+
+/// What the rooms get: the same cases as machiya.test.mjs's.
+struct RoomCredentialsTests {
+    static let rooms = ["https://kura.example"]
+    static let hister = "ABCDEFGHJKLMNPQRSTUVWXYZ23"
+    static let identity = "mch_q9xa_" + String(repeating: "A", count: 43)
+    static let sid = "mhs_" + String(repeating: "Z", count: 43)
+
+    func headers(_ signIn: MachiyaSignIn?, _ url: String = "https://kura.example/api/search") -> (String?, String?) {
+        let request = signIn?.authorize(URLRequest(url: URL(string: url)!)) ?? URLRequest(url: URL(string: url)!)
+        return (request.value(forHTTPHeaderField: "Authorization"), request.value(forHTTPHeaderField: "X-Access-Token"))
+    }
+
+    @Test func onlyTheHisterTokenGoesAsXAccessToken() throws {
+        let signIn = try #require(MachiyaSignIn(token: "", rooms: Self.rooms, histerToken: Self.hister))
+        #expect(headers(signIn) == (nil, Self.hister))
+        #expect(headers(signIn, "https://hister.example/search") == (nil, nil))
+        #expect(MachiyaSignIn(token: "", rooms: Self.rooms, histerToken: "not a token") == nil)
+    }
+
+    @Test func bothGoTogetherWhileRoomsMayBeInEitherMode() throws {
+        let signIn = try #require(MachiyaSignIn(token: Self.identity, rooms: Self.rooms, histerToken: Self.hister))
+        #expect(headers(signIn) == ("Bearer \(Self.identity)", Self.hister))
+    }
+
+    @Test func aSignedInDeviceSendsItsIdAlone() throws {
+        let signIn = try #require(MachiyaSignIn(sessionID: Self.sid, rooms: Self.rooms))
+        #expect(headers(signIn) == ("Bearer \(Self.sid)", nil))
+        // Even given a token, an mhs_ id goes alone.
+        let request = Machiya.authorize(URLRequest(url: URL(string: "https://kura.example/")!), token: Self.sid, rooms: Self.rooms, histerToken: Self.hister)
+        #expect(request.value(forHTTPHeaderField: "X-Access-Token") == nil)
+    }
+
+    @Test func aRedirectElsewhereDropsBoth() {
+        var original = URLRequest(url: URL(string: "https://kura.example/a")!)
+        original.setValue("Bearer \(Self.identity)", forHTTPHeaderField: "Authorization")
+        original.setValue(Self.hister, forHTTPHeaderField: "X-Access-Token")
+        var next = original
+        next.url = URL(string: "https://evil.example/b")
+        let out = Machiya.redirected(next, from: original, rooms: Self.rooms)
+        #expect(out.value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(out.value(forHTTPHeaderField: "X-Access-Token") == nil)
+    }
+}
