@@ -12,6 +12,9 @@ final class WebResultsModel {
     private(set) var isLoadingMore = false
     /// What Hister has of these results: URL → label ("" = visited).
     private(set) var saved: [String: String] = [:]
+    /// How many results the first page brought: All spreads yours over
+    /// those, so rows already seen stay put as later pages arrive.
+    private(set) var firstPageCount = 0
     private var page = 1
     /// Every result URL so far, kept as pages arrive.
     private var known = Set<String>()
@@ -31,6 +34,7 @@ final class WebResultsModel {
             let first = try await searx.search(query, page: 1)
             results = await wikipediaFirst(first.results, searx: searx)
             known = Set(results.map(\.url))
+            firstPageCount = results.count
             suggestions = first.suggestions.filter { $0 != query }
             page = 1
             exhausted = first.results.isEmpty

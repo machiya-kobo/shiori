@@ -2,9 +2,10 @@ import HisterKit
 import SwiftUI
 
 /// Search → All, as on Shiori's search page and in the web app: the web's
-/// results with your top pages and notes among them (a page after the first
-/// web result, a note after the second, and so on), each row saying whose it
-/// is; their totals go on the Pages and Notes pills (`SearchSession.counts`).
+/// results with a page of your pages and notes among them (taking turns,
+/// spread evenly over the web's first page: `MixedResults`), each row saying
+/// whose it is; their totals go on the Pages and Notes pills
+/// (`SearchSession.counts`). Web is the pill for the web alone.
 /// Web Results switches the web off here too: then the list is yours.
 struct AllResults: View {
     let query: String
@@ -37,9 +38,9 @@ struct AllResults: View {
         _web = State(initialValue: WebResultsModel(query: SearxClient.webQuery(query)))
     }
 
-    /// Your pages and your notes in All: the top three each, among the web's
-    /// results (the rest on the Pages and Notes pills, with their totals).
-    static let count = 3
+    /// Your pages and your notes in All: a page of each (as the web pages'
+    /// 20), among the web's results (the rest on the Pages and Notes pills).
+    static let count = 20
 
     /// Not for a search of Hister syntax alone (label:bsd, @retro).
     private var webOn: Bool { app.allSearch.webResults && app.searx != nil && !web.query.isEmpty }
@@ -168,12 +169,7 @@ struct AllResults: View {
     }
 
     static func alternate(_ pages: [StoredPage], _ notes: [StoredPage]) -> [Yours] {
-        var out: [Yours] = []
-        for i in 0..<max(pages.count, notes.count) {
-            if i < pages.count { out.append(Yours(page: pages[i], kind: .hister)) }
-            if i < notes.count { out.append(Yours(page: notes[i], kind: .notes)) }
-        }
-        return out
+        MixedResults.alternate(pages.map { Yours(page: $0, kind: .hister) }, notes.map { Yours(page: $0, kind: .notes) })
     }
 
     private func mixed(_ item: Yours, opened: Set<String>) -> some View {
@@ -218,17 +214,21 @@ struct AllResults: View {
                 .fadesOverflow()
                 .listRowBackground(palette.background)
             }
+            // Yours spread evenly over the web's first page (later pages
+            // arriving don't move what's been seen).
+            let slots = MixedResults.counts(web: min(results.count, web.firstPageCount), mine: yours.count)
+            let starts = slots.reduce(into: [0]) { $0.append($0.last! + $1) }
             ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
                 WebItem(result: result, query: web.query, saved: web.saved[result.url])
                     .task {
                         await web.loadMoreIfNeeded(after: result, searx: app.searx, hister: app.client)
                     }
-                // One of yours after each of the first web results.
-                if index < yours.count { mixed(yours[index], opened: opened) }
+                if index < slots.count {
+                    ForEach(yours[starts[index]..<starts[index + 1]], id: \.page.url) { mixed($0, opened: opened) }
+                }
             }
-            // More of yours than web results: the rest after them.
-            if yours.count > results.count {
-                ForEach(yours[results.count...], id: \.page.url) { mixed($0, opened: opened) }
+            if slots.isEmpty, !results.isEmpty {
+                ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
             }
             if web.isLoadingMore {
                 ProgressView()
