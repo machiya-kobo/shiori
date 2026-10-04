@@ -183,9 +183,16 @@ test("the web app marks web results you already have, with the search page's loo
   assert.match(read('../patches/shiori/search.js'), /const labels = S\.savedLabels\(known\.documents\);/);
 });
 
-test("the web app's Settings hide their own gear (Back is the way out)", () => {
+test("the web app's Settings are a tab on a phone, with no title row on the tabs' own views", () => {
   const app = read('../web/app/app.js');
-  assert.match(app.slice(app.indexOf('function setTitle('), app.indexOf('function viewLibrary(')), /\$\('settings-button'\)\.hidden = text === 'Settings';/);
+  const css = read('../web/app/app.css');
+  assert.doesNotMatch(read('../web/app/index.html'), /settings-button/);
+  assert.match(app.slice(app.indexOf('function tabs('), app.indexOf('// --- Render')), /tab\('settings', 'Settings', 'gear', 'settings'\)/);
+  assert.match(app, /function viewSettings\(\) \{\n[^\n]*\n  setTitle\('Settings'\);/);
+  // Hidden at every width, not only beside the sidebar.
+  const rule = '#list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) { display: none; }';
+  assert.ok(css.includes(rule));
+  assert.ok(css.lastIndexOf('@media', css.indexOf(rule)) < css.lastIndexOf('}', css.indexOf(rule)), 'not inside a media query');
 });
 
 test("the web app's sidebar has no empty heading", () => {

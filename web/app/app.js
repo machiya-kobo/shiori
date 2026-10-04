@@ -821,8 +821,6 @@ function setTitle(text, back = false) {
   $('title').classList.toggle('sidebar-says', !back);
   document.title = text === 'Library' ? 'Shiori' : `${text} – Shiori`;
   $('back').hidden = !back;
-  // In Settings, its own gear would do nothing: Back is the way out.
-  $('settings-button').hidden = text === 'Settings';
 }
 
 function viewLibrary(params) {
@@ -1675,7 +1673,8 @@ addEventListener('pagehide', () => commitDelete({ keepalive: true }));
 // --- Settings ------------------------------------------------------------------
 
 function viewSettings() {
-  setTitle('Settings', !sidebarShown());
+  // A place of its own: the sidebar's gear, or the Settings tab.
+  setTitle('Settings');
   listSearch = '';
   fill($('list-top'), );
   const toggle = (key, title) => {
@@ -2011,12 +2010,15 @@ function tabs(view) {
   const tab = (name, title, iconName, target) =>
     h('button', { type: 'button', 'aria-current': view === target || (target === 'labels' && view === 'list') ? 'page' : undefined, onclick: () => go(target) }, icon(iconName), title);
   // As the iPhone app's Library · Labels · + (Add Page, with the
-  // small-web gateway), then the Machiya rooms, a sheet.
+  // small-web gateway) · Settings, then the Machiya rooms, a sheet.
+  // Settings is a tab, not a gear in a title row: the tabs' own views have
+  // none.
   const add = SMALLWEB ? h('button', { type: 'button', class: 'add-tab', onclick: () => addPage() }, icon('plus'), 'Add Page') : null;
   const rooms = ROOMS.length > 1
     ? h('button', { type: 'button', onclick: () => dialog('Rooms', h('div', { class: 'rooms-sheet', role: 'menu' }, S.roomLinks(ROOMS))) }, S.roomGlyph('house'), 'Rooms')
     : null;
-  fill($('tabs'), tab('library', 'Library', 'library', 'library'), tab('labels', 'Labels', 'tag', 'labels'), add, rooms);
+  fill($('tabs'), tab('library', 'Library', 'library', 'library'), tab('labels', 'Labels', 'tag', 'labels'), add,
+    tab('settings', 'Settings', 'gear', 'settings'), rooms);
   $('tabs').querySelector('button').setAttribute('aria-current', view === 'library' || view === 'search' ? 'page' : 'false');
 }
 
@@ -2177,8 +2179,6 @@ const keyboard = (() => {
 
 $('back').replaceChildren(icon('back'));
 $('back').addEventListener('click', () => history.back());
-$('settings-button').replaceChildren(icon('gear'));
-$('settings-button').addEventListener('click', () => go('settings'));
 
 applyLook();
 /**

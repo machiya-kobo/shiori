@@ -338,15 +338,22 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 #sidebar .sidebar-gear { width: 34px; height: 34px; padding: 0; justify-content: center; flex: none; border-radius: 50%; color: var(--accent); }
 #sidebar .sidebar-gear:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 #sidebar .sidebar-gear[aria-current="page"] { background: var(--accent); color: var(--bg); }
-/* Beside the sidebar, whose selected row already says Library. The gear is
-   in the sidebar there, so a bar with no title and no Back holds nothing:
-   it goes, and the search field is the column's top, level with the
-   sidebar's Library (as the Mac app's toolbar field). */
+/* No title row where there's no Back: beside the sidebar, whose selected
+   row already says Library, and on a phone, whose tabs say where you are
+   (Settings is one of them), as the iPhone app's tabs. The bar would hold
+   nothing: it goes, and the search field is the column's top, level with
+   the sidebar's Library (as the Mac app's toolbar field). */
+#title.sidebar-says { display: none; }
+#list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) { display: none; }
 @media (min-width: 760px) {
-  #title.sidebar-says { display: none; }
-  #settings-button { display: none; }
-  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) { display: none; }
   #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top .searchfield { margin-top: 12px; }
+}
+/* A phone: the first bar shown takes the top inset the title row had. */
+@media (max-width: 759px) {
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]),
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top[hidden] + #list-top {
+    padding-top: calc(8px + env(safe-area-inset-top));
+  }
 }
 
 /* Bottom tabs (narrow) */
