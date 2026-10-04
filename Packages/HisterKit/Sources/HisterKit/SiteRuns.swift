@@ -46,7 +46,8 @@ public enum SiteRuns {
     /// The site a page counts under ("www." aside), or nil for one that
     /// never folds.
     static func key(_ page: StoredPage) -> String? {
-        guard page.label != "vault", !LocalFiles.isLocalFile(page.url) else { return nil }
+        // Nor code: one forge holds every repo, and the rows are its own.
+        guard page.label != "vault", !LocalFiles.isLocalFile(page.url), page.code == nil else { return nil }
         let host = page.domain.isEmpty ? (URL(string: page.url)?.host() ?? "") : page.domain
         let site = host.lowercased().hasPrefix("www.") ? String(host.dropFirst(4)) : host.lowercased()
         return site.isEmpty ? nil : site

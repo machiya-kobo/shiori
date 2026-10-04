@@ -404,8 +404,73 @@ let selected = null; // the page shown in the preview pane
 let listSearch = ''; // the query the list came from, for Remember What You Open
 let lastPage = null;
 
+/**
+ * The Code pill: the owner's repos in Hister (code-import's), searched as
+ * you type (Hister's own index: nothing spent), never in All or any other
+ * list. Above it, the kind, Open Only and Private, as metadata terms
+ * (S.codeQuery), kept for this visit.
+ */
+let codeFilters = {};
+function codeList(container, q, { sort = '' } = {}) {
+  shownList = { title: q || 'Code' };
+  const box = h('div', {});
+  const draw = () => resultsList(box, { query: S.codeQuery(q, codeFilters), sort, group: '', source: 'pages', empty: q ? `No code matches “${q}”.` : 'Your repos show up here once code-import has indexed them.', opened: false });
+  const kind = h('select', { 'aria-label': 'Kind' },
+    h('option', { value: '' }, 'Everything'),
+    ...S.CODE_KINDS.map(([value, name]) => h('option', { value, selected: codeFilters.kind === value }, name)));
+  kind.addEventListener('change', () => ((codeFilters = { ...codeFilters, kind: kind.value || undefined }), draw()));
+  const toggle = (key, text) => {
+    const b = h('button', { type: 'button', 'aria-pressed': codeFilters[key] ? 'true' : 'false' }, text);
+    b.addEventListener('click', () => {
+      codeFilters = { ...codeFilters, [key]: !codeFilters[key] };
+      b.setAttribute('aria-pressed', codeFilters[key] ? 'true' : 'false');
+      draw();
+    });
+    return b;
+  };
+  container.replaceChildren(h('div', { class: 'code-filters', role: 'group', 'aria-label': 'Filters' }, kind, toggle('open', 'Open Only'), toggle('private', 'Private')), box);
+  draw();
+}
+
+/** A code row: its kind's glyph, the title, the repo, its state, a lock when private, the date. */
+function codeRow(doc, code) {
+  const [glyph, kindName] = CODE_GLYPHS[code.kind] || ['‹›', 'Code'];
+  const when = ago(doc.updated || doc.added);
+  const row = h(
+    'li',
+    { class: 'row doc-row code-row', role: 'button', tabindex: '0', 'aria-selected': selected && selected.url === doc.url ? 'true' : 'false' },
+    h('span', { class: 'icon code-glyph', role: 'img', 'aria-label': kindName }, glyph),
+    h(
+      'div',
+      {},
+      h('div', { class: 'title' }, doc.title || doc.url),
+      h('div', { class: 'meta' },
+        code.private ? h('span', { 'aria-label': 'Private', title: 'Private' }, '🔒 ') : null,
+        h('span', { class: 'domain' }, code.repoName || doc.domain || hostOf(doc.url)),
+        code.state ? [' · ', h('span', { class: `code-state${code.state === 'open' ? ' open' : ''}` }, code.state)] : null,
+        when ? ` · ${when}` : ''),
+      doc.text ? snippet(doc.text) : null,
+    ),
+  );
+  row._doc = doc;
+  const open = () => openDoc(doc, row);
+  row.addEventListener('click', open);
+  row.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      open();
+    }
+  });
+  return row;
+}
+
+// A code row's kind, as a glyph and in words.
+const CODE_GLYPHS = { repo: ['▣', 'Repository'], readme: ['¶', 'README'], doc: ['¶', 'Document'], issue: ['◉', 'Issue'], pr: ['⇄', 'Pull request'], release: ['◆', 'Release'] };
+
 function docRow(doc) {
   const n = note(doc);
+  const code = S.codeInfo(doc);
+  if (code) return codeRow(doc, code);
   const favicon = doc.favicon_key ? h('img', { class: 'icon', src: api.faviconURL(doc.favicon_key), alt: '', loading: 'lazy' }) : null;
   const file = S.isLocalFile(doc.url);
   const iconEl = favicon || h('span', { class: 'icon' }, icon(n || file ? 'note' : 'globe'));
@@ -502,7 +567,7 @@ function folder(list) {
   let site = null;
   let pending = null; // a run's second row, held until the third decides
   let fold = null; // {button, rows, open}
-  const key = (d) => (settings.foldRepeats === false || d.label === 'vault' || S.isLocalFile(d.url) ? null : S.siteOf(d) || null);
+  const key = (d) => (settings.foldRepeats === false || d.label === 'vault' || S.isLocalFile(d.url) || S.isCodeDoc(d) ? null : S.siteOf(d) || null);
   const label = () => (fold.open ? `Hide ${fold.rows.length} more from ${site}` : `${fold.rows.length} more from ${site}`);
   const close = () => {
     if (pending) list.append(docRow(pending));
@@ -883,6 +948,7 @@ function viewLibrary(params) {
   if (filter === 'smallweb') {
     return list.replaceChildren(status('Search the Small Web', 'Type in the search field and press Return to search Gemini and Gopher.'));
   }
+  if (filter === 'code') return codeList(list, '', { sort: 'date' });
   if (filter === 'files') {
     // The folders Hister watches, newest first; never mixed into the rest.
     shownList = { title: 'Files' };
@@ -1018,9 +1084,10 @@ function viewList(params) {
 // Notes wear Kura's orange and the web Shiori's lens yellow (the Machiya
 // rooms' colours).
 // Files: the folders Hister watches, green (a hue no room wears).
-const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['opened', 'Opened', 'purple']];
+// Code: the owner's repos (code-import's), red, the one hue left.
+const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['opened', 'Opened', 'purple']];
 /** The pills: Opened only while Show Opened is on (off by default); Files only while Hister has some. */
-const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || settings.smallWebTab !== false) && (v !== 'files' || hasLocalFiles));
+const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || settings.smallWebTab !== false) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs));
 /** The pill's key in the shared vocabulary (S.PILLS). */
 const pillKey = (scope) => (scope === 'hister' ? 'pages' : scope);
 /** The pills in the order set in Settings → Pills, less the ones switched off (S.orderPills). */
@@ -1030,7 +1097,10 @@ const scopes = () => {
 };
 /** Hister holds files from folders it watches (`type:local`): asked once at launch, before the first draw. */
 let hasLocalFiles = false;
+/** Hister holds the owner's repos (metadata.source:code): asked with the files. */
+let hasCodeDocs = false;
 async function loadLocalFiles() {
+  api.search(S.codeQuery(''), { limit: 1 }).then((r) => (hasCodeDocs = r.total > 0)).catch(() => {});
   try {
     hasLocalFiles = (await api.search(S.filesQuery(''), { limit: 1 })).total > 0;
   } catch (_) {}
@@ -1038,7 +1108,7 @@ async function loadLocalFiles() {
 // One row over every list, browsing or searching, as in the apps (it had
 // been two: the Library's and a search's). `s` in the address is the
 // choice for both, so typing searches whichever is picked.
-const PROMPTS = { all: 'Search All', hister: 'Search Your Pages', notes: 'Search Notes', web: 'Search the Web', smallweb: 'Search Gemini and Gopher', files: 'Search Your Files', opened: 'Search What You Opened' };
+const PROMPTS = { all: 'Search All', hister: 'Search Your Pages', notes: 'Search Notes', web: 'Search the Web', smallweb: 'Search Gemini and Gopher', files: 'Search Your Files', code: 'Search Your Code', opened: 'Search What You Opened' };
 function scopeOf(params) {
   const s = params.get('s') || { pages: 'hister' }[params.get('f')] || params.get('f') || 'all';
   return scopes().some(([v]) => v === s) ? s : 'all';
@@ -1085,6 +1155,7 @@ function viewSearch(params) {
     if (web) webList($('list'), q);
     else $('list').replaceChildren(status('Search the Web', 'Press Return to search the web for this.'));
   } else if (scope === 'smallweb') smallwebList($('list'), q);
+  else if (scope === 'code') codeList($('list'), q);
   else if (scope === 'files') {
     shownList = { title: q };
     resultsList($('list'), { query: S.filesQuery(q), sort: '', group: '', source: 'pages', empty: `No files match “${q}”.` });
@@ -1153,6 +1224,8 @@ async function searchAll(container, q, { web = true } = {}) {
   // it is, and their totals go on the Pages and Notes pills.
   const hiddenOpened = settings.showOpened === true ? 0 : ((pages && pages.opened) || []).filter((o) => !S.isNoteURL(o.url, settings.niwaURL, settings.konbiniURL)).length;
   if (pages) setSegmentCount('hister', Math.max((pages.total || 0) - hiddenOpened, pages.documents.length));
+  // The Code pill's count (Hister's own index, nothing spent); code is never listed here.
+  if (hasCodeDocs) api.search(S.codeQuery(q), { limit: 1 }).then((r) => setSegmentCount('code', r.total)).catch(() => {});
   if (notes && !notes.signIn) setSegmentCount('notes', Math.max(notes.total || 0, (notes.documents || []).length));
   const mine = (reply, label) => ((reply && reply.documents) || []).slice(0, ALL_COUNT).map((d) => {
     const row = docRow(d);
@@ -1422,7 +1495,8 @@ function answerCard(q) {
   return h('section', { class: 'answer-card' }, head, body);
 }
 const summaries = new Map();
-const canSummarize = (doc, n) => aiOn && !n && S.summarizable(doc.url, doc.label);
+// Never code: the server's AI isn't on the device (the owner's rule: code stays there).
+const canSummarize = (doc, n) => aiOn && !n && !S.isCodeDoc(doc) && S.summarizable(doc.url, doc.label);
 
 function summaryCard(doc, state) {
   const card = h('section', { class: 'summary', 'aria-live': 'polite' });
@@ -1506,6 +1580,15 @@ async function showPreview(doc, { extractor = '' } = {}) {
         iconButton('share', 'Share', () => (navigator.share ? navigator.share({ url: doc.url, title: doc.title }).catch(() => {}) : copy(doc.url))),
         iconButton('search', 'Open in Hister', () => open(api.histerPageURL(doc.url))),
       ];
+  // A code document's repo note in Kura (Repos/<name>.git.md), when there is one.
+  const code = S.codeInfo(doc);
+  const notePath = code && S.codeNotePath(code.repoName);
+  if (notePath) {
+    api.kuraNote(notePath, '').then((html) => {
+      const url = html && S.readerURL('', settings.niwaURL ? settings.niwaURL.replace(/\/?$/, '/') : '', notePath);
+      if (url && token === previewToken) bar.querySelector('.icon-group')?.prepend(iconButton('openbook', 'The Repo’s Note in Kura', () => open(url)));
+    }).catch(() => {});
+  }
   fill(bar, 
     !wide() ? iconButton('back', 'Back', () => history.back()) : null,
     h('span', { class: 'where' }, n || S.isLocalFile(doc.url) ? doc.title || n?.place || doc.url : doc.domain || hostOf(doc.url)),
@@ -1582,10 +1665,11 @@ function pageMenu(doc, n) {
     // As the apps: the places are in the bar; here the rest.
     const items = [];
     // A file is Hister's to keep as it watches it: no label, no delete.
-    const file = S.isLocalFile(doc.url);
+    // Nor a code document: code-import owns it.
+    const file = S.isLocalFile(doc.url) || S.isCodeDoc(doc);
     if (!n && !file) items.push(item('Edit Label…', () => labelPicker(doc)));
     if (canSummarize(doc, n)) items.push(item('Summarize', () => summarize(doc, false)));
-    items.push(item('Copy Link', () => copy(file ? S.localFileURL(location.origin, doc.url) : doc.url)));
+    items.push(item('Copy Link', () => copy(S.isLocalFile(doc.url) ? S.localFileURL(location.origin, doc.url) : doc.url)));
     // Show As goes here, before Delete, once Hister names the extractors.
     const showAs = h('div', { class: 'show-as', role: 'none' });
     // No Delete for a work note (Hister never has one) or a file.
@@ -2295,9 +2379,10 @@ const keyboard = (() => {
         if (!doc) return;
         if (note(doc) || doc.label === 'vault') toast('Notes keep their label');
         else if (S.isLocalFile(doc.url)) toast('Files keep their label');
+        else if (S.isCodeDoc(doc)) toast('Code is kept as its forge has it');
         else labelPicker(doc);
         break;
-      case 'delete': if (!doc || S.isLocalFile(doc.url)) return; mark(null); deleteWithUndo(doc); break;
+      case 'delete': if (!doc || S.isLocalFile(doc.url) || S.isCodeDoc(doc)) return; mark(null); deleteWithUndo(doc); break;
       case 'focusSearch':
         if ($('search-top').hidden) return;
         searchInput.focus();

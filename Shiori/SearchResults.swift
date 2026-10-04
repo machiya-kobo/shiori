@@ -10,7 +10,7 @@ import os
 /// Browsing, All, Pages and Notes are the Library, Web asks for a search,
 /// and Opened is what you opened; searching, each one narrows the search.
 enum SearchScope: String, Hashable, CaseIterable, Identifiable {
-    case all, hister, notes, web, smallweb, files, opened
+    case all, hister, notes, web, smallweb, files, code, opened
 
     var id: Self { self }
 
@@ -31,6 +31,8 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .smallweb: .teal
         // The folders Hister watches: green, a hue no room wears.
         case .files: .green
+        // The owner's repos (code-import): red, the one hue left.
+        case .code: .red
         case .opened: .purple
         }
     }
@@ -43,6 +45,7 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .web: "Web"
         case .smallweb: "Small Web"
         case .files: "Files"
+        case .code: "Code"
         case .opened: "Opened"
         }
     }
@@ -55,6 +58,7 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .web: "Search the Web"
         case .smallweb: "Search Gemini and Gopher"
         case .files: "Search Your Files"
+        case .code: "Search Your Code"
         case .opened: "Search What You Opened"
         }
     }
@@ -139,6 +143,8 @@ struct SearchResultsView: View {
         // The folders Hister watches (`type:local`), here and nowhere else.
         case .files:
             _model = State(initialValue: ResultsModel(query: LocalFiles.query(query)))
+        // The owner's repos (`metadata.source:code`): CodeResults, with its filters.
+        case .code: break
         case .opened: break
         }
     }
@@ -149,6 +155,8 @@ struct SearchResultsView: View {
                 AllResults(query: query, showScope: showScope, search: search)
             } else if scope == .opened {
                 OpenedListView(filter: query)
+            } else if scope == .code {
+                CodeResults(query: query)
             } else if let webModel {
                 if session == nil || session?.webAllowed == query {
                     WebResultsList(model: webModel, search: search)

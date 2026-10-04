@@ -33,7 +33,7 @@ const shioriHost = (() => {
   const RESULT_STYLES = ['tint', 'solid', 'bar', 'none'];
   const SMALL_WEB_OPENS = ['gateway', 'direct'];
   // PillOrder.keys: the pills' order and which show (`pills`).
-  const PILL_KEYS = ['all', 'pages', 'notes', 'web', 'images', 'videos', 'news', 'smallweb', 'files', 'opened'];
+  const PILL_KEYS = ['all', 'pages', 'notes', 'web', 'images', 'videos', 'news', 'smallweb', 'files', 'code', 'opened'];
   /** PillOrder.clean: known keys, each once, All shown; [] for anything else. */
   function cleanPills(raw) {
     if (!Array.isArray(raw) || raw.length > PILL_KEYS.length) return [];

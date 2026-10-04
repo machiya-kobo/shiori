@@ -262,9 +262,10 @@ holds the rules and the traps the code can't tell you.
 - `api/add` replaces a page's metadata (last writer wins) but keeps its label
   when the add has none. Provenance in metadata is best effort.
 - **Every Hister query ends in ` -label:vault -metadata.source:vault
-  -type:local`** (`SearchText.forHister` / `S.histerText`, applied inside
-  the clients): notes come from Kura, files only on the Files pill (a query
-  with `type:local` keeps them). There's no `NOT` and no exclude parameter;
+  -type:local -metadata.source:code`** (`SearchText.forHister` /
+  `S.histerText`, applied inside the clients): notes come from Kura, files
+  only on the Files pill (a query with `type:local` keeps them), code only
+  on the Code pill (one with `metadata.source:code` keeps it). There's no `NOT` and no exclude parameter;
   a negated field works with exact totals.
 - The last typed word is searched as a prefix (`prefixLastWord`): Hister and
   Kura match whole words.
@@ -411,6 +412,23 @@ holds the rules and the traps the code can't tell you.
   recorded as opened, labelled or deleted, and never folds by site. No AI:
   `AIContent.localFile` makes `EngineChain.eligible` empty, on-device
   engines included. Files queries go into Recent like any other.
+
+## Code
+
+- The owner's repos (code-import, `metadata.source:code`: repo cards,
+  READMEs and docs, issues, PRs, releases, each at its forge URL). Only
+  the Code pill shows them, after Files, while Hister has some
+  (`CodeDocs` / `S.codeQuery`, twins); searched as you type (Hister's own
+  index), with a count from All; never in All or any other list.
+- Filters are metadata terms, each one lowercase token (Hister can't match
+  `/` in a metadata value): `metadata.code_kind:`, `code_state:open`,
+  `code_repo:<owner>__<repo>` (`codeRepoKey`), `code_private:true` (a
+  string). Rows read `metadata` from the search reply (`CodeInfo`).
+- Never labelled, deleted or folded by site (code-import owns them). AI:
+  on the device only (`AIContent.code`: Apple Intelligence, not a local
+  server, never a cloud engine); the hosted pages never summarize code.
+  "code" is a reserved collection name, and an alias naming
+  `metadata.source:code` is no collection.
 
 ## Small Web
 

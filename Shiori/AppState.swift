@@ -323,6 +323,7 @@ final class AppState {
             case .opened: searchPage.showOpened
             case .smallweb: smallweb != nil
             case .files: hasLocalFiles
+            case .code: hasCodeDocs
             default: true
             }
         }
@@ -475,6 +476,28 @@ final class AppState {
     func loadLocalFiles() async {
         guard let client else { hasLocalFiles = false; return }
         if let page = try? await client.search(LocalFiles.query(""), limit: 1) { hasLocalFiles = page.total > 0 }
+        if let page = try? await client.search(CodeDocs.query(""), limit: 1) { hasCodeDocs = page.total > 0 }
+    }
+
+    // MARK: Code
+
+    /// Hister holds the owner's repos (code-import, `metadata.source:code`):
+    /// the Code pill shows only then. Asked with the files.
+    private(set) var hasCodeDocs = false
+
+    /// A code document: shown on the Code pill only, never labelled,
+    /// deleted or given to a model off the device (`AIContent.code`).
+    func isCode(_ document: StoredPage) -> Bool { document.code != nil }
+
+    /// A repo's note in the default vault (`Repos/<name>.git.md`), Kura's
+    /// reader page for it when Kura has one; asked once per repo a launch.
+    @ObservationIgnored private var repoNotes: [String: URL?] = [:]
+    func repoNoteURL(repoName: String) async -> URL? {
+        if let known = repoNotes[repoName] { return known }
+        guard let path = CodeDocs.notePath(repoName: repoName), let kura = notesKura else { return nil }
+        let url = await kura.hasNote(path: path) ? Notes.niwaURL(base: searchPage.niwaURL, path: path) : nil
+        repoNotes[repoName] = url
+        return url
     }
 
     /// A file from those folders: shown on the Files pill only, opened from

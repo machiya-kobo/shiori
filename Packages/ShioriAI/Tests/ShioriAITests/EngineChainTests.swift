@@ -81,6 +81,18 @@ final class FakeEngine: AIEngine, @unchecked Sendable {
         #expect(EngineChain([apple, local, cloud]).eligible(for: .localFile).isEmpty)
     }
 
+    @Test func codeStaysOnTheDevice() async throws {
+        let apple = FakeEngine(.appleIntelligence, .success("on device"))
+        let local = FakeEngine(.local, .success("home"))
+        let cloud = FakeEngine(.anthropic, .success("cloud"))
+        let code = AIRequest(system: "s", user: "u", content: .code)
+        #expect(EngineChain([apple, local, cloud]).eligible(for: .code).map(\.provider) == [.appleIntelligence])
+        #expect(try await EngineChain([apple, local, cloud]).respond(to: code).provider == .appleIntelligence)
+        // Without Apple Intelligence: none at all, not the local server, never the cloud.
+        await #expect(throws: AIError.noEngine) { try await EngineChain([local, cloud]).respond(to: code) }
+        #expect(local.calls == 0 && cloud.calls == 0)
+    }
+
     @Test func aNoteMayUseALocalServer() async throws {
         let local = FakeEngine(.local, .success("home"))
         #expect(try await EngineChain([local]).respond(to: note).provider == .local)

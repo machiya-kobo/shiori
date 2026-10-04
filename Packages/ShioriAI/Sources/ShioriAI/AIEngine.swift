@@ -46,6 +46,10 @@ public enum AIContent: Sendable, Equatable {
     /// A file from the folders Hister watches (the Files pill): never to
     /// any model either, on-device ones included.
     case localFile
+    /// A code document (the owner's repos, code-import's, the Code pill):
+    /// on-device engines only (Apple Intelligence), not a local server, never
+    /// a cloud one. The owner's rule: code stays on the device, as notes do.
+    case code
     /// Nothing of the user's: a connection test.
     case none
 }
@@ -120,6 +124,7 @@ public struct EngineChain: Sendable {
     /// place that rule lives.
     public func eligible(for content: AIContent) -> [any AIEngine] {
         guard content != .workNote, content != .localFile else { return [] }
+        if content == .code { return engines.filter { $0.provider == .appleIntelligence } }
         return engines.filter { content != .note || !$0.provider.isCloud }
     }
 

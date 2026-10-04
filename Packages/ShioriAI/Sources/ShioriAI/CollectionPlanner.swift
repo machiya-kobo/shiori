@@ -85,7 +85,7 @@ public struct CollectionPlanner: Sendable {
     /// relabelling would delete). An existing alias's name, with or without "@",
     /// is refused where the rules are known (`CollectionKeeper`).
     public static let reserved: Set<String> =
-        Set(["notes", "pages"] + BuildDefaults.list(plistKey: "ShioriDefaultReservedCollections", environment: "SHIORI_RESERVED_COLLECTIONS"))
+        Set(["notes", "pages", "code"] + BuildDefaults.list(plistKey: "ShioriDefaultReservedCollections", environment: "SHIORI_RESERVED_COLLECTIONS"))
 
     public init(chain: EngineChain) {
         self.chain = chain

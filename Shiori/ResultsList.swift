@@ -247,7 +247,15 @@ struct DocumentRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Group {
-                if notePlace != nil || LocalFiles.isLocalFile(document.url) {
+                if let code = document.code {
+                    // What it is (repo, doc, issue, PR, release), in Code's red.
+                    Image(systemName: code.symbol)
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(palette.tint(SearchScope.code.tint))
+                        .frame(width: scaledIcon * macScale, height: scaledIcon * macScale)
+                        .accessibilityLabel(code.kindName)
+                } else if notePlace != nil || LocalFiles.isLocalFile(document.url) {
                     Image(systemName: "doc.text")
                         .resizable()
                         .scaledToFit()
@@ -271,7 +279,22 @@ struct DocumentRow: View {
                     .foregroundStyle(palette.accent)
                     .lineLimit(2)
                 HStack(spacing: 6) {
-                    if let notePlace {
+                    if let code = document.code {
+                        // Where it is: the repo, its state, a lock when private.
+                        if code.isPrivate {
+                            Image(systemName: "lock.fill")
+                                .textStyle(.caption)
+                                .accessibilityLabel("Private")
+                        }
+                        Text(code.repoName.isEmpty ? document.domain : code.repoName)
+                            .textStyle(.caption, design: .monospaced)
+                            .lineLimit(1)
+                        if !code.state.isEmpty {
+                            Text(code.state)
+                                .textStyle(.caption, weight: .semibold)
+                                .foregroundStyle(code.state == "open" ? palette.tint(.green) : palette.secondaryText)
+                        }
+                    } else if let notePlace {
                         Text(notePlace)
                             .textStyle(.caption)
                             .lineLimit(1)

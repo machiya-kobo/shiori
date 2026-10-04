@@ -25,6 +25,9 @@ struct AllResults: View {
     /// Hister answers both in about 50 ms, so the list
     /// appears once, laid out. The web comes later, in its own section.
     @State private var holding = true
+    /// How many code documents match, for the Code pill's count (never
+    /// listed here: code shows only on its own pill).
+    @State private var codeTotal = 0
 
     init(query: String, showScope: @escaping (SearchScope) -> Void, search: @escaping (String) -> Void) {
         self.query = query
@@ -67,14 +70,14 @@ struct AllResults: View {
             .resultActions(query: query)
             // Their totals on the Pages and Notes pills ("Pages 31").
             .onChange(of: totals, initial: true) { _, totals in
-                session?.setCounts([.hister: totals[0], .notes: totals[1]], for: query)
+                session?.setCounts([.hister: totals[0], .notes: totals[1], .code: totals[2]], for: query)
             }
     }
 
     /// Hister's total has no notes (they're Kura's), and leaves out the pages
     /// you opened while Show Opened is off.
     private var totals: [Int] {
-        [max(pages.total - hiddenOpened, yourPages().count), max(notes.total, shown(notes, count: Self.count).count)]
+        [max(pages.total - hiddenOpened, yourPages().count), max(notes.total, shown(notes, count: Self.count).count), codeTotal]
     }
 
     private func load() async {
@@ -84,6 +87,10 @@ struct AllResults: View {
         notes.kura = app.notesKura
         async let mine: Void = pages.load(using: app.client)
         async let vault: Void = notes.load(using: app.client)
+        // The Code pill's count: Hister's own index, nothing spent.
+        if app.hasCodeDocs, let client = app.client, let page = try? await client.search(CodeDocs.query(query), limit: 1) {
+            codeTotal = page.total
+        }
         if webOn { await web.load(searx: app.searx, hister: app.client) }
         _ = await (mine, vault)
     }

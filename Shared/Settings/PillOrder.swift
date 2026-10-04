@@ -7,10 +7,10 @@ import Foundation
 /// after it. All is never hidden. `S.pillSetting` / `S.orderPills` /
 /// `S.pillsChanged` in search-core.js are the twins, with the same tests.
 nonisolated enum PillOrder {
-    static let keys = ["all", "pages", "notes", "web", "images", "videos", "news", "smallweb", "files", "opened"]
+    static let keys = ["all", "pages", "notes", "web", "images", "videos", "news", "smallweb", "files", "code", "opened"]
     static let names = [
         "all": "All", "pages": "Pages", "notes": "Notes", "web": "Web", "images": "Images", "videos": "Videos",
-        "news": "News", "smallweb": "Small Web", "files": "Files", "opened": "Opened",
+        "news": "News", "smallweb": "Small Web", "files": "Files", "code": "Code", "opened": "Opened",
     ]
 
     struct Pill: Equatable {

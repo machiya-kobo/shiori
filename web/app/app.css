@@ -210,6 +210,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 .segments button[data-tint="yellow"] { --tab: var(--web); }
 .segments button[data-tint="teal"] { --tab: var(--smallweb); }
 .segments button[data-tint="green"] { --tab: var(--kept); }
+.segments button[data-tint="red"] { --tab: var(--tab-videos); }
 /* Their totals on the Pages and Notes pills ("Pages 31"), as the search page. */
 .segments .pill-count { margin-left: 5px; font-weight: 400; font-variant-numeric: tabular-nums; }
 /* All: your top pages and notes among the web rows, each title led by whose it is. */
@@ -313,6 +314,18 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .doc-row.note-row { --tint: var(--notes); }
 .doc-row.opened-row { --tint: var(--tab-news); }
 .doc-row.file-row { --tint: var(--kept); }
+.doc-row.code-row { --tint: var(--tab-videos); }
+/* A code row: what it is, its repo, its state, a lock when private. */
+.code-glyph { display: inline-grid; place-items: center; color: var(--tab-videos); font-weight: 700; }
+.code-state { font-weight: 600; }
+.code-state.open { color: var(--kept); }
+/* The Code pill's filters, above the list. */
+.code-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 16px; }
+.code-filters select, .code-filters button {
+  font: inherit; font-size: 0.875rem; color: var(--text); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer;
+}
+.code-filters button[aria-pressed="true"] { border-color: var(--tab-videos); color: var(--tab-videos); }
 /* Settings → Result Style: a plain card with a hairline (Solid), a bar down
    the leading edge, or plain rows. */
 body[data-result-style="solid"] .doc-row { background: var(--card); border-color: var(--line); }

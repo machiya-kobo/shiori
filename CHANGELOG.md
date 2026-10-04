@@ -5,6 +5,27 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The tag also releases Shiori for Firefox. The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.3.0 (2026-10-04)
+
+### Added
+
+- **Code**: a pill for the owner's repos in Hister (code-import's repo
+  cards, READMEs and docs, issues, pull requests and releases), after
+  Files, on every Shiori. Searched as you type, with a count on the pill;
+  filters for the kind, Open Only and Private; each row shows what it is,
+  the repo, its state and a lock when private, and opens at the forge. A
+  repo's note in Kura is linked when there is one.
+
+### Changed
+
+- Every other Hister search leaves code out (` -metadata.source:code`),
+  as it does notes and files: code is never in All, Pages or any list but
+  its own.
+- Code is summarized on the device only (Apple Intelligence), never by a
+  local server or a cloud engine; the hosted pages never summarize it.
+  Code is never labelled, deleted or folded by site, "code" is a reserved
+  collection name, and an alias for code isn't listed as a collection.
+
 ## 0.2.1 (2026-10-04)
 
 ### Changed

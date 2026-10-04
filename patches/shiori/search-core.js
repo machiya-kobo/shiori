@@ -528,7 +528,8 @@
    * and "pages". HisterKit's Rules.namesTheVault, with the same tests.
    */
   function collectionAliases(aliases) {
-    return Object.fromEntries(Object.entries(aliases || {}).filter(([, v]) => !/(label|source):(\([^)]*)?\bvault\b/.test(String(v))));
+    // Nor one about the code (metadata.source:code, code-import's): it has its own pill.
+    return Object.fromEntries(Object.entries(aliases || {}).filter(([, v]) => !/(label|source):(\([^)]*)?\bvault\b|source:(\([^)]*)?\bcode\b/.test(String(v))));
   }
 
   /**
@@ -765,16 +766,84 @@
     try { return decodeURIComponent(rest); } catch (_) { return rest; }
   }
 
-  /** A Hister search as sent: the last word a prefix, never the notes, and never the files unless it asks. */
+  // --- Code: the owner's repos (code-import, metadata.source:code) ---------------------
+  // Repo cards, READMEs and docs, issues, PRs and releases from the owner's
+  // forges, each at its real forge URL. Only the Code pill shows them:
+  // every other Hister query leaves them out. Their metadata values a
+  // query matches are single lowercase tokens (Hister can't match "/" in
+  // one): code_repo is owner__repo, code_private the STRING "true".
+  // HisterKit's CodeDocs is the twin, with the same tests.
+  const CODE_TERM = 'metadata.source:code';
+  const CODE_EXCLUSION = '-metadata.source:code';
+  /** A query that asks for code: `metadata.source:code` among its words. */
+  function asksForCode(text) {
+    return String(text || '').split(/\s+/).includes(CODE_TERM);
+  }
+  /**
+   * A repo's key as code-import stores it: owner and repo each lowercase
+   * with every other character "_", joined by "__" ("Owner/My-Repo" →
+   * "owner__my_repo"); a key already made stays as it is.
+   */
+  function codeRepoKey(name) {
+    const clean = (part) => String(part || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const text = String(name || '').trim();
+    const slash = text.indexOf('/');
+    return slash < 0 ? clean(text) : `${clean(text.slice(0, slash))}__${clean(text.slice(slash + 1))}`;
+  }
+  // The kinds a filter offers; Docs covers READMEs too.
+  const CODE_KINDS = [
+    ['repo', 'Repos'], ['docs', 'Docs'], ['issue', 'Issues'], ['pr', 'Pull Requests'], ['release', 'Releases'],
+  ];
+  /**
+   * The Code pill's query: the term and the filters first, so the last
+   * typed word stays a prefix. `filters`: { kind (CODE_KINDS' key), host,
+   * open (true), repo (a name or key), private (true) }.
+   */
+  function codeQuery(typed, filters = {}) {
+    const terms = [CODE_TERM];
+    const f = filters || {};
+    if (f.kind === 'docs') terms.push('metadata.code_kind:(readme|doc)');
+    else if (CODE_KINDS.some(([k]) => k === f.kind)) terms.push(`metadata.code_kind:${f.kind}`);
+    if (/^[a-z]+$/.test(String(f.host || ''))) terms.push(`metadata.code_host:${f.host}`);
+    if (f.open === true) terms.push('metadata.code_state:open');
+    if (f.repo) terms.push(`metadata.code_repo:${codeRepoKey(f.repo)}`);
+    if (f.private === true) terms.push('metadata.code_private:true');
+    const words = String(typed || '').trim();
+    return `${terms.join(' ')} ${words || '*'}`;
+  }
+  /** A code document (Hister's metadata.source "code"). */
+  function isCodeDoc(doc) {
+    return !!(doc && doc.metadata && doc.metadata.source === 'code');
+  }
+  /** What a code row shows, from its metadata; null for anything else. */
+  function codeInfo(doc) {
+    if (!isCodeDoc(doc)) return null;
+    const m = doc.metadata;
+    const str = (v) => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '');
+    return {
+      kind: str(m.code_kind), host: str(m.code_host), repo: str(m.code_repo), repoName: str(m.code_repo_name),
+      state: str(m.code_state), private: m.code_private === 'true' || m.code_private === true,
+      number: str(m.code_number), tag: str(m.code_tag), path: str(m.code_path),
+    };
+  }
+  /** The repo's note in the default vault, as Kura's path (Repos/<name>.git.md), or ''. */
+  function codeNotePath(repoName) {
+    const name = String(repoName || '').split('/').pop().trim();
+    return /^[A-Za-z0-9._-]+$/.test(name) ? `Repos/${name}.git.md` : '';
+  }
+
+  /** A Hister search as sent: the last word a prefix, never the notes, and never the files or code unless it asks. */
   function histerText(text) {
-    const sent = excludingNotes(prefixLastWord(String(text || '').trim(), { union: true }));
-    if (asksForFiles(sent) || sent.split(/\s+/).includes(FILES_EXCLUSION)) return sent;
-    return `${sent} ${FILES_EXCLUSION}`;
+    let sent = excludingNotes(prefixLastWord(String(text || '').trim(), { union: true }));
+    const words = sent.split(/\s+/);
+    if (!asksForFiles(sent) && !words.includes(FILES_EXCLUSION)) sent = `${sent} ${FILES_EXCLUSION}`;
+    if (!asksForCode(sent) && !words.includes(CODE_EXCLUSION)) sent = `${sent} ${CODE_EXCLUSION}`;
+    return sent;
   }
 
   /** A query as typed, from one sent (the Opened list shows it). */
   function typedQuery(text) {
-    const shown = String(text || '').split(/\s+/).filter((w) => w && !EXCLUSION_TERMS.includes(w) && w !== FILES_EXCLUSION).join(' ');
+    const shown = String(text || '').split(/\s+/).filter((w) => w && !EXCLUSION_TERMS.includes(w) && w !== FILES_EXCLUSION && w !== CODE_EXCLUSION).join(' ');
     // "(word|word*)" as sent now, "word*" before.
     const union = shown.match(/^(.*?)\(([\p{L}\p{N}]+)\|\2\*\)$/u);
     if (union) return union[1] + union[2];
@@ -1353,12 +1422,12 @@
   /**
    * A list with runs of one site folded, as the app's SiteRuns: a run of
    * `minimum` or more pages from one site in a row shows its first page,
-   * then one item that holds the rest. Notes (label vault) and files never fold.
+   * then one item that holds the rest. Notes (label vault), files and code never fold.
    * Items: {page} or {folded: site, pages}.
    */
   function siteRuns(docs, minimum = 3) {
     const items = [];
-    const key = (d) => (d.label === 'vault' || isLocalFile(d.url) ? null : siteOf(d) || null);
+    const key = (d) => (d.label === 'vault' || isLocalFile(d.url) || isCodeDoc(d) ? null : siteOf(d) || null);
     let i = 0;
     while (i < docs.length) {
       const site = key(docs[i]);
@@ -1827,7 +1896,7 @@
 
   const PILLS = [
     ['all', 'All'], ['pages', 'Pages'], ['notes', 'Notes'], ['web', 'Web'], ['images', 'Images'],
-    ['videos', 'Videos'], ['news', 'News'], ['smallweb', 'Small Web'], ['files', 'Files'], ['opened', 'Opened'],
+    ['videos', 'Videos'], ['news', 'News'], ['smallweb', 'Small Web'], ['files', 'Files'], ['code', 'Code'], ['opened', 'Opened'],
   ];
   const PILL_KEYS = PILLS.map(([key]) => key);
 
@@ -2234,6 +2303,13 @@
     fieldButtons,
     histerToken,
     histerHeaders,
+    asksForCode,
+    codeRepoKey,
+    CODE_KINDS,
+    codeQuery,
+    isCodeDoc,
+    codeInfo,
+    codeNotePath,
     histerSignInURL,
     histerSessionsURL,
     signInAsked,

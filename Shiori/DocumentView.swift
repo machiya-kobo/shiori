@@ -29,6 +29,8 @@ struct DocumentView: View {
     /// Summarize (Settings → AI): the card above the preview.
     @State private var summary: SummaryState = .none
     @State private var summarizing: Task<Void, Never>?
+    /// A code document's repo note in Kura (`Repos/<name>.git.md`), when it has one.
+    @State private var repoNote: URL?
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
@@ -44,6 +46,10 @@ struct DocumentView: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar { toolbar(note: note) }
+            .task(id: document.code?.repoName) {
+                repoNote = nil
+                if let name = document.code?.repoName, !name.isEmpty { repoNote = await app.repoNoteURL(repoName: name) }
+            }
             .task(id: document.url) {
                 summarizing?.cancel()
                 summary = .none
@@ -138,6 +144,10 @@ struct DocumentView: View {
                 places.append(.init(name: "Konbini", help: "View Card in Konbini", symbol: "rectangle.split.3x1") { openURL(url) })
             }
         }
+        // A code document's repo note (Kura's), when there is one.
+        if let repoNote {
+            places.append(.init(name: "Repo Note", help: "The Repo's Note in Kura", symbol: "book") { openURL(repoNote) })
+        }
         // Not a work note: Hister never has one.
         if !workNote, let url = app.client?.webPreviewURL(for: document.url) {
             places.append(.init(name: "Hister", help: "Open in Hister", symbol: "magnifyingglass") { openURL(url) })
@@ -210,10 +220,10 @@ struct DocumentView: View {
         ToolbarItem(placement: Self.pagePlacement) {
             Menu {
                 // First, and flat: what the toolbar left out.
-                if note == nil, !localFile {
+                if note == nil, !localFile, !code {
                     Button("Edit Label…", systemImage: "tag") { labelling = true }
                 }
-                if app.ai.hasEngine(note: note != nil), !workNote, !localFile {
+                if canSummarize(note: note), !workNote, !localFile {
                     Button("Summarize", systemImage: "sparkles") { summarize(note: note != nil) }
                         .disabled(preview == nil || summary == .working)
                 }
@@ -259,7 +269,7 @@ struct DocumentView: View {
                 // Gone at once, with Undo for a few seconds (no confirmation),
                 // as everywhere else. Not for a work note (Hister never has
                 // one) or a file (Hister watches its folder).
-                if !workNote, !localFile {
+                if !workNote, !localFile, !code {
                     Divider()
                     Button("Delete", systemImage: "trash", role: .destructive) {
                         app.deleteWithUndo(document)
@@ -282,6 +292,14 @@ struct DocumentView: View {
     /// A file from the folders Hister watches: opened from Hister's copy;
     /// never labelled, deleted, or given to a model.
     private var localFile: Bool { app.isLocalFile(document.url) }
+    /// The owner's repos (code-import's): never labelled or deleted here,
+    /// and summarized on the device only (`AIContent.code`).
+    private var code: Bool { document.code != nil }
+
+    /// Whether an engine may summarize this: code only on the device.
+    private func canSummarize(note: AppState.NoteLinks?) -> Bool {
+        code ? !app.ai.chain.eligible(for: .code).isEmpty : app.ai.hasEngine(note: note != nil)
+    }
 
     private func load() async {
         if let vault = Notes.otherVault(of: document.url) {
@@ -330,7 +348,7 @@ struct DocumentView: View {
     /// In the toolbar where there's room (the Mac, a regular-width iPad);
     /// the iPhone has it in the ⋯ menu.
     private func showsSummarizeButton(note: AppState.NoteLinks?) -> Bool {
-        guard !workNote, !localFile, app.ai.hasEngine(note: note != nil) else { return false }
+        guard !workNote, !localFile, canSummarize(note: note) else { return false }
         #if os(iOS)
         return sizeClass == .regular
         #else
@@ -353,6 +371,7 @@ struct DocumentView: View {
             return
         }
         let isNote = note || document.label == Notes.label
+        let isCode = document.code != nil
         let chain = app.ai.chain
         let title = preview.title.isEmpty ? document.displayTitle : preview.title
         let url = document.url
@@ -365,7 +384,9 @@ struct DocumentView: View {
                 // vault's note is asked of Kura afresh first: a shared vault
                 // may be private by now.
                 // A file reaches none either (`.localFile`).
+                // Code stays on the device (`.code`: Apple Intelligence only).
                 let content: AIContent = LocalFiles.isLocalFile(url) ? .localFile
+                    : isCode ? .code
                     : await app.isWorkNoteNow(url) ? .workNote : isNote ? .note : .page
                 let made = try await Summarizer(chain: chain).summarize(
                     title: title, url: url, html: preview.contentHTML, content: content)

@@ -104,7 +104,7 @@ struct HisterClientTests {
         let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
         let query = try JSONSerialization.jsonObject(with: Data(items.first { $0.name == "query" }!.value!.utf8)) as! [String: Any]
         // Notes come from Kura: every Hister query leaves them out.
-        #expect(query["text"] as? String == "y -label:vault -metadata.source:vault -type:local")  // one letter: no prefix
+        #expect(query["text"] as? String == "y -label:vault -metadata.source:vault -type:local -metadata.source:code")  // one letter: no prefix
         #expect(query["sort"] as? String == "date")
         #expect(query["page_key"] as? String == "p1")
         #expect(query["highlight"] as? String == "HTML")
@@ -125,7 +125,7 @@ struct HisterClientTests {
         #expect(raw.contains("%2B"))
         let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
         let query = try JSONSerialization.jsonObject(with: Data(items.first { $0.name == "query" }!.value!.utf8)) as! [String: Any]
-        #expect(query["text"] as? String == "c++ -label:vault -metadata.source:vault -type:local")
+        #expect(query["text"] as? String == "c++ -label:vault -metadata.source:vault -type:local -metadata.source:code")
         #expect(query["page_key"] as? String == "[\" Am+MO~\"]")
     }
 

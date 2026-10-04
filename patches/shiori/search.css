@@ -211,6 +211,7 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
 #categories a[data-cat="smallweb"] { --tab: var(--smallweb); }
 /* The folders Hister watches: green, a hue no room wears. */
 #categories a[data-cat="files"] { --tab: var(--kept); }
+#categories a[data-cat="code"] { --tab: var(--tab-videos); }
 .card.smallweb-card .url .origin { color: var(--smallweb); font-weight: 600; }
 .smallweb-card .places { align-items: center; }
 .smallweb-card .places .engines { font: -apple-system-caption1; color: var(--secondary); }
@@ -299,6 +300,17 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
 .opened-card { --tint: var(--tab-news); }
 /* A file from the folders Hister watches: the Files tab's green. */
 .file-card { --tint: var(--kept); }
+/* The owner's repos (code-import's): red, the one hue left. */
+.code-card { --tint: var(--tab-videos); }
+.code-glyph { color: var(--tab-videos); font-weight: 700; }
+.code-state { font-weight: 600; }
+.code-state.open { color: var(--kept); }
+.code-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 12px; }
+.code-filters select, .code-filters button {
+  font: inherit; font-size: 0.875rem; color: var(--text); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer;
+}
+.code-filters button[aria-pressed="true"] { border-color: var(--tab-videos); color: var(--tab-videos); }
 /* Settings → Result Style: a plain card with a hairline (Solid), a bar down
    the leading edge, or plain. */
 body[data-result-style="solid"] :is(.hister-card, .vault-card) { background: var(--card); border-color: var(--line); }

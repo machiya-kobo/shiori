@@ -98,7 +98,7 @@ private struct ResultActionsHost: ViewModifier {
 /// (`Palette.tintOpacity`, `tintBase`).
 struct ResultBar: View {
     enum Kind {
-        case page, note, opened, file
+        case page, note, opened, file, code
     }
 
     let kind: Kind
@@ -116,6 +116,7 @@ struct ResultBar: View {
         case .note: palette.tint(SearchScope.notes.tint)
         case .opened: palette.tint(SearchScope.opened.tint)
         case .file: palette.tint(SearchScope.files.tint)
+        case .code: palette.tint(SearchScope.code.tint)
         }
     }
 
@@ -191,7 +192,7 @@ struct DocumentItem: View {
     @Environment(\.previewSelection) private var selection
 
     private func kind(_ note: AppState.NoteLinks?) -> ResultBar.Kind {
-        LocalFiles.isLocalFile(document.url) ? .file : note != nil ? .note : opened ? .opened : .page
+        LocalFiles.isLocalFile(document.url) ? .file : document.code != nil ? .code : note != nil ? .note : opened ? .opened : .page
     }
 
     var body: some View {
@@ -236,8 +237,11 @@ struct DocumentItem: View {
                                 .tint(palette.tint(SearchScope.files.tint))
                         }
                     } else if note == nil {
-                        Button("Label", systemImage: "tag") { actions.label(document) }
-                            .tint(palette.accent)
+                        // A code document is code-import's: never labelled here.
+                        if document.code == nil {
+                            Button("Label", systemImage: "tag") { actions.label(document) }
+                                .tint(palette.accent)
+                        }
                         if let url = URL(string: document.url) {
                             Button("Open in Browser", systemImage: "safari") {
                                 actions.opened(document)
@@ -266,7 +270,7 @@ struct DocumentItem: View {
                     // The theme's red: without it the app's accent tint (blue)
                     // wins over the destructive role. Not for a work note
                     // (Hister never has one) or a file (Hister watches its folder).
-                    if !Notes.isPrivateNote(document.url), !LocalFiles.isLocalFile(document.url) {
+                    if !Notes.isPrivateNote(document.url), !LocalFiles.isLocalFile(document.url), document.code == nil {
                         Button("Delete", systemImage: "trash", role: .destructive) { actions.delete(document) }
                             .tint(palette.danger)
                     }
@@ -355,7 +359,8 @@ struct DocumentMenu: View {
     var body: some View {
         // Not for a note: its label must stay "vault" (see Swipes). Neither
         // for a file: Hister watches its folder, and the file stays as it is.
-        let file = LocalFiles.isLocalFile(document.url)
+        // Nor for code: code-import owns those documents (it re-reads the forge).
+        let file = LocalFiles.isLocalFile(document.url) || document.code != nil
         if app.noteLinks(for: document) == nil, !file {
             Button("Edit Label…", systemImage: "tag") { actions.label(document) }
         }

@@ -163,6 +163,8 @@ public struct StoredPage: Sendable, Equatable, Hashable, Identifiable {
     /// `snippetHTML` parsed, once, when the page is made (not by every
     /// redraw of the row that shows it).
     public private(set) var snippet: Snippet
+    /// A code document's facts (code-import's metadata); nil for any other page.
+    public var code: CodeInfo?
 
     public init(
         url: String, title: String, domain: String, label: String, added: Date, updated: Date,
@@ -262,9 +264,11 @@ public struct Rules: Sendable, Equatable {
     }
 
     /// An expansion that picks or drops the vault's notes by label or
-    /// source (`label:vault`, `-metadata.source:vault`).
+    /// source (`label:vault`, `-metadata.source:vault`), or the code
+    /// (`metadata.source:code`, code-import's: it has its own pill). No
+    /// collection either way.
     public static func namesTheVault(_ expansion: String) -> Bool {
-        expansion.range(of: #"(label|source):(\([^)]*)?\bvault\b"#, options: .regularExpression) != nil
+        expansion.range(of: #"(label|source):(\([^)]*)?\bvault\b|source:(\([^)]*)?\bcode\b"#, options: .regularExpression) != nil
     }
 
     /// The collections a page with this label shows up in.
@@ -313,9 +317,25 @@ struct DocumentWire: Decodable {
     var updated: Int64?
     var favicon_key: String?
     var text: String?
+    var metadata: MetadataWire?
+
+    private enum Keys: String, CodingKey { case url, title, domain, label, added, updated, favicon_key, text, metadata }
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        url = try c.decode(String.self, forKey: .url)
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        domain = try c.decodeIfPresent(String.self, forKey: .domain)
+        label = try c.decodeIfPresent(String.self, forKey: .label)
+        added = try c.decodeIfPresent(Int64.self, forKey: .added)
+        updated = try c.decodeIfPresent(Int64.self, forKey: .updated)
+        favicon_key = try c.decodeIfPresent(String.self, forKey: .favicon_key)
+        text = try c.decodeIfPresent(String.self, forKey: .text)
+        // Extras: never the reason a search fails.
+        metadata = try? c.decodeIfPresent(MetadataWire.self, forKey: .metadata)
+    }
 
     var document: StoredPage {
-        StoredPage(
+        var page = StoredPage(
             url: url,
             title: title ?? "",
             // The history list sends "" rather than leaving it out.
@@ -325,6 +345,8 @@ struct DocumentWire: Decodable {
             updated: Date(timeIntervalSince1970: TimeInterval(updated ?? added ?? 0)),
             faviconKey: favicon_key ?? "",
             snippetHTML: text ?? "")
+        page.code = metadata?.code
+        return page
     }
 }
 

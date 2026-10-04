@@ -29,9 +29,11 @@ public enum SearchText {
     /// reads those from Kura, `Notes.exclusion`), and never the watched
     /// files unless it asks for them (the Files pill, `LocalFiles`).
     public static func forHister(_ text: String) -> String {
-        let sent = Notes.excluding(prefixLastWord(text.trimmingCharacters(in: .whitespaces), union: true))
+        var sent = Notes.excluding(prefixLastWord(text.trimmingCharacters(in: .whitespaces), union: true))
         let words = sent.split(whereSeparator: \.isWhitespace)
-        if LocalFiles.asked(in: sent) || words.contains(where: { $0 == LocalFiles.exclusion }) { return sent }
-        return "\(sent) \(LocalFiles.exclusion)"
+        if !LocalFiles.asked(in: sent), !words.contains(where: { $0 == LocalFiles.exclusion }) { sent += " \(LocalFiles.exclusion)" }
+        // Never the code (code-import's) unless it asks: the Code pill.
+        if !CodeDocs.asked(in: sent), !words.contains(where: { $0 == CodeDocs.exclusion }) { sent += " \(CodeDocs.exclusion)" }
+        return sent
     }
 }

@@ -519,16 +519,16 @@ test('the last plain word is a prefix', () => {
 });
 
 test('Hister never gets the notes or the files', () => {
-  assert.equal(S.histerText('hist'), '(hist|hist*) -label:vault -metadata.source:vault -type:local');
-  assert.equal(S.histerText('raspberry pi'), 'raspberry (pi|pi*) -label:vault -metadata.source:vault -type:local');
+  assert.equal(S.histerText('hist'), '(hist|hist*) -label:vault -metadata.source:vault -type:local -metadata.source:code');
+  assert.equal(S.histerText('raspberry pi'), 'raspberry (pi|pi*) -label:vault -metadata.source:vault -type:local -metadata.source:code');
   // Kura keeps the plain prefix (it has no (a|b)).
   assert.equal(S.prefixLastWord('raspberry pi'), 'raspberry pi*');
   assert.equal(S.prefixLastWord('raspberry pi', { union: true }), 'raspberry (pi|pi*)');
   assert.equal(S.prefixLastWord('町家', { union: true }), '(町家|町家*)');
-  assert.equal(S.histerText('*'), '* -label:vault -metadata.source:vault -type:local');
-  assert.equal(S.histerText(''), '-label:vault -metadata.source:vault -type:local');
+  assert.equal(S.histerText('*'), '* -label:vault -metadata.source:vault -type:local -metadata.source:code');
+  assert.equal(S.histerText(''), '-label:vault -metadata.source:vault -type:local -metadata.source:code');
   // Once, however often it's applied.
-  assert.equal(S.histerText('x -label:vault -metadata.source:vault'), 'x -label:vault -metadata.source:vault -type:local');
+  assert.equal(S.histerText('x -label:vault -metadata.source:vault'), 'x -label:vault -metadata.source:vault -type:local -metadata.source:code');
   assert.equal(S.histerText(S.histerText('x')), S.histerText('x'));
   assert.equal(S.typedQuery('rust* -label:vault -metadata.source:vault -type:local'), 'rust');
   assert.equal(S.typedQuery('(rust|rust*) -label:vault -metadata.source:vault -type:local'), 'rust');
@@ -538,8 +538,8 @@ test('Hister never gets the notes or the files', () => {
 test('the Files tab asks for the files and only them (LocalFiles twins)', () => {
   assert.equal(S.filesQuery('pi setup'), 'type:local pi setup');
   assert.equal(S.filesQuery(''), 'type:local *');
-  assert.equal(S.histerText(S.filesQuery('pi set')), 'type:local pi (set|set*) -label:vault -metadata.source:vault');
-  assert.equal(S.histerText(S.filesQuery('')), 'type:local * -label:vault -metadata.source:vault');
+  assert.equal(S.histerText(S.filesQuery('pi set')), 'type:local pi (set|set*) -label:vault -metadata.source:vault -metadata.source:code');
+  assert.equal(S.histerText(S.filesQuery('')), 'type:local * -label:vault -metadata.source:vault -metadata.source:code');
   assert.ok(S.asksForFiles('a type:local b'));
   assert.ok(!S.asksForFiles('a -type:local'));
   assert.ok(!S.asksForFiles('type:locally'));
@@ -1084,4 +1084,39 @@ test("who Hister says is signed in, from /api/profile, never from a bare 200", (
   assert.deepEqual(plain(S.histerAccount(401, null)), { state: 'out' });
   assert.deepEqual(plain(S.histerAccount(502, null)), { state: 'none' });
   assert.equal(S.histerAccount(200, { username: 'x'.repeat(100) }).name.length, 64);
+});
+
+test('Code: its own pill, never anywhere else, filters as metadata terms (CodeDocs twins)', () => {
+  const plain = (v) => JSON.parse(JSON.stringify(v));
+  // Every other query leaves code out; the Code pill's keeps it, and the other exclusions.
+  assert.equal(S.histerText('kura'), '(kura|kura*) -label:vault -metadata.source:vault -type:local -metadata.source:code');
+  assert.equal(S.histerText(S.codeQuery('tag page')), 'metadata.source:code tag (page|page*) -label:vault -metadata.source:vault -type:local');
+  assert.equal(S.histerText(S.histerText('x')), S.histerText('x'));
+  assert.equal(S.typedQuery(S.histerText('kura')), 'kura');
+  // Filters before the words, so the last word stays a prefix.
+  assert.equal(S.codeQuery(''), 'metadata.source:code *');
+  assert.equal(S.codeQuery('fix', { kind: 'pr', open: true }), 'metadata.source:code metadata.code_kind:pr metadata.code_state:open fix');
+  assert.equal(S.codeQuery('', { kind: 'docs' }), 'metadata.source:code metadata.code_kind:(readme|doc) *');
+  assert.equal(S.codeQuery('', { kind: 'bogus', host: 'Git Hub' }), 'metadata.source:code *');
+  assert.equal(S.codeQuery('x', { host: 'forgejo', repo: 'Machiya-Kobo/Kura', private: true }),
+    'metadata.source:code metadata.code_host:forgejo metadata.code_repo:machiya_kobo__kura metadata.code_private:true x');
+  assert.equal(S.codeRepoKey('machiya-kobo/kura'), 'machiya_kobo__kura');
+  // A row's facts from its metadata; private is the string "true".
+  const doc = { url: 'https://github.example/o/r/pull/3', metadata: { source: 'code', code_kind: 'pr', code_host: 'github', code_repo: 'o__r', code_repo_name: 'o/r', code_state: 'merged', code_private: 'true', code_number: 3 } };
+  assert.deepEqual(plain(S.codeInfo(doc)), { kind: 'pr', host: 'github', repo: 'o__r', repoName: 'o/r', state: 'merged', private: true, number: '3', tag: '', path: '' });
+  assert.equal(S.codeInfo({ url: 'https://a.example/', metadata: { source: 'shiori' } }), null);
+  assert.equal(S.codeInfo({ url: 'https://a.example/' }), null);
+  assert.equal(S.codeNotePath('machiya-kobo/kura'), 'Repos/kura.git.md');
+  assert.equal(S.codeNotePath('o/a b'), '');
+  assert.equal(S.codeNotePath('../x'), 'Repos/x.git.md'); // the last segment only
+  // @code is no collection, as @notes isn't; the pill is in the order setting, after Files.
+  assert.deepEqual(Object.keys(S.collectionAliases({ '@code': 'metadata.source:code', '@retro': 'label:(a|b)' })), ['@retro']);
+  assert.deepEqual(plain(S.PILL_KEYS.slice(-3)), ['files', 'code', 'opened']);
+});
+
+test('code never folds by site (one forge holds every repo)', () => {
+  const code = (n) => ({ url: `https://github.example.com/o/r/issues/${n}`, metadata: { source: 'code', code_kind: 'issue' } });
+  const items = S.siteRuns([code(1), code(2), code(3), code(4)]);
+  assert.equal(items.length, 4);
+  assert.ok(items.every((i) => i.page));
 });

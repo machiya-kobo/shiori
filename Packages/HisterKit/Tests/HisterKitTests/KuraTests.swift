@@ -103,8 +103,8 @@ struct KuraLiveTests {
     }
 
     @Test func histerNeverGetsTheNotesOrTheFiles() {
-        #expect(SearchText.forHister("hist") == "(hist|hist*) -label:vault -metadata.source:vault -type:local")
-        #expect(SearchText.forHister("raspberry pi") == "raspberry (pi|pi*) -label:vault -metadata.source:vault -type:local")
+        #expect(SearchText.forHister("hist") == "(hist|hist*) -label:vault -metadata.source:vault -type:local -metadata.source:code")
+        #expect(SearchText.forHister("raspberry pi") == "raspberry (pi|pi*) -label:vault -metadata.source:vault -type:local -metadata.source:code")
         // Kura keeps the plain prefix (it has no (a|b)).
         #expect(SearchText.prefixLastWord("raspberry pi") == "raspberry pi*")
         #expect(SearchText.prefixLastWord("raspberry pi", union: true) == "raspberry (pi|pi*)")
@@ -114,10 +114,10 @@ struct KuraLiveTests {
             #expect(OpenedEntry(id: 1, url: "https://a.example/", title: "A", query: sent, added: .now).typedQuery == "rust")
         }
         #expect(OpenedEntry(id: 1, url: "https://a.example/", title: "A", query: SearchText.forHister("raspberry pi"), added: .now).typedQuery == "raspberry pi")
-        #expect(SearchText.forHister("*") == "* -label:vault -metadata.source:vault -type:local")
-        #expect(SearchText.forHister("") == "-label:vault -metadata.source:vault -type:local")
+        #expect(SearchText.forHister("*") == "* -label:vault -metadata.source:vault -type:local -metadata.source:code")
+        #expect(SearchText.forHister("") == "-label:vault -metadata.source:vault -type:local -metadata.source:code")
         // Once, however often it's applied.
-        #expect(SearchText.forHister("x -label:vault -metadata.source:vault") == "x -label:vault -metadata.source:vault -type:local")
+        #expect(SearchText.forHister("x -label:vault -metadata.source:vault") == "x -label:vault -metadata.source:vault -type:local -metadata.source:code")
         #expect(SearchText.forHister(SearchText.forHister("x")) == SearchText.forHister("x"))
         #expect(Notes.withoutExclusion("rust* -label:vault -metadata.source:vault -type:local") == "rust*")
     }
@@ -126,8 +126,8 @@ struct KuraLiveTests {
         #expect(LocalFiles.query("pi setup") == "type:local pi setup")
         #expect(LocalFiles.query("") == "type:local *")
         // The last typed word still a prefix; the notes still left out; no -type:local.
-        #expect(SearchText.forHister(LocalFiles.query("pi set")) == "type:local pi (set|set*) -label:vault -metadata.source:vault")
-        #expect(SearchText.forHister(LocalFiles.query("")) == "type:local * -label:vault -metadata.source:vault")
+        #expect(SearchText.forHister(LocalFiles.query("pi set")) == "type:local pi (set|set*) -label:vault -metadata.source:vault -metadata.source:code")
+        #expect(SearchText.forHister(LocalFiles.query("")) == "type:local * -label:vault -metadata.source:vault -metadata.source:code")
         #expect(LocalFiles.asked(in: "a type:local b"))
         #expect(!LocalFiles.asked(in: "a -type:local"))
         #expect(!LocalFiles.asked(in: "type:locally"))

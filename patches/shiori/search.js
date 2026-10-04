@@ -29,7 +29,7 @@
   const vaultParam = params.get('vault') || 'all';
   const terms = S.highlightTerms(q);
   // Your pages, notes or files: the full search of one, sorted rather than filtered by time.
-  const isNoteTab = (cat) => cat === 'hister' || cat === 'vault' || cat === 'files';
+  const isNoteTab = (cat) => cat === 'hister' || cat === 'vault' || cat === 'files' || cat === 'code';
   // The app's Text Size, one setting for the app and this page. Scales
   // as Dynamic Type steps body text (17 points at Large).
   const TEXT_SCALES = { xSmall: 14, small: 15, medium: 16, large: 17, xLarge: 19, xxLarge: 21, xxxLarge: 23 };
@@ -49,6 +49,12 @@
   let hasFiles = false;
   try {
     hasFiles = localStorage.getItem(FILES_KEY) === '1';
+  } catch (_) {}
+  // The same for the owner's repos (code-import's, metadata.source:code).
+  const CODE_KEY = 'shioriHasCode';
+  let hasCode = false;
+  try {
+    hasCode = localStorage.getItem(CODE_KEY) === '1';
   } catch (_) {}
   let header = null;
   // Counts on the Pages and Notes pills (All's searches find them), kept so
@@ -86,7 +92,7 @@
   // Every tab keeps All's width (Small Web, News and the rest shrank):
   // results in the first column, the second empty but for All's Info;
   // Images' tiles take both (search.css).
-  const wideCat = (cat) => ['general', 'web', 'hister', 'vault', 'images', 'videos', 'news', 'smallweb', 'files'].includes(cat || 'general');
+  const wideCat = (cat) => ['general', 'web', 'hister', 'vault', 'images', 'videos', 'news', 'smallweb', 'files', 'code'].includes(cat || 'general');
   document.body.classList.toggle('two-col', wideCat(params.get('cat')) && twoColumns(header || {}));
   document.body.dataset.cat = params.get('cat') || 'general';
 
@@ -257,6 +263,8 @@
     ...(settings.smallWebTab !== false && smallwebBase ? [['smallweb', 'Small Web']] : []),
     // The folders Hister watches (type:local), once it has some files.
     ...(hasFiles && histerBase ? [['files', 'Files']] : []),
+    // The owner's repos (code-import's), once Hister has some.
+    ...(hasCode && histerBase ? [['code', 'Code']] : []),
   ]);
   const category = CATEGORIES.some(([c]) => c === params.get('cat')) ? params.get('cat') : 'general';
   // All and Web are SearXNG's general results; Web without yours mixed in.
@@ -287,6 +295,20 @@
           localStorage.setItem(FILES_KEY, found ? '1' : '0');
         } catch (_) {}
         nextHeader.categories = found ? inPillOrder([...CATEGORIES, ['files', 'Files']]) : CATEGORIES.filter(([c]) => c !== 'files');
+        drawHeader(nextHeader);
+        try {
+          localStorage.setItem(HEADER_KEY, JSON.stringify(nextHeader));
+        } catch (_) {}
+      })
+      .catch(() => {});
+    histerSearch(S.codeQuery(''), 1)
+      .then((r) => {
+        const found = !!(r && r.total);
+        if (found === hasCode) return;
+        try {
+          localStorage.setItem(CODE_KEY, found ? '1' : '0');
+        } catch (_) {}
+        nextHeader.categories = found ? inPillOrder([...nextHeader.categories.filter(([c]) => c !== 'code'), ['code', 'Code']]) : nextHeader.categories.filter(([c]) => c !== 'code');
         drawHeader(nextHeader);
         try {
           localStorage.setItem(HEADER_KEY, JSON.stringify(nextHeader));
@@ -1097,7 +1119,7 @@
         const id = `setting-${row.key || row.action}`;
         let control;
         if (row.action === 'pills') {
-          const items = S.PILLS.filter(([key]) => key !== 'opened' && (key !== 'files' || hasFiles));
+          const items = S.PILLS.filter(([key]) => key !== 'opened' && (key !== 'files' || hasFiles) && (key !== 'code' || hasCode));
           group.append(
             S.pillEditor(items, settings.pills, (next, control) => {
               change({ pills: next });
@@ -1784,6 +1806,70 @@
   }
 
   /**
+   * A code document (the owner's repos, code-import's): its kind's glyph,
+   * the repo, its state and a lock when private on the address line; opens
+   * at its forge. No summarize (code stays on the device: the hosted AI
+   * isn't) and no label. The repo's note in Kura joins its places when Kura
+   * has one.
+   */
+  const CODE_GLYPHS = { repo: ['▣', 'Repository'], readme: ['¶', 'README'], doc: ['¶', 'Document'], issue: ['◉', 'Issue'], pr: ['⇄', 'Pull request'], release: ['◆', 'Release'] };
+  function codeCard(d) {
+    const code = S.codeInfo(d) || {};
+    const [glyph, kindName] = CODE_GLYPHS[code.kind] || ['‹›', 'Code'];
+    const saved = d.updated || d.added;
+    const where = places(chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister'));
+    const notePath = S.codeNotePath(code.repoName);
+    if (notePath && kuraBase) {
+      fetchJSON(`${kuraBase}api/note?path=${encodeURIComponent(notePath)}`, { timeout: 4000, room: true })
+        .then(() => {
+          const url = S.readerURL('', niwaBase, notePath);
+          if (url) where.prepend(chipLink('kura', 'kura', url, 'The Repo’s Note in Kura'));
+        })
+        .catch(() => {});
+    }
+    return el(
+      'li',
+      { class: 'card hister-card code-card', 'data-preview': d.url },
+      el('a', { class: 'title', href: d.url }, d.title || d.url),
+      el('div', { class: 'url' },
+        el('span', { class: 'code-glyph', role: 'img', 'aria-label': kindName }, glyph), ' ',
+        code.private ? el('span', { title: 'Private', 'aria-label': 'Private' }, '🔒 ') : null,
+        el('span', { class: 'crumbs' }, code.repoName || d.domain || '',
+          code.state ? el('span', { class: `code-state${code.state === 'open' ? ' open' : ''}` }, ` · ${code.state}`) : null)),
+      saved ? relativeDate(saved) : null,
+      markedSnippet(d.text),
+      el('div', { class: 'meta' }, el('a', { href: histerPage(d.url), class: 'preview-link' }, 'preview')),
+      where,
+    );
+  }
+
+  /** The Code tab's filters: kind, Open Only, Private, kept in the address (ck, co, cp). */
+  function codeFiltersFromAddress() {
+    return { kind: params.get('ck') || undefined, open: params.get('co') === '1', private: params.get('cp') === '1' };
+  }
+  function codeFilterBar() {
+    const f = codeFiltersFromAddress();
+    const go = (key, value) => {
+      const next = new URLSearchParams(location.search);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      next.delete('page');
+      next.delete('hk');
+      location.search = next.toString();
+    };
+    const kind = el('select', { 'aria-label': 'Kind' }, el('option', { value: '' }, 'Everything'),
+      ...S.CODE_KINDS.map(([value, name]) => el('option', { value }, name)));
+    kind.value = f.kind || '';
+    kind.addEventListener('change', () => go('ck', kind.value));
+    const toggle = (key, on, text) => {
+      const b = el('button', { type: 'button', 'aria-pressed': on ? 'true' : 'false' }, text);
+      b.addEventListener('click', () => go(key, on ? '' : '1'));
+      return b;
+    };
+    return el('div', { class: 'code-filters', role: 'group', 'aria-label': 'Filters' }, kind, toggle('co', f.open, 'Open Only'), toggle('cp', f.private, 'Private'));
+  }
+
+  /**
    * Where a result opens (Obsidian, Kura, Konbini, Hister): a row of its
    * own under the snippet, left-aligned; the
    * label, preview and summarize stay on the date line.
@@ -2062,8 +2148,11 @@
     const vault = category === 'vault';
     // Files: Hister's watched folders, the same search asking for them alone.
     const files = category === 'files';
+    // Code: the owner's repos, with their filters.
+    const code = category === 'code';
     $('web').hidden = false;
-    $('web-title').textContent = vault ? 'Your Notes' : files ? 'Your Files' : 'Your Pages';
+    $('web-title').textContent = vault ? 'Your Notes' : files ? 'Your Files' : code ? 'Your Code' : 'Your Pages';
+    if (code) $('web-results').before(codeFilterBar());
     if (vault && !kuraBase) return showStatus('No Kura address is set up (Settings → Notes).');
     if (!vault && !histerBase) return showStatus('No Hister server is set up.');
     let result = pageState[category];
@@ -2102,7 +2191,9 @@
         if (histerSort === 'new') extra.sort = 'date';
         result = files
           ? await histerSearch(S.filesQuery(q), 20, extra)
-          : await histerOrClose(q, 20, extra, undefined, () => webSuggestions(q));
+          : code
+            ? await histerSearch(S.codeQuery(q, codeFiltersFromAddress()), 20, extra)
+            : await histerOrClose(q, 20, extra, undefined, () => webSuggestions(q));
         pageState[category] = result;
         saveState();
       } catch (_) {
@@ -2114,23 +2205,23 @@
     const pageOf = (d) => d.label !== 'vault' && !S.isNoteURL(d.url, niwaBase, konbiniBase);
     let docs = (result.documents || []).filter((d) => vault || pageOf(d));
     if (!docs.length && !(!vault && (result.history || []).some((h) => pageOf(h)))) {
-      return showStatus(vault ? 'No notes in the vault match.' : files ? 'None of your files match.' : 'None of your pages match.');
+      return showStatus(vault ? 'No notes in the vault match.' : files ? 'None of your files match.' : code ? 'None of your code matches.' : 'None of your pages match.');
     }
     if (result.closeMatches) $('web-title').textContent += ` · for “${result.closeMatches}”`;
     const cards = vault ? await konbiniCards() : [];
     let lifted = 0;
-    if (!vault && !files && page === 1) {
+    if (!vault && !files && !code && page === 1) {
       const first = withOpened(result, docs, { skipNotes: true });
       for (const card of first.cards) $('web-results').append(card);
       lifted = first.cards.length;
       docs = first.docs;
     }
-    appendFolded($('web-results'), docs, (d) => (vault ? vaultCard(d, cards) : files ? fileCard(d) : histerCard(d)));
+    appendFolded($('web-results'), docs, (d) => (vault ? vaultCard(d, cards) : files ? fileCard(d) : code ? codeCard(d) : histerCard(d)));
     const from = (page - 1) * 20 + 1;
-    const noun = vault ? 'notes' : files ? 'files' : 'pages';
+    const noun = vault ? 'notes' : files ? 'files' : code ? 'results' : 'pages';
     // Hister's total is your pages alone (notes are Kura's), so both can say "of".
     $('timing').textContent = `${from}–${from + lifted + docs.length - 1} of ${(result.total || docs.length).toLocaleString()} ${noun}`;
-    $('hister-more-tab').href = `${histerBase}?q=${encodeURIComponent(files ? S.filesQuery(q) : q)}`;
+    $('hister-more-tab').href = `${histerBase}?q=${encodeURIComponent(files ? S.filesQuery(q) : code ? S.codeQuery(q, codeFiltersFromAddress()) : q)}`;
     // "Open in Hister" is for Hister's own results, not Kura's.
     $('hister-more-tab').hidden = vault;
     $('pages').hidden = false;
@@ -2255,6 +2346,10 @@
   let myPages = [];
   let myNotes = [];
   const showHister = category === 'general' && settings.histerInGeneral && page === 1 && !!histerBase;
+  // The Code pill's count (Hister's own index, nothing spent); code is never listed on All.
+  if (category === 'general' && page === 1 && hasCode && histerBase && q) {
+    histerSearch(S.codeQuery(q), 1).then((r) => setPillCount('code', (r && r.total) || 0)).catch(() => {});
+  }
   const showVault = category === 'general' && settings.vaultInGeneral && page === 1 && !!kuraBase;
   // Your notes, from Kura (Hister's queries leave them out).
   const vaultResult = !showVault

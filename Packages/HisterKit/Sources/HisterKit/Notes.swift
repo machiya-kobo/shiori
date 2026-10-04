@@ -34,7 +34,7 @@ public enum Notes {
     /// list says what each page was opened from).
     public static func withoutExclusion(_ text: String) -> String {
         text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
-            .filter { !exclusionTerms.contains($0) && $0 != LocalFiles.exclusion }.joined(separator: " ")
+            .filter { !exclusionTerms.contains($0) && $0 != LocalFiles.exclusion && $0 != CodeDocs.exclusion }.joined(separator: " ")
     }
 
     /// A Konbini card: its slug and its note's path in the vault.

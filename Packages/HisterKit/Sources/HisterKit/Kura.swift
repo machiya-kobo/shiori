@@ -89,6 +89,16 @@ public struct KuraClient: Sendable {
         return html
     }
 
+    /// Whether Kura has a note at `path` in the default vault (`/api/note`
+    /// answers 200): a repo's note, for its Code rows. False on any failure.
+    public func hasNote(path: String) async -> Bool {
+        var components = URLComponents(url: baseURL.appending(path: "api/note"), resolvingAgainstBaseURL: false)!
+        components.setQueryItems([URLQueryItem(name: "path", value: path)])
+        guard let (_, response) = try? await session.roomData(for: URLRequest(url: components.url!, timeoutInterval: 6), signIn: signIn)
+        else { return false }
+        return (response as? HTTPURLResponse)?.statusCode == 200
+    }
+
     /// Kura's RSS of notes (`feed.xml`: the 50 most recently changed, or
     /// the newest 50 matching `q`), the Notes lists' feed.
     /// No prefix here: a feed is a saved search, not typing.
