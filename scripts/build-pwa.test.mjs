@@ -181,12 +181,14 @@ test('without SHIORI_SMALLWEB_URL the build offers no Add Page and no share targ
 
 // --- status.json: what the house's status page reads of a hosted build ---
 
-test('both web builds publish _shiori/status.json: version, build, built, and nothing else', () => {
+test('both web builds publish _shiori/status.json: version, build, built, hister, and nothing else', () => {
   const project = read('../project.yml').match(/MARKETING_VERSION:\s*"?([0-9][0-9A-Za-z.\-]*)/)[1];
   for (const out of [build(), buildWeb()]) {
     try {
       const status = JSON.parse(read(join(out, '_shiori', 'status.json')));
-      assert.deepEqual(Object.keys(status).sort(), ['build', 'built', 'version']);
+      assert.deepEqual(Object.keys(status).sort(), ['build', 'built', 'hister', 'version']);
+      // The Hister release Shiori is built against: the tag, or the pinned commit.
+      assert.match(status.hister, /^(v\d+\.\d+\.\d+.*|[0-9a-f]{7})$/);
       assert.equal(status.version, project);
       assert.match(status.build, /^[0-9a-f]{7,}(-dirty)?$/);
       assert.match(status.built, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);

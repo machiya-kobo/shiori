@@ -14,8 +14,9 @@ stands in for the few extension APIs it uses.
 `OUT_DIR/index.html` is the page, and its files are under
 `OUT_DIR/_shiori/` (with `opensearch.xml`, which is the only file that needs
 the host name). Both builds also write `_shiori/status.json`,
-`{"version", "build", "built"}` (Shiori's version, the commit, the time in
-UTC; nothing else), for the house's status page. The optional last address is a status
+`{"version", "build", "built", "hister"}` (Shiori's version, the commit,
+the time in UTC, the Hister release it's built against; nothing else), for
+the house's status page. The optional last address is a status
 page: the search page links it in its footer, the web app in its sidebar
 and Settings. Without it there is no link. Rebuild after pulling a new
 Shiori.
