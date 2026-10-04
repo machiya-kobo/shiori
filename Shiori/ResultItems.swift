@@ -98,7 +98,7 @@ private struct ResultActionsHost: ViewModifier {
 /// (`Palette.tintOpacity`, `tintBase`).
 struct ResultBar: View {
     enum Kind {
-        case page, note, opened
+        case page, note, opened, file
     }
 
     let kind: Kind
@@ -115,6 +115,7 @@ struct ResultBar: View {
         case .page: palette.tint(SearchScope.hister.tint)
         case .note: palette.tint(SearchScope.notes.tint)
         case .opened: palette.tint(SearchScope.opened.tint)
+        case .file: palette.tint(SearchScope.files.tint)
         }
     }
 
@@ -190,7 +191,7 @@ struct DocumentItem: View {
     @Environment(\.previewSelection) private var selection
 
     private func kind(_ note: AppState.NoteLinks?) -> ResultBar.Kind {
-        note != nil ? .note : opened ? .opened : .page
+        LocalFiles.isLocalFile(document.url) ? .file : note != nil ? .note : opened ? .opened : .page
     }
 
     var body: some View {
@@ -221,12 +222,20 @@ struct DocumentItem: View {
         @Environment(\.openURL) private var openURL
         @Environment(\.resultActions) private var actions
 
+        @Environment(AppState.self) private var app
+
         func body(content: Content) -> some View {
             content
                 .swipeActions(edge: .leading) {
                     // The first is the full swipe. A note's label is "vault"
                     // (it's what makes it a note); its tags are Obsidian's.
-                    if note == nil {
+                    // A file opens from Hister's copy, and is never labelled.
+                    if LocalFiles.isLocalFile(document.url) {
+                        if let served = app.servedFile(document.url) {
+                            Button("Open", systemImage: "doc") { openURL(served) }
+                                .tint(palette.tint(SearchScope.files.tint))
+                        }
+                    } else if note == nil {
                         Button("Label", systemImage: "tag") { actions.label(document) }
                             .tint(palette.accent)
                         if let url = URL(string: document.url) {
@@ -248,16 +257,16 @@ struct DocumentItem: View {
                         }
                         .tint(palette.accent)
                     }
-                    if let url = URL(string: document.url) {
+                    if !LocalFiles.isLocalFile(document.url), let url = URL(string: document.url) {
                         Button("Copy Link", systemImage: "link") { Pasteboard.copy(url) }
                             .tint(palette.tint(.purple))
                     }
                 }
                 .swipeActions(edge: .trailing) {
                     // The theme's red: without it the app's accent tint (blue)
-                    // wins over the destructive role. Not for a work note:
-                    // Hister never has one.
-                    if !Notes.isPrivateNote(document.url) {
+                    // wins over the destructive role. Not for a work note
+                    // (Hister never has one) or a file (Hister watches its folder).
+                    if !Notes.isPrivateNote(document.url), !LocalFiles.isLocalFile(document.url) {
                         Button("Delete", systemImage: "trash", role: .destructive) { actions.delete(document) }
                             .tint(palette.danger)
                     }
@@ -344,11 +353,13 @@ struct DocumentMenu: View {
     @Environment(AppState.self) private var app
 
     var body: some View {
-        // Not for a note: its label must stay "vault" (see Swipes).
-        if app.noteLinks(for: document) == nil {
+        // Not for a note: its label must stay "vault" (see Swipes). Neither
+        // for a file: Hister watches its folder, and the file stays as it is.
+        let file = LocalFiles.isLocalFile(document.url)
+        if app.noteLinks(for: document) == nil, !file {
             Button("Edit Label…", systemImage: "tag") { actions.label(document) }
         }
-        if !Notes.isPrivateNote(document.url) {
+        if !Notes.isPrivateNote(document.url), !file {
             Button("Delete…", systemImage: "trash", role: .destructive) { actions.delete(document) }
         }
         Divider()

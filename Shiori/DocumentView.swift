@@ -37,8 +37,9 @@ struct DocumentView: View {
         // Once per render: the note's links and place (it was worked out five times).
         let note = app.noteLinks(for: document)
         content(note: note)
-            // A vault note by its name, not the Niwa or Konbini host it is stored under.
-            .navigationTitle(note == nil ? document.domain : document.displayTitle)
+            // A vault note or a file by its name, not the host it is stored
+            // under (a file's is Hister's "local").
+            .navigationTitle(note == nil && !localFile ? document.domain : document.displayTitle)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -162,7 +163,15 @@ struct DocumentView: View {
             ToolbarSpacer(.flexible)
         }
         #endif
-        if note == nil, let url = URL(string: document.url) {
+        if localFile {
+            // Hister's copy: the file:// address is the server's, not ours.
+            if let served = app.servedFile(document.url) {
+                ToolbarItem(placement: Self.pagePlacement) {
+                    Button("Open", systemImage: "doc") { openURL(served) }
+                        .help("Open Hister's copy")
+                }
+            }
+        } else if note == nil, let url = URL(string: document.url) {
             ToolbarItem(placement: Self.pagePlacement) {
                 Button("Open in Browser", systemImage: "safari") { openURL(url) }
                     .help("Open in browser")
@@ -201,10 +210,10 @@ struct DocumentView: View {
         ToolbarItem(placement: Self.pagePlacement) {
             Menu {
                 // First, and flat: what the toolbar left out.
-                if note == nil {
+                if note == nil, !localFile {
                     Button("Edit Label…", systemImage: "tag") { labelling = true }
                 }
-                if app.ai.hasEngine(note: note != nil), !workNote {
+                if app.ai.hasEngine(note: note != nil), !workNote, !localFile {
                     Button("Summarize", systemImage: "sparkles") { summarize(note: note != nil) }
                         .disabled(preview == nil || summary == .working)
                 }
@@ -228,7 +237,7 @@ struct DocumentView: View {
                     }
                 }
                 Divider()
-                if let url = URL(string: document.url) {
+                if let url = localFile ? app.servedFile(document.url) : URL(string: document.url) {
                     Button("Copy Link", systemImage: "link") { Pasteboard.copy(url) }
                 }
                 if extractors.count > 1 {
@@ -248,8 +257,9 @@ struct DocumentView: View {
                     }
                 }
                 // Gone at once, with Undo for a few seconds (no confirmation),
-                // as everywhere else. Not for a work note: Hister never has one.
-                if !workNote {
+                // as everywhere else. Not for a work note (Hister never has
+                // one) or a file (Hister watches its folder).
+                if !workNote, !localFile {
                     Divider()
                     Button("Delete", systemImage: "trash", role: .destructive) {
                         app.deleteWithUndo(document)
@@ -268,6 +278,10 @@ struct DocumentView: View {
     /// A private vault's note: no AI, Hister link or delete is offered for
     /// it. (Every other vault's note is previewed from Kura, below.)
     private var workNote: Bool { app.isWorkNote(document.url) }
+
+    /// A file from the folders Hister watches: opened from Hister's copy;
+    /// never labelled, deleted, or given to a model.
+    private var localFile: Bool { app.isLocalFile(document.url) }
 
     private func load() async {
         if let vault = Notes.otherVault(of: document.url) {
@@ -316,7 +330,7 @@ struct DocumentView: View {
     /// In the toolbar where there's room (the Mac, a regular-width iPad);
     /// the iPhone has it in the ⋯ menu.
     private func showsSummarizeButton(note: AppState.NoteLinks?) -> Bool {
-        guard !workNote, app.ai.hasEngine(note: note != nil) else { return false }
+        guard !workNote, !localFile, app.ai.hasEngine(note: note != nil) else { return false }
         #if os(iOS)
         return sizeClass == .regular
         #else
@@ -350,7 +364,9 @@ struct DocumentView: View {
                 // `.workNote`), even if a button slipped through. Another
                 // vault's note is asked of Kura afresh first: a shared vault
                 // may be private by now.
-                let content: AIContent = await app.isWorkNoteNow(url) ? .workNote : isNote ? .note : .page
+                // A file reaches none either (`.localFile`).
+                let content: AIContent = LocalFiles.isLocalFile(url) ? .localFile
+                    : await app.isWorkNoteNow(url) ? .workNote : isNote ? .note : .page
                 let made = try await Summarizer(chain: chain).summarize(
                     title: title, url: url, html: preview.contentHTML, content: content)
                 SummaryCache.write(made, url: url, updated: preview.updated)

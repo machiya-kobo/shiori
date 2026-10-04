@@ -195,7 +195,13 @@ struct DocumentLinks: View {
 
     var body: some View {
         NoteLinksMenu(document: document)
-        if let url = URL(string: document.url) {
+        if LocalFiles.isLocalFile(document.url) {
+            // Hister's copy: the file:// address means nothing here.
+            if let served = app.servedFile(document.url) {
+                Link(destination: served) { Label("Open", systemImage: "doc") }
+                Button("Copy Link", systemImage: "link") { Pasteboard.copy(served) }
+            }
+        } else if let url = URL(string: document.url) {
             Link(destination: url) {
                 Label("Open in Browser", systemImage: "safari")
             }
@@ -234,7 +240,7 @@ struct DocumentRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Group {
-                if notePlace != nil {
+                if notePlace != nil || LocalFiles.isLocalFile(document.url) {
                     Image(systemName: "doc.text")
                         .resizable()
                         .scaledToFit()
@@ -257,6 +263,12 @@ struct DocumentRow: View {
                         Text(notePlace)
                             .textStyle(.caption)
                             .lineLimit(1)
+                    } else if LocalFiles.isLocalFile(document.url) {
+                        // Where it lives on the server, not "local".
+                        Text(LocalFiles.path(of: document.url))
+                            .textStyle(.caption, design: .monospaced)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
                     } else {
                         Text(document.domain)
                             .textStyle(.caption, design: .monospaced)

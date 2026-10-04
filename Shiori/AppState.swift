@@ -227,6 +227,7 @@ final class AppState {
             switch $0 {
             case .opened: searchPage.showOpened
             case .smallweb: smallweb != nil
+            case .files: hasLocalFiles
             default: true
             }
         }
@@ -360,6 +361,26 @@ final class AppState {
     /// given to a model, never cached, exported or put in a feed.
     func isWorkNote(_ url: String) -> Bool { Notes.isPrivateNote(url) }
 
+    // MARK: Files
+
+    /// Hister holds files from the folders it watches (`type:local`): the
+    /// Files pill shows only then. Asked with the rules.
+    private(set) var hasLocalFiles = false
+
+    func loadLocalFiles() async {
+        guard let client else { hasLocalFiles = false; return }
+        if let page = try? await client.search(LocalFiles.query(""), limit: 1) { hasLocalFiles = page.total > 0 }
+    }
+
+    /// A file from those folders: shown on the Files pill only, opened from
+    /// Hister's copy, never recorded, labelled, deleted or given to a model.
+    func isLocalFile(_ url: String) -> Bool { LocalFiles.isLocalFile(url) }
+
+    /// Hister's served copy of a file (`/api/file`).
+    func servedFile(_ url: String) -> URL? {
+        client.flatMap { LocalFiles.servedURL(for: url, server: $0.baseURL) }
+    }
+
     /// The same with Kura asked afresh, for anything about another vault's
     /// note that goes to Hister or a model (a shared vault may be private
     /// by now; unanswered, it is). The default vault's notes ask nothing.
@@ -486,6 +507,7 @@ final class AppState {
             // The share sheet's label picker works from this copy.
             SharedSettings.defaults?.set(fetched.labels, forKey: SharedSettings.Key.labels)
             if let found = try? await client.topDomains() { domains = found }
+            await loadLocalFiles()
         } catch .cancelled {
         } catch {
             // Tried again on the next screen that needs them; say why here.
@@ -505,7 +527,7 @@ final class AppState {
     func setLabel(_ label: String, url: String) async throws(HisterError) {
         guard let client else { throw .unreachable }
         // Hister never has a private vault's note.
-        guard !(await isWorkNoteNow(url)) else { throw .notFound }
+        guard !(await isWorkNoteNow(url)), !isLocalFile(url) else { throw .notFound }
         try await client.setLabel(label, for: url)
         // Bounded: the lists refetch long before this many edits matter.
         if labelEdits.count >= 2000 { labelEdits.removeAll() }
@@ -514,7 +536,7 @@ final class AppState {
 
     func delete(_ document: StoredPage) async throws(HisterError) {
         guard let client else { throw .unreachable }
-        guard !(await isWorkNoteNow(document.url)) else { throw .notFound }
+        guard !(await isWorkNoteNow(document.url)), !isLocalFile(document.url) else { throw .notFound }
         try await client.delete(url: document.url)
         if deletedURLs.count >= 2000 { deletedURLs.removeAll() }
         deletedURLs.insert(document.url)
@@ -588,7 +610,8 @@ final class AppState {
 
     func recordOpened(url: String, title: String, query: String) {
         // Never a work note's address or title to Hister.
-        guard searchPage.rememberOpened, let client, Self.remembers(query), !isWorkNote(url) else { return }
+        // Never a file's: what you open there stays here.
+        guard searchPage.rememberOpened, let client, Self.remembers(query), !isWorkNote(url), !isLocalFile(url) else { return }
         Task {
             // Another vault's note: Kura asked afresh first.
             guard !(await self.isWorkNoteNow(url)) else { return }

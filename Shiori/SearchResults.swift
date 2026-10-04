@@ -10,7 +10,7 @@ import os
 /// Browsing, All, Pages and Notes are the Library, Web asks for a search,
 /// and Opened is what you opened; searching, each one narrows the search.
 enum SearchScope: String, Hashable, CaseIterable, Identifiable {
-    case all, hister, notes, web, smallweb, opened
+    case all, hister, notes, web, smallweb, files, opened
 
     var id: Self { self }
 
@@ -26,6 +26,8 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .web: .yellow
         // Gemini and Gopher: the web's neighbour, teal.
         case .smallweb: .teal
+        // The folders Hister watches: green, a hue no room wears.
+        case .files: .green
         case .opened: .purple
         }
     }
@@ -37,6 +39,7 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .notes: "Notes"
         case .web: "Web"
         case .smallweb: "Small Web"
+        case .files: "Files"
         case .opened: "Opened"
         }
     }
@@ -48,6 +51,7 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .notes: "Search Notes"
         case .web: "Search the Web"
         case .smallweb: "Search Gemini and Gopher"
+        case .files: "Search Your Files"
         case .opened: "Search What You Opened"
         }
     }
@@ -109,6 +113,9 @@ struct SearchResultsView: View {
             _model = State(initialValue: ResultsModel(query: query, source: .notes, filterable: true, respellable: (query, { $0 })))
         case .web: _webModel = State(initialValue: WebResultsModel(query: SearxClient.webQuery(query)))
         case .smallweb: _smallWebModel = State(initialValue: SmallWebModel(query: SearxClient.webQuery(query)))
+        // The folders Hister watches (`type:local`), here and nowhere else.
+        case .files:
+            _model = State(initialValue: ResultsModel(query: LocalFiles.query(query)))
         case .opened: break
         }
     }

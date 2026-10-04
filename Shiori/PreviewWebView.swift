@@ -16,7 +16,9 @@ enum PreviewPage {
         images: Bool = true, kura: String = ""
     ) -> String {
         let imageSources = images ? "* data:" : "data:"
-        let whereLine = place.map { escape($0) } ?? #"<span class="domain">\#(escape(document.domain))</span>"#
+        // A file: where it lives on the server, not Hister's "local".
+        let shownDomain = LocalFiles.isLocalFile(document.url) ? LocalFiles.path(of: document.url) : document.domain
+        let whereLine = place.map { escape($0) } ?? #"<span class="domain">\#(escape(shownDomain))</span>"#
         let title = escape(preview.title.isEmpty ? document.displayTitle : preview.title)
         let dates = [
             "Added \(preview.added.formatted(date: .abbreviated, time: .omitted))",

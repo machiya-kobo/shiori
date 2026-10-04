@@ -199,6 +199,8 @@ struct RecentScreen: View {
     @State private var all = ResultsModel(query: "*", sort: .newest, source: .all)
     @State private var pages = ResultsModel(query: "*", sort: .newest)
     @State private var notes = ResultsModel(query: "*", sort: .newest, source: .notes)
+    /// The folders Hister watches, newest first.
+    @State private var files = ResultsModel(query: LocalFiles.query(""), sort: .newest)
     /// False beside the sidebar, whose selected row already says Library:
     /// the column's title repeated it.
     var titled = true
@@ -225,6 +227,13 @@ struct RecentScreen: View {
                     description: Text("Type in the search field and press Return to search Gemini and Gopher."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .themedBackground()
+            case .files:
+                ResultsList(model: files, title: "Files") {
+                    ContentUnavailableView(
+                        "No Files", systemImage: "folder",
+                        description: Text("Files appear here once your Hister server watches a folder."))
+                }
+                .id(ObjectIdentifier(files))
             case .opened: OpenedListView()
             }
         }

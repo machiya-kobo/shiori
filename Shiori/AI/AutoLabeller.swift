@@ -337,7 +337,8 @@ struct LabellingState: Codable {
         repeat {
             let page = try await client.search("*", sort: .newest, pageKey: key, limit: 100)
             for document in page.documents
-            where document.label.isEmpty && state.seen[document.url] == nil && !app.isNotePage(document.url) && found.count < Self.perRun {
+            where document.label.isEmpty && state.seen[document.url] == nil && !app.isNotePage(document.url)
+                && !app.isLocalFile(document.url) && found.count < Self.perRun {
                 found.append(document)
             }
             read += page.documents.count
