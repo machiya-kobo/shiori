@@ -340,11 +340,16 @@ holds the rules and the traps the code can't tell you.
 - Asset addresses carry the build (`?v=<commit>`; the web app's, and its
   service worker's cache name, a hash of the built files); unstamped placeholders
   read as empty (`S.fromBuild`).
+- **Nothing searches while typing** (the user's call): Return, the
+  field's magnifier, a recent search, Did you mean or a pill runs a
+  search, in the apps, the web app and the search page alike, the "Search
+  in" fields of collections and labels too; clearing a field resets at
+  once. The field keeps the keyboard while you type. Type-ahead
+  (autocompleter) still shows.
 - **Web searches are frugal** (each counts: a paid search API would
   charge it, as AI is kept frugal): the web is asked only for a search run
   on purpose (Return, a recent search, Did you mean, the Web pill;
-  `SearchSession.webAllowed`, the web app's `w=1`). Live typing searches
-  your pages and notes alone. Respellings come from the autocompleter,
+  `SearchSession.webAllowed`, the web app's `w=1`). Respellings come from the autocompleter,
   never a `/search`; the "wiki" second search runs only when needed.
 - **`replaceChildren`/`append` write a `null` child out as the text "null"**:
   filter first.
@@ -418,8 +423,8 @@ holds the rules and the traps the code can't tell you.
 - The owner's repos (code-import, `metadata.source:code`: repo cards,
   READMEs and docs, issues, PRs, releases, each at its forge URL). Only
   the Code pill shows them, after Files, while Hister has some
-  (`CodeDocs` / `S.codeQuery`, twins); searched as you type (Hister's own
-  index), with a count from All; never in All or any other list.
+  (`CodeDocs` / `S.codeQuery`, twins), with a count from All; never in
+  All or any other list.
 - Filters are metadata terms, each one lowercase token (Hister can't match
   `/` in a metadata value): `metadata.code_kind:`, `code_state:open`,
   `code_repo:<owner>__<repo>` (`codeRepoKey`), `code_private:true` (a

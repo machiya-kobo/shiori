@@ -114,8 +114,8 @@ struct LibraryView: View {
                     text: session.within == nil ? $session.text : $session.withinText,
                     prompt: session.within.map { "Search in \($0.title)" } ?? session.scope.prompt, focused: $searchFocused,
                     width: searchWidth, store: fieldStore, typeAhead: session.within == nil) {
-                    // Within a collection the list searches by itself, after a pause.
-                    if session.within == nil { run() }
+                    // Within a collection: the list's own search, on Return too.
+                    if session.within == nil { run() } else { session.withinSubmitted = session.withinText }
                     app.resultsFocusRequests += 1
                 }
             }
@@ -129,13 +129,8 @@ struct LibraryView: View {
         .onGeometryChange(for: Double.self) { $0.size.width } action: { windowWidth = $0 }
         .task(id: liveSidebar) { await saveWidths() }
         .task(id: liveResults) { await saveWidths() }
-        // Live: results follow the typing (Return still keeps it in Recent).
-        .task(id: session.text) {
-            guard session.liveQuery != nil else { return }
-            try? await Task.sleep(for: SearchSession.liveDelay)
-            guard !Task.isCancelled else { return }
-            run(recording: false)
-        }
+        // No search while typing (the user's call): Return, a recent search
+        // or a pill runs it, and the field keeps the keyboard meanwhile.
         .onChange(of: session.scope) { _, scope in
             // A tap on the Web pill asks the web: that's on purpose.
             if scope == .web { session.webAllowed = session.text.trimmingCharacters(in: .whitespaces) }
@@ -251,7 +246,7 @@ struct LibraryView: View {
             .autocorrectionDisabled()
             .searchFocused($searchFocused)
             .onSubmit(of: .search) {
-                if session.within == nil { run() }
+                if session.within == nil { run() } else { session.withinSubmitted = session.withinText }
                 app.resultsFocusRequests += 1
             }
         #endif

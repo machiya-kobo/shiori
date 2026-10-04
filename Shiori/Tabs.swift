@@ -309,17 +309,19 @@ struct ResultsScreen: View {
             guard windowField else { return }
             session.within = route
             session.withinText = ""
+            session.withinSubmitted = ""
         }
         .onDisappear {
             if windowField, session.within == route { session.within = nil; session.withinText = "" }
         }
-        .task(id: typed) {
-            let words = typed.trimmingCharacters(in: .whitespaces)
-            guard words != searched else { return }
-            // Live, after a pause; clearing the field is at once.
-            if !words.isEmpty { try? await Task.sleep(for: SearchSession.liveDelay) }
-            guard !Task.isCancelled else { return }
-            searched = words
+        // On Return (the window's field, or this list's own), never while
+        // typing; clearing the field shows the whole list at once.
+        .onChange(of: typed) { _, now in
+            if now.trimmingCharacters(in: .whitespaces).isEmpty { searched = "" }
+        }
+        .onChange(of: session.withinSubmitted) { _, words in
+            guard windowField, session.within == route else { return }
+            searched = words.trimmingCharacters(in: .whitespaces)
         }
         .onChange(of: searched) { _, words in
             // Best match while searching, the newest first while browsing.
@@ -469,13 +471,8 @@ struct SearchScreen: View {
         .onChange(of: session.text) { _, new in
             if new.isEmpty { session.submitted = nil }
         }
-        // Live: results follow the typing (Return still keeps it in Recent).
-        .task(id: session.text) {
-            guard session.liveQuery != nil else { return }
-            try? await Task.sleep(for: SearchSession.liveDelay)
-            guard !Task.isCancelled else { return }
-            run(recording: false)
-        }
+        // No search while typing (the user's call): Return or the field's
+        // magnifier runs it, and the field keeps the keyboard meanwhile.
         .onChange(of: request.pending, initial: true) { _, query in
             guard let query else { return }
             request.pending = nil

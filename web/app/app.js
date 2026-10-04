@@ -1065,11 +1065,19 @@ function viewList(params) {
     if (focused) field.focus();
     load();
   };
+  // On Enter (below) or the magnifier, never while typing; clearing shows
+  // the whole list at once.
   field.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(apply, field.value.trim() ? 350 : 0);
+    if (!field.value.trim()) apply();
   });
-  // Its X, and on a phone its magnifier: the search at once, without the pause.
+  field.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    clearTimeout(timer);
+    apply();
+  });
+  // Its X, and on a phone its magnifier: the search at once.
   const fieldButtons = S.fieldButtons(field, () => {
     clearTimeout(timer);
     apply();
@@ -2151,10 +2159,8 @@ searchInput.addEventListener('input', () => {
   clearTimeout(liveTimer);
   const q = searchInput.value.trim();
   if (!q) return searchTo('');
-  // Small Web searches on Enter only: its engines are volunteers'.
-  if (scopeOf(route().params) === 'smallweb') return;
-  // Live: 350 ms after typing stops, two characters or more (Recent only on Enter).
-  if (q.length >= 2) liveTimer = setTimeout(() => searchTo(q), 350);
+  // No search while typing (the user's call): Enter or the magnifier runs
+  // it, and the field keeps the keyboard meanwhile. Clearing it is at once.
 });
 searchInput.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;

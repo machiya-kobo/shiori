@@ -99,18 +99,9 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         guard countsQuery == submitted, let n = counts[scope], n > 0 else { return nil }
         return n
     }
-    /// How long typing pauses before the search runs by itself.
-    static let liveDelay = Duration.milliseconds(350)
-
-    /// What typing alone should search, after the pause: two characters
-    /// or more, and not what's already on screen. Nil otherwise.
-    var liveQuery: String? {
-        let typed = text.trimmingCharacters(in: .whitespaces)
-        // Small Web searches only on Return: its engines are volunteers'
-        // (the gateway's contract: no search while typing).
-        guard typed.count >= 2, typed != submitted, scope != .smallweb else { return nil }
-        return typed
-    }
+    /// The words searched within a collection or label (Mac, iPad: the
+    /// window's field), set on Return: `ResultsScreen` searches them.
+    var withinSubmitted = ""
 }
 
 /// One search's results in one scope. Give it an `.id` of the query and

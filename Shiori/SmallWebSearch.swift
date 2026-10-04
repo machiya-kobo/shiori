@@ -4,7 +4,7 @@ import SwiftUI
 
 /// Gemini and Gopher results for Search → Small Web, through a small-web
 /// gateway (docs/smallweb.md), a page at a time. Asked only
-/// for a submitted search (`SearchSession.liveQuery` leaves this scope out).
+/// for a submitted search (nothing searches while typing).
 @Observable
 final class SmallWebModel {
     let query: String

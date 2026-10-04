@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The tag also releases Shiori for Firefox. The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.3.4 (2026-10-04)
+
+### Changed
+
+- **Nothing searches while you type**: a search runs on Return, the
+  field's magnifier, a recent search, Did you mean or a pill, in the apps
+  and the web app, the "Search in" fields of collections and labels too.
+  The field keeps the keyboard while you type (a search that ran at a
+  pause took it away); clearing the field still resets at once.
+
 ## 0.3.3 (2026-10-04)
 
 ### Added
