@@ -392,3 +392,9 @@ test("every phone search field has the rooms' X and submit magnifier", () => {
   assert.doesNotMatch(html, /title="Clear search">×</);
   assert.match(pageCSS, /#go \{ display: none; \}\n@media \(max-width: 759px\) \{\n  #go \{ display: grid; \}/);
 });
+
+test('installed on an iPhone, the web app starts 24px under the status bar, as the rooms do', () => {
+  const appCSS = read('../web/app/app.css');
+  // Installed on an iPhone only: safe area + 24px.
+  assert.match(appCSS, /@supports \(-webkit-touch-callout: none\) \{\n  @media \(display-mode: standalone\) and \(max-width: 759px\) \{[^}]*padding-top: calc\(24px \+ env\(safe-area-inset-top\)\);/);
+});

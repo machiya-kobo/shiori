@@ -378,6 +378,19 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
     padding-top: calc(8px + env(safe-area-inset-top));
   }
 }
+/* Installed on an iPhone (the home screen app): iOS softens a band under
+   the status bar, so the first bar starts 24px below it, as the rooms'
+   headers do (vaultkit 0.16.8). Safari's tab and other browsers keep 8px. */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) and (max-width: 759px) {
+    #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]),
+    #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top[hidden] + #list-top,
+    .bar {
+      padding-top: calc(24px + env(safe-area-inset-top));
+    }
+  }
+}
+
 /* Bottom tabs (narrow): the Machiya rooms' shared floating bar (vaultkit),
    edge to edge less 8px, its tabs sharing the width (five fit at 320px;
    centred and sized to its content, the bar's ends ran off a phone). */
