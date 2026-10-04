@@ -10,6 +10,7 @@ import { newPage, addRequest, titleIn } from '../src/page.js';
 import * as outbox from '../src/outbox.js';
 import { parseArgs } from '../src/cli.js';
 import { providerResults } from '../src/provider.js';
+import { histerHeaders } from '../src/hister.js';
 
 installURL(globalThis);
 // search-core.js is a script that sets globalThis.ShioriSearch; imported
@@ -26,7 +27,11 @@ function check(name, got, want) {
 
 check('URL is the shim', typeof URL === 'function' && new URL('https://www.Example.com:443/a?b=1').host, 'www.example.com');
 check('normalizeURL', S.normalizeURL('https://www.Example.com/a/b/?utm_source=x&q=1'), 'example.com/a/b?q=1');
-check('histerText', S.histerText('machi'), 'machi* -label:vault -metadata.source:vault');
+check('histerText', S.histerText('machi'), 'machi* -label:vault -metadata.source:vault -type:local');
+const tokenConfig = { server: 'https://h.example/', smallweb: 'https://sw.example/', histerToken: 'ABCDEFGHJKLMNPQRSTUVWXYZ23' };
+check('histerHeaders (server)', histerHeaders(tokenConfig, 'https://h.example/search', S), { 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' });
+check('histerHeaders (gateway)', histerHeaders(tokenConfig, 'https://sw.example/api/save', S), {});
+check('histerHeaders (none)', histerHeaders({ server: 'https://h.example/' }, 'https://h.example/search', S), {});
 check('kuraURL', S.kuraURL('https://kura.example/', 'hister', { limit: 5 }), 'https://kura.example/api/search?limit=5&offset=0&q=hister*&sort=relevance');
 check('feedURL', S.feedURL('https://s.example/', { query: 'rust', title: 'Rust' }), 'https://s.example/shiori/feed?q=rust&exclude_label=vault&title=Rust');
 check('smallwebSearchURL', S.smallwebSearchURL('https://sw.example/', 'gemini capsule'), 'https://sw.example/api/search?q=gemini+capsule&page=1');
