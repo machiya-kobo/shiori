@@ -140,7 +140,9 @@ holds the rules and the traps the code can't tell you.
   capture answers a synthetic 201 (`X-Shiori-Queued: 1`); a manual one
   rethrows. It **fails closed**: nothing is stored until the skip rules have
   been fetched once. No auth headers are stored. 406/413/422 and other 4xx
-  are never retried; 5xx/429 get 5 tries; entries older than 14 days drop.
+  are never retried, but a 401/403 (Hister's users on, no token yet) keeps
+  the capture, no try counted; 5xx/429 get 5 tries; entries older than 14
+  days drop.
   It drains on any Hister reply under 500 and on worker start (no timer: iOS
   suspends the worker). It follows a server change from anywhere
   (`storage.onChanged`; `set-server` marks its own write): queued pages

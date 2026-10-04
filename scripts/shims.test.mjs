@@ -236,6 +236,36 @@ test('a 5xx during a drain keeps the capture for later, up to the retry budget',
   assert.equal(queued(storage).length, 0);
 });
 
+test("a capture Hister refuses for want of a credential (401/403) is kept, with no try counted, until a token works", async () => {
+  // Hister's users on, no token here yet: every call answers 403.
+  let token = false;
+  const sent = [];
+  const { ctx, storage } = loadBackground({
+    network: (url, init) => {
+      const authorised = token && init && init.headers && init.headers['X-Access-Token'] === 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
+      if (!url.endsWith('api/add')) return new Response('{}', { status: authorised || !token ? (token ? 200 : 403) : 403 });
+      if (!authorised) return new Response('', { status: 403 });
+      sent.push(JSON.parse(init.body).url);
+      return new Response('', { status: 201 });
+    },
+  });
+  const r = await ctx.fetch(BASE + 'api/add', addInit({ url: 'https://a.example/' }));
+  assert.equal(r.status, 403);
+  assert.equal(queued(storage).length, 1);
+  // Refusals don't set off drains, and a drain that meets one counts nothing.
+  for (let i = 0; i < 6; i++) await ctx.fetch(BASE + 'api/rules');
+  await settle();
+  assert.equal(queued(storage).length, 1);
+  assert.equal(queued(storage)[0].attempts ?? 0, 0);
+  // The token arrives: the next answer drains it, with the token.
+  storage.data.histerToken = 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
+  token = true;
+  await ctx.fetch(BASE + 'api/rules', { headers: { 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' } });
+  await settle();
+  assert.deepEqual(sent, ['https://a.example/']);
+  assert.equal(queued(storage).length, 0);
+});
+
 test('a direct success for a page forgets its queued copy', async () => {
   let online = false;
   const sent = [];

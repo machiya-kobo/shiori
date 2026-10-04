@@ -30,14 +30,18 @@
 //   queue. With no remembered rules at all, nothing is queued.
 // - Queued captures never store credentials (the token is re-read when
 //   sending), and are dropped after 14 days.
-// - The queue drains whenever the server answers anything below 500, and
-//   once each time the service worker starts.
+// - The queue drains whenever the server answers anything below 500 but a
+//   refusal (401, 403), and once each time the service worker starts.
 //
 // Replies of 406 (skip rule), 413 (too large), 422 (sensitive content) and
-// any other 4xx drop the queued capture: retrying cannot change them.
+// any other 4xx drop the queued capture: retrying cannot change them. A 401
+// or 403 is Hister wanting a credential (its users on, the token not here
+// yet or made anew): the capture is kept, with no try counted, until a
+// token is (14 days at most, as any).
 (function installCaptureQueue() {
   if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
   if (typeof globalThis.fetch !== 'function') return;
+  const refusedForCredentials = (status) => status === 401 || status === 403;
 
   const INDEX_KEY = 'shioriQueueIndex';
   const ITEM_PREFIX = 'shioriQueueItem:';
@@ -223,6 +227,8 @@
           } catch (_) {
             return; // still offline; keep everything
           }
+          // No credential (yet): keep everything, count nothing.
+          if (refusedForCredentials(r.status)) return;
           if (r.status >= 500 || r.status === 429) {
             done = head.attempts + 1 >= MAX_ATTEMPTS;
             if (!done) {
@@ -353,7 +359,7 @@
           const text = await r.clone().text();
           void storage.set({ [RULES_KEY]: text }).catch(() => {});
         }
-        if (r.status < 500) void drain();
+        if (r.status < 500 && !refusedForCredentials(r.status)) void drain();
         return r;
       } catch (err) {
         const cached = (await storage.get([RULES_KEY]))[RULES_KEY];
@@ -405,7 +411,7 @@
           headers: { 'Content-Type': 'application/json', 'X-Shiori-Queued': '1' },
         });
       }
-      if (r.status >= 500 || r.status === 429) {
+      if (r.status >= 500 || r.status === 429 || refusedForCredentials(r.status)) {
         await enqueue(url, headers, init.body).catch(() => false);
       } else {
         // The server has answered for this page; a queued copy is stale.
