@@ -37,7 +37,45 @@ Pass requests through **unchanged**. Do not add `Origin: hister://`: Hister
 lets a same-origin browser write (`Sec-Fetch-Site: same-origin`) and
 refuses a cross-site one (403), and that check is what keeps other sites
 from, say, deleting pages through this host. Keep the host private (your
-network or VPN), like Hister itself, which has no login.
+network or VPN), like Hister itself.
+
+**Signing in (Hister's users).** When Hister has users (Hister's
+`app.user_handling`, with Machiya's sign-in helper, hister-login, on
+Hister's own host), this host signs every Hister call in for the browser:
+the browser holds only the helper's opaque `machiya_sso` cookie, and nginx
+asks the helper (`auth_request`) for Hister's session on its own hop:
+
+```nginx
+location = /_machiya_auth {
+    internal;
+    proxy_pass http://hister-login:8081/v1/nginx;   # the helper's internal port
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header X-Machiya-Session $cookie_machiya_sso;
+}
+location / {                                        # Hister's routes, /shiori/ai/ and /shiori/ too
+    auth_request /_machiya_auth;
+    auth_request_set $hister_cookie $upstream_http_x_hister_cookie;
+    proxy_set_header Cookie $hister_cookie;         # replaces the browser's whole Cookie header
+    proxy_hide_header Set-Cookie;                   # Hister re-sends its session on every answer
+    # … the existing proxy_pass and websocket lines
+}
+```
+
+- `/v1/nginx` answers 200 with `X-Hister-Cookie: hister=<session>`, or 401.
+  The session travels only nginx → Hister, never to the browser: hence the
+  `Cookie` replacement **and** `proxy_hide_header Set-Cookie`.
+- `/kura/` and `/konbini/` get `Cookie: machiya_sso=$cookie_machiya_sso`
+  only; the rooms check it themselves.
+- The pages: a 401 (nginx) or 403 (Hister) from Hister's routes sends the
+  page to `<hister>/machiya/signin?return=<the page>` (the `hister` entry
+  of `SHIORI_ROOMS` at build time; without it they just fail as before);
+  a 500 from the check is "sign-in is unavailable", in a line. Sign-out is
+  the helper's sessions page (`<hister>/machiya/sessions`), linked from
+  the web app's Settings once a sign-in has been needed: the helper takes
+  sign-out posts only from its own origin.
+- Without users nothing changes: Hister answers as before and the pages
+  never go to the sign-in.
 
 **Kura's reader pages stay at Kura's own address.** Kura gives a work
 vault's note an address starting `/v/<vault>/n/`, and Shiori (the

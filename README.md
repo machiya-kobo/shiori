@@ -242,13 +242,27 @@ Lantern festival kit
 
 The Mac and iOS apps take the same addresses in `local.yml` (`SHIORI_SEARXNG_URL`, `SHIORI_NIWA_URL`, `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`) or in their Settings.
 
-**Signing in.** With Machiya's identity file on, see [Sign in to Machiya](#sign-in-to-machiya).
+**Signing in.** With Hister's users on, see [Sign in to Hister](#sign-in-to-hister); with Machiya's identity file
+on, [Sign in to Machiya](#sign-in-to-machiya).
+
+## Sign in to Hister
+
+Shiori needs no sign-in while Hister has no users (the default). When Hister has them (`app.user_handling`, v0.20.0+,
+with Machiya's sign-in helper on Hister's host), each Shiori signs in once:
+
+- **The apps:** Settings → Server → Sign in to Hister, with a name and password or Sign In with the Browser (shown only
+  while Hister has users), and Access Token for your Hister user's token. Both stay in the Keychain.
+- **Safari's extension** takes the token from the app; **Firefox** has an Access Token field on its settings page.
+- **The hosted pages** send you to Hister's sign-in when it asks, and back.
+- **Linux:** `shiori sign-in` (a small window), `shiori sign-out`, and `"histerToken"` in config.json.
+
+The session and token go only to your Hister; the rooms get an opaque id instead. [docs/signing-in.md](docs/signing-in.md)
+has the details.
 
 ## Sign in to Machiya
 
-Shiori needs no sign-in: Hister and SearXNG have no login, and the Machiya rooms run without one unless their owner
-turns on Machiya's identity file (off by default). When they do, Kura and Konbini ask who is calling, and each Shiori
-signs in once, on its own:
+The Machiya rooms run without a sign-in unless their owner turns on Machiya's identity file (off by default). When
+they do, Kura and Konbini ask who is calling, and each Shiori signs in once, on its own:
 
 - **With a pairing code** (easiest): on the server, `python3 -m vaultkit.identity pair <you> --label iPhone` shows a
   one-time code for ten minutes; type it into Shiori, which trades it with Kura for a device token.
@@ -397,7 +411,7 @@ Then tell it where your servers are, in `~/.config/shiori/config.json`:
 
 ## Hosting the web pages
 
-Shiori's search page and the web app are plain static files that any browser can use and install. Build them with `scripts/build-web.sh` and `scripts/build-pwa.sh`, and serve them from one host that also routes, on the same origin, to your Hister server, SearXNG, and optionally Kura, Konbini, the small-web gateway and the AI endpoint. Pass requests through unchanged, keep the host reachable only by you (your network or VPN is the gate: Hister has no login), and set the build's environment for the options you use. [web/README.md](web/README.md) has the routing table and the variables.
+Shiori's search page and the web app are plain static files that any browser can use and install. Build them with `scripts/build-web.sh` and `scripts/build-pwa.sh`, and serve them from one host that also routes, on the same origin, to your Hister server, SearXNG, and optionally Kura, Konbini, the small-web gateway and the AI endpoint. Pass requests through unchanged, keep the host reachable only by you (your network or VPN is the gate; with Hister's users on, its nginx also signs Hister's calls in, web/README.md), and set the build's environment for the options you use. [web/README.md](web/README.md) has the routing table and the variables.
 
 **Add Page and sharing to the web app.** Built with `SHIORI_SMALLWEB_URL` (the small-web gateway, routed at `/smallweb/`), the web app has **Add Page** (the + beside Library in the sidebar, or the Add Page tab on a phone): an address (http, https, gemini or gopher) and an optional title, sent to the gateway's `POST /api/save`, which fetches the page and saves it in Hister. Installed from a browser that supports it (Chrome or Edge, on Android or a computer), the app also appears in the system's share menu: sharing a link opens Add Page filled in, and nothing is saved until you tap Save. The gateway answers before it fetches, so the app says "Saving…", not "Saved". Kura's notes are never sent (notes live in Kura, and a private vault's `/v/<vault>/` address is refused in every form). The gateway must accept this host's origin: put the web app's address in its `SMALLWEB_ORIGINS`. Without the gateway there is no Add Page and no share target.
 

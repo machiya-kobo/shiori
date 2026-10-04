@@ -42,8 +42,8 @@ holds the rules and the traps the code can't tell you.
   `gemini://`/`gopher://` links are handed to the system, never fetched. No
   analytics. AI providers only when the user switches AI on, and only from
   the app.
-- **Never re-add the `cookies` permission.** The server has no login; the
-  network is the gate.
+- **Never re-add the `cookies` permission.** The extensions use Hister's
+  token (`X-Access-Token`), never a session or a cookie.
 - **The Machiya sign-in** (docs/signing-in.md): a token (`mch_…` pasted,
   `mcd_…` from `POST /api/pair` with a code) in `Authorization: Bearer`,
   only where the host rule allows (`S.machiyaRooms` /
