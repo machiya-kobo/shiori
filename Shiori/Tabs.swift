@@ -440,7 +440,8 @@ struct SearchScreen: View {
                 .id("\(session.scope.rawValue):\(submitted)")
                 // Always visible, not just while the field is active (as
                 // .searchScopes would be).
-                .topChoices("Search in", selection: $session.scope, choices: app.searchScopes, title: \.title, tint: \.tint)
+                .topChoices("Search in", selection: $session.scope, choices: app.searchScopes, title: \.title, tint: \.tint,
+                            count: { session.count(for: $0) })
                 .navigationTitle("Search")
             } else {
                 RecentScreen()

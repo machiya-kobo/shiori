@@ -386,7 +386,8 @@ struct LibraryView: View {
                     run()
                 }
                 .id("\(session.scope.rawValue):\(submitted)")
-                .topChoices("Search in", selection: $session.scope, choices: app.searchScopes, title: \.title, tint: \.tint)
+                .topChoices("Search in", selection: $session.scope, choices: app.searchScopes, title: \.title, tint: \.tint,
+                            count: { session.count(for: $0) })
                 .navigationTitle(submitted)
             }
         case .alias(let alias):

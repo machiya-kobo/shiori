@@ -1,10 +1,11 @@
 import HisterKit
 import SwiftUI
 
-/// Search → All: the top of your pages and of your notes, then the web, as
-/// General is on Safari's results page. The counts are the same settings
-/// (Your Pages / Your Notes → How Many), and Web Results switches the web
-/// off here too. Each section's last row opens its own scope in full.
+/// Search → All, as on Shiori's search page and in the web app: the web's
+/// results with your top pages and notes among them (a page after the first
+/// web result, a note after the second, and so on), each row saying whose it
+/// is; their totals go on the Pages and Notes pills (`SearchSession.counts`).
+/// Web Results switches the web off here too: then the list is yours.
 struct AllResults: View {
     let query: String
     let showScope: (SearchScope) -> Void
@@ -12,6 +13,7 @@ struct AllResults: View {
 
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
+    @Environment(SearchSession.self) private var session: SearchSession?
     @State private var pages: ResultsModel
     @State private var notes: ResultsModel
     @State private var web: WebResultsModel
@@ -35,10 +37,9 @@ struct AllResults: View {
         _web = State(initialValue: WebResultsModel(query: SearxClient.webQuery(query)))
     }
 
-    /// Your pages and your notes in All: the top five each, then a row to the
-    /// full search ("How Many" is gone, here, on the search page and in the
-    /// web app).
-    static let count = 5
+    /// Your pages and your notes in All: the top three each, among the web's
+    /// results (the rest on the Pages and Notes pills, with their totals).
+    static let count = 3
 
     /// Not for a search of Hister syntax alone (label:bsd, @retro).
     private var webOn: Bool { app.allSearch.webResults && app.searx != nil && !web.query.isEmpty }
@@ -55,6 +56,16 @@ struct AllResults: View {
                 ListControls(model: pages, title: query, ordering: false) {}
             }
             .resultActions(query: query)
+            // Their totals on the Pages and Notes pills ("Pages 31").
+            .onChange(of: totals, initial: true) { _, totals in
+                session?.setCounts([.hister: totals[0], .notes: totals[1]], for: query)
+            }
+    }
+
+    /// Hister's total has no notes (they're Kura's), and leaves out the pages
+    /// you opened while Show Opened is off.
+    private var totals: [Int] {
+        [max(pages.total - hiddenOpened, yourPages().count), max(notes.total, shown(notes, count: Self.count).count)]
     }
 
     private func load() async {
@@ -134,35 +145,14 @@ struct AllResults: View {
                 if webOn, AIAnswerSection.offered(in: app, results: webResults) {
                     AIAnswerSection(query: web.query, results: webResults)
                 }
-                // No "You Opened" here: it only grows, and pushed the rest down
-                // It's on Pages and Opened.
-                if !mine.isEmpty {
-                    Section {
-                        let opened = Set(pages.opened.map(\.url))
-                        ForEach(mine) { DocumentItem(document: $0, opened: opened.contains($0.url)) }
-                    } header: {
-                        // Hister's total has no notes: they come from Kura (`SearchText`).
-                        let pageTotal = max(pages.total - hiddenOpened, mine.count)
-                        header(pages.respelledAs.map { "Your Pages · for “\($0)”" } ?? "Your Pages",
-                               count: pageTotal, tint: SearchScope.hister.tint,
-                               more: pageTotal > mine.count ? { showScope(.hister) } : nil)
-                    }
-                }
-                if !vault.isEmpty {
-                    Section {
-                        ForEach(vault) { DocumentItem(document: $0) }
-                    } header: {
-                        header(notes.respelledAs.map { "Your Notes · for “\($0)”" } ?? "Your Notes",
-                               count: max(notes.total, vault.count), tint: SearchScope.notes.tint,
-                               more: notes.total > vault.count ? { showScope(.notes) } : nil)
-                    }
-                }
+                // No headings: the web's results, yours among them. No "You
+                // Opened" here either: it only grew, and pushed the rest down.
+                let opened = Set(pages.opened.map(\.url))
+                let yours = Self.alternate(mine, vault)
                 if webOn {
-                    Section {
-                        webSection(webResults)
-                    } header: {
-                        header("Web")
-                    }
+                    webSection(webResults, yours: yours, opened: opened)
+                } else {
+                    ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
                 }
             }
             .listStyle(.plain)
@@ -170,9 +160,32 @@ struct AllResults: View {
         }
     }
 
-    @ViewBuilder private func webSection(_ results: [WebResult]) -> some View {
+    /// Yours, in the order they go among the web's: a page, then a note, and
+    /// so on (whichever runs out, the other carries on).
+    struct Yours {
+        let page: StoredPage
+        let kind: SearchScope
+    }
+
+    static func alternate(_ pages: [StoredPage], _ notes: [StoredPage]) -> [Yours] {
+        var out: [Yours] = []
+        for i in 0..<max(pages.count, notes.count) {
+            if i < pages.count { out.append(Yours(page: pages[i], kind: .hister)) }
+            if i < notes.count { out.append(Yours(page: notes[i], kind: .notes)) }
+        }
+        return out
+    }
+
+    private func mixed(_ item: Yours, opened: Set<String>) -> some View {
+        DocumentItem(document: item.page, opened: opened.contains(item.page.url))
+            .environment(\.mixedIn, item.kind)
+    }
+
+    @ViewBuilder private func webSection(_ results: [WebResult], yours: [Yours], opened: Set<String>) -> some View {
         switch web.phase {
         case .idle, .loading:
+            // Yours first, while the web is on its way.
+            ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
             ProgressView()
                 .frame(maxWidth: .infinity)
                 .listRowBackground(palette.background)
@@ -181,12 +194,16 @@ struct AllResults: View {
                 .textStyle(.callout)
                 .foregroundStyle(palette.secondaryText)
                 .listRowBackground(palette.background)
+            ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
         case .loaded:
             if results.isEmpty {
-                Text("No web results.")
-                    .textStyle(.callout)
-                    .foregroundStyle(palette.secondaryText)
-                    .listRowBackground(palette.background)
+                if yours.isEmpty {
+                    Text("No web results.")
+                        .textStyle(.callout)
+                        .foregroundStyle(palette.secondaryText)
+                        .listRowBackground(palette.background)
+                }
+                ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
             }
             if !web.suggestions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -201,61 +218,23 @@ struct AllResults: View {
                 .fadesOverflow()
                 .listRowBackground(palette.background)
             }
-            ForEach(results) { result in
+            ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
                 WebItem(result: result, query: web.query, saved: web.saved[result.url])
                     .task {
                         await web.loadMoreIfNeeded(after: result, searx: app.searx, hister: app.client)
                     }
+                // One of yours after each of the first web results.
+                if index < yours.count { mixed(yours[index], opened: opened) }
+            }
+            // More of yours than web results: the rest after them.
+            if yours.count > results.count {
+                ForEach(yours[results.count...], id: \.page.url) { mixed($0, opened: opened) }
             }
             if web.isLoadingMore {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .listRowBackground(palette.background)
             }
-        }
-    }
-
-    /// A section's heading. Your Pages and Your Notes wear their pill's
-    /// colour, with the full count, as on the search page and in the web
-    /// app (a faint tint, the text and an outline).
-    /// `more`: the count is a link to the full search (Pages or Notes), in
-    /// place of a "More in …" row under the five, which looked out of place
-    /// there.
-    @ViewBuilder
-    private func header(_ title: String, count: Int? = nil, tint: Palette.Tint? = nil, more: (() -> Void)? = nil) -> some View {
-        if let tint {
-            let color = palette.tint(tint)
-            HStack {
-                Text(title)
-                    .textStyle(.subheadline, weight: .semibold)
-                Spacer()
-                if let count {
-                    let label = "\(count.formatted()) \(count == 1 ? "result" : "results")"
-                    if let more {
-                        Button(action: more) {
-                            HStack(spacing: 3) {
-                                Text(label)
-                                Image(systemName: "chevron.forward").imageScale(.small)
-                            }
-                            .textStyle(.footnote, weight: .semibold)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Show all of them")
-                    } else {
-                        Text(label)
-                            .textStyle(.footnote)
-                    }
-                }
-            }
-            .foregroundStyle(color)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(color))
-        } else {
-            Text(title)
-                .textStyle(.subheadline, weight: .semibold)
-                .foregroundStyle(palette.secondaryText)
         }
     }
 }

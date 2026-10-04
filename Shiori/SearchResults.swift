@@ -73,6 +73,20 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
     /// list. Nil elsewhere.
     var within: QueryRoute?
     var withinText = ""
+    /// All's totals for the search on screen (Pages', Notes'), for their pills.
+    private(set) var counts: [SearchScope: Int] = [:]
+    private var countsQuery: String?
+
+    func setCounts(_ counts: [SearchScope: Int], for query: String) {
+        self.counts = counts
+        countsQuery = query
+    }
+
+    /// A pill's count, only while it belongs to the search shown.
+    func count(for scope: SearchScope) -> Int? {
+        guard countsQuery == submitted, let n = counts[scope], n > 0 else { return nil }
+        return n
+    }
     /// How long typing pauses before the search runs by itself.
     static let liveDelay = Duration.milliseconds(350)
 
@@ -411,11 +425,14 @@ extension View {
     /// Safari results page draws its categories: the chosen one filled.
     /// Sort, Group and Filter below them are plain text, so the two rows
     /// don't read as one; a line under the bar parts it from the results.
+    /// `count`: a total shown after a pill's name ("Pages 31": All's search
+    /// finds Pages' and Notes'), in a lighter weight.
     func topChoices<Choice: Hashable & Identifiable>(
         _ label: String, selection: Binding<Choice>, choices: [Choice],
-        title: @escaping (Choice) -> String, tint: @escaping (Choice) -> Palette.Tint
+        title: @escaping (Choice) -> String, tint: @escaping (Choice) -> Palette.Tint,
+        count: @escaping (Choice) -> Int? = { _ in nil }
     ) -> some View {
-        modifier(TopChoices(label: label, selection: selection, choices: choices, title: title, tint: tint))
+        modifier(TopChoices(label: label, selection: selection, choices: choices, title: title, tint: tint, count: count))
     }
 }
 
@@ -544,6 +561,7 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
     let choices: [Choice]
     let title: (Choice) -> String
     let tint: (Choice) -> Palette.Tint
+    let count: (Choice) -> Int?
     @Environment(\.palette) private var palette
     @State private var rowBelow = false
 
@@ -585,7 +603,7 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
         return Button {
             selection.wrappedValue = choice
         } label: {
-            Text(title(choice))
+            pillText(choice)
                 .textStyle(.subheadline, weight: .semibold)
                 .foregroundStyle(on ? palette.background : color)
                 .padding(.horizontal, 11)
@@ -597,5 +615,11 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
         .animation(.snappy(duration: 0.2), value: on)
+    }
+
+    /// The name, and a count after it in a lighter weight.
+    private func pillText(_ choice: Choice) -> Text {
+        guard let n = count(choice) else { return Text(title(choice)) }
+        return Text(title(choice)) + Text(" \(n.formatted())").fontWeight(.regular)
     }
 }

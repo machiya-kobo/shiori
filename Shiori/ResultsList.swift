@@ -222,6 +222,12 @@ struct DocumentLinks: View {
 }
 
 /// One result: favicon, title, where and when, the matching text, label.
+extension EnvironmentValues {
+    /// All's rows of your own among the web results: whose this one is
+    /// (`.hister` "Your page", `.notes` "Your note"), said above its title.
+    @Entry var mixedIn: SearchScope?
+}
+
 struct DocumentRow: View {
     let document: StoredPage
     let label: String
@@ -234,6 +240,7 @@ struct DocumentRow: View {
     /// Absent outside the search layouts (a sheet's list): then a vault
     /// chip only filters Notes, without switching to it.
     @Environment(SearchSession.self) private var session: SearchSession?
+    @Environment(\.mixedIn) private var mixedIn
     @ScaledMetric(relativeTo: .headline) private var scaledIcon: CGFloat = 20
     @Environment(\.macTextScale) private var macScale
 
@@ -253,6 +260,11 @@ struct DocumentRow: View {
             }
             .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
             VStack(alignment: .leading, spacing: 4) {
+                if let mixedIn {
+                    Text(mixedIn == .notes ? "Your note" : "Your page")
+                        .textStyle(.caption, weight: .semibold)
+                        .foregroundStyle(palette.tint(mixedIn.tint))
+                }
                 // The accent, as the search page and the web app draw titles.
                 Text(document.displayTitle)
                     .textStyle(.headline)
