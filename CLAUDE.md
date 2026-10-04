@@ -111,8 +111,10 @@ holds the rules and the traps the code can't tell you.
   `SHIORI_STATUS_URL`, `SHIORI_SEARCH_PAGE_URL`, `SHIORI_SOURCE_URL`,
   `SHIORI_FRONTENDS` (`redlib=https://…,invidious=https://…,libmedium=…`:
   a web page's menu, and the search page's cards, offer the page there
-  beside Archive.org and Archive.is; `Elsewhere` / `S.elsewhereLinks`,
-  twins; the web builds take it from their environment).
+  beside Archive.org and Archive.is, and a page on one of them its
+  original (Open Original on Reddit…, its archives of the original);
+  `Elsewhere` / `S.elsewhereLinks`, twins; the web builds take it from
+  their environment).
 - The user's conventions are build defaults, empty in a public build:
   `SHIORI_OBSIDIAN_VAULT`, `SHIORI_AI_NEVER_SUGGEST`, `SHIORI_AI_NOT_TOPICS`,
   `SHIORI_RESERVED_COLLECTIONS` (comma lists). `SHIORI_ROOM_LOGOS` (a folder

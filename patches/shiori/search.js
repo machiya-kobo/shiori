@@ -1961,8 +1961,10 @@
   /** A web page elsewhere: the Wayback Machine, archive.is and the build's front ends (links only). */
   function elsewhere(url) {
     return S.elsewhereLinks(url, FRONTENDS).map((link) =>
-      el('a', { href: link.url, title: link.name.startsWith('Archive.') ? `Open on ${link.name}` : `Open in ${link.name}` },
-        link.name === 'Archive.org' ? 'cached' : link.name === 'Archive.is' ? 'archive.is' : link.name.toLowerCase()));
+      link.name === 'Original'
+        ? el('a', { href: link.url, title: `Open Original on ${link.site}` }, link.site.toLowerCase())
+        : el('a', { href: link.url, title: link.name.startsWith('Archive.') ? `Open on ${link.name}` : `Open in ${link.name}` },
+          link.name === 'Archive.org' ? 'cached' : link.name === 'Archive.is' ? 'archive.is' : link.name.toLowerCase()));
   }
 
   function webCard(r) {

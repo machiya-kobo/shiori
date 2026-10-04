@@ -1154,4 +1154,19 @@ test('a web page elsewhere: archives, and the front ends the build names (Elsewh
     { name: 'Archive.is', url: 'https://archive.is/newest/https://a.example/x?y=1' },
   ]);
   assert.equal(S.elsewhereLinks('gemini://a.example/', instances).length, 0);
+  // A front end's page opens on its own site too (ElsewhereTests' aFrontEndPageOpensOnItsOwnSiteToo).
+  const original = (url) => { const o = S.originalLink(url, instances); return o ? `${o.site} ${o.url}` : null; };
+  assert.equal(original('https://redlib.example.ts.net/r/unix/comments/abc/a_title/?sort=new'), 'Reddit https://www.reddit.com/r/unix/comments/abc/a_title/?sort=new');
+  assert.equal(original('https://invidious.example.ts.net/watch?v=dQw4w9WgXcQ&t=42'), 'YouTube https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42');
+  assert.equal(original('https://bw.example.ts.net/zelda/wiki/Link'), 'Fandom https://zelda.fandom.com/wiki/Link');
+  assert.equal(original('https://libmedium.example.ts.net/@someone/a-post-123abc'), 'Medium https://medium.com/@someone/a-post-123abc');
+  assert.equal(original('https://www.reddit.com/r/unix/'), null);
+  assert.equal(original('https://redlib.example.ts.net.evil.example/r/unix/'), null);
+  assert.equal(original('https://bw.example.ts.net/'), null);
+  // Its archives are of the original, which they can reach.
+  assert.deepEqual(JSON.parse(JSON.stringify(S.elsewhereLinks('https://redlib.example.ts.net/r/unix/', instances))), [
+    { name: 'Original', site: 'Reddit', url: 'https://www.reddit.com/r/unix/' },
+    { name: 'Archive.org', url: 'https://web.archive.org/web/https://www.reddit.com/r/unix/' },
+    { name: 'Archive.is', url: 'https://archive.is/newest/https://www.reddit.com/r/unix/' },
+  ]);
 });

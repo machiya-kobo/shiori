@@ -1700,7 +1700,7 @@ function pageMenu(doc, n) {
     // a note is Kura's, and archives can't reach a private forge). Links only.
     if (!isNoteDoc(doc, n) && !file) {
       for (const link of S.elsewhereLinks(doc.url, FRONTENDS)) {
-        items.push(item(link.name.startsWith('Archive.') ? `Open on ${link.name}` : `Open in ${link.name}`,
+        items.push(item(link.name === 'Original' ? `Open Original on ${link.site}` : link.name.startsWith('Archive.') ? `Open on ${link.name}` : `Open in ${link.name}`,
           () => window.open(link.url, '_blank', 'noopener')));
       }
     }

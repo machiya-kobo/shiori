@@ -44,6 +44,17 @@ struct ElsewhereTests {
         #expect(links("https://medium.com/@someone/a-post-123abc") == ["LibMedium https://libmedium.example.ts.net/@someone/a-post-123abc"])
     }
 
+    @Test func aFrontEndPageOpensOnItsOwnSiteToo() {
+        let original = { (url: String) in Elsewhere.original(of: url, instances: instances).map { "\($0.site) \($0.url.absoluteString)" } }
+        #expect(original("https://redlib.example.ts.net/r/unix/comments/abc/a_title/?sort=new") == "Reddit https://www.reddit.com/r/unix/comments/abc/a_title/?sort=new")
+        #expect(original("https://invidious.example.ts.net/watch?v=dQw4w9WgXcQ&t=42") == "YouTube https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42")
+        #expect(original("https://bw.example.ts.net/zelda/wiki/Link") == "Fandom https://zelda.fandom.com/wiki/Link")
+        #expect(original("https://libmedium.example.ts.net/@someone/a-post-123abc") == "Medium https://medium.com/@someone/a-post-123abc")
+        #expect(original("https://www.reddit.com/r/unix/") == nil)
+        #expect(original("https://redlib.example.ts.net.evil.example/r/unix/") == nil)
+        #expect(original("https://bw.example.ts.net/") == nil)
+    }
+
     @Test func otherSitesAndUnconfiguredFrontEndsGetNothing() {
         #expect(links("https://a.example/r/unix/") == [])
         #expect(links("https://reddit.com.evil.example/r/x") == [])

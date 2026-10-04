@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.5.3 (2026-10-05)
+
+### Added
+
+- **Open Original** for a page on one of your privacy front ends (a
+  Reddit thread saved from Redlib, a video from Invidious…): the menu
+  (apps, web app) and the search page's cards offer it on its own site,
+  and their Archive.org and Archive.is links are of the original, which
+  the archives can reach.
+
 ## 0.5.2 (2026-10-05)
 
 ### Fixed

@@ -238,10 +238,17 @@ struct ElsewhereLinks: View {
         from: (Bundle.main.object(forInfoDictionaryKey: "ShioriFrontends") as? String) ?? "")
 
     var body: some View {
-        if let wayback = Elsewhere.wayback(url) {
+        // A page on one of the front ends (saved while browsing Redlib, say):
+        // its own site too, and the archives of that address, which they can reach.
+        let original = Elsewhere.original(of: url, instances: Self.instances)
+        let page = original?.url.absoluteString ?? url
+        if let original {
+            Link(destination: original.url) { Label("Open Original on \(original.site)", systemImage: "arrow.uturn.backward") }
+        }
+        if let wayback = Elsewhere.wayback(page) {
             Link(destination: wayback) { Label("Open on Archive.org", systemImage: "building.columns") }
         }
-        if let archive = Elsewhere.archiveToday(url) {
+        if let archive = Elsewhere.archiveToday(page) {
             Link(destination: archive) { Label("Open on Archive.is", systemImage: "archivebox") }
         }
         ForEach(Elsewhere.frontends(for: url, instances: Self.instances), id: \.url) { frontend in

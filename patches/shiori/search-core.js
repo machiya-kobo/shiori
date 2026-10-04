@@ -306,12 +306,53 @@
     }).filter(Boolean);
   }
 
-  /** A web page elsewhere, for a menu: Archive.org, Archive.is, then the front ends. */
+  // Where each front end's pages come from (the reverse of frontendLinks).
+  const sameOn = (site, origin) => ({ site, page: (path, query) => origin + path + (query ? '?' + query : '') });
+  const ORIGINS = {
+    redlib: sameOn('Reddit', 'https://www.reddit.com'),
+    invidious: sameOn('YouTube', 'https://www.youtube.com'),
+    piped: sameOn('YouTube', 'https://www.youtube.com'),
+    nitter: sameOn('X', 'https://x.com'),
+    scribe: sameOn('Medium', 'https://medium.com'),
+    libmedium: sameOn('Medium', 'https://medium.com'),
+    rimgo: sameOn('Imgur', 'https://imgur.com'),
+    libremdb: sameOn('IMDb', 'https://www.imdb.com'),
+    breezewiki: { site: 'Fandom', page: (path, query) => {
+      // /<wiki>/wiki/Page → <wiki>.fandom.com/wiki/Page.
+      const m = /^\/([^/.]+)\/(.+)$/.exec(path);
+      return m ? `https://${m[1]}.fandom.com/${m[2]}` + (query ? '?' + query : '') : null;
+    } },
+  };
+
+  /** A page on one of the build's front ends, back on its own site: {site, url}, or null. */
+  function originalLink(url, instances) {
+    if (!/^https?:\/\//i.test(String(url || ''))) return null;
+    let u;
+    try { u = new URL(url); } catch (_) { return null; }
+    for (const { frontend, base } of instances || []) {
+      const origin = ORIGINS[frontend.key];
+      if (!origin || base.host.toLowerCase() !== u.host.toLowerCase()) continue;
+      const prefix = base.pathname.replace(/\/$/, '');
+      if (!u.pathname.startsWith(prefix)) continue;
+      const page = origin.page(u.pathname.slice(prefix.length) || '/', u.search.slice(1));
+      if (page) return { site: origin.site, url: page + u.hash };
+    }
+    return null;
+  }
+
+  /**
+   * A web page elsewhere, for a menu: its own site when it's a front end's
+   * page (Original), Archive.org and Archive.is (of the original), then the
+   * front ends for its site.
+   */
   function elsewhereLinks(url, instances) {
     if (!/^https?:\/\//i.test(String(url || ''))) return [];
+    const original = originalLink(url, instances);
+    const page = original ? original.url : url;
     return [
-      { name: 'Archive.org', url: cachedURL(url) },
-      { name: 'Archive.is', url: archiveURL(url) },
+      ...(original ? [{ name: 'Original', site: original.site, url: original.url }] : []),
+      { name: 'Archive.org', url: cachedURL(page) },
+      { name: 'Archive.is', url: archiveURL(page) },
       ...frontendLinks(url, instances),
     ];
   }
@@ -2453,6 +2494,7 @@
     archiveURL,
     frontendInstances,
     frontendLinks,
+    originalLink,
     elsewhereLinks,
     hasBang,
     webQuery,

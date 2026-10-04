@@ -118,6 +118,43 @@ public enum Elsewhere {
         }
     }
 
+    /// Where each front end's pages come from: the site's name and its
+    /// address for a path on the front end (the reverse of `frontends`).
+    static let origins: [String: (site: String, page: @Sendable (_ path: String, _ query: String?) -> String?)] = [
+        "redlib": ("Reddit", { p, q in "https://www.reddit.com" + p + (q.map { "?" + $0 } ?? "") }),
+        "invidious": ("YouTube", { p, q in "https://www.youtube.com" + p + (q.map { "?" + $0 } ?? "") }),
+        "piped": ("YouTube", { p, q in "https://www.youtube.com" + p + (q.map { "?" + $0 } ?? "") }),
+        "nitter": ("X", { p, q in "https://x.com" + p + (q.map { "?" + $0 } ?? "") }),
+        "scribe": ("Medium", { p, q in "https://medium.com" + p + (q.map { "?" + $0 } ?? "") }),
+        "libmedium": ("Medium", { p, q in "https://medium.com" + p + (q.map { "?" + $0 } ?? "") }),
+        "rimgo": ("Imgur", { p, q in "https://imgur.com" + p + (q.map { "?" + $0 } ?? "") }),
+        "libremdb": ("IMDb", { p, q in "https://www.imdb.com" + p + (q.map { "?" + $0 } ?? "") }),
+        "breezewiki": ("Fandom", { p, q in
+            // /<wiki>/wiki/Page → <wiki>.fandom.com/wiki/Page.
+            let parts = p.split(separator: "/", maxSplits: 1).map(String.init)
+            guard parts.count == 2, !parts[0].isEmpty, !parts[0].contains(".") else { return nil }
+            return "https://\(parts[0]).fandom.com/" + parts[1] + (q.map { "?" + $0 } ?? "")
+        }),
+    ]
+
+    /// A page on one of the configured front ends, back on its own site
+    /// ("Reddit", reddit.com/r/…): a page saved while browsing Redlib opens
+    /// where it came from too. Nil for any other address.
+    public static func original(of url: String, instances: [(frontend: Frontend, base: URL)]) -> (site: String, url: URL)? {
+        guard isWeb(url), let c = URLComponents(string: url), let host = c.host?.lowercased() else { return nil }
+        for (frontend, base) in instances {
+            guard base.host?.lowercased() == host, base.port == c.port, let origin = origins[frontend.key] else { continue }
+            let prefix = base.path.hasSuffix("/") ? String(base.path.dropLast()) : base.path
+            guard c.percentEncodedPath.hasPrefix(prefix) else { continue }
+            let path = String(c.percentEncodedPath.dropFirst(prefix.count))
+            guard let page = origin.page(path.isEmpty ? "/" : path, c.percentEncodedQuery),
+                  var out = URLComponents(string: page) else { continue }
+            out.fragment = c.fragment
+            if let url = out.url { return (origin.site, url) }
+        }
+        return nil
+    }
+
     static func isWeb(_ url: String) -> Bool {
         let lower = url.lowercased()
         return lower.hasPrefix("https://") || lower.hasPrefix("http://")
