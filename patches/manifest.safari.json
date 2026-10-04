@@ -2,7 +2,7 @@
   "$comment": "Safari's overrides, merged after patches/manifest.shiori.json (see there for the rules).",
   "$comment_permissions": "Upstream also asks for 'cookies', which only serves 'Authenticate with Browser Session'. Shiori talks to a token-less server gated by the network, so it is dropped. nativeMessaging reaches the app (ext/host-native.js); contextMenus is the Mac's right-click menu (ext/menus.js; iOS has none). scripts/build-extension.sh fails if upstream adds a permission this list does not account for.",
   "permissions": ["tabs", "storage", "nativeMessaging", "contextMenus"],
-  "$comment_content_scripts": "Upstream's, plus the combined-search redirect on duckduckgo.com: Safari's address bar searches only with its own engines, so Shiori takes a DuckDuckGo search over (shiori/redirect.js). Firefox adds Shiori as a search engine instead, and has none of this.",
+  "$comment_content_scripts": "Upstream's, plus the combined-search redirect on duckduckgo.com: Safari's address bar searches only with its own engines, so Shiori takes a DuckDuckGo search over (shiori/redirect.js).",
   "content_scripts": [
     { "js": ["content.js"], "matches": ["<all_urls>"] },
     {

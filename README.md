@@ -1,6 +1,6 @@
 # Shiori 栞
 
-Shiori (栞, "bookmark") is [Hister](https://github.com/asciimoo/hister) for Safari on iPhone, iPad, and Mac: a native app to search your Hister server, plus the Safari extension that feeds it. The same extension is built for Firefox too ([docs/firefox.md](docs/firefox.md)).
+Shiori (栞, "bookmark") is [Hister](https://github.com/asciimoo/hister) for Safari on iPhone, iPad, and Mac: a native app to search your Hister server, plus the Safari extension that feeds it. On Firefox and Chrome, use upstream Hister's own extension ([Firefox](https://addons.mozilla.org/firefox/addon/hister/), [Chrome](https://chromewebstore.google.com/detail/hister/cciilamhchpmbdnniabclekddabkifhb)).
 
 Hister is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server, so you can search your history later. Upstream ships extensions for Firefox and Chrome only and has declined Safari support in-tree ([issue #49](https://github.com/asciimoo/hister/issues/49)). iOS only loads extensions that ship inside a signed app, so Shiori is that app.
 
@@ -253,7 +253,7 @@ with Machiya's sign-in helper on Hister's host), each Shiori signs in once:
 - **The apps:** Settings → Server → Sign in to Hister, with Sign In with Saved Password (Hister's page, where your saved
   password is offered) or a name and password (shown only
   while Hister has users), and Access Token for your Hister user's token. Both stay in the Keychain.
-- **Safari's extension** takes the token from the app; **Firefox** has an Access Token field on its settings page.
+- **Safari's extension** takes the token from the app.
 - **The hosted pages** send you to Hister's sign-in when it asks, and back.
 - **Linux:** `shiori sign-in` (a small window), `shiori sign-out`, and `"histerToken"` in config.json.
 
@@ -270,7 +270,7 @@ they do, Kura and Konbini ask who is calling, and each Shiori signs in once, on 
 - **Or with a token** from `python3 -m vaultkit.identity token mint <you> --label iPhone`, pasted in.
 
 Where: the iPhone, iPad and Mac apps in Settings → Notes → Sign in to Machiya (kept in the Keychain; Safari's extension
-asks the app); Firefox in Shiori's settings page (`storage.local`, never synced); Linux as `"machiyaToken"` in
+asks the app); Linux as `"machiyaToken"` in
 `~/.config/shiori/config.json` (`shiori pair <code>` prints it); the hosted pages use Kura's own `/signin` cookie. The
 token goes only to the configured Kura and Konbini, never to Hister or SearXNG. Sign Out deletes it from the device;
 revoke it on the server. [docs/signing-in.md](docs/signing-in.md) has the details, and
@@ -308,9 +308,9 @@ The app talks only to the servers you configure: your Hister server and, if you 
 Shiori wraps the **official upstream extension** without forking it:
 
 - `vendor/hister/` pins upstream as a git submodule (currently **v0.20.0**, extension 0.31.0). It is never modified.
-- `scripts/build-extension.sh` builds upstream's extension with npm, then patches the built bundle for Safari (or, with `--target firefox`, for Firefox):
+- `scripts/build-extension.sh` builds upstream's extension with npm, then patches the built bundle for Safari:
   - `patches/manifest.shiori.json`, then `patches/manifest.safari.json`: manifest overrides (icons, name, Shiori's shortcuts, drops the `cookies` permission).
-  - Prepended to `background.js`: `patches/safari-shims.js` (prebuilt toolbar icons in place of `OffscreenCanvas`, ignores Safari's internal pages), `patches/ext/host-native.js` (settings from the app), `patches/ext/core.js`, Shiori's own part for every browser (the **offline queue** (below), tagged captures and combined search), then `patches/shiori/search-core.js`, `patches/ext/badge.js` and `patches/ext/menus.js` (the toolbar count and the Mac's right-click menu, shared with Firefox).
+  - Prepended to `background.js`: `patches/safari-shims.js` (prebuilt toolbar icons in place of `OffscreenCanvas`, ignores Safari's internal pages), `patches/ext/host-native.js` (settings from the app), `patches/ext/core.js`, Shiori's own part (the **offline queue** (below), tagged captures and combined search), then `patches/shiori/search-core.js`, `patches/ext/badge.js` and `patches/ext/menus.js` (the toolbar count and the Mac's right-click menu).
   - `patches/safari-content-shim.js`, prepended to `content.js`: a **size cap** on captured pages.
   - `patches/safari-popup.css`, linked into `popup.html`: lets the popup fill the sheet on touch screens.
 - `project.yml` ([XcodeGen](https://github.com/yonaskolb/XcodeGen)) generates one Xcode project with an iOS/iPadOS app, a macOS app, and a Safari Web Extension for each.
@@ -372,24 +372,6 @@ Never edit `Shiori.xcodeproj` (it is generated and gitignored) or `ShioriExtensi
 **iPhone / iPad:** Settings → Apps → Safari → Extensions → Shiori. Turn it on, set **All Websites** to **Allow**, and leave **Allow in Private Browsing** off. Then in Safari, tap the Page Menu button at the left of the address bar → Shiori to check the server address.
 
 **Mac:** open Shiori, click **Open Safari Extensions Settings…**, turn on Shiori, and allow it on every website. A build signed with your team stays enabled. An ad-hoc build needs Develop → Allow Unsigned Extensions after every Safari restart.
-
-## Firefox
-
-The same extension, built for Firefox 153 and later (the current ESR) on every system Firefox runs on, including LibreWolf, Zen, Floorp and Firefox for Android. It has no app behind it, so its own settings page sets the server and the rest. Firefox adds:
-
-- the address-bar keyword `sh`;
-- a sidebar;
-- container rules;
-- settings you can carry to another device.
-
-The right-click menu and the toolbar's waiting count are the Mac's too.
-
-It never takes over DuckDuckGo's searches as Safari's does: Firefox adds search engines, so add the hosted search page as one (it advertises OpenSearch), or use `sh`. Signed builds, kept up to date by Firefox, come with each [release](https://github.com/machiya-kobo/shiori/releases); [docs/firefox.md](docs/firefox.md) covers installing, building and releasing.
-
-```bash
-git submodule update --init
-scripts/build-extension.sh --target firefox    # build/firefox/ and an unsigned build/shiori-firefox-<version>.zip
-```
 
 ## Linux
 

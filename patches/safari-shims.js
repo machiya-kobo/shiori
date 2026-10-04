@@ -1,6 +1,6 @@
 // Safari compatibility shim, prepended to background.js at build time,
-// before ext/host-native.js, ext/core.js and the rest of Shiori's own,
-// shared with Firefox (BACKGROUND in scripts/build-extension.sh). Both
+// before ext/host-native.js, ext/core.js and the rest of Shiori's own
+// (BACKGROUND in scripts/build-extension.sh). Both
 // sections come from nburns/hister-safari.
 //
 // 1. Toolbar icons. Upstream background.js uses OffscreenCanvas +

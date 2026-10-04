@@ -50,11 +50,10 @@ for (const [key, p] of Object.entries(table)) {
   }
 }
 
-test("the settings' whitelists know the same ten: SharedSettings.palettes and host-local.js", () => {
+test("the settings' whitelist knows the same ten: SharedSettings.palettes", () => {
   const keys = Object.keys(table);
   const list = (text, pattern) => [...text.match(pattern)[1].matchAll(/["']([a-z-]+)["']/g)].map((m) => m[1]);
   assert.deepEqual(list(read('../Shared/Settings/SharedSettings.swift'), /static let palettes = \[([^\]]*)\]/), keys);
-  assert.deepEqual(list(read('../patches/ext/host-local.js'), /const PALETTES = \[([^\]]*)\]/), keys);
 });
 
 test('tinted heading rows and panels (Pages, Notes, Web, AI Answer, Info) read at 4.5:1 at --tint-mix', () => {

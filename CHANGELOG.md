@@ -2,8 +2,21 @@
 
 Every deploy of Shiori is a release: a version here, the same as
 `MARKETING_VERSION` in project.yml, and a `vX.Y.Z` tag (minor for
-features, patch for fixes). The tag also releases Shiori for Firefox. The
+features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
+
+## 0.4.0 (2026-10-05)
+
+### Removed
+
+- **Shiori for Firefox.** On Firefox (and Chrome), upstream Hister's own
+  extension does the automatic capturing, which was the Firefox
+  extension's purpose. Gone: its build target, settings page, sidebar,
+  `sh` keyword, container rules, settings files and the signed release
+  workflow. Copies already installed stay at 0.3.5 and get no more
+  updates: remove Shiori from Firefox's add-ons and install
+  [Hister's extension](https://addons.mozilla.org/firefox/addon/hister/).
+  Safari's extension is unchanged.
 
 ## 0.3.5 (2026-10-04)
 

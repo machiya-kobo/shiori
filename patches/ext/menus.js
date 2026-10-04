@@ -1,5 +1,4 @@
-// The right-click menu (Firefox's `menus`, Safari's `contextMenus` on the
-// Mac; iOS has none):
+// The right-click menu (Safari's `contextMenus` on the Mac; iOS has none):
 // search Shiori for the selection; save this page, or never save it or its
 // site (upstream's own commands, the same ones its shortcuts run: the
 // server's rules stay the truth); save a link to Hister. Prepended to
@@ -212,7 +211,7 @@
   globalThis.ShioriMenus = { saveLink, ITEMS };
 
   const menus = chrome.menus || chrome.contextMenus;
-  if (!menus || !menus.create) return; // Firefox for Android and iOS have none
+  if (!menus || !menus.create) return; // iOS has none
   // Made afresh each time the background starts, so a changed list never
   // leaves an old item behind. removeAll answers by promise or by callback.
   new Promise((done) => {

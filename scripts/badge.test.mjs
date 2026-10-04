@@ -1,5 +1,5 @@
 // Tests for patches/ext/badge.js, the toolbar badge with the queue's count
-// (Firefox and Safari), over a fake toolbar button and storage.
+// (Safari), over a fake toolbar button and storage.
 // Run: node --test scripts/*.test.mjs
 
 import { readFileSync } from 'node:fs';

@@ -35,9 +35,7 @@ holds the rules and the traps the code can't tell you.
   small-web gateway, SearXNG, the visited site's favicon and PDFs (upstream
   behaviour). With Machiya's identity file, Kura's `POST /api/pair`
   (pairing a device) and, from the web app, Kura's `/api/prefs` (theme and
-  text size, as the rooms keep them). Firefox itself fetches the add-on's `updates.json` from this
-  repository's GitHub Releases (its `update_url`); the extension's code
-  never does. NewsBlur, status pages and the Wayback Machine and archive.is
+  text size, as the rooms keep them). NewsBlur, status pages and the Wayback Machine and archive.is
   copies are only ever opened as links.
   `gemini://`/`gopher://` links are handed to the system, never fetched. No
   analytics. AI providers only when the user switches AI on, and only from
@@ -51,8 +49,7 @@ holds the rules and the traps the code can't tell you.
   the configured Kura and Konbini by origin, less Hister's and SearXNG's;
   never across a redirect. It lives in the Keychain (`MachiyaKeychain`,
   service "Machiya"; Safari's extension asks the app, `machiya`),
-  Firefox's `storage.local` key `machiyaSignIn` (never in settings or a
-  settings file), Linux's config.json; never UserDefaults, never logged.
+  Linux's config.json; never UserDefaults, never logged.
   The extension hands it to its own pages only, never a content script;
   extension fetches keep `credentials: 'omit'`. The hosted pages carry
   none: the browser's `machiya_session` cookie goes to `/kura/` and
@@ -66,9 +63,7 @@ holds the rules and the traps the code can't tell you.
 - **Never test a write against a live Hister.** Use the stubs in the test
   suites or `linux/fake-hister.py`. Reads against your own server are fine.
 - **Logic shared by Swift and JavaScript has twins** (HisterKit and
-  `patches/shiori/search-core.js`; `SharedSettings`' apply, recordSearch and
-  extensionPayload and `patches/ext/host-local.js`) with the same test
-  cases. Change both.
+  `patches/shiori/search-core.js`) with the same test cases. Change both.
 - **No rule editor in the app**: the server's rules are the truth. Shiori
   edits aliases only through Keep Collections Current (docs/ai.md).
 - **Settings are per device, never synced.** Anything on the network could
@@ -152,37 +147,28 @@ holds the rules and the traps the code can't tell you.
 - **The native handler class must be `nonisolated`**: Safari calls it off
   the main thread, and a MainActor handler crashes on every message. Same
   for `NSItemProvider` callbacks and `openURL`'s completion on macOS.
-- One build, a target per browser: `scripts/build-extension.sh` (Safari,
-  into `ShioriExtension/Resources/`) or `--target firefox` (into
-  `build/firefox/`, then `web-ext` lint and pack). Manifests are upstream's,
-  then `patches/manifest.shiori.json` (every browser), then
-  `patches/manifest.<target>.json`; `scripts/check-extension.py` holds each
-  target's rules.
-- Shiori's background logic is `patches/ext/core.js`, for Safari and
-  Firefox alike. It reaches settings only through `shioriHost`:
-  `ext/host-native.js` (the app) on Safari, `ext/host-local.js`
-  (`storage.local`) on Firefox (docs/firefox-plan.md).
-- Firefox's settings page is `patches/ext/settings.*` (Safari's,
-  `patches/shiori/options.*`, only shows what the app set). Only it may set
-  the server (`set-server`: from its own address, where
-  `shioriHost.ownsServer`); everything else goes through `set-settings`, the
-  gear's whitelist.
+- **Safari is the one extension.** Shiori for Firefox was removed in
+  0.4.0: on Firefox and Chrome, upstream Hister's own extension does the
+  capturing. Don't bring a second browser target back.
+  `scripts/build-extension.sh` builds into `ShioriExtension/Resources/`;
+  manifests are upstream's, then `patches/manifest.shiori.json`, then
+  `patches/manifest.safari.json`; `scripts/check-extension.py` holds the
+  rules.
+- Shiori's background logic is `patches/ext/core.js`. It reaches the app
+  only through `shioriHost` (`ext/host-native.js`, native messaging). The
+  extension never sets the server, the token or the sign-in: the app does,
+  and its page (`patches/shiori/options.*`) only shows them. The results
+  page's gear goes through `set-settings`, the whitelist.
 - **Every deploy is a release**: bump `MARKETING_VERSION` (project.yml)
   and `VERSION` (linux/gjs/save.js) together, add a `## X.Y.Z (date)`
   section to CHANGELOG.md (minor for features, patch for fixes; a test
   holds all three), commit, then tag `vX.Y.Z` on main and push the tag to
   both forges. The hosted builds are made from the tag, and serve
-  `/_shiori/status.json` and `/_shiori/CHANGELOG.md`. The tag also
-  releases Firefox (below). 1.0.0 marks the public release.
-- **Firefox releases** (`.github/workflows/firefox-release.yml`, on a `v*`
-  tag matching `MARKETING_VERSION`): Mozilla signs them unlisted; the
-  add-on ID `shiori@machiya-kobo.github.io` and the AMO account are fixed
-  for good. Every latest release must carry `updates.json`, or Firefox's
-  updates break (docs/firefox.md).
+  `/_shiori/status.json` and `/_shiori/CHANGELOG.md`. 1.0.0 marks the
+  public release.
 - **The background order matters** (`BACKGROUND` in `build-extension.sh`,
-  held by tests). Firefox: `host-local`, `containers`, `core`,
-  `search-core`, `pages`, `omnibox`, `badge`, `menus`. Safari:
-  `safari-shims`, `host-native`, `core`, `search-core`, `badge`, `menus`.
+  held by tests): `safari-shims`, `host-native`, `core`, `search-core`,
+  `badge`, `menus`.
   The core hides `shiori:` messages from every `onMessage` listener added
   after it, so a file with its own `shiori:` messages must come before it;
   `menus` needs `search-core` and `badge` before it.
@@ -190,16 +176,9 @@ holds the rules and the traps the code can't tell you.
   (`patches/ext/badge.js`): `null` where the browser takes it, else a copy
   kept in step with the count. Safari's answer to `null` hasn't been seen
   on a device.
-- `contextualIdentities` (container rules) is a **required** permission:
-  Firefox drops it from `optional_permissions`. Installing switches
-  containers on where they were off; say so in docs/firefox.md.
-- The right-click menu (Firefox, and Safari on the Mac with `contextMenus`)
+- The right-click menu (Safari on the Mac, `contextMenus`)
   runs upstream's own commands for its page items (the menu keeps
   upstream's `onCommand` listener). Never add a rule editor there.
-- Firefox's address-bar keyword (`sh`, `patches/ext/omnibox.js`) searches
-  through `search-core.js` (`histerText`), drops notes and non-web pages,
-  and records an opened suggestion in `api/history` only while Remember What
-  You Open is on.
 - Settings reach the extension through the App Group: the background asks by
   `sendNativeMessage` on every search (400 ms budget, then its cache in
   `storage.local`). A setting the extension page shows must be in both
@@ -207,9 +186,7 @@ holds the rules and the traps the code can't tell you.
 - The results page's gear writes through `SharedSettings.applyFromPage`, a
   whitelist of keys, types and values. AI settings are never in it: a page
   must never turn AI on.
-- Search from Safari (Safari only: Firefox adds search engines, so it never
-  takes another engine's searches; `check-extension.py` holds that): keep
-  DuckDuckGo; `redirect.js` hands address-bar searches to the hosted search
+- Search from Safari: keep DuckDuckGo; `redirect.js` hands address-bar searches to the hosted search
   page when it answers (else the extension's `search.html`). `search-core.js` decides: no `!bang`, image/news search,
   Back/Reload, or `shiori=off`. Never open results with `tabs.update`: Back
   then strands you on DuckDuckGo.
@@ -238,7 +215,7 @@ holds the rules and the traps the code can't tell you.
 - **Hister's token** (`X-Access-Token`, for a server with users): the
   owner's one token per user, entered once per device (Settings → Server,
   `HisterKeychain`; Safari's extension asks the app by the `hister` native
-  message; Firefox's settings field; Linux `histerToken`). It goes only to
+  message; Linux `histerToken`). It goes only to
   the Hister server (never the gateway, which also gets `Origin:
   hister://`), never in a URL, a log, a settings file or the offline queue
   (drain re-reads it), and follows no redirect elsewhere. Unset, nothing

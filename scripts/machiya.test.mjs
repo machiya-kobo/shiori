@@ -1,7 +1,7 @@
 // Tests for the Machiya sign-in: search-core.js's twin of HisterKit's
 // Machiya (pairing, the token's header, the host rule), and the
-// extension's background keeping and using it (patches/ext/core.js on
-// host-local.js, Firefox, and host-native.js, Safari). The cases match
+// extension's background using it (patches/ext/core.js on
+// host-native.js: the app keeps it). The cases match
 // MachiyaTests.swift.
 // Run: node --test scripts/*.test.mjs
 
@@ -211,12 +211,12 @@ function fakeStorage(initial = {}) {
 const RULES = { shioriCachedRules: '{"skip":[]}' };
 const SETTINGS = { niwaURL: KURA, konbiniURL: KONBINI, searxngURL: SEARX };
 
-/** The background as a browser runs it: `host` is 'local' (Firefox) or 'native' (Safari, `native` answering the app). */
-function loadBackground({ host = 'local', storage, network = async () => new Response('{}'), native = async () => ({}) }) {
+/** The background as Safari runs it, `native` answering for the app. */
+function loadBackground({ storage, network = async () => new Response('{}'), native = async () => ({}) }) {
   const listeners = [];
   const fetched = [];
   const nativeSent = [];
-  const scheme = host === 'local' ? 'moz-extension' : 'safari-web-extension';
+  const scheme = 'safari-web-extension';
   const sandbox = {
     chrome: {
       storage: { local: storage },
@@ -237,8 +237,7 @@ function loadBackground({ host = 'local', storage, network = async () => new Res
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  const hostFile = host === 'local' ? '../patches/ext/host-local.js' : '../patches/ext/host-native.js';
-  vm.runInContext([read(hostFile), read('../patches/ext/core.js'), coreSource].join('\n'), sandbox);
+  vm.runInContext([read('../patches/ext/host-native.js'), read('../patches/ext/core.js'), coreSource].join('\n'), sandbox);
   const send = (request, sender) =>
     new Promise((resolve) => {
       for (const l of listeners) if (l(request, sender, resolve) === true) return;
@@ -249,77 +248,34 @@ function loadBackground({ host = 'local', storage, network = async () => new Res
 }
 
 const settle = () => new Promise((r) => setTimeout(r, 20));
+/** The app: its settings, and the sign-in from its Keychain (none when token is empty). */
+const app = (settings = SETTINGS, token = TOKEN) => async (message) =>
+  message.type === 'machiya' ? (token ? { token, principal: 'alex' } : {}) : message.type === 'settings' ? settings : {};
 const CONTENT_SCRIPT = { url: 'https://evil.example/', tab: { id: 3 } };
 
-test('Firefox: the settings page pairs with Kura, and the token is kept apart, never in the settings', async () => {
-  const storage = fakeStorage({ histerURL: HISTER, ...RULES, shioriLocalSettings: SETTINGS });
-  const pairs = [];
-  const { send, page } = loadBackground({
-    storage,
-    network: async (url, init) => {
-      if (url === KURA + 'api/pair') {
-        pairs.push(JSON.parse(init.body));
-        return new Response(JSON.stringify({ token: DEVICE_TOKEN, principal: 'alex' }), { status: 200 });
-      }
-      return new Response('{}');
-    },
-  });
+test('nothing in the extension signs in or out; a web page never gets the token', async () => {
+  const storage = fakeStorage({ histerURL: HISTER, ...RULES, shioriSettings: SETTINGS });
+  const { send, page } = loadBackground({ storage, native: app() });
   await settle();
-  const reply = await send({ shiori: 'machiya-sign-in', entry: 'abcd efgh', device: 'Firefox' }, page('shiori-settings.html'));
-  assert.equal(reply.ok, true);
-  assert.equal(reply.text, 'Signed in as alex');
-  assert.deepEqual(pairs, [{ code: 'ABCDEFGH', device: 'Firefox' }]);
-  assert.deepEqual(storage.data.machiyaSignIn, { token: DEVICE_TOKEN, principal: 'alex' });
-  assert.ok(!JSON.stringify(storage.data.shioriLocalSettings || {}).includes(DEVICE_TOKEN));
-  assert.ok(!JSON.stringify(storage.data.shioriSettings || {}).includes(DEVICE_TOKEN));
-  const status = await send({ shiori: 'machiya-status' }, page('shiori-settings.html'));
-  assert.deepEqual([status.signedIn, status.text, status.token], [true, 'Signed in as alex', undefined]);
-});
-
-test('Firefox: a pasted token is kept; a bad code says why and keeps nothing', async () => {
-  const storage = fakeStorage({ histerURL: HISTER, ...RULES, shioriLocalSettings: SETTINGS });
-  const { send, page } = loadBackground({
-    storage,
-    network: async (url) => (url.endsWith('api/pair') ? new Response('{"error":"refused"}', { status: 401 }) : new Response('{}')),
-  });
-  await settle();
-  const bad = await send({ shiori: 'machiya-sign-in', entry: 'WRONGCODE' }, page('shiori-settings.html'));
-  assert.equal(bad.ok, false);
-  assert.match(bad.error, /wrong or has expired/);
-  assert.equal('machiyaSignIn' in storage.data, false);
-  const nonsense = await send({ shiori: 'machiya-sign-in', entry: 'what?' }, page('shiori-settings.html'));
-  assert.equal(nonsense.ok, false);
-  const pasted = await send({ shiori: 'machiya-sign-in', entry: TOKEN }, page('shiori-settings.html'));
-  assert.deepEqual([pasted.ok, pasted.text], [true, 'Signed in with a token']);
-  assert.equal(storage.data.machiyaSignIn.token, TOKEN);
-});
-
-test('only the settings page signs in or out; a web page never gets the token', async () => {
-  const storage = fakeStorage({ histerURL: HISTER, ...RULES, shioriLocalSettings: SETTINGS, machiyaSignIn: { token: TOKEN, principal: 'alex' } });
-  const { send, page } = loadBackground({ storage });
-  await settle();
-  for (const sender of [CONTENT_SCRIPT, page('search.html'), { tab: { id: 3 } }]) {
+  for (const sender of [CONTENT_SCRIPT, page('search.html'), page('shiori-options.html'), { tab: { id: 3 } }]) {
     assert.equal((await send({ shiori: 'machiya-sign-out' }, sender)).ok, false);
     assert.equal((await send({ shiori: 'machiya-sign-in', entry: 'mch_evil_' + 'B'.repeat(40) }, sender)).ok, false);
   }
-  assert.equal(storage.data.machiyaSignIn.token, TOKEN);
-  for (const sender of [CONTENT_SCRIPT, { tab: { id: 3 } }, { url: 'moz-extension://other/search.html' }]) {
+  for (const sender of [CONTENT_SCRIPT, { tab: { id: 3 } }, { url: 'safari-web-extension://other/search.html' }]) {
     const reply = await send({ shiori: 'machiya' }, sender);
     assert.equal(reply.ok, false);
     assert.equal(reply.token, undefined);
   }
   // The results page (an extension page) gets it, for its own fetches.
   assert.equal((await send({ shiori: 'machiya' }, page('search.html'))).token, TOKEN);
-  assert.equal((await send({ shiori: 'machiya-sign-out' }, page('shiori-settings.html'))).ok, true);
-  assert.equal('machiyaSignIn' in storage.data, false);
-  assert.equal((await send({ shiori: 'machiya-status' }, page('shiori-settings.html'))).text, 'Not signed in');
 });
 
 test("Kura's vaults are asked with the token; Hister's captures never carry it, queued or sent", async () => {
-  const storage = fakeStorage({ histerURL: HISTER, ...RULES, shioriLocalSettings: SETTINGS, machiyaSignIn: { token: TOKEN, principal: 'alex' } });
+  const storage = fakeStorage({ histerURL: HISTER, ...RULES, shioriSettings: SETTINGS });
   let online = true;
   const { sandbox, fetched } = loadBackground({
     storage,
+    native: app(),
     network: async (url) => {
       if (url === KURA + 'api/vaults') return new Response(JSON.stringify({ vaults: [{ name: 'work', private: false }] }));
       if (!online) throw new TypeError('offline');
@@ -353,13 +309,10 @@ test("Kura's vaults are asked with the token; Hister's captures never carry it, 
 });
 
 test('Kura on another origin than the settings say gets no token', async () => {
-  const storage = fakeStorage({
-    histerURL: HISTER, ...RULES,
-    shioriLocalSettings: { ...SETTINGS, niwaURL: 'https://kura.example.evil.example/' },
-    machiyaSignIn: { token: TOKEN, principal: 'alex' },
-  });
+  const evil = { ...SETTINGS, niwaURL: 'https://kura.example.evil.example/' };
+  const storage = fakeStorage({ histerURL: HISTER, ...RULES, shioriSettings: evil });
   // The rooms are the settings' Kura and Konbini, nothing else.
-  const loaded = loadBackground({ storage });
+  const loaded = loadBackground({ storage, native: app(evil) });
   await settle();
   const run = vm.runInContext('shioriMachiya.rooms()', loaded.sandbox);
   assert.deepEqual(plain(await run), ['https://kura.example.evil.example', 'https://konbini.example']);
@@ -371,19 +324,15 @@ test('Kura on another origin than the settings say gets no token', async () => {
 
 test('Safari: the token comes from the app over native messaging, and only the app signs in', async () => {
   const storage = fakeStorage({ histerURL: HISTER, ...RULES });
-  const { send, page, nativeSent } = loadBackground({
-    host: 'native',
-    storage,
-    native: async (message) => (message.type === 'machiya' ? { token: TOKEN, principal: 'alex' } : message.type === 'settings' ? SETTINGS : {}),
-  });
+  const { send, page, nativeSent } = loadBackground({ storage, native: app() });
   await settle();
   const reply = await send({ shiori: 'machiya' }, page('search.html'));
   assert.equal(reply.token, TOKEN);
   assert.ok(nativeSent.some((m) => m.type === 'machiya'));
   const status = await send({ shiori: 'machiya-status' }, page('shiori-options.html'));
   assert.deepEqual([status.text, status.owns], ['Signed in as alex', false]);
-  assert.equal((await send({ shiori: 'machiya-sign-in', entry: TOKEN }, page('shiori-settings.html'))).ok, false);
-  assert.equal((await send({ shiori: 'machiya-sign-out' }, page('shiori-settings.html'))).ok, false);
+  assert.equal((await send({ shiori: 'machiya-sign-in', entry: TOKEN }, page('shiori-options.html'))).ok, false);
+  assert.equal((await send({ shiori: 'machiya-sign-out' }, page('shiori-options.html'))).ok, false);
   // Never stored by the extension.
   assert.ok(!JSON.stringify(storage.data).includes(TOKEN));
 });

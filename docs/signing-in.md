@@ -22,7 +22,6 @@ page and app flow) and turns a Hister session into an opaque id,
 |---|---|---|
 | iPhone, iPad, Mac | Settings → Server → **Sign in to Hister**: first **Sign In with Saved Password** (the helper's `/machiya/signin?app=1&return=shiori://signed-in` in a private web session, back with `#sid=…&hister=…`; Safari's AutoFill offers the saved login there, which the app's own fields can't without Associated Domains, a paid team's), or a name and password (Hister's `POST /api/login`, then the helper's `POST /machiya/api/app-session` trades the session for an id). Shown only while the helper's `/machiya/healthz` says Hister has users, or while signed in. | `Cookie: hister=<session>` to Hister (HisterKit keeps cookies off and sets it itself), `Authorization: Bearer mhs_…` to the rooms. Kept in the Keychain, service `Hister` (`HisterKeychain`): this device only, shared with the share extension. |
 | Safari extension | Settings → Server → **Access Token** in the app (paste your Hister user's token, once per device) | `X-Access-Token`, handed over by native messaging (`hister`); a browser extension can't set `Cookie`. |
-| Firefox | Shiori's settings page → **Access Token** | `X-Access-Token`, from `storage.local` (`histerToken`): never synced, never in a settings file; the page only learns whether one is set. |
 | Hosted search page and web app | The helper's sign-in page: a 401 or 403 from Hister's routes sends the page to `<hister>/machiya/signin?return=<the page>` (at most once in 30 s), and back | Nothing of their own: the browser's `machiya_sso` cookie goes to this host, whose nginx asks the helper and adds Hister's session on its own hop (web/README.md). Signing out: Settings → Signing In → Hister's sessions page. |
 | Linux | `shiori sign-in` (a small window, name and password) | The session and id in `$XDG_DATA_HOME/shiori/sign-in.json` (0600, tied to the server's origin); `histerToken` in config.json for the token. `shiori sign-out`, `shiori status`. |
 
@@ -97,7 +96,6 @@ search-core's `machiyaRooms` / `mayCarryMachiyaToken` and HisterKit's
 |---|---|---|
 | iPhone, iPad, Mac | Settings → Notes → Sign in to Machiya: a code or a token | The Keychain, service `Machiya` (`MachiyaKeychain`); on iOS this device only, never in a backup, shared with the Safari extension through the App Group; on the Mac the login keychain. Never UserDefaults. |
 | Safari extension | In the app | Asked from the app over native messaging (`machiya`), kept in the background's memory a minute, never stored. |
-| Firefox | Shiori's settings page → Sign in to Machiya | `storage.local` under its own key (`machiyaSignIn`): never synced, never in a settings file, never logged. |
 | Hosted search page and web app | Kura's own `/signin` (the web app: Settings → Notes → Machiya) | No token: the browser's `machiya_session` cookie (with `MACHIYA_COOKIE_DOMAIN` covering Shiori's host), passed on only to `/kura/` and `/konbini/` (web/README.md). A 401 shows a Sign In link. |
 | Linux | `"machiyaToken"` in `~/.config/shiori/config.json`; `shiori pair <code>` prints it | That file, `chmod 600` (docs/linux.md). |
 

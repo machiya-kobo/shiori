@@ -1,7 +1,6 @@
 // The toolbar button's badge: how many pages are waiting to send, on every
-// tab, and the button's tooltip says so (Firefox, which has no app to show
-// the queue, and Safari on the Mac and iOS, beside the app's Waiting to
-// Send).
+// tab, and the button's tooltip says so (Safari on the Mac and iOS, beside
+// the app's Waiting to Send).
 // Prepended to background.js before upstream's code (which badges single
 // tabs: "!" for an error, "✓" for a page saved when its option is on).
 // Upstream clears a tab's badge with "", which would hide the count on that
@@ -24,8 +23,8 @@
   };
 
   // The toolbar's own text and tooltip, and the tabs holding a copy of them
-  // where the browser refused null (Firefox takes it; Safari's answer
-  // hasn't been seen), kept in step by show().
+  // where the browser refused null (Safari's answer to null hasn't been
+  // seen on a device), kept in step by show().
   let current = { text: '', title: 'Shiori' };
   const copies = new Set();
 

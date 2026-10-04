@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-# Build the upstream Hister extension and patch it for one browser:
+# Build the upstream Hister extension and patch it for Safari:
 #
-#   scripts/build-extension.sh                   Safari, staged in
-#       ShioriExtension/Resources/ (gitignored); every Xcode build copies it
-#       into both the iOS and macOS appex.
-#   scripts/build-extension.sh --target firefox  Firefox (desktop and
-#       Android) in build/firefox/, then linted and packed by web-ext into
-#       build/shiori-firefox-<version>.zip (unsigned; docs/firefox-plan.md).
+#   scripts/build-extension.sh   staged in ShioriExtension/Resources/
+#       (gitignored); every Xcode build copies it into both the iOS and
+#       macOS appex.
+#
+# (For other browsers, upstream Hister's own extension is the one to use.)
 #
 # Stages:
 #   1. npm ci + build of the upstream extension inside vendor/hister.
-#   2. Copy dist/; merge patches/manifest.shiori.json, then the browser's
-#      patches/manifest.<target>.json, over its upstream manifest.
-#   3. Prepend the browser's background files (its shims, the host and
+#   2. Copy dist/; merge patches/manifest.shiori.json, then
+#      patches/manifest.safari.json, over its upstream manifest.
+#   3. Prepend the background files (Safari's shims, the host and
 #      Shiori's core) to background.js and the content shim to content.js,
 #      and link the popup stylesheet override into popup.html.
 #   4. Point the default server URL at SHIORI_SERVER_URL (from local.yml).
@@ -23,13 +22,10 @@
 set -euo pipefail
 
 TARGET=safari
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --target) TARGET="${2:-}"; shift 2 ;;
-        --target=*) TARGET="${1#*=}"; shift ;;
-        *) echo "usage: $0 [--target safari|firefox]" >&2; exit 2 ;;
-    esac
-done
+if [[ $# -gt 0 ]]; then
+    echo "usage: $0" >&2
+    exit 2
+fi
 
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd -- "$REPO_ROOT"
@@ -53,26 +49,13 @@ UPSTREAM_EXT="$UPSTREAM_ROOT/webui/ext"
 DIST="$UPSTREAM_EXT/dist"
 UPSTREAM_DEFAULT_URL="http://127.0.0.1:4433/"
 
-# Per browser: where the bundle goes, which of upstream's manifests it
-# starts from, and what is prepended to background.js, in order (the host
-# defines shioriHost, which the core uses; scripts/shims.test.mjs and
-# scripts/host-local.test.mjs load the same files in the same order).
-case "$TARGET" in
-    safari)
-        RESOURCES="ShioriExtension/Resources"
-        UPSTREAM_MANIFEST="manifest.json"
-        BACKGROUND=(patches/safari-shims.js patches/ext/host-native.js patches/ext/core.js patches/shiori/search-core.js patches/ext/badge.js patches/ext/menus.js)
-        ;;
-    firefox)
-        RESOURCES="build/firefox"
-        UPSTREAM_MANIFEST="manifest_ff.json"
-        BACKGROUND=(patches/ext/host-local.js patches/ext/containers.js patches/ext/core.js patches/shiori/search-core.js patches/ext/pages.js patches/ext/omnibox.js patches/ext/badge.js patches/ext/menus.js)
-        ;;
-    *)
-        echo "error: unknown target '$TARGET' (safari or firefox)" >&2
-        exit 2
-        ;;
-esac
+# Where the bundle goes, which of upstream's manifests it starts from, and
+# what is prepended to background.js, in order (the host defines
+# shioriHost, which the core uses; scripts/shims.test.mjs loads the same
+# files in the same order).
+RESOURCES="ShioriExtension/Resources"
+UPSTREAM_MANIFEST="manifest.json"
+BACKGROUND=(patches/safari-shims.js patches/ext/host-native.js patches/ext/core.js patches/shiori/search-core.js patches/ext/badge.js patches/ext/menus.js)
 
 if [[ ! -d "$UPSTREAM_EXT" ]]; then
     echo "error: $UPSTREAM_EXT missing; run 'git submodule update --init'" >&2
@@ -146,28 +129,13 @@ cp -- patches/shiori/search.html patches/shiori/search.css patches/shiori/search
     patches/shiori/search-core.js "$RESOURCES/"
 # The Machiya rooms' other nine themes, the web app's own (scripts/palettes.mjs).
 cp -- web/app/palettes.css "$RESOURCES/palettes.css"
-# The DuckDuckGo hand-off is Safari's alone (manifest.safari.json).
-if [[ "$TARGET" == safari ]]; then
-    cp -- patches/shiori/redirect.js "$RESOURCES/shiori-redirect.js"
-fi
-# Shiori's settings page. Safari's shows what the app set (Safari →
-# Extensions → Shiori → Settings); Firefox has no app, so its page sets them.
-if [[ "$TARGET" == safari ]]; then
-    cp -- patches/shiori/options.html "$RESOURCES/shiori-options.html"
-    cp -- patches/shiori/options.css "$RESOURCES/shiori-options.css"
-    cp -- patches/shiori/options.js "$RESOURCES/shiori-options.js"
-else
-    cp -- patches/ext/settings.html "$RESOURCES/shiori-settings.html"
-    cp -- patches/ext/settings.css "$RESOURCES/shiori-settings.css"
-    cp -- patches/ext/settings.js "$RESOURCES/shiori-settings.js"
-    cp -- patches/ext/settings-file.js "$RESOURCES/shiori-settings-file.js"
-    # The sidebar (Firefox's sidebar_action), and the page list it shares
-    # with the address-bar keyword.
-    cp -- patches/ext/sidebar.html "$RESOURCES/shiori-sidebar.html"
-    cp -- patches/ext/sidebar.css "$RESOURCES/shiori-sidebar.css"
-    cp -- patches/ext/sidebar.js "$RESOURCES/shiori-sidebar.js"
-    cp -- patches/ext/pages.js "$RESOURCES/shiori-pages.js"
-fi
+# The DuckDuckGo hand-off (manifest.safari.json).
+cp -- patches/shiori/redirect.js "$RESOURCES/shiori-redirect.js"
+# Shiori's settings page (Safari → Extensions → Shiori → Settings): it
+# shows what the app set.
+cp -- patches/shiori/options.html "$RESOURCES/shiori-options.html"
+cp -- patches/shiori/options.css "$RESOURCES/shiori-options.css"
+cp -- patches/shiori/options.js "$RESOURCES/shiori-options.js"
 # Your server's status page, linked in the results page's footer.
 SHIORI_STATUS_URL="${SHIORI_STATUS_URL:-$(yml SHIORI_STATUS_URL)}"
 python3 scripts/status-link.py "$RESOURCES/search.html" "$SHIORI_STATUS_URL"
@@ -256,13 +224,12 @@ else
   echo "==> Room icons: neutral glyphs"
 fi
 
-if [[ "$TARGET" == safari ]]; then
-    # The app's ID for sendNativeMessage, from the bundle prefix (local.yml).
-    # Safari ignores it and answers from the containing app, so a build
-    # without one names the placeholder Apple's samples use.
-    SHIORI_BUNDLE_PREFIX="${SHIORI_BUNDLE_PREFIX:-$(yml SHIORI_BUNDLE_PREFIX)}"
-    APP_ID="${SHIORI_BUNDLE_PREFIX:+$SHIORI_BUNDLE_PREFIX.shiori}"
-    python3 - "$RESOURCES/background.js" "${APP_ID:-application.id}" <<'PY'
+# The app's ID for sendNativeMessage, from the bundle prefix (local.yml).
+# Safari ignores it and answers from the containing app, so a build
+# without one names the placeholder Apple's samples use.
+SHIORI_BUNDLE_PREFIX="${SHIORI_BUNDLE_PREFIX:-$(yml SHIORI_BUNDLE_PREFIX)}"
+APP_ID="${SHIORI_BUNDLE_PREFIX:+$SHIORI_BUNDLE_PREFIX.shiori}"
+python3 - "$RESOURCES/background.js" "${APP_ID:-application.id}" <<'PY'
 import sys
 p, app = sys.argv[1:]
 s = open(p, encoding="utf-8").read()
@@ -270,8 +237,7 @@ if "__SHIORI_APP_ID__" not in s:
     sys.exit("background.js lost the app ID placeholder")
 open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_APP_ID__", app))
 PY
-    echo "==> App ID: ${APP_ID:-(none: application.id)}"
-fi
+echo "==> App ID: ${APP_ID:-(none: application.id)}"
 
 # The Machiya rooms for the results page's switcher (optional).
 SHIORI_ROOMS="${SHIORI_ROOMS:-$(yml SHIORI_ROOMS)}"
@@ -288,7 +254,7 @@ if [[ -n "$SHIORI_SEARCH_PAGE_URL" && "$SHIORI_SEARCH_PAGE_URL" != */ ]]; then S
 python3 - "$RESOURCES" "$SHIORI_SEARCH_PAGE_URL" "$TARGET" <<'PY'
 import os, sys
 root, url, target = sys.argv[1:]
-for name in ("background.js", "shiori-options.js") if target == "safari" else ("background.js",):
+for name in ("background.js", "shiori-options.js"):
     p = os.path.join(root, name)
     s = open(p, encoding="utf-8").read()
     if "__SHIORI_SEARCH_PAGE_URL__" not in s:
@@ -334,13 +300,3 @@ cp -- assets/icon-128.png "$RESOURCES/assets/icons/icon128.png"
 
 python3 scripts/check-extension.py "$RESOURCES" "$TARGET"
 
-# Firefox: Mozilla's linter (0 errors or the build fails; warnings are
-# printed), then the unsigned package. Signing happens in the release
-# workflow (docs/firefox-plan.md, phase 5).
-if [[ "$TARGET" == firefox ]]; then
-    WEB_EXT="web-ext@10.7.0"
-    echo "==> $WEB_EXT lint"
-    npx --yes "$WEB_EXT" lint --source-dir "$RESOURCES" --self-hosted --output text
-    npx --yes "$WEB_EXT" build --source-dir "$RESOURCES" --artifacts-dir build \
-        --filename "shiori-firefox-$SHIORI_VERSION.zip" --overwrite-dest
-fi

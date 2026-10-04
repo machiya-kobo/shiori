@@ -1,7 +1,7 @@
 // The host behind the extension, on Safari: the Shiori app, through native
 // messaging (its handler reads and writes the App Group). Prepended to
 // background.js before ext/core.js, which reaches the host only through
-// `shioriHost`. Firefox has no app: ext/host-local.js stands in.
+// `shioriHost`.
 //
 //   settings()          the app's settings (SharedSettings.extensionPayload),
 //                       or null when the app can't be reached
@@ -11,17 +11,11 @@
 //   canReportQueue()    whether reportQueue can reach anything
 //   reportQueue(count, oldest)  the offline queue's size, for the app's
 //                       Settings → Waiting to Send
-//   ownsServer          whether the extension's own settings page may set
-//                       the Hister server (here no: the app sets it)
 //   machiya()           the Machiya sign-in, {token, principal}, from the
 //                       app's Keychain; {} when signed out or unreachable.
 //                       Never stored here: asked again when needed.
-//   ownsMachiya         whether the extension's pages may sign in and out
-//                       (here no: the app's Settings → Notes does)
 //   histerToken()       Hister's token, from the app's Keychain ('' when
 //                       unset or unreachable), sent as X-Access-Token
-//   ownsHisterToken     whether the extension's settings page sets it
-//                       (here no: the app's Settings → Server does)
 const shioriHost = (() => {
   const APP_ID = '__SHIORI_APP_ID__';
   const canSend = () =>
@@ -39,7 +33,6 @@ const shioriHost = (() => {
     setSettings: (values) => send({ type: 'set-settings', values }),
     canReportQueue: canSend,
     reportQueue: (count, oldest) => send({ type: 'queue', count, oldest }),
-    ownsServer: false,
     async machiya() {
       try {
         const reply = await send({ type: 'machiya' });
@@ -48,7 +41,6 @@ const shioriHost = (() => {
         return {};
       }
     },
-    ownsMachiya: false,
     async histerToken() {
       try {
         const reply = await send({ type: 'hister' });
@@ -57,6 +49,5 @@ const shioriHost = (() => {
         return '';
       }
     },
-    ownsHisterToken: false,
   };
 })();

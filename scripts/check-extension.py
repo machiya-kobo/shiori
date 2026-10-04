@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
-"""Check a built extension bundle (scripts/build-extension.sh's last step):
-every file the manifest names is there, Shiori's shims are in place, and
-the manifest keeps the rules (no cookies; on Firefox no native messaging,
-never in private windows, the fixed ID, update URL and floor).
+"""Check the built Safari extension bundle (scripts/build-extension.sh's
+last step): every file the manifest names is there, Shiori's shims are in
+place, and the manifest keeps the rules (no cookies, at most four suggested
+shortcuts).
 
-    check-extension.py ROOT TARGET     (TARGET: safari or firefox)
+    check-extension.py ROOT [safari]
 """
 import json
 import os
 import sys
 
-FIREFOX_ID = "shiori@machiya-kobo.github.io"
-FIREFOX_UPDATE_URL = "https://github.com/machiya-kobo/shiori/releases/latest/download/updates.json"
 
-
-def problems(root, target):
+def problems(root, target="safari"):
     m = json.load(open(os.path.join(root, "manifest.json")))
     out = []
     background = m.get("background") or {}
@@ -23,7 +20,7 @@ def problems(root, target):
     paths = list((m.get("icons") or {}).values())
     paths += list(((m.get("action") or {}).get("default_icon") or {}).values())
     paths += [background.get("service_worker")] + list(background.get("scripts") or [])
-    paths += [(m.get("action") or {}).get("default_popup"), options, (m.get("sidebar_action") or {}).get("default_panel")]
+    paths += [(m.get("action") or {}).get("default_popup"), options]
     paths += [js for cs in m.get("content_scripts", []) for js in cs["js"]]
     missing = [p for p in paths if p and not os.path.isfile(os.path.join(root, p))]
     if missing:
@@ -43,54 +40,20 @@ def problems(root, target):
         # The rooms' other themes (web/app/palettes.css), for every page on search.css.
         "palettes.css": [':root[data-palette="nord"]'],
     }
-    # The settings page: Safari's shows what the app set, Firefox's sets them.
-    if target == "safari":
-        marks["shiori-options.html"] = ["shiori-options.js", "search.css"]
-    else:
-        marks["shiori-settings.html"] = ["shiori-settings.js", "shiori-settings-file.js", "shiori-settings.css", "search.css"]
-        marks["shiori-sidebar.html"] = ["search-core.js", "shiori-pages.js", "shiori-sidebar.js", "shiori-sidebar.css"]
-        if (m.get("sidebar_action") or {}).get("default_panel") != "shiori-sidebar.html":
-            out.append("Firefox's sidebar must be shiori-sidebar.html")
-        if options != "shiori-settings.html":
-            out.append("Firefox's settings page must be shiori-settings.html (there's no app to set them)")
+    # The settings page shows what the app set.
+    marks["shiori-options.html"] = ["shiori-options.js", "search.css"]
+    if target != "safari":
+        out.append("unknown target %r (Safari is the only one)" % target)
 
-    if target == "safari":
-        marks["background.js"] += ["installIconShim", "root.ShioriSearch", "installQueueBadge", "installMenus"]
-        if "contextMenus" not in permissions:
-            out.append("Safari's right-click menu (ext/menus.js) needs contextMenus")
-        # More than four suggested shortcuts and Safari drops the extension's
-        # background without a word: nothing is captured and Safari's
-        # searches stay on DuckDuckGo.
-        suggested = [k for k, c in (m.get("commands") or {}).items() if c.get("suggested_key")]
-        if len(suggested) > 4:
-            out.append("manifest suggests %d shortcuts (%s); Safari allows at most 4" % (len(suggested), ", ".join(suggested)))
-    elif target == "firefox":
-        marks["background.js"] += ["shioriLocalSettings", "root.ShioriSearch", "installOmnibox", "installQueueBadge", "installMenus", "installContainerRules"]
-        if "contextualIdentities" not in permissions:
-            out.append("container rules need contextualIdentities, as a required permission (Firefox refuses it as optional)")
-        if "contextualIdentities" in (m.get("optional_permissions") or []):
-            out.append("Firefox drops contextualIdentities from optional_permissions: keep it in permissions")
-        if any("duckduckgo" in str(cs.get("matches")) for cs in m.get("content_scripts", [])) or os.path.exists(os.path.join(root, "shiori-redirect.js")):
-            out.append("Firefox never takes a DuckDuckGo search over (Shiori is a search engine there)")
-        if not (m.get("omnibox") or {}).get("keyword"):
-            out.append("Firefox's address-bar keyword (omnibox) is missing")
-        if background.get("scripts") != ["background.js"] or "service_worker" in background:
-            out.append("Firefox's background must be scripts: [background.js] (an event page)")
-        if "nativeMessaging" in permissions:
-            out.append("Firefox has no app to message: drop nativeMessaging")
-        if m.get("incognito") != "not_allowed":
-            out.append('Firefox must never load in private windows: incognito "not_allowed"')
-        bss = m.get("browser_specific_settings") or {}
-        gecko, android = bss.get("gecko") or {}, bss.get("gecko_android") or {}
-        if gecko.get("id") != FIREFOX_ID:
-            out.append("the add-on ID must stay %s (signing and updates follow it)" % FIREFOX_ID)
-        if gecko.get("update_url") != FIREFOX_UPDATE_URL:
-            out.append("the update URL must be %s" % FIREFOX_UPDATE_URL)
-        floor = gecko.get("strict_min_version")
-        if not floor or android.get("strict_min_version") != floor:
-            out.append("desktop and Android need the same strict_min_version (the current ESR)")
-    else:
-        out.append("unknown target %r" % target)
+    marks["background.js"] += ["installIconShim", "root.ShioriSearch", "installQueueBadge", "installMenus"]
+    if "contextMenus" not in permissions:
+        out.append("Safari's right-click menu (ext/menus.js) needs contextMenus")
+    # More than four suggested shortcuts and Safari drops the extension's
+    # background without a word: nothing is captured and Safari's
+    # searches stay on DuckDuckGo.
+    suggested = [k for k, c in (m.get("commands") or {}).items() if c.get("suggested_key")]
+    if len(suggested) > 4:
+        out.append("manifest suggests %d shortcuts (%s); Safari allows at most 4" % (len(suggested), ", ".join(suggested)))
 
     for name, wanted in marks.items():
         path = os.path.join(root, name)
@@ -99,10 +62,6 @@ def problems(root, target):
             continue
         s = open(path, encoding="utf-8").read()
         out += ["%s is missing the %s shim" % (name, mark) for mark in wanted if mark not in s]
-    if target == "firefox":
-        s = open(os.path.join(root, "background.js"), encoding="utf-8").read()
-        if "__SHIORI_APP_ID__" in s or "sendNativeMessage" in s:
-            out.append("Firefox's background.js carries the app's native messaging (host-native.js)")
     return out
 
 

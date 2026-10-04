@@ -1,5 +1,5 @@
-// Tests for patches/ext/menus.js, the right-click menu (Firefox), loaded as
-// the Firefox background has it (search-core before; resultsBase from the
+// Tests for patches/ext/menus.js, the right-click menu (Safari on the Mac),
+// loaded as the background has it (search-core before; resultsBase from the
 // core stubbed). A fake Hister, web and gateway.
 // Run: node --test scripts/*.test.mjs
 

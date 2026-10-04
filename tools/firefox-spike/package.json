@@ -1,9 +1,0 @@
-{
-  "name": "shiori-firefox-spike",
-  "private": true,
-  "description": "The Firefox build in headless Firefox against a fake Hister (docs/firefox-plan.md).",
-  "type": "module",
-  "devDependencies": {
-    "selenium-webdriver": "^4.35.0"
-  }
-}

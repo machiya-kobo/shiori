@@ -805,13 +805,13 @@ test('the build prepends the Safari background files in the order these tests lo
 test('on Safari the app owns the server: the extension never sets it', async () => {
   const storage = fakeStorage({ histerURL: 'https://kept.example/' });
   const { listeners } = loadCombinedSearch({ nativeReply: {}, storage });
-  // Even from the settings page's own address: the app sets the server.
-  const sender = { url: 'safari-web-extension://x/shiori-settings.html', tab: { id: 9 } };
+  // Even from an extension page: nothing in the extension answers it.
+  const sender = { url: 'safari-web-extension://x/shiori-options.html', tab: { id: 9 } };
   const reply = await new Promise((resolve) => {
     for (const l of listeners) if (l({ shiori: 'set-server', url: 'https://evil.example/' }, sender, resolve) === true) return;
     resolve(undefined);
   });
-  assert.equal(reply.ok, false);
+  assert.notEqual(reply && reply.ok, true);
   assert.equal(storage.data.histerURL, 'https://kept.example/');
 });
 

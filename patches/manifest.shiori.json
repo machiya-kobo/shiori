@@ -1,9 +1,9 @@
 {
-  "$comment": "Shiori's overrides for every browser, merged over upstream's manifest (vendor/hister/webui/ext/dist/manifest.json or manifest_ff.json) before the browser's own patches/manifest.<target>.json, by scripts/patch-manifest.mjs. Keys starting with $ are dropped, null deletes a key, objects merge recursively, arrays and scalars replace whole.",
+  "$comment": "Shiori's overrides, merged over upstream's manifest (vendor/hister/webui/ext/dist/manifest.json) before patches/manifest.safari.json, by scripts/patch-manifest.mjs. Keys starting with $ are dropped, null deletes a key, objects merge recursively, arrays and scalars replace whole.",
   "key": null,
   "name": "Shiori",
   "description": "Sends the pages you visit to your own Hister server.",
-  "$comment_content_scripts": "Upstream's content script (build-extension.sh checks it is unchanged). Safari adds its DuckDuckGo hand-off (patches/manifest.safari.json); Firefox never takes searches over.",
+  "$comment_content_scripts": "Upstream's content script (build-extension.sh checks it is unchanged). Safari adds its DuckDuckGo hand-off (patches/manifest.safari.json).",
   "content_scripts": [{ "js": ["content.js"], "matches": ["<all_urls>"] }],
   "icons": {
     "16": "assets/icons/icon-16.png",

@@ -1,7 +1,6 @@
-// Shiori's part of background.js, the same on Safari and Firefox:
-// prepended at build time after the browser's own shims and the host
-// (ext/host-native.js on Safari, the app; ext/host-local.js on Firefox,
-// storage.local), which it reaches only through `shioriHost`.
+// Shiori's part of Safari's background.js: prepended at build time after
+// Safari's shims and the host (ext/host-native.js: the app, through native
+// messaging), which it reaches only through `shioriHost`.
 //
 // 1. Offline capture queue. The Hister server is often unreachable (VPN
 //    off, no signal), and upstream's only retry lives in the page's content
@@ -209,8 +208,8 @@
         let done = true;
         const expired = Date.now() - (head.queuedAt ?? Date.now()) > MAX_AGE_MS;
         if (item && !expired) {
-          // Hister's token (histerToken: from the app on Safari, the settings
-          // page on Firefox), read fresh at replay and never stored with the
+          // Hister's token (histerToken, from the app), read fresh at replay
+          // and never stored with the
           // queued item. Unset while the server has no users; with users, a
           // replay without it would be refused and the queue would drop it.
           const { histerToken } = await storage.get(['histerToken']);
@@ -486,33 +485,8 @@
     }
   }
 
-  /** A new Hister server (the settings page, where the host owns it): the
-   *  queue follows it (followServer) and its rules are fetched at once, so
-   *  the queue has them before the first offline capture. Returns whether
-   *  the new server answered. */
-  const ownWrites = new Set(); // addresses setServer stored, for onChanged below
-  async function setServer(url) {
-    const base = baseOf(url);
-    const old = await serverBase();
-    if (base !== old) {
-      await withLock(async () => {
-        await followServer(old, base);
-        ownWrites.add(base);
-        try {
-          await storage.set({ histerURL: base });
-        } catch (error) {
-          ownWrites.delete(base);
-          throw error;
-        }
-      });
-    }
-    const reachable = await fetchRules(base);
-    if (reachable) void drain();
-    return reachable;
-  }
-
-  // A server set anywhere else follows the same way: on Safari the app's
-  // (askHost stores it), upstream's own options page, and upstream's
+  // A server set anywhere follows: on Safari the app's (askHost stores
+  // it), upstream's own options page, and upstream's
   // default on a fresh install, whose rules the start-up fetch above ran too
   // early to get.
   if (chrome.storage.onChanged && chrome.storage.onChanged.addListener) {
@@ -520,7 +494,7 @@
       if (area !== 'local' || !changes || !changes.histerURL) return;
       const old = baseOf(changes.histerURL.oldValue);
       const base = baseOf(changes.histerURL.newValue);
-      if (ownWrites.delete(base) || old === base) return;
+      if (old === base) return;
       withLock(() => followServer(old, base))
         .then(async () => {
           if (base && (await fetchRules(base))) void drain();
@@ -528,89 +502,13 @@
         .catch(() => {});
     });
   }
-
-  async function queueStatus() {
-    const index = await readIndex();
-    return { count: index.length, oldest: index.length ? Math.min(...index.map((e) => e.queuedAt || Date.now())) : null };
-  }
-
-  // The settings page's questions about the server and the queue. Only an
-  // extension page may set the server, and only where the host owns it (on
-  // Safari the app does). Upstream's listeners never see these (section 2
-  // hides `shiori:` messages from them).
-  if (chrome.runtime && chrome.runtime.onMessage && chrome.runtime.onMessage.addListener) {
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (!request || typeof request.shiori !== 'string') return false;
-      const fromSettings =
-        !!sender && typeof sender.url === 'string' && typeof chrome.runtime.getURL === 'function' &&
-        sender.url.split(/[?#]/)[0] === chrome.runtime.getURL('shiori-settings.html');
-      if (request.shiori === 'set-server') {
-        let url = null;
-        try {
-          const u = new URL(String(request.url || '').trim());
-          if (u.protocol === 'http:' || u.protocol === 'https:') url = u.href;
-        } catch (_) {}
-        if (!shioriHost.ownsServer || !fromSettings || !url) {
-          sendResponse({ ok: false });
-          return false;
-        }
-        setServer(url).then(
-          (reachable) => sendResponse({ ok: true, reachable }),
-          () => sendResponse({ ok: false }),
-        );
-        return true;
-      }
-      // Hister's token (Firefox: the settings page sets it; on Safari the
-      // app does). Checked here, kept in histerToken for upstream's
-      // background and Shiori's pages; the page is told only whether one is
-      // set, never the token. '' clears it.
-      if (request.shiori === 'set-hister-token' || request.shiori === 'hister-token-status') {
-        if (!fromSettings || !shioriHost.ownsHisterToken || !globalThis.ShioriSearch) {
-          sendResponse({ ok: false });
-          return false;
-        }
-        const run = async () => {
-          if (request.shiori === 'set-hister-token') {
-            const raw = String(request.token == null ? '' : request.token).trim();
-            const token = globalThis.ShioriSearch.histerToken(raw);
-            if (raw && !token) return { ok: false, invalid: true };
-            if (token) await chrome.storage.local.set({ histerToken: token });
-            else await chrome.storage.local.remove('histerToken');
-          }
-          const { histerToken } = await chrome.storage.local.get(['histerToken']);
-          return { ok: true, set: !!histerToken };
-        };
-        run().then(sendResponse, () => sendResponse({ ok: false }));
-        return true;
-      }
-      // What the whitelist would keep of a settings file, before it's applied.
-      if (request.shiori === 'judge-settings') {
-        if (!fromSettings || typeof shioriHost.judge !== 'function' || !request.values || typeof request.values !== 'object') {
-          sendResponse({ ok: false });
-          return false;
-        }
-        sendResponse({ ok: true, kept: shioriHost.judge(request.values) });
-        return false;
-      }
-      if (request.shiori === 'queue-status' || request.shiori === 'retry-queue') {
-        const run = request.shiori === 'retry-queue' ? drain() : Promise.resolve();
-        run.then(queueStatus).then(
-          (status) => sendResponse({ ok: true, ...status }),
-          () => sendResponse({ ok: false }),
-        );
-        return true;
-      }
-      return false;
-    });
-  }
 })();
 
 // Machiya sign-in (docs/signing-in.md). With Machiya's identity file the
 // rooms (Kura, Konbini, Niwa) want a proof: a token, `mch_…` pasted or
 // `mcd_…` from pairing with a code, sent as `Authorization: Bearer …`.
-// The host keeps it (Safari: the app's Keychain, asked over native
-// messaging and never stored here; Firefox: storage.local under its own
-// key, never synced, never logged). It goes only where search-core's host
+// The app keeps it (its Keychain, asked over native messaging and never
+// stored here). It goes only where search-core's host
 // rule allows (S.machiyaFetchOptions): the configured Kura and Konbini by
 // origin, never Hister or SearXNG, never across a redirect. Hister's
 // requests never carry it, and the capture queue strips `authorization`
@@ -660,33 +558,6 @@ const shioriMachiya = (() => {
   const isExtensionPage = (sender) =>
     !!sender && typeof sender.url === 'string' && typeof chrome.runtime.getURL === 'function' &&
     sender.url.startsWith(chrome.runtime.getURL('')) && (!sender.id || sender.id === chrome.runtime.id);
-  const isSettingsPage = (sender) =>
-    isExtensionPage(sender) && sender.url.split(/[?#]/)[0] === chrome.runtime.getURL('shiori-settings.html');
-
-  /** Firefox's settings page signs in: `entry` is a pasted token, or a code paired against Kura. */
-  async function signInWith(request) {
-    const Sx = S();
-    if (!Sx) return { ok: false, error: 'Sign-in is unavailable.' };
-    const entry = Sx.machiyaEntry(request.entry);
-    if (!entry) return { ok: false, error: 'Type the pairing code from identity pair, or paste a token (mch_… or mcd_…).' };
-    let signedIn;
-    if (entry.token) {
-      signedIn = { token: entry.token, principal: '' };
-    } else {
-      const stored = await chrome.storage.local.get(['shioriSettings']);
-      const kura = String({ niwaURL: KURA_DEFAULT, ...(stored.shioriSettings || {}) }.niwaURL || '');
-      try {
-        // Through the page's fetch (section 1's wrapper passes anything but Hister's API through).
-        signedIn = await Sx.machiyaPair(kura, entry.code, request.device, (url, init) => globalThis.fetch(url, init));
-      } catch (error) {
-        return { ok: false, error: error.message, kind: error.kind };
-      }
-    }
-    await shioriHost.setMachiya(signedIn.token, signedIn.principal);
-    cached = { at: 0, value: {} };
-    return { ok: true, text: Sx.machiyaStatusText(signedIn) };
-  }
-
   if (chrome.runtime && chrome.runtime.onMessage && chrome.runtime.onMessage.addListener) {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (!request || typeof request.shiori !== 'string' || !request.shiori.startsWith('machiya')) return false;
@@ -694,7 +565,6 @@ const shioriMachiya = (() => {
         sendResponse({ ok: false });
         return false;
       }
-      const owns = !!shioriHost.ownsMachiya;
       const answer = (promise) => {
         promise.then(sendResponse, () => sendResponse({ ok: false }));
         return true;
@@ -704,18 +574,10 @@ const shioriMachiya = (() => {
           // The token itself, for the results page's own fetches (it applies the host rule).
           return answer(signIn().then((v) => ({ ok: true, token: v.token || '', principal: v.principal || '' })));
         case 'machiya-status':
+          // Signing in and out happens in the app (Settings → Notes).
           return answer(signIn({ fresh: true }).then((v) => ({
-            ok: true, signedIn: !!v.token, principal: v.principal || '', owns, text: S() ? S().machiyaStatusText(v) : '',
+            ok: true, signedIn: !!v.token, principal: v.principal || '', owns: false, text: S() ? S().machiyaStatusText(v) : '',
           })));
-        case 'machiya-sign-in':
-          if (!owns || !isSettingsPage(sender)) break;
-          return answer(signInWith(request));
-        case 'machiya-sign-out':
-          if (!owns || !isSettingsPage(sender)) break;
-          return answer(Promise.resolve(shioriHost.clearMachiya()).then(() => {
-            cached = { at: 0, value: {} };
-            return { ok: true };
-          }));
       }
       sendResponse({ ok: false });
       return false;
@@ -827,7 +689,7 @@ const shioriMachiya = (() => {
     await chrome.storage.local.set(changes);
     // Hister's token, from the app (Safari): kept where upstream's background
     // and Shiori's pages read it (histerToken), gone when the app has none.
-    if (!shioriHost.ownsHisterToken && typeof shioriHost.histerToken === 'function' && globalThis.ShioriSearch) {
+    if (typeof shioriHost.histerToken === 'function' && globalThis.ShioriSearch) {
       const token = globalThis.ShioriSearch.histerToken(await shioriHost.histerToken());
       const current = (await chrome.storage.local.get(['histerToken'])).histerToken || '';
       if (token && token !== current) await chrome.storage.local.set({ histerToken: token });
@@ -926,10 +788,7 @@ const shioriMachiya = (() => {
         .then(() => shioriHost.setSettings(request.values))
         .then(
           () => refreshSettings({ after: true }).then(readSettings),
-          async (err) => {
-            // Where the host is the store itself (Firefox), its failure is
-            // the answer: never keep values its whitelist hasn't judged.
-            if (shioriHost.ownsServer) throw err;
+          async () => {
             // No app to answer: keep the change here, until the app has a say.
             const next = { ...(await readSettings()), ...request.values };
             await chrome.storage.local.set({ [SETTINGS_KEY]: next });

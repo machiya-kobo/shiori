@@ -918,8 +918,7 @@
     ],
   };
 
-  /** A glyph as an <svg>, built node by node: no markup, so Mozilla's
-   *  linter has no innerHTML to flag in the signed Firefox build. */
+  /** A glyph as an <svg>, built node by node: no markup to parse. */
   function roomGlyph(name) {
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
@@ -2085,7 +2084,7 @@
   // --- Hister's token (the Hister login's phase 1: docs/signing-in.md) ------------
   // The owner's one Hister token, sent as `X-Access-Token` by every Hister
   // caller that holds one: Safari's extension (from the app's Keychain),
-  // Firefox's (its settings field), the apps, Linux. Unset, nothing is sent,
+  // the apps, Linux. Unset, nothing is sent,
   // as before. Never in a URL, never logged. HisterKit's HisterToken is the
   // twin, with the same tests.
 
