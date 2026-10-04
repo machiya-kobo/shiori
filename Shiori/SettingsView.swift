@@ -203,6 +203,9 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.surface)
 
+            PillsSection()
+                .listRowBackground(palette.surface)
+
             Section {
                 Toggle("Search with Shiori", isOn: $app.combinedSearch)
             } header: {

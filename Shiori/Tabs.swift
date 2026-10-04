@@ -56,9 +56,10 @@ struct RootView: View {
                 SaveLinksView(target: target)
             }
             .onChange(of: app.addPageRequests) { _, _ in addingPage = true }
-            // Show Opened turned off while its pill was chosen: back to All.
-            .onChange(of: app.searchPage.showOpened) { _, shown in
-                if !shown, session.scope == .opened { session.scope = .all }
+            // The chosen pill gone (Show Opened off, or hidden in Settings →
+            // Search → Pills): back to All.
+            .onChange(of: app.searchScopes) { _, scopes in
+                if !scopes.contains(session.scope) { session.scope = .all }
             }
             .onChange(of: app.settingsRequests) { _, _ in
                 #if os(macOS)

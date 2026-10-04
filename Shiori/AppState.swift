@@ -99,6 +99,8 @@ final class AppState {
         }
         let page = SearchPageOptions(from: shared)
         if page != searchPage { searchPage = page }
+        let pillsNow = PillOrder.clean(shared?.array(forKey: SharedSettings.Key.pills))
+        if pillsNow != pills { pills = pillsNow }
         if let raw = shared?.string(forKey: SharedSettings.Key.theme) {
             let fromPage = AppTheme.resolve(raw)
             if fromPage != theme { theme = fromPage }
@@ -245,7 +247,7 @@ final class AppState {
 
     /// The pills over a list or search: Opened only while Show Opened is on.
     var searchScopes: [SearchScope] {
-        SearchScope.allCases.filter {
+        let available = SearchScope.allCases.filter {
             switch $0 {
             case .opened: searchPage.showOpened
             case .smallweb: smallweb != nil
@@ -253,6 +255,16 @@ final class AppState {
             default: true
             }
         }
+        // In the order set in Settings → Search → Pills, less the ones
+        // switched off (`PillOrder`).
+        return PillOrder.ordered(available: available.map(\.pillKey), pills)
+            .compactMap { key in available.first { $0.pillKey == key } }
+    }
+
+    /// Settings → Search → Pills: their order and which show, shared with
+    /// Safari's results page through the App Group (`PillOrder`).
+    var pills: [String] {
+        didSet { SharedSettings.defaults?.set(pills, forKey: SharedSettings.Key.pills) }
     }
 
     /// The small-web gateway, while its tab is on (Settings → Search).
@@ -495,6 +507,7 @@ final class AppState {
         client = HisterClient(serverURL: stored ?? fallback, token: HisterKeychain.token)
 
         let shared = SharedSettings.defaults
+        pills = PillOrder.clean(shared?.array(forKey: SharedSettings.Key.pills))
         combinedSearch = shared?.object(forKey: SharedSettings.Key.combinedSearch) as? Bool ?? true
         let defaultSearxng = (bundle.object(forInfoDictionaryKey: "ShioriDefaultSearxngURL") as? String) ?? ""
         searxngURL = shared?.string(forKey: SharedSettings.Key.searxngURL) ?? defaultSearxng

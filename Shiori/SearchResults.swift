@@ -14,6 +14,9 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
 
     var id: Self { self }
 
+    /// Its key in the pills' setting (`PillOrder.keys`).
+    var pillKey: String { self == .hister ? "pages" : rawValue }
+
     /// The Safari page's colours: All cyan, your pages blue, notes Kura's
     /// orange, the web Shiori's lens yellow (the Machiya rooms' colours:
     /// things wear their room's). `hister` is your pages, called Pages everywhere
