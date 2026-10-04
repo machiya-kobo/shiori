@@ -15,8 +15,18 @@ holds the rules and the traps the code can't tell you.
   matching version.
 - **Never edit `Shiori.xcodeproj/`, `ShioriExtension/Resources/` or
   `build/`**: all generated. Change `project.yml` or `patches/`.
-- **No personal details in the repo**: server addresses, network names,
-  device names, team IDs. They go in the gitignored `local.yml`/`local.env`.
+- **Never commit personal details, preferences or settings.** This
+  repository ships neutral defaults only. Server addresses, hostnames,
+  tailnet and network names, people's names, logins and emails, device names
+  and team IDs, vault and folder names, tokens, and anyone's own choices or
+  settings (themes and text size, rooms, `.env` and `local.*` files, the
+  identity file `identity.toml`, `prefs.sqlite3` and other data) stay
+  outside the repository: in the gitignored `local.yml`/`local.env`,
+  settings or the deployment's own repository. Code, tests, fixtures, docs,
+  comments, screenshots and commit messages use `example.com`,
+  `example.ts.net`, "the user" and the sample vault. Check the diff for them
+  before you push: once the repository is public, its history can't take
+  them back.
 - **No new network endpoints** without discussion. Shiori talks to the
   configured Hister server (and on its host the optional companion
   services, not in this repository: the feed service `/shiori/feed` and the

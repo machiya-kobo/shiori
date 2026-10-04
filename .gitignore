@@ -48,3 +48,5 @@ __pycache__/
 # The Quickstart's built pages
 /demo-site/
 /demo-app/
+# Machiya's identity file (logins, token hashes, the session key): never in the repository
+identity.toml
