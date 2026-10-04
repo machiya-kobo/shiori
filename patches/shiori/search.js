@@ -1747,15 +1747,11 @@
   }
 
   function webCard(r) {
-    const engines = el(
-      'span',
-      { class: 'engines' },
-      ...(r.engines || [r.engine]).filter(Boolean).map((e) => el('span', {}, e)),
-    );
+    // Not which engines found it (Google CSE, Bing…): where it is and when
+    // is what a result needs.
     const meta = el(
       'div',
       { class: 'meta' },
-      engines,
       el('a', { href: S.cachedURL(r.url) }, 'cached'),
       el('a', { href: S.archiveURL(r.url) }, 'archive.is'),
     );

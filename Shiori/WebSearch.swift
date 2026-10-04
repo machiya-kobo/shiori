@@ -169,7 +169,8 @@ struct WebResultsList: View {
 }
 
 /// One web result: title, where, the snippet with the query's words in
-/// bold, a proxied thumbnail, the engines, and whether Hister has it.
+/// bold, a proxied thumbnail, and whether Hister has it (not which engines
+/// found it).
 struct WebRow: View {
     let result: WebResult
     let query: String
@@ -204,16 +205,10 @@ struct WebRow: View {
                         .foregroundStyle(palette.secondaryText)
                         .lineLimit(3)
                 }
-                HStack(spacing: 8) {
-                    if let saved {
-                        LabelChip(label: saved.isEmpty ? "visited" : saved)
-                    }
-                    Text(result.engines.joined(separator: " · "))
-                        .textStyle(.caption2)
-                        .foregroundStyle(palette.secondaryText)
-                        .lineLimit(1)
+                if let saved {
+                    LabelChip(label: saved.isEmpty ? "visited" : saved)
+                        .padding(.top, 2)
                 }
-                .padding(.top, 2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if let thumbnail = result.thumbnail {

@@ -335,7 +335,6 @@ mark { background: var(--highlight); color: var(--text); border-radius: 3px; pad
   grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
   gap: 8px; margin-top: 8px; font: -apple-system-caption1; color: var(--secondary);
 }
-.meta .engines { display: flex; gap: 8px; }
 .meta a { text-decoration: none; }
 .chip {
   display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor;
