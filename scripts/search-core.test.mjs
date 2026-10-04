@@ -993,3 +993,16 @@ test("Hister's token: sent as X-Access-Token only when there is a sound one (His
   assert.deepEqual(plain(S.histerHeaders('', { Accept: 'application/json' })), { Accept: 'application/json' });
   assert.deepEqual(plain(S.histerHeaders(undefined)), {});
 });
+
+test('All spreads your pages and notes evenly among the web results (MixedResults twins)', () => {
+  const plain = (v) => JSON.parse(JSON.stringify(v));
+  assert.deepEqual(plain(S.mixCounts(4, 2)), [1, 0, 1, 0]);
+  assert.deepEqual(plain(S.mixCounts(2, 6)), [3, 3]);
+  assert.deepEqual(plain(S.mixCounts(10, 40)), [4, 4, 4, 4, 4, 4, 4, 4, 4, 4]);
+  assert.deepEqual(plain(S.mixCounts(3, 4)), [2, 1, 1]);
+  assert.deepEqual(plain(S.mixCounts(3, 0)), [0, 0, 0]);
+  assert.deepEqual(plain(S.mixCounts(0, 5)), []);
+  assert.equal(S.mixCounts(7, 13).reduce((a, b) => a + b, 0), 13);
+  assert.deepEqual(plain(S.alternate(['p1', 'p2', 'p3'], ['n1'])), ['p1', 'n1', 'p2', 'p3']);
+  assert.deepEqual(plain(S.alternate([], ['n1', 'n2'])), ['n1', 'n2']);
+});

@@ -86,7 +86,7 @@
   // Every tab keeps All's width (Small Web, News and the rest shrank):
   // results in the first column, the second empty but for All's Info;
   // Images' tiles take both (search.css).
-  const wideCat = (cat) => ['general', 'hister', 'vault', 'images', 'videos', 'news', 'smallweb', 'files'].includes(cat || 'general');
+  const wideCat = (cat) => ['general', 'web', 'hister', 'vault', 'images', 'videos', 'news', 'smallweb', 'files'].includes(cat || 'general');
   document.body.classList.toggle('two-col', wideCat(params.get('cat')) && twoColumns(header || {}));
   document.body.dataset.cat = params.get('cat') || 'general';
 
@@ -106,9 +106,9 @@
     new Promise((resolve) => setTimeout(resolve, 500)),
   ]);
   const FOLDS_KEY = 'shioriFolds';
-  // Your Pages and Your Notes in All: the top five each, then "N results ›"
-  // to the full search ("How Many" is gone).
-  const ALL_COUNT = 5;
+  // Your pages and notes in All: a page of each (as the Pages tab's), all
+  // of them among the web results (mixIn).
+  const ALL_COUNT = 20;
   const stored = await chrome.storage.local.get(['histerURL', 'histerToken', PAGE_CACHE_KEY, FOLDS_KEY, 'shioriSettings']);
   // Hister's token where this device has one (the extension; the hosted
   // page has none: its host signs it in), sent as X-Access-Token.
@@ -238,6 +238,8 @@
     ...(settings.vaultTab ? [['vault', 'Notes']] : []),
     ...(settings.webResults
       ? [
+          // The web alone: All without your pages and notes (no count).
+          ['web', 'Web'],
           ['images', 'Images'],
           ['videos', 'Videos'],
           ['news', 'News'],
@@ -248,6 +250,8 @@
     ...(hasFiles && histerBase ? [['files', 'Files']] : []),
   ];
   const category = CATEGORIES.some(([c]) => c === params.get('cat')) ? params.get('cat') : 'general';
+  // All and Web are SearXNG's general results; Web without yours mixed in.
+  const webLike = category === 'general' || category === 'web';
   const nextHeader = {
     theme: settings.theme || '',
     palette: settings.palette || '',
@@ -1371,7 +1375,7 @@
    * Images, Videos or News (a label has none of those), then All.
    */
   function labelHref(label) {
-    const cat = ['images', 'videos', 'news'].includes(category) ? 'general' : category;
+    const cat = ['web', 'images', 'videos', 'news'].includes(category) ? 'general' : category;
     return link({ q: `label:${label}`, cat, p: 1, hk: '' });
   }
 
@@ -2046,7 +2050,7 @@
   (async () => {
     const section = $('answer');
     const text = S.webQuery(q);
-    if (!aiBase || category !== 'general' || page !== 1 || !settings.webResults || settings.aiAnswer === false || !text || S.hasBang(q)) return;
+    if (!aiBase || !webLike || page !== 1 || !settings.webResults || settings.aiAnswer === false || !text || S.hasBang(q)) return;
     const status = await aiStatus;
     if (!status || !status.enabled || !status.answer) return;
     const body = $('answer-body');
@@ -2120,7 +2124,7 @@
   // The Info card comes with the web results, a second after your pages:
   // drawing those first made the page jump when it arrived. So the results
   // wait, unseen, for the web (at most 1.5 s), then show at once.
-  const holding = category === 'general' && page === 1 && settings.webResults && settings.showInfobox !== false && !!searxBase;
+  const holding = webLike && page === 1 && settings.webResults && settings.showInfobox !== false && !!searxBase;
   // var: restoreScroll() calls settle() on paths that return before here.
   var settled = false;
   function settle() {
@@ -2140,13 +2144,12 @@
   let webArrived;
   const webReply = new Promise((resolve) => (webArrived = resolve));
   const suggest = () => webReply.then((d) => (d && d.suggestions) || []);
-  if (category === 'general') didYouMeanLine(suggest());
+  if (webLike) didYouMeanLine(suggest());
 
   let histerDocs = [];
-  // On All your pages and notes have no sections: their top three each go
+  // On All your pages and notes have no sections: a page of each goes
   // among the web results (mixIn, below), each card saying whose it is,
   // and their totals go on the Pages and Notes pills.
-  const MIX_COUNT = 3;
   let myPages = [];
   let myNotes = [];
   const showHister = category === 'general' && settings.histerInGeneral && page === 1 && !!histerBase;
@@ -2172,24 +2175,29 @@
   }
 
   /**
-   * Your pages and notes among the web results: a page after the first,
-   * a note after the second, and so on (each kind's top three), each card
-   * saying whose it is; after the last web result what's left over. With
-   * no web results, the list is theirs.
+   * Your pages and notes among the web results: pages and notes taking
+   * turns, spread evenly from the first web result to the last
+   * (S.mixCounts), each card saying whose it is. With no web results,
+   * the list is theirs.
    */
   function mixIn() {
-    const mine = [];
-    for (let i = 0; i < MIX_COUNT; i++) mine.push(myPages[i], myNotes[i]);
+    const mine = S.alternate(myPages, myNotes).filter(Boolean);
+    if (!mine.length) return;
     const list = $('web-results');
     const web = [...list.children];
-    mine.filter(Boolean).forEach((card, i) => {
+    for (const card of mine) {
       card.classList.add('mixed');
       const title = card.querySelector('.title');
       if (title) title.dataset.label = card.classList.contains('vault-card') ? 'Your note' : 'Your page';
-      if (web[i]) web[i].after(card);
-      else list.append(card);
+    }
+    const counts = S.mixCounts(web.length, mine.length);
+    let next = 0;
+    if (!web.length) list.append(...mine);
+    web.forEach((card, i) => {
+      card.after(...mine.slice(next, next + counts[i]));
+      next += counts[i];
     });
-    if (mine.some(Boolean)) $('web').hidden = false;
+    $('web').hidden = false;
   }
 
   /** A section with nothing to show: its heading, faded, and why. */
@@ -2220,7 +2228,7 @@
       first.docs = first.docs.slice(0, Math.max(0, ALL_COUNT - first.cards.length));
       if (!first.cards.length && !first.docs.length) return;
       // The pages you opened (lifted to the top) first, then the rest.
-      myPages = [...first.cards, ...first.docs.map(histerCard)].slice(0, MIX_COUNT);
+      myPages = [...first.cards, ...first.docs.map(histerCard)];
       const shown = first.cards.length + first.docs.length;
       // Hister counts the pages you opened in its total: hidden (Show
       // Opened off), they leave the count too.
@@ -2243,7 +2251,7 @@
       if (result.closeMatches) $('vault-title').textContent = `Your Notes · for “${result.closeMatches}”`;
       if (!vaultDocs.length) return;
       const cards = await konbiniCards();
-      myNotes = vaultDocs.slice(0, MIX_COUNT).map((d) => vaultCard(d, cards));
+      myNotes = vaultDocs.slice(0, ALL_COUNT).map((d) => vaultCard(d, cards));
       setPillCount('vault', Math.max(result.total || 0, vaultDocs.length));
     } catch (error) {
       // Kura wants the sign-in: said where the notes would be.
@@ -2279,19 +2287,19 @@
   // "wiki" as a word: Wikipedia's article first, with its Info card. The
   // search without the word starts now, beside the main one, in case the
   // typed search finds no article.
-  const wikiWords = page === 1 && category === 'general' ? S.wikiQuery(wq) : null;
+  const wikiWords = page === 1 && webLike ? S.wikiQuery(wq) : null;
   const wikiAlt = wikiWords && !(data && data.shioriWiki) ? searx(wikiWords).catch(() => null) : null;
   if (!data) {
     const url = new URL(`${searxBase}search`);
-    url.search = new URLSearchParams({ q: wq, format: 'json', pageno: String(page), categories: category }).toString();
+    url.search = new URLSearchParams({ q: wq, format: 'json', pageno: String(page), categories: webLike ? 'general' : category }).toString();
     if (time) url.searchParams.set('time_range', time);
     try {
-      data = await fetchJSON(url.href, { timeout: page === 1 && category === 'general' ? WEB_TIMEOUT_MS : 10000 });
+      data = await fetchJSON(url.href, { timeout: page === 1 && webLike ? WEB_TIMEOUT_MS : 10000 });
       pageState.web = data;
       saveState();
     } catch (_) {
       webArrived(null);
-      if (page === 1 && category === 'general') {
+      if (page === 1 && webLike) {
         await histerDone;
         await vaultDone;
         // Unreachable (VPN off) or broken, and nothing of yours to show:
@@ -2336,7 +2344,7 @@
     $('correction').hidden = false;
   }
   const box = wiki.infobox || (data.infoboxes && data.infoboxes[0]);
-  if (settings.showInfobox && category === 'general' && page === 1 && box) {
+  if (settings.showInfobox && webLike && page === 1 && box) {
     $('infobox-slot').querySelector('.infobox')?.remove();
     $('infobox-slot').append(infobox(box)); // last, under the AI answer and Related Searches
   }
@@ -2349,7 +2357,7 @@
     fold($('suggestions'));
     $('suggestions').hidden = false;
   }
-  if (settings.showRelated && page === 1 && category === 'general') {
+  if (settings.showRelated && page === 1 && webLike) {
     if (suggestions.length) drawRelated(suggestions);
     // The engines that send related searches drop out now and then (a
     // CAPTCHA, a rate limit): the autocomplete's completions stand in.
@@ -2366,11 +2374,11 @@
   $('web').hidden = false;
   placeSide.ready = true;
   placeSide();
-  $('web-title').textContent = category === 'general' ? 'Web' : CATEGORIES.find(([c]) => c === category)[1];
+  $('web-title').textContent = webLike ? 'Web' : CATEGORIES.find(([c]) => c === category)[1];
   const count = data.number_of_results > 0 ? `${data.number_of_results.toLocaleString()} results · ` : '';
-  // On All the web's results need no heading: they're the list, your
-  // pages and notes among them.
-  if (category === 'general') $('web-title').hidden = true;
+  // On All and Web the web's results need no heading: they're the list
+  // (on All, your pages and notes among them).
+  if (webLike) $('web-title').hidden = true;
   $('timing').textContent = cached ? count.replace(/ · $/, '') : `${count}${seconds} s`;
   const slow = (data.unresponsive_engines || []).map((e) => (Array.isArray(e) ? e[0] : e));
   $('engines').textContent = slow.length ? `No answer from ${slow.join(', ')}` : '';

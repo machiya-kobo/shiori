@@ -112,7 +112,7 @@ test('the search page asks for /shiori/ai/ only when built with SHIORI_AI=1', as
   assert.match(page, /const aiStatus = aiBase \? fetchJSON\(`\$\{aiBase\}status`/);
   assert.equal(page.match(/\$\{aiBase\}/g).length, 2, 'status, and aiPost');
   assert.match(page, /aiBase && S\.summarizable\(/);
-  assert.match(page, /if \(!aiBase \|\| category !== 'general'/);
+  assert.match(page, /if \(!aiBase \|\| !webLike \|\| page !== 1/);
 });
 
 test('the web app asks for /shiori/ai/ only when built with SHIORI_AI=1', () => {

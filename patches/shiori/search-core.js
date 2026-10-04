@@ -1766,6 +1766,30 @@
     return /^mc[hd]_[A-Za-z0-9_.-]{8,4096}$/.test(token) ? token : '';
   }
 
+  // --- All: your pages and notes among the web results ------------------------------
+  // HisterKit's MixedResults is the twin, with the same tests.
+
+  /**
+   * How many of yours follow each of `web` web results, `mine` in all,
+   * spread evenly from the first: [1, 0, 1, 0] for 4 and 2, [3, 3] for 2
+   * and 6. With no web results there's no slot: they're the whole list.
+   */
+  function mixCounts(web, mine) {
+    const w = Math.max(0, Math.floor(web)), m = Math.max(0, Math.floor(mine));
+    if (!w) return [];
+    return Array.from({ length: w }, (_, i) => Math.ceil(((i + 1) * m) / w) - Math.ceil((i * m) / w));
+  }
+
+  /** Pages and notes taking turns (a page first), then whichever is left. */
+  function alternate(pages, notes) {
+    const out = [];
+    for (let i = 0; i < Math.max(pages.length, notes.length); i++) {
+      if (i < pages.length) out.push(pages[i]);
+      if (i < notes.length) out.push(notes[i]);
+    }
+    return out;
+  }
+
   // --- Hister's token (the Hister login's phase 1: docs/signing-in.md) ------------
   // The owner's one Hister token, sent as `X-Access-Token` by every Hister
   // caller that holds one: Safari's extension (from the app's Keychain),
@@ -1987,6 +2011,8 @@
     fieldButtons,
     histerToken,
     histerHeaders,
+    mixCounts,
+    alternate,
     roomsSwitcher,
     roomGlyph,
     collectionAliases,

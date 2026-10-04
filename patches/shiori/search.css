@@ -204,6 +204,7 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
 #categories a[data-cat="general"] { --tab: var(--tab-general); }
 #categories a[data-cat="hister"] { --tab: var(--accent); }
 #categories a[data-cat="vault"] { --tab: var(--notes); }
+#categories a[data-cat="web"] { --tab: var(--web); }
 #categories a[data-cat="images"] { --tab: var(--tab-images); }
 #categories a[data-cat="videos"] { --tab: var(--tab-videos); }
 #categories a[data-cat="news"] { --tab: var(--tab-news); }
@@ -692,7 +693,7 @@ body.settling #skeleton { display: block; position: absolute; inset: 0 0 auto 0;
    phone drew the result placeholders in a sliver). */
 @media (min-width: 1100px) {
   body.two-col.settling:not(.with-preview) #skeleton { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 28rem); column-gap: 24px; align-items: start; }
-  body.two-col[data-cat="general"] .sk-info { display: block; margin-top: 38px; }
+  body.two-col:is([data-cat="general"], [data-cat="web"]) .sk-info { display: block; margin-top: 38px; }
 }
 .sk-line { height: 0.8em; border-radius: 6px; margin: 0.6em 0; background: linear-gradient(90deg, var(--raised) 0%, var(--line) 50%, var(--raised) 100%); background-size: 200% 100%; animation: sk-shimmer 1.2s ease-in-out infinite; }
 .sk-line.title { width: 55%; height: 1.05em; }
