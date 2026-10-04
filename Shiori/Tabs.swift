@@ -11,7 +11,7 @@ struct QueryRoute: Hashable {
 struct RootView: View {
     /// `add` is an action, not a place: choosing it opens Add Page and
     /// stays on the tab you were on.
-    enum Tab: String, Hashable { case recent, labels, add }
+    enum Tab: String, Hashable { case recent, labels, add, settings }
 
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
@@ -20,7 +20,8 @@ struct RootView: View {
     /// Held here, above the layout choice, so a layout switch keeps it.
     @State private var session = SearchSession()
     @State private var addingPage = false
-    /// Settings asked for by `shiori://settings`, on the iPhone's layout.
+    /// Settings asked for by `shiori://settings` on an iPad's narrow
+    /// layout (the iPhone has its Settings tab).
     @State private var showingSettings = false
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -63,8 +64,9 @@ struct RootView: View {
                 #if os(macOS)
                 openSettings()
                 #else
-                // The three columns open their Settings row themselves.
-                if !(UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular) { showingSettings = true }
+                // The three columns open their Settings row themselves; the
+                // tabs have a Settings tab.
+                if !(UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular) { selection = .settings }
                 #endif
             }
             .sheet(isPresented: $showingSettings) {
@@ -107,8 +109,9 @@ struct RootView: View {
         #endif
     }
 
-    /// The iPhone: Library (with the search field at its top), Labels, and
-    /// + to add a page. The gear is the only thing top right.
+    /// The iPhone: Library (with the search field at its top), Labels, +
+    /// to add a page, and Settings. The tabs' own screens have no title
+    /// row: the search field is the top of the Library.
     private var tabs: some View {
         TabView(selection: Binding(get: { selection }, set: { tab in
             if tab == .add { addingPage = true } else { selection = tab }
@@ -117,18 +120,29 @@ struct RootView: View {
                 NavigationStack {
                     SearchScreen()
                         .withDestinations()
-                        .settingsButton()
+                        .tabRoot()
                 }
             }
             SwiftUI.Tab("Labels", systemImage: "tag", value: Tab.labels) {
                 NavigationStack {
                     LabelsScreen()
                         .withDestinations()
-                        .settingsButton()
+                        .tabRoot()
                 }
             }
             SwiftUI.Tab("Add Page", systemImage: "plus", value: Tab.add) {
                 Color.clear
+            }
+            // Theme, appearance, text size and the rest: one tap away.
+            SwiftUI.Tab("Settings", systemImage: "gearshape", value: Tab.settings) {
+                NavigationStack {
+                    SettingsView()
+                        #if os(iOS)
+                        // A small title, not a large heading: it names the
+                        // pages for Back.
+                        .navigationBarTitleDisplayMode(.inline)
+                        #endif
+                }
             }
         }
         .tabViewStyle(.sidebarAdaptable)
@@ -141,11 +155,16 @@ struct RootView: View {
 }
 
 extension View {
-    /// The iPhone's way to Settings: a gear at the top of each tab, opening
-    /// a sheet (the tab bar keeps History, Labels and Search). The Mac has
-    /// its Settings window, the iPad a sidebar row.
-    func settingsButton() -> some View {
-        modifier(SettingsButton())
+    /// A tab's own screen on the iPhone: no navigation bar, so no title
+    /// row; its search field (`TabSearchField`) is the top. The title still
+    /// names it for a pushed list's Back. Settings is a tab of its own; the
+    /// Mac has its Settings window, the iPad a sidebar row.
+    func tabRoot() -> some View {
+        #if os(iOS)
+        toolbar(.hidden, for: .navigationBar)
+        #else
+        self
+        #endif
     }
 
     /// Where stored pages and query lists open, for every stack.
@@ -325,6 +344,7 @@ struct LabelsScreen: View {
     /// Narrows the lists by name as you type (the Library's pinned field,
     /// here for labels: there can be many).
     @State private var find = ""
+    @FocusState private var finding: Bool
 
     private func matches(_ name: String) -> Bool {
         let typed = find.trimmingCharacters(in: .whitespaces)
@@ -385,13 +405,7 @@ struct LabelsScreen: View {
             }
         }
         .themedBackground()
-        #if os(iOS)
-        .searchable(text: $find, placement: .navigationBarDrawer(displayMode: .always), prompt: Text("Find a Label"))
-        .textInputAutocapitalization(.never)
-        #else
-        .searchable(text: $find, prompt: Text("Find a Label"))
-        #endif
-        .autocorrectionDisabled()
+        .topBar { TabSearchField(prompt: "Find a Label", text: $find, focus: $finding) }
         .overlay {
             if !app.rules.labels.isEmpty, collections.isEmpty, labels.isEmpty {
                 ContentUnavailableView.search(text: find)
@@ -442,20 +456,17 @@ struct SearchScreen: View {
                 RecentScreen()
             }
         }
-        .searchable(text: $session.text, placement: searchPlacement, prompt: Text(session.scope.prompt))
-        #if os(iOS)
-        // Query words are case-sensitive (label:books), and Hister
-        // remembers what you opened by the exact query.
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        #endif
-        .searchFocused($searchFocused)
+        // Above the pills. Query words are case-sensitive (label:books),
+        // and Hister remembers what you opened by the exact query, so the
+        // field neither capitalises nor corrects.
+        .topBar {
+            TabSearchField(prompt: session.scope.prompt, text: $session.text, focus: $searchFocused) { run() }
+        }
         .onChange(of: searchFocused) { _, focused in
             if focused { app.reloadRecentSearches() }
         }
         .onChange(of: session.scope) { _, _ in run(recording: false) }
         .task { await app.loadCardsIfNeeded() }
-        .onSubmit(of: .search) { run() }
         .onChange(of: session.text) { _, new in
             if new.isEmpty { session.submitted = nil }
         }
@@ -477,18 +488,6 @@ struct SearchScreen: View {
 }
 
 extension SearchScreen {
-    /// Always visible on iPhone. iOS 27 (simulator) draws this
-    /// app's search-role tab inline in the tab bar rather than as the
-    /// detached circle, even in a bare TabView, so the field would
-    /// otherwise hide until the list is pulled down.
-    private var searchPlacement: SearchFieldPlacement {
-        #if os(iOS)
-        .navigationBarDrawer(displayMode: .always)
-        #else
-        .automatic
-        #endif
-    }
-
     /// `recording`: into Recent (Return, a recent, a tip), not a live search.
     private func run(recording: Bool = true) {
         let query = session.text.trimmingCharacters(in: .whitespaces)
@@ -498,6 +497,72 @@ extension SearchScreen {
         }
         if recording { app.recordSearch(query) }
         session.submitted = query
+    }
+}
+
+/// The iPhone tabs' search field, at the very top: the tabs have no title
+/// row. A field of the app's own, as a pushed list's: `.searchable` lives
+/// in the navigation bar's drawer, which kept an empty title row above it,
+/// and a search-role tab draws inline in iOS 27's tab bar. No
+/// capitalisation or correction (Hister matches the exact words); a tap
+/// into it selects what's there, as every search field does.
+struct TabSearchField: View {
+    let prompt: String
+    @Binding var text: String
+    var focus: FocusState<Bool>.Binding
+    var submit: () -> Void = {}
+    @Environment(\.palette) private var palette
+    @State private var selection: TextSelection?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(palette.secondaryText)
+            TextField(prompt, text: $text, selection: $selection)
+                .textFieldStyle(.plain)
+                .focused(focus)
+                .submitLabel(.search)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+                .onSubmit(submit)
+            if !text.isEmpty {
+                Button("Clear", systemImage: "xmark.circle.fill") { text = "" }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(palette.secondaryText)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .modifier(SearchFieldShape())
+        .padding(.horizontal)
+        .padding(.top, 6)
+        .topBarBackground()
+        .onChange(of: focus.wrappedValue) { _, focused in
+            guard focused, !text.isEmpty else { return }
+            // After the tap has placed its caret, or it would undo this.
+            Task { selection = TextSelection(range: text.startIndex..<text.endIndex) }
+        }
+    }
+}
+
+/// The field's capsule: Liquid Glass on iOS 26 and later, as the system's
+/// search field is (chrome, not content), else the theme's surface.
+private struct SearchFieldShape: ViewModifier {
+    @Environment(\.palette) private var palette
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        if #available(iOS 26, *) {
+            content.glassEffect(.regular.interactive(), in: .capsule)
+        } else {
+            content.background(palette.surface, in: .capsule)
+        }
+        #else
+        content.background(palette.surface, in: .capsule)
+        #endif
     }
 }
 
@@ -539,34 +604,6 @@ struct SearchTips: View {
                 }
             }
         }
-    }
-}
-
-private struct SettingsButton: ViewModifier {
-    @State private var showing = false
-
-    func body(content: Content) -> some View {
-        content
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Settings", systemImage: "gearshape") { showing = true }
-                        .help("Settings")
-                }
-            }
-            #if os(iOS)
-            // The large title on the gear's row, not a row of its own.
-            .toolbarTitleDisplayMode(.inlineLarge)
-            #endif
-            .sheet(isPresented: $showing) {
-                NavigationStack {
-                    SettingsView()
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showing = false }
-                            }
-                        }
-                }
-            }
     }
 }
 
