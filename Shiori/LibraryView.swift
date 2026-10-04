@@ -152,6 +152,14 @@ struct LibraryView: View {
         #if os(iOS)
         // shiori://settings: the iPad's Settings is a sidebar row.
         .onChange(of: app.settingsRequests) { _, _ in item = .settings }
+        // Cleared (the field's X, ⌘A and delete, Escape): back to the
+        // Library's newest, the search's rows and its sidebar row let go.
+        // Not while the field searches within a collection or label.
+        .onChange(of: session.text) { _, new in
+            guard new.trimmingCharacters(in: .whitespaces).isEmpty, session.within == nil else { return }
+            session.submitted = nil
+            if case .search = item { item = .recent }
+        }
         #endif
         .onChange(of: item) { _, new in
             session.selected = nil

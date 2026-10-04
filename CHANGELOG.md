@@ -5,6 +5,23 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The tag also releases Shiori for Firefox. The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.3.2 (2026-10-04)
+
+### Added
+
+- The apps' Sign in to Hister starts with **Sign In with Tailscale** when
+  Hister offers its tailnet sign-in (`oauthProviders` has "oidc"): the
+  sign-in sheet goes straight to it, one tap with no form, once the
+  sign-in helper takes the provider; until then it opens the sign-in page
+  a tap from it.
+
+### Fixed
+
+- On the Mac and iPad, clearing the search field (its X, deleting the
+  text, Escape) goes back to the Library's newest, as on the iPhone and
+  the web app; the cleared search's results, Did you mean and AI Answer
+  stayed until another search.
+
 ## 0.3.1 (2026-10-04)
 
 ### Fixed

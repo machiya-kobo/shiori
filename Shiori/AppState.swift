@@ -223,14 +223,20 @@ final class AppState {
     /// whose body is empty until it's true (SwiftUI never runs an empty
     /// view's `.task`: it never showed).
     private(set) var histerSignInOffered = false
+    /// Hister's sign-in providers besides the password (`oauthProviders`):
+    /// "oidc" puts Sign In with Tailscale first.
+    private(set) var histerOAuthProviders: [String] = []
 
     func checkHisterSignIn() async {
         guard let server = client?.baseURL else {
             histerSignInOffered = false
+            histerOAuthProviders = []
             return
         }
         let offered = await HisterAccount.available(server: server)
         if offered != histerSignInOffered { histerSignInOffered = offered }
+        let providers = offered ? await HisterAccount.oauthProviders(server: server) : []
+        if providers != histerOAuthProviders { histerOAuthProviders = providers }
     }
 
     /// Keeps a sign-in. Nil when kept, else what to tell the person.

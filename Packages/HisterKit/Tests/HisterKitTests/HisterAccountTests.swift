@@ -42,6 +42,9 @@ struct HisterAccountTests {
         #expect(HisterAccount.callback(URL(string: "shiori://signed-in#sid=nope&hister=\(Self.S)")!) == nil)
         let start = HisterAccount.browserSignInURL(server: Self.server).absoluteString
         #expect(start == "https://account.example/machiya/signin?app=1&return=shiori://signed-in")
+        #expect(HisterAccount.browserSignInURL(server: Self.server, provider: "oidc").absoluteString
+            == "https://account.example/machiya/signin?app=1&return=shiori://signed-in&provider=oidc")
+        #expect(HisterAccount.browserSignInURL(server: Self.server, provider: "evil&x=1").absoluteString == start)
     }
 
     @Test func availableOnlyWhenTheHelperSaysHisterHasUsers() async {
@@ -98,6 +101,15 @@ struct HisterAccountTests {
         let logout = try #require(requests.last)
         #expect(logout.url?.path() == "/api/logout")
         #expect(logout.value(forHTTPHeaderField: "Cookie") == "hister=\(Self.S)")
+    }
+
+    @Test func theProvidersComeFromHistersConfig() async {
+        StubProtocol.handle(Self.host) { _ in (200, Data(#"{"oauthProviders":["oidc"],"semanticEnabled":false}"#.utf8)) }
+        #expect(await HisterAccount.oauthProviders(server: Self.server, session: session) == ["oidc"])
+        StubProtocol.handle(Self.host) { _ in (200, Data(#"{"semanticEnabled":false}"#.utf8)) }
+        #expect(await HisterAccount.oauthProviders(server: Self.server, session: session) == [])
+        StubProtocol.handle(Self.host) { _ in (403, Data()) }
+        #expect(await HisterAccount.oauthProviders(server: Self.server, session: session) == [])
     }
 
     @Test func signOutGoesThroughTheHelperWithTheId() async throws {

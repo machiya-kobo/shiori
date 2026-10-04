@@ -72,7 +72,13 @@ struct HisterSignInSection: View {
                 // Safari's AutoFill (Passwords, Bitwarden) offers the saved
                 // login for the site. The app's own fields can't be matched
                 // to the site without Associated Domains (a paid team's).
-                Button("Sign In with Saved Password…", systemImage: "key.fill", action: signInWithBrowser)
+                // The tailnet's sign-in (Hister's OIDC provider), when it has
+                // one: one tap, no form.
+                if app.histerOAuthProviders.contains("oidc") {
+                    Button("Sign In with Tailscale", systemImage: "network") { signInWithBrowser(provider: "oidc") }
+                        .disabled(working)
+                }
+                Button("Sign In with Saved Password…", systemImage: "key.fill") { signInWithBrowser() }
                     .disabled(working)
                 TextField("Name", text: $username, prompt: Text("Name"))
                     .textContentType(.username)
@@ -97,7 +103,7 @@ struct HisterSignInSection: View {
         } header: {
             Text("Sign in to Hister")
         } footer: {
-            Text("Your Hister has users: sign in once on this device. The session stays in this device's Keychain and goes only to your Hister (and the rooms get an id for it, never the session). Sign In with Saved Password opens Hister's sign-in page privately, where your saved password (or the tailnet's sign-in) is offered; or type your name and password below. Sign Out ends the session everywhere; Hister's sessions page lists every device.")
+            Text("Your Hister has users: sign in once on this device. The session stays in this device's Keychain and goes only to your Hister (and the rooms get an id for it, never the session). Sign In with Tailscale signs in through your tailnet; Sign In with Saved Password opens Hister's sign-in page privately, where your saved password is offered; or type your name and password below. Sign Out ends the session everywhere; Hister's sessions page lists every device.")
         }
         .buttonStyle(.borderless)
     }
@@ -133,7 +139,7 @@ struct HisterSignInSection: View {
         }
     }
 
-    private func signInWithBrowser() {
+    private func signInWithBrowser(provider: String? = nil) {
         guard !working, let server = app.client?.baseURL else { return }
         working = true
         problem = nil
@@ -144,7 +150,7 @@ struct HisterSignInSection: View {
                 // A private browser session: the app's Hister session is its
                 // own, never Safari's.
                 callback = try await webAuthenticationSession.authenticate(
-                    using: HisterAccount.browserSignInURL(server: server),
+                    using: HisterAccount.browserSignInURL(server: server, provider: provider),
                     callbackURLScheme: HisterAccount.callbackScheme,
                     preferredBrowserSession: .ephemeral)
             } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {

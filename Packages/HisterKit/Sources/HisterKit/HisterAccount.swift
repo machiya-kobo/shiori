@@ -78,11 +78,32 @@ public enum HisterAccount {
 
     // MARK: Addresses
 
-    /// The helper's sign-in page for the app (opened in an ephemeral web session).
-    public static func browserSignInURL(server: URL) -> URL {
+    /// The helper's sign-in page for the app (opened in an ephemeral web
+    /// session). `provider` (one of `oauthProviders`, "oidc" for the
+    /// tailnet's): the helper goes straight on to it, so it's one tap to
+    /// signed in; a helper that doesn't know the parameter shows its page.
+    public static func browserSignInURL(server: URL, provider: String? = nil) -> URL {
         var components = URLComponents(url: server.appending(path: "machiya/signin"), resolvingAgainstBaseURL: false)!
-        components.setQueryItems([URLQueryItem(name: "app", value: "1"), URLQueryItem(name: "return", value: callbackURL)])
+        var items = [URLQueryItem(name: "app", value: "1"), URLQueryItem(name: "return", value: callbackURL)]
+        if let provider, !provider.isEmpty, provider.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_") }) {
+            items.append(URLQueryItem(name: "provider", value: provider))
+        }
+        components.setQueryItems(items)
         return components.url!
+    }
+
+    /// The sign-in providers Hister offers besides the password (its
+    /// `/api/config` `oauthProviders`: "oidc" for the tailnet's); none on
+    /// any failure.
+    public static func oauthProviders(server: URL, session: URLSession = HisterClient.defaultSession) async -> [String] {
+        var request = URLRequest(url: server.appending(path: "api/config"), timeoutInterval: 6)
+        request.setValue("hister://", forHTTPHeaderField: "Origin")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        guard let (data, response) = try? await session.data(for: request, delegate: NoRedirects()),
+            (response as? HTTPURLResponse)?.statusCode == 200,
+            let reply = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return [] }
+        return (reply["oauthProviders"] as? [String] ?? []).filter { !$0.isEmpty }
     }
 
     /// The browser flow's answer, `shiori://signed-in#sid=…&hister=…`: the
