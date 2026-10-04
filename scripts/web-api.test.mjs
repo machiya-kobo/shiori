@@ -350,3 +350,18 @@ test("Add Page's save: the body, and what each answer says", async () => {
   assert.match(await said({ down: true }), /didn’t answer/);
   server.save = { status: 202 };
 });
+
+test("the web app's tab bar is the rooms' shared one: edge to edge, its tabs sharing the width", () => {
+  const css = read('../web/app/app.css');
+  // A rule of its own at the top level (the wide layout's `#tabs { display: none }` is indented).
+  const block = (sel) => { const at = css.indexOf(`\n${sel} {`); return css.slice(at, css.indexOf('}', at)); };
+  const bar = block('#tabs');
+  // Centred and sized to its content, five tabs ran off a phone.
+  assert.doesNotMatch(bar, /translateX/);
+  assert.match(bar, /left: calc\(8px \+ env\(safe-area-inset-left\)\); right: calc\(8px \+ env\(safe-area-inset-right\)\)/);
+  assert.match(block('#tabs button'), /flex: 1 1 0; min-width: 0;/);
+  // The rooms' see-through glass: the card colour at 70%, blurred and saturated.
+  assert.match(bar, /background: color-mix\(in srgb, var\(--card\) 70%, transparent\)/);
+  assert.match(bar, /-webkit-backdrop-filter: blur\(20px\) saturate\(180%\); backdrop-filter: blur\(20px\) saturate\(180%\)/);
+  assert.match(css, /#tabs button > span \{[^}]*text-overflow: ellipsis/);
+});

@@ -2008,14 +2008,14 @@ function sidebar(current) {
 
 function tabs(view) {
   const tab = (name, title, iconName, target) =>
-    h('button', { type: 'button', 'aria-current': view === target || (target === 'labels' && view === 'list') ? 'page' : undefined, onclick: () => go(target) }, icon(iconName), title);
+    h('button', { type: 'button', 'aria-current': view === target || (target === 'labels' && view === 'list') ? 'page' : undefined, onclick: () => go(target) }, icon(iconName), h('span', {}, title));
   // As the iPhone app's Library · Labels · + (Add Page, with the
   // small-web gateway) · Settings, then the Machiya rooms, a sheet.
   // Settings is a tab, not a gear in a title row: the tabs' own views have
   // none.
-  const add = SMALLWEB ? h('button', { type: 'button', class: 'add-tab', onclick: () => addPage() }, icon('plus'), 'Add Page') : null;
+  const add = SMALLWEB ? h('button', { type: 'button', class: 'add-tab', onclick: () => addPage() }, icon('plus'), h('span', {}, 'Add Page')) : null;
   const rooms = ROOMS.length > 1
-    ? h('button', { type: 'button', onclick: () => dialog('Rooms', h('div', { class: 'rooms-sheet', role: 'menu' }, S.roomLinks(ROOMS))) }, S.roomGlyph('house'), 'Rooms')
+    ? h('button', { type: 'button', onclick: () => dialog('Rooms', h('div', { class: 'rooms-sheet', role: 'menu' }, S.roomLinks(ROOMS))) }, S.roomGlyph('house'), h('span', {}, 'Rooms'))
     : null;
   fill($('tabs'), tab('library', 'Library', 'library', 'library'), tab('labels', 'Labels', 'tag', 'labels'), add,
     tab('settings', 'Settings', 'gear', 'settings'), rooms);
