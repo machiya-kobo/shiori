@@ -772,9 +772,16 @@
     { key: 'searxng', name: 'SearXNG', tint: 'secondary', neighbour: true },
   ];
 
-  /** The switcher's button glyph (24-point strokes, each a path's `d`), shared by both web pages. */
+  /** Each room's one-word role in the menu, as the rooms say it (vaultkit's switcher). */
+  const ROOM_ROLES = { shiori: 'search', konbini: 'board', niwa: 'garden', kura: 'notes', hister: 'pages', searxng: 'the web' };
+
+  /** The switcher's glyphs (24-point strokes, each a path's `d`), shared by both web pages: the house, and the menu's gear. */
   const ROOM_GLYPHS = {
     house: ['M3 11l9-7 9 7', 'M5 10v10h14V10', 'M10 20v-6h4v6'],
+    gear: [
+      'M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+      'M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+    ],
   };
 
   /** A glyph as an <svg>, built node by node: no markup, so Mozilla's
@@ -793,61 +800,94 @@
   }
 
   /**
-   * The rooms as links, the neighbours after a rule: each with its own
-   * icon (`.room-icon`, from scripts/room-icons.py: a room's home-screen
-   * icon, a neighbour's logo or a neutral glyph), in its room's colour (`--room`,
-   * set through setProperty for the extension page's CSP), `current`
-   * marked. For the header menu and the phones' sheet.
+   * The Rooms menu's rows, as the rooms draw theirs (vaultkit's switcher):
+   * each room's icon tile (`.room-icon`, from scripts/room-icons.py), its
+   * name and its role, the current one not a link but highlighted, "here";
+   * the neighbours (Hister, SearXNG: line glyphs) after a rule; then, with
+   * `settings` ({href, open}), a rule and Settings with the gear.
    */
-  function roomLinks(list, current = 'shiori') {
+  function roomLinks(list, current = 'shiori', { settings = null } = {}) {
     const out = [];
+    const rule = () => document.createElement('hr');
     for (const r of list) {
-      if (r.neighbour && out.length && !out.some((n) => n.tagName === 'HR')) out.push(document.createElement('hr'));
-      const a = document.createElement('a');
-      a.className = 'room' + (r.neighbour ? ' neighbour' : '');
-      a.href = r.url;
-      a.setAttribute('role', 'menuitem');
-      if (r.key === current) a.setAttribute('aria-current', 'page');
-      a.style.setProperty('--room', `var(--${r.tint})`);
-      const name = document.createElement('span');
-      name.textContent = r.name;
-      // Every entry its own icon: a room's home-screen icon, a
-      // neighbour's logo (smaller, with no tile).
+      if (r.neighbour && out.length && !out.some((n) => n.tagName === 'HR')) out.push(rule());
+      const here = r.key === current;
+      const row = document.createElement(here ? 'b' : 'a');
+      row.className = 'room' + (r.neighbour ? ' neighbour' : '') + (here ? ' here' : '');
+      row.dataset.room = r.key;
+      row.setAttribute('role', 'menuitem');
+      if (here) row.setAttribute('aria-current', 'page');
+      else row.href = r.url;
       const iconEl = document.createElement('span');
       iconEl.className = 'room-icon';
       iconEl.dataset.room = r.key;
       iconEl.setAttribute('aria-hidden', 'true');
-      a.append(iconEl, name);
+      const role = document.createElement('small');
+      role.textContent = here ? 'here' : ROOM_ROLES[r.key] || '';
+      row.append(iconEl, r.name, role);
+      out.push(row);
+    }
+    if (settings) {
+      out.push(rule());
+      const a = document.createElement('a');
+      a.className = 'room settings';
+      a.href = settings.href || '#';
+      a.setAttribute('role', 'menuitem');
+      const glyph = document.createElement('span');
+      glyph.className = 'room-glyph';
+      glyph.append(roomGlyph('gear'));
+      a.append(glyph, 'Settings');
+      if (settings.open) a.addEventListener('click', (e) => (e.preventDefault(), settings.open()));
       out.push(a);
     }
     return out;
   }
 
   /**
-   * The header's switcher: a house button and its menu, closed by a click
-   * elsewhere or Escape. Null when there's nowhere else to go.
+   * The switcher: a button and its menu (`.rooms-menu`), closed by a click
+   * elsewhere, Escape, the button again, or a choice in it. `tab`: the
+   * phone's tab bar's Rooms tab (the house over "Rooms"), whose menu opens
+   * above it (CSS); otherwise a house button. Null when there's nowhere
+   * else to go.
    */
-  function roomsSwitcher(list, current = 'shiori') {
+  function roomsSwitcher(list, current = 'shiori', { settings = null, tab = false } = {}) {
     if (list.filter((r) => r.key !== current).length === 0) return null;
     const wrap = document.createElement('div');
-    wrap.className = 'rooms';
+    wrap.className = 'rooms' + (tab ? ' rooms-tab' : '');
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'icon-button rooms-open';
+    button.className = tab ? 'rooms-open' : 'icon-button rooms-open';
     button.title = 'Rooms';
     button.setAttribute('aria-label', 'Rooms');
     button.setAttribute('aria-haspopup', 'menu');
     button.setAttribute('aria-expanded', 'false');
     button.append(roomGlyph('house'));
+    if (tab) {
+      const label = document.createElement('span');
+      label.textContent = 'Rooms';
+      button.append(label);
+    }
     const menu = document.createElement('div');
     menu.className = 'rooms-menu';
     menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', 'Rooms');
     menu.hidden = true;
-    menu.append(...roomLinks(list, current));
+    menu.append(...roomLinks(list, current, { settings }));
     const show = (open) => ((menu.hidden = !open), button.setAttribute('aria-expanded', String(open)));
     button.addEventListener('click', (e) => (e.stopPropagation(), show(menu.hidden)));
-    document.addEventListener('click', (e) => !wrap.contains(e.target) && show(false));
-    document.addEventListener('keydown', (e) => e.key === 'Escape' && !menu.hidden && (show(false), button.focus()));
+    menu.addEventListener('click', (e) => e.target.closest('a') && show(false));
+    // The page's own listeners go with the switcher: the web app redraws
+    // its tabs and sidebar, and each drew a new one.
+    const outside = (e) => {
+      if (!wrap.isConnected) return document.removeEventListener('click', outside);
+      if (!wrap.contains(e.target)) show(false);
+    };
+    const escape = (e) => {
+      if (!wrap.isConnected) return document.removeEventListener('keydown', escape);
+      if (e.key === 'Escape' && !menu.hidden) (show(false), button.focus());
+    };
+    document.addEventListener('click', outside);
+    document.addEventListener('keydown', escape);
     wrap.append(button, menu);
     return wrap;
   }

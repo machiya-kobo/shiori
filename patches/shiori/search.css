@@ -26,6 +26,9 @@
   /* Label colours, one of eight by the app's hash of the label (S.labelChipIndex). */
   --chip0: #7aa2f7; --chip1: #7dcfff; --chip2: #bb9af7; --chip3: #9ece6a;
   --chip4: #ff9e64; --chip5: #f7768e; --chip6: #e0af68; --chip7: #1abc9c;
+  /* The Rooms menu, as the rooms draw it (scripts/palettes.mjs's rooms-* for Tokyo Night). */
+  --rooms-bg: #16161e; --rooms-on: #292e42; --rooms-text: #c0caf5; --rooms-muted: #a9b1d6;
+  --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -39,6 +42,8 @@
     --tint-mix: 8%;
     --chip0: #155fc5; --chip1: #006b8f; --chip2: #802cee; --chip3: #506b34;
     --chip4: #9a5000; --chip5: #bd204c; --chip6: #7a5e36; --chip7: #0d6e5c;
+    --rooms-bg: #d0d5e3; --rooms-on: #eef0f6; --rooms-text: #3258af; --rooms-muted: #4c5a8f;
+    --rooms-shadow: 0 1px 2px rgb(55 96 191 / 0.12), 0 6px 18px rgb(55 96 191 / 0.12);
     color-scheme: light;
   }
 }
@@ -52,6 +57,8 @@
   --tint-mix: 8%;
   --chip0: #155fc5; --chip1: #006b8f; --chip2: #802cee; --chip3: #506b34;
   --chip4: #9a5000; --chip5: #bd204c; --chip6: #7a5e36; --chip7: #0d6e5c;
+  --rooms-bg: #d0d5e3; --rooms-on: #eef0f6; --rooms-text: #3258af; --rooms-muted: #4c5a8f;
+  --rooms-shadow: 0 1px 2px rgb(55 96 191 / 0.12), 0 6px 18px rgb(55 96 191 / 0.12);
   color-scheme: light;
 }
 
@@ -214,24 +221,27 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
 .rooms { position: relative; display: flex; }
 .rooms-open svg { display: block; width: 18px; height: 18px; margin: auto; fill: none; stroke: var(--secondary); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .rooms-open:hover svg, .rooms-open:focus-visible svg, .rooms-open[aria-expanded="true"] svg { stroke: var(--accent); }
+/* The menu, as the rooms draw theirs (vaultkit's switcher): their --dark
+   panel and --hl current row (--rooms-*), each room's icon tile, name and
+   one-word role, the neighbours' line glyphs after a rule, then Settings. */
 .rooms-menu {
-  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 200px; padding: 6px;
-  background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 230px; padding: 8px;
+  background: var(--rooms-bg); border: 1px solid var(--line2); border-radius: 10px; box-shadow: var(--rooms-shadow);
 }
 .rooms-menu[hidden] { display: none; }
 .rooms-menu hr { border: 0; border-top: 1px solid var(--line); margin: 6px 4px; }
-a.room {
-  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px;
-  color: var(--text); text-decoration: none; font: -apple-system-subheadline;
+.rooms-menu .room {
+  display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px;
+  color: var(--rooms-text); font-size: 0.8125rem; font-weight: 500; line-height: 1.4; text-decoration: none;
 }
-a.room svg { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--room); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-a.room:hover, a.room:focus-visible { background: color-mix(in srgb, var(--room) 14%, transparent); }
-a.room[aria-current="page"] { font-weight: 600; }
-a.room.neighbour { color: var(--secondary); }
-/* A room's home-screen icon, a neighbour's logo (their data URIs below,
-   ROOM ICONS): a neighbour's at 20px in the same 24px slot, no tile. */
-.room-icon { width: 24px; height: 24px; flex: none; border-radius: 6px; background: center / contain no-repeat; }
-a.room.neighbour .room-icon { border-radius: 0; background-size: 20px 20px; }
+.rooms-menu a.room:hover, .rooms-menu a.room:focus-visible { background: var(--rooms-on); }
+.rooms-menu .room.here { background: var(--rooms-on); }
+.rooms-menu .room small { margin-left: auto; color: var(--rooms-muted); font-weight: 400; }
+.rooms-menu .room-glyph { display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; }
+.rooms-menu .room-glyph svg { width: 18px; height: 18px; fill: none; stroke: var(--rooms-muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* A room's home-screen icon; a neighbour's glyph at 20px in the same 24px slot. */
+.room-icon { width: 24px; height: 24px; flex: none; background: center / cover no-repeat; }
+.room.neighbour .room-icon { background-size: 20px 20px; background-position: center; }
 .filters select {
   font: -apple-system-footnote; color: var(--secondary); background: transparent;
   border: 0; padding: 4px 0;

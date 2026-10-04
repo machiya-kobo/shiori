@@ -918,3 +918,35 @@ test("a preview's dates: the preview's, else the row's; never a bare \"Added\"",
   assert.equal(S.previewDates({ content: 'x' }, { url: 'u' }, f), '');
   assert.equal(S.previewDates(null, null, f), '');
 });
+
+test("the Rooms menu's rows are the rooms': icon, name, role; here not a link; a rule; Settings", () => {
+  // A small stand-in for the DOM: what roomLinks builds, as plain objects.
+  const node = (tagName) => ({
+    tagName: tagName.toUpperCase(), children: [], dataset: {}, attrs: {}, listeners: {}, className: '', href: '', text: '',
+    setAttribute(k, v) { this.attrs[k] = v; },
+    append(...kids) { for (const k of kids) this.children.push(typeof k === 'string' ? { text: k } : k); },
+    addEventListener(type, fn) { this.listeners[type] = fn; },
+    set textContent(v) { this.text = v; },
+  });
+  const doc = { createElement: node, createElementNS: (_, t) => node(t) };
+  const ctx2 = { URL, URLSearchParams, document: doc };
+  ctx2.globalThis = ctx2;
+  vm.createContext(ctx2);
+  vm.runInContext(source, ctx2);
+  const R = ctx2.ShioriSearch;
+  const list = R.rooms('konbini=https://k.example/,niwa=https://n.example/,kura=https://ku.example/,hister=https://h.example/,searxng=https://s.example/', 'https://shiori.example');
+  let opened = 0;
+  const rows = R.roomLinks(list, 'shiori', { settings: { href: '#/settings', open: () => opened++ } });
+  const shape = Array.from(rows, (r) => (r.tagName === 'HR' ? '—' : `${r.tagName === 'B' ? '*' : ''}${r.children.map((c) => c.text || '').join('|')}`));
+  assert.deepEqual(shape, ['*|Shiori|here', '|Konbini|board', '|Niwa|garden', '|Kura|notes', '—', '|Hister|pages', '|SearXNG|the web', '—', '|Settings']);
+  assert.equal(rows[0].attrs['aria-current'], 'page');
+  assert.equal(rows[0].href, '', 'the room you are in is not a link');
+  assert.equal(rows[1].href, 'https://k.example/');
+  assert.equal(rows[1].children[0].className, 'room-icon');
+  const settings = rows[rows.length - 1];
+  assert.equal(settings.href, '#/settings');
+  settings.listeners.click({ preventDefault() {} });
+  assert.equal(opened, 1);
+  // Without settings, no rule and no row for it.
+  assert.equal(R.roomLinks(list, 'shiori').length, 7);
+});

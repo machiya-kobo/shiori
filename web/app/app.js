@@ -767,6 +767,8 @@ function controls(view, params, { search = false, notes = false } = {}) {
 
 /** The Machiya rooms, as the build stamped them (scripts/rooms-stamp.py); Shiori is here. */
 const ROOMS = S.rooms('__SHIORI_ROOMS__', location.origin).filter((r) => r.key === 'shiori' || !HOUSE.hidden.includes(r.key));
+/** The Rooms menu's last row, as the rooms end theirs: Shiori's Settings. */
+const ROOMS_SETTINGS = { href: '#/settings', open: () => go('settings') };
 
 /** Kura on this host (web/README.md), for the notes lists' feeds. */
 const KURA_BASE = location.origin + '/kura/';
@@ -2006,7 +2008,7 @@ function sidebar(current) {
   const add = SMALLWEB ? h('button', { type: 'button', class: 'sidebar-gear sidebar-add', 'aria-label': 'Add Page', title: 'Add Page', onclick: () => addPage() }, icon('plus')) : null;
   fill(nav, 
     // The Machiya rooms' switcher before the gear.
-    h('div', { class: 'sidebar-top' }, item('Library', 'library', {}, 'library', view === 'library'), add, S.roomsSwitcher(ROOMS), gear),
+    h('div', { class: 'sidebar-top' }, item('Library', 'library', {}, 'library', view === 'library'), add, S.roomsSwitcher(ROOMS, 'shiori', { settings: ROOMS_SETTINGS }), gear),
     // The search on screen, then the recent ones, five in all, as the Mac's
     // sidebar has them: the history, now there's no list under the field.
     ...sidebarSearches(view === 'search' ? q : null).map((text) =>
@@ -2040,9 +2042,8 @@ function tabs(view) {
   // Settings is a tab, not a gear in a title row: the tabs' own views have
   // none.
   const add = SMALLWEB ? h('button', { type: 'button', class: 'add-tab', onclick: () => addPage() }, icon('plus'), h('span', {}, 'Add Page')) : null;
-  const rooms = ROOMS.length > 1
-    ? h('button', { type: 'button', onclick: () => dialog('Rooms', h('div', { class: 'rooms-sheet', role: 'menu' }, S.roomLinks(ROOMS))) }, S.roomGlyph('house'), h('span', {}, 'Rooms'))
-    : null;
+  // The rooms' tab-bar menu: it opens above the tab, as theirs does.
+  const rooms = S.roomsSwitcher(ROOMS, 'shiori', { tab: true, settings: ROOMS_SETTINGS });
   fill($('tabs'), tab('library', 'Library', 'library', 'library'), tab('labels', 'Labels', 'tag', 'labels'), add,
     tab('settings', 'Settings', 'gear', 'settings'), rooms);
   $('tabs').querySelector('button').setAttribute('aria-current', view === 'library' || view === 'search' ? 'page' : 'false');

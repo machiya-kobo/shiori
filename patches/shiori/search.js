@@ -1111,7 +1111,12 @@
   // the addresses the build stamped in (scripts/rooms-stamp.py).
   // Rooms switched off in the house's settings (machiya_show_*) stay out.
   const hiddenRooms = S.houseSettings(document.cookie).hidden;
-  const switcher = S.roomsSwitcher(S.rooms('__SHIORI_ROOMS__').filter((r) => r.key === 'shiori' || !hiddenRooms.includes(r.key)));
+  // Its last row is the page's own Settings, as the rooms end theirs.
+  // Shiori is this page ("here") where it's served over http(s): the
+  // hosted page; Safari's own page has no such address and leaves it out.
+  const switcher = S.roomsSwitcher(S.rooms('__SHIORI_ROOMS__', /^https?:$/.test(location.protocol) ? location.origin : '').filter((r) => r.key === 'shiori' || !hiddenRooms.includes(r.key)), 'shiori', {
+    settings: { href: '#settings', open: () => $('settings-open').click() },
+  });
   if (switcher) $('settings-open').before(switcher);
 
   $('settings-open').addEventListener('click', () => {
