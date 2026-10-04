@@ -1786,6 +1786,7 @@ function viewSettings() {
     h(
       'div',
       { class: 'settings' },
+      accountGroup(group),
       group('Appearance', [
         choice('palette', 'Theme', Object.entries(S.PALETTES).map(([key, p]) => [key, p.name])),
         choice('theme', 'Appearance', [['system', 'System'], ['day', 'Light'], ['night', 'Dark']]),
@@ -1810,12 +1811,6 @@ function viewSettings() {
       ], 'Kept in this browser only.'),
       group('Notes', [text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/'), machiyaRow()],
         settings.niwaURL ? 'Signed in, your theme and text size follow you to the Machiya rooms. Signing in and out happen on Kura’s own pages.' : ''),
-      // Only once this browser has been asked to sign in (Hister has users).
-      readLocal('shioriSignInSeen') && S.histerSessionsURL(ROOMS_STAMP, location.origin)
-        ? group('Signing In', [
-          h('div', { class: 'item' }, h('span', {}, 'Hister'), h('a', { class: 'link-button', href: S.histerSessionsURL(ROOMS_STAMP, location.origin) }, 'Sessions and Sign Out…')),
-        ], 'Signed in once, every Machiya room knows you. Sign out on Hister’s sessions page: it ends this browser’s session everywhere, or every device’s.')
-        : null,
       group('About', [
         h('div', { class: 'item' }, h('span', {}, 'Saving pages'), h('span', { style: 'color:var(--secondary);text-align:right' },
           SMALLWEB ? 'Add Page, or share a link to Shiori where your browser lists it (installed from Chrome or Edge). Safari’s extension is in the Shiori app.' : 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
@@ -1827,6 +1822,30 @@ function viewSettings() {
         'Install this as an app: Share → Add to Home Screen (iPhone, iPad), File → Add to Dock (Safari on the Mac), or Install in the browser’s menu (Chrome, Edge).'),
     ),
   );
+}
+
+/**
+ * Settings → Account, first: who Hister says is signed in on this browser
+ * (S.histerAccount from /api/profile), with Sign Out (the helper's sessions
+ * page: its sign-out takes only its own origin's posts), or Sign In when
+ * signed out. Nothing while Hister has no users.
+ */
+function accountGroup(group) {
+  const box = h('div', { hidden: true });
+  const sessions = S.histerSessionsURL(ROOMS_STAMP, location.origin);
+  const signIn = S.histerSignInURL(ROOMS_STAMP, location.origin, location.href);
+  void api.profile().then(({ status, json }) => {
+    const account = S.histerAccount(status, json);
+    if (account.state === 'none') return;
+    const row = account.state === 'in'
+      ? h('div', { class: 'item' }, h('span', {}, 'Signed in as ', h('strong', {}, account.name)), sessions ? h('a', { class: 'link-button', href: sessions }, 'Sign Out…') : null)
+      : h('div', { class: 'item' }, h('span', {}, 'Not signed in'), signIn ? h('a', { class: 'link-button', href: signIn }, 'Sign In') : null);
+    // Not null as a child: replaceChildren writes it out as the text "null".
+    box.replaceChildren(...group('Account', [row],
+      account.state === 'in' ? 'Signed in once, every Machiya room knows you. Sign Out opens Hister’s sessions page: end this browser’s session, or every device’s.' : '').filter(Boolean));
+    box.hidden = false;
+  });
+  return box;
 }
 
 /** Settings → Pills: their order, and which show (S.pillEditor), redrawn in place. */

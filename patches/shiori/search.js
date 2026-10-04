@@ -1052,8 +1052,42 @@
   const saving = [];
   let redraw = false;
 
+  // Who Hister says is signed in (S.histerAccount from /api/profile), on
+  // the hosted page only: its host signs Hister's calls in. Asked once per
+  // page, when the sheet first opens; nothing while Hister has no users.
+  let account = null;
+  let accountAsked = false;
+  function askAccount() {
+    if (accountAsked || !histerBase || !sameOrigin(histerBase)) return;
+    accountAsked = true;
+    fetch(`${histerBase}api/profile`, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then(async (r) => {
+        let json = null;
+        try {
+          json = JSON.parse((await r.text()) || 'null');
+        } catch (_) {}
+        return S.histerAccount(r.status, json);
+      })
+      .catch(() => ({ state: 'none' }))
+      .then((a) => {
+        account = a;
+        if (a.state !== 'none') drawSettings();
+      });
+  }
+
+  function accountGroup() {
+    if (!account || account.state === 'none') return [];
+    const sessions = S.histerSessionsURL('__SHIORI_ROOMS__', location.origin);
+    const signIn = S.histerSignInURL('__SHIORI_ROOMS__', location.origin, location.href);
+    const row = account.state === 'in'
+      ? el('div', { class: 'setting' }, el('span', {}, 'Signed in as ', el('strong', {}, account.name)), sessions ? el('a', { href: sessions }, 'Sign Out…') : null)
+      : el('div', { class: 'setting' }, el('span', {}, 'Not signed in'), signIn ? el('a', { href: signIn }, 'Sign In') : null);
+    return [el('h3', { class: 'group-title' }, 'Account'), el('div', { class: 'group' }, row)];
+  }
+
   function drawSettings() {
-    const body = [];
+    askAccount();
+    const body = [...accountGroup()];
     for (const [title, rows] of SETTINGS_ROWS) {
       body.push(el('h3', { class: 'group-title' }, title));
       const group = el('div', { class: 'group' });

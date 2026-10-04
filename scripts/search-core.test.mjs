@@ -1073,3 +1073,15 @@ test('the hosted pages: where to sign in, what an answer asks, and no loop', () 
   assert.equal(S.signInDue(storage, 131_000), true);
   assert.equal(S.signInDue({ getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } }, 1_000_000), true);
 });
+
+test("who Hister says is signed in, from /api/profile, never from a bare 200", () => {
+  const plain = (v) => JSON.parse(JSON.stringify(v));
+  assert.deepEqual(plain(S.histerAccount(200, { user_id: 1, username: 'alex', is_admin: true })), { state: 'in', name: 'alex' });
+  assert.deepEqual(plain(S.histerAccount(200, null)), { state: 'none' });
+  assert.deepEqual(plain(S.histerAccount(200, {})), { state: 'none' });
+  assert.deepEqual(plain(S.histerAccount(200, { username: '' })), { state: 'none' });
+  assert.deepEqual(plain(S.histerAccount(403, null)), { state: 'out' });
+  assert.deepEqual(plain(S.histerAccount(401, null)), { state: 'out' });
+  assert.deepEqual(plain(S.histerAccount(502, null)), { state: 'none' });
+  assert.equal(S.histerAccount(200, { username: 'x'.repeat(100) }).name.length, 64);
+});

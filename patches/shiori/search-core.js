@@ -1974,6 +1974,19 @@
     return '';
   }
 
+  /**
+   * Who Hister says is signed in, from its /api/profile (read through the
+   * hosted page's own host, which signs it in): { state: 'in', name } for
+   * 200 with a username, { state: 'out' } for 401/403, else { state:
+   * 'none' } (Hister without users answers an empty 200 to anyone: never
+   * "signed in").
+   */
+  function histerAccount(status, json) {
+    if (status === 401 || status === 403) return { state: 'out' };
+    const name = status === 200 && json && typeof json.username === 'string' ? json.username.trim().slice(0, 64) : '';
+    return name ? { state: 'in', name } : { state: 'none' };
+  }
+
   const SIGN_IN_GUARD_MS = 30_000;
   /**
    * Whether to go to the sign-in now: at most once in 30 s per tab (a
@@ -2217,6 +2230,7 @@
     histerSessionsURL,
     signInAsked,
     signInDue,
+    histerAccount,
     urlLookupQueries,
     LOOKUP_MAX,
     mixCounts,

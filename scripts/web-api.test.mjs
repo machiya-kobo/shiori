@@ -431,3 +431,14 @@ test('the web is searched only on purpose: Return, a recent search, Did you mean
   // Respellings come from the autocompleter, never a web search.
   assert.doesNotMatch(app, /api\.web\([^)]*\)\.then\(\(d\) => d\.suggestions/);
 });
+
+test("Settings opens on who's signed in, read without a trip to the sign-in", () => {
+  const app = read('../web/app/app.js');
+  const api = read('../web/app/api.js');
+  assert.match(app, /accountGroup\(group\),\n\s+group\('Appearance'/);
+  assert.match(app, /const account = S\.histerAccount\(status, json\);/);
+  const fn = api.slice(api.indexOf('export async function profile('), api.indexOf('export async function profile(') + 900);
+  assert.doesNotMatch(fn, /request\(/);
+  assert.match(fn, /credentials: 'same-origin'/);
+  assert.match(read('../patches/shiori/search.js'), /const body = \[\.\.\.accountGroup\(\)\];/);
+});

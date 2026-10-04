@@ -69,6 +69,29 @@ async function request(path, { method = 'GET', body, timeout = 12000, keepalive 
 
 const query = (params) => new URLSearchParams(params).toString();
 
+/**
+ * Who Hister says is signed in on this browser: its /api/profile through
+ * this host (whose nginx signs Hister's calls in), as { status, json }. Not
+ * through request(): a 403 here is an answer, never a trip to the sign-in.
+ */
+export async function profile() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const response = await fetch(`${ROOT}api/profile`, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: controller.signal });
+    const text = await response.text();
+    let json = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch (_) {}
+    return { status: response.status, json };
+  } catch (_) {
+    return { status: 0, json: null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** One page of results: documents, the next page's key, opened ones, a suggestion. */
 export async function search(text, { sort = '', pageKey = '', limit = 30 } = {}) {
   // The last word a prefix, never the notes (those are Kura's).
