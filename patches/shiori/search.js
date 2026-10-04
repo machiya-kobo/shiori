@@ -234,6 +234,7 @@
   const category = CATEGORIES.some(([c]) => c === params.get('cat')) ? params.get('cat') : 'general';
   const nextHeader = {
     theme: settings.theme || '',
+    palette: settings.palette || '',
     categories: CATEGORIES,
     webResults: !!settings.webResults,
     textSize: settings.textSize,
@@ -963,7 +964,8 @@
   ];
   const SETTINGS_ROWS = [
     ['Appearance', [
-      { key: 'theme', label: 'Theme', options: [['system', 'System'], ['night', 'Tokyo Night'], ['day', 'Tokyo Night Day']] },
+      { key: 'palette', label: 'Theme', options: Object.entries(S.PALETTES).map(([key, p]) => [key, p.name]) },
+      { key: 'theme', label: 'Appearance', options: [['system', 'System'], ['day', 'Light'], ['night', 'Dark']] },
       { key: 'textSize', label: 'Text Size', options: TEXT_SIZE_CHOICES },
       { key: 'previewPane', label: 'Preview Pane' },
       { key: 'previewImages', label: 'Images in Previews' },
@@ -996,7 +998,9 @@
       { action: 'clear-recent', label: 'Clear Recent Searches' },
     ]],
   ];
-  const LOOK_KEYS = ['theme', 'textSize', 'previewPane'];
+  const LOOK_KEYS = ['theme', 'palette', 'textSize', 'previewPane'];
+  // What a choice shows while it was never set.
+  const CHOICE_DEFAULTS = { theme: 'system', palette: 'tokyo-night' };
   const saving = [];
   let redraw = false;
 
@@ -1022,7 +1026,7 @@
           control = el('select', { id, disabled: off });
           for (const [value, text] of row.options) {
             const option = el('option', { value: String(value) }, text);
-            if (String(settings[row.key] ?? (row.key === 'theme' ? 'system' : '')) === String(value)) option.selected = true;
+            if (String(settings[row.key] ?? CHOICE_DEFAULTS[row.key] ?? '') === String(value)) option.selected = true;
             control.append(option);
           }
           control.addEventListener('change', () => {
@@ -1057,11 +1061,11 @@
     if (values.searchHistory === false) recent = [];
     if (Object.keys(values).some((k) => !LOOK_KEYS.includes(k) && k !== 'clearRecentSearches')) redraw = true;
     if (Object.keys(values).some((k) => LOOK_KEYS.includes(k))) {
-      applyLook(settings.theme, settings.textSize);
+      applyLook(settings.theme, settings.textSize, settings.palette);
       previewPane.update();
       try {
         const copy = JSON.parse(localStorage.getItem(HEADER_KEY) || 'null');
-        if (copy) localStorage.setItem(HEADER_KEY, JSON.stringify({ ...copy, theme: settings.theme || '', textSize: settings.textSize }));
+        if (copy) localStorage.setItem(HEADER_KEY, JSON.stringify({ ...copy, theme: settings.theme || '', palette: settings.palette || '', textSize: settings.textSize }));
       } catch (_) {}
     }
     saving.push(
@@ -1152,8 +1156,8 @@
     keep();
   }
 
-  function drawHeader({ theme, categories, webResults, textSize }) {
-    applyLook(theme, textSize);
+  function drawHeader({ theme, palette, categories, webResults, textSize }) {
+    applyLook(theme, textSize, palette);
     const current = categories.some(([c]) => c === params.get('cat')) ? params.get('cat') : 'general';
     $('categories').replaceChildren(
       ...categories.map(([cat, name]) => {
@@ -1197,10 +1201,13 @@
     row.shioriFade();
   }
 
-  /** Theme and text size: the page's look, applied at once. */
-  function applyLook(theme, textSize) {
+  /** Appearance, theme and text size: the page's look, applied at once. */
+  function applyLook(theme, textSize, palette) {
     if (theme === 'day' || theme === 'night') document.documentElement.dataset.theme = theme;
     else delete document.documentElement.dataset.theme;
+    // The rooms' themes (palettes.css); Tokyo Night is search.css's own.
+    if (Object.hasOwn(S.PALETTES, palette) && palette !== 'tokyo-night') document.documentElement.dataset.palette = palette;
+    else delete document.documentElement.dataset.palette;
     const zoom = pageZoom(textSize);
     document.body.style.zoom = Math.abs(zoom - 1) < 0.01 ? '' : String(zoom);
   }

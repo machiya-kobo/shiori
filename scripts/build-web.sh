@@ -22,7 +22,7 @@ status=${3:-}
 
 rm -rf -- "$out"
 mkdir -p -- "$out/_shiori"
-cp -- patches/shiori/search.js patches/shiori/search-core.js patches/shiori/search.css "$out/_shiori/"
+cp -- patches/shiori/search.js patches/shiori/search-core.js patches/shiori/search.css web/app/palettes.css "$out/_shiori/"
 cp -- web/shim.js "$out/_shiori/web-shim.js"
 # The neighbours' icons (Hister, SearXNG): neutral glyphs unless the build
 # names a folder holding their own logos (hister.png, searxng.svg) in
@@ -36,6 +36,7 @@ cp -- assets/icon-32.png assets/icon-256.png assets/web-icon-64.png "$out/_shior
 # Hister's), the shim first, an icon, and the OpenSearch link.
 sed \
   -e 's#href="search.css"#href="/_shiori/search.css"#' \
+  -e 's#href="palettes.css"#href="/_shiori/palettes.css"#' \
   -e 's#<script src="search-core.js"></script>#<script src="/_shiori/web-shim.js"></script>\n    <script src="/_shiori/search-core.js"></script>#' \
   -e 's#<script src="search.js"></script>#<script src="/_shiori/search.js"></script>#' \
   -e 's#src="assets/icons/icon-256.png"#src="/_shiori/icon-256.png"#' \
@@ -68,9 +69,9 @@ PY
 # Each file's address carries the build, so a browser holding an older copy
 # (they're cached for minutes) never runs new HTML with old scripts.
 version=$(git rev-parse --short HEAD 2>/dev/null || date +%s)
-sed -i.bak -E "s#(/_shiori/(web-shim|search-core|search)\.(js|css))\"#\1?v=$version\"#g" "$out/index.html" && rm -f -- "$out/index.html.bak"
+sed -i.bak -E "s#(/_shiori/(web-shim|search-core|search|palettes)\.(js|css))\"#\1?v=$version\"#g" "$out/index.html" && rm -f -- "$out/index.html.bak"
 
-for needle in '/_shiori/web-shim.js' '/_shiori/search.js' '/_shiori/search.css' 'opensearch.xml'; do
+for needle in '/_shiori/web-shim.js' '/_shiori/search.js' '/_shiori/search.css' '/_shiori/palettes.css' 'opensearch.xml'; do
   grep -q -- "$needle" "$out/index.html" || { echo "build-web: index.html lacks $needle (did search.html change?)" >&2; exit 1; }
 done
 

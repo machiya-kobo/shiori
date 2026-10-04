@@ -46,6 +46,10 @@
   function look(s) {
     if (s.theme === 'night' || s.theme === 'day') document.documentElement.dataset.theme = s.theme;
     else delete document.documentElement.dataset.theme;
+    // The rooms' themes (palettes.css, which knows only their keys); Tokyo
+    // Night is search.css's own.
+    if (typeof s.palette === 'string' && /^[a-z-]+$/.test(s.palette) && s.palette !== 'tokyo-night') document.documentElement.dataset.palette = s.palette;
+    else delete document.documentElement.dataset.palette;
   }
   function fill(s) {
     for (const key of TOGGLES) $(key).checked = s[key] !== false;

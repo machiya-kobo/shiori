@@ -39,7 +39,9 @@ def problems(root, target):
         "background.js": ["const shioriHost", "installCaptureQueue", "installCombinedSearch"],
         "content.js": ["installPageSizeCap"],
         "popup.html": ["safari-popup.css", "shiori-popup.js"],
-        "search.html": ["search-core.js", "search.js"],
+        "search.html": ["search-core.js", "search.js", "palettes.css"],
+        # The rooms' other themes (web/app/palettes.css), for every page on search.css.
+        "palettes.css": [':root[data-palette="nord"]'],
     }
     # The settings page: Safari's shows what the app set, Firefox's sets them.
     if target == "safari":

@@ -1,4 +1,5 @@
 import Foundation
+import HisterKit
 import Testing
 
 /// A defaults suite of its own, gone when the test is. (Nonisolated so
@@ -61,6 +62,17 @@ struct SharedSettingsTests {
     @Test func aChangeFromThePageIsKept() {
         SharedSettings.applyFromPage(["theme": "day"], to: defaults)
         #expect(defaults.string(forKey: "theme") == "day")
+    }
+
+    @Test func aThemeFromThePageIsOneOfTheRoomsTen() {
+        SharedSettings.applyFromPage(["palette": "nord"], to: defaults)
+        #expect(defaults.string(forKey: SharedSettings.Key.palette) == "nord")
+        SharedSettings.applyFromPage(["palette": "purple"], to: defaults)
+        SharedSettings.applyFromPage(["palette": 3], to: defaults)
+        #expect(defaults.string(forKey: SharedSettings.Key.palette) == "nord")
+        #expect(SharedSettings.extensionPayload(from: defaults)[SharedSettings.Key.palette] as? String == "nord")
+        // The extension's list is the app's.
+        #expect(SharedSettings.palettes == AppPalette.all.map(\.key))
     }
 
     @Test func smallWebOpensOnlyWhereItCan() {

@@ -95,3 +95,29 @@ test('the page cache round-trips through storage', async () => {
   await b.chrome.storage.local.set({ shioriPageCache: { k: 1 } });
   assert.deepEqual(plain((await b.chrome.storage.local.get(['shioriPageCache'])).shioriPageCache), { k: 1 });
 });
+
+test("the theme is the house's: read from machiya_palette, written back on a change", async () => {
+  const window = {};
+  const storage = new Map();
+  const document = {};
+  const written = [];
+  Object.defineProperty(document, 'cookie', {
+    get: () => 'machiya_palette=nord; machiya_theme=day',
+    set: (v) => written.push(v),
+  });
+  const context = {
+    window,
+    document,
+    location: { origin: 'https://shiori.example', hostname: 'shiori.tail.example' },
+    localStorage: { getItem: (k) => storage.get(k) ?? null, setItem: (k, v) => storage.set(k, String(v)) },
+  };
+  vm.runInNewContext(readFileSync(new URL('../patches/shiori/search-core.js', import.meta.url), 'utf8'), context);
+  window.ShioriSearch = context.ShioriSearch;
+  vm.runInNewContext(source, context);
+  const get = async () => (await window.chrome.storage.local.get(['shioriSettings'])).shioriSettings;
+  assert.equal((await get()).palette, 'nord');
+  assert.equal((await get()).theme, 'day');
+  await new Promise((resolve) => window.chrome.runtime.sendMessage({ shiori: 'set-settings', values: { palette: 'dracula' } }, resolve));
+  assert.ok(written.some((c) => c.startsWith('machiya_palette=dracula;') && c.includes('domain=tail.example')), written.join(' | '));
+  assert.equal(written.some((c) => c.startsWith('machiya_theme=')), false);
+});

@@ -7,6 +7,9 @@
   const got = await chrome.storage.local.get(['histerURL', 'shioriSettings', 'shioriQueueIndex']);
   const settings = got.shioriSettings || {};
   if (settings.theme === 'night' || settings.theme === 'day') document.documentElement.dataset.theme = settings.theme;
+  // The rooms' themes (palettes.css); Tokyo Night is search.css's own.
+  const PALETTES = globalThis.ShioriSearch.PALETTES;
+  if (Object.hasOwn(PALETTES, settings.palette) && settings.palette !== 'tokyo-night') document.documentElement.dataset.palette = settings.palette;
 
   const onOff = (value) => (value === false ? 'Off' : 'On');
   const orNone = (text) => (typeof text === 'string' && text.trim() ? text.trim() : 'Not set');
@@ -17,7 +20,8 @@
   $('results-at').textContent = /^https?:\/\//.test(hosted) ? hosted : "The extension's page";
   for (const el of document.querySelectorAll('[data-flag]')) el.textContent = onOff(settings[el.dataset.flag]);
   $('result-style').textContent = { solid: 'Solid', bar: 'Left Bar', none: 'None' }[settings.resultStyle] || 'Tint';
-  $('theme').textContent = { night: 'Tokyo Night', day: 'Tokyo Night Day' }[settings.theme] || 'System';
+  $('palette').textContent = (PALETTES[settings.palette] || PALETTES['tokyo-night']).name;
+  $('theme').textContent = { night: 'Dark', day: 'Light' }[settings.theme] || 'System';
   // The app's names (TextSize.name): xxLarge read "Large", below xLarge's "Larger".
   const sizes = { xSmall: 'Extra Small', small: 'Small', medium: 'Medium', large: 'Large', xLarge: 'Extra Large', xxLarge: 'Extra Extra Large', xxxLarge: 'Largest' };
   $('text-size').textContent = sizes[settings.textSize] || 'Standard';

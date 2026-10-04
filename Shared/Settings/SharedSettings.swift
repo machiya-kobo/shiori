@@ -18,8 +18,8 @@ nonisolated enum SharedSettings {
         static let combinedSearch = "combinedSearch"
         static let searxngURL = "searxngURL"
         static let theme = "theme"
-        /// The app's theme (one of the rooms' ten, `AppPalette`): the app and
-        /// the share extension only, until Safari's page has the ten.
+        /// The theme (one of the Machiya rooms' ten, `AppPalette`): the app,
+        /// the share extension and Safari's pages, which the page's gear may set.
         static let palette = "palette"
         /// Combined search page options (Settings → Search from Safari).
         static let showInfobox = "showInfobox"
@@ -113,6 +113,11 @@ nonisolated enum SharedSettings {
     static let urlKeys = [Key.searxngURL, Key.niwaURL, Key.konbiniURL, Key.newsBlurURL, Key.smallwebURL]
     static let resultStyles = ["tint", "solid", "bar", "none"]
     static let smallWebOpens = ["gateway", "direct"]
+    /// The rooms' theme keys, `AppPalette.all`'s (here because the Safari
+    /// extension doesn't link HisterKit; tests keep the three lists alike).
+    static let palettes = [
+        "tokyo-night", "solarized", "nord", "dracula", "catppuccin", "gruvbox", "rose-pine", "kanagawa", "everforest", "ayu",
+    ]
 
     /// Writes the values that pass: known keys, the right type, an allowed
     /// value. Anything else is ignored.
@@ -140,6 +145,7 @@ nonisolated enum SharedSettings {
         }
         if let value = values[Key.textSize] as? String, textSizes.contains(value) { set(value, Key.textSize) }
         if let value = values[Key.theme] as? String, ["system", "day", "night"].contains(value) { set(value, Key.theme) }
+        if let value = values[Key.palette] as? String, palettes.contains(value) { set(value, Key.palette) }
         if let value = values[Key.resultStyle] as? String, resultStyles.contains(value) { set(value, Key.resultStyle) }
         if let value = values[Key.smallWebOpen] as? String, smallWebOpens.contains(value) { set(value, Key.smallWebOpen) }
         if values[Key.searchHistory] as? Bool == false { clearRecentSearches(in: defaults) }
@@ -206,7 +212,7 @@ nonisolated enum SharedSettings {
         // The Hister server too, so the extension follows the app's.
         for key in [
             Key.obsidianVault, Key.niwaURL, Key.konbiniURL, Key.textSize, Key.serverURL, Key.resultStyle,
-            Key.smallwebURL, Key.smallWebOpen,
+            Key.smallwebURL, Key.smallWebOpen, Key.palette,
         ] {
             if let value = defaults.string(forKey: key) { payload[key] = value }
         }

@@ -29,12 +29,13 @@ const shioriHost = (() => {
   const COUNT_KEYS = ['histerCount', 'vaultCount'];
   const URL_KEYS = ['searxngURL', 'niwaURL', 'konbiniURL', 'newsBlurURL', 'smallwebURL'];
   const THEMES = ['system', 'day', 'night'];
+  const PALETTES = ['tokyo-night', 'solarized', 'nord', 'dracula', 'catppuccin', 'gruvbox', 'rose-pine', 'kanagawa', 'everforest', 'ayu'];
   const RESULT_STYLES = ['tint', 'solid', 'bar', 'none'];
   const SMALL_WEB_OPENS = ['gateway', 'direct'];
   // What extensionPayload passes on as it is stored.
   const STRING_KEYS = [
     'searxngURL', 'theme', 'obsidianVault', 'niwaURL', 'konbiniURL', 'textSize', 'serverURL',
-    'resultStyle', 'smallwebURL', 'smallWebOpen',
+    'resultStyle', 'smallwebURL', 'smallWebOpen', 'palette',
   ];
 
   const storage = () => chrome.storage.local;
@@ -61,6 +62,7 @@ const shioriHost = (() => {
     };
     oneOf('textSize', TEXT_SIZES);
     oneOf('theme', THEMES);
+    oneOf('palette', PALETTES);
     oneOf('resultStyle', RESULT_STYLES);
     oneOf('smallWebOpen', SMALL_WEB_OPENS);
     if (values.searchHistory === false) delete store.recentSearches;

@@ -45,6 +45,7 @@ const SWIFT = {
   resultStyles: swiftList(/static let resultStyles = \[([^\]]*)\]/),
   smallWebOpens: swiftList(/static let smallWebOpens = \[([^\]]*)\]/),
   themes: swiftList(/\[([^\]]*)\]\.contains\(value\) \{ set\(value, Key\.theme\) \}/),
+  palettes: swiftList(/static let palettes = \[([^\]]*)\]/),
   recentLimit: Number(swift.match(/static let recentLimit = (\d+)/)[1]),
   // extensionPayload: keys it sets one by one (payload[Key.x] = …), then its lists.
   payloadSingles: [...swift.matchAll(/payload\[Key\.(\w+)\] =/g)].map((m) => keyName[m[1]]),
@@ -178,7 +179,7 @@ test('addresses are http(s) or empty, as the app takes them', async () => {
 });
 
 test('choices take only the values the app knows', async () => {
-  const cases = { textSize: SWIFT.textSizes, theme: SWIFT.themes, resultStyle: SWIFT.resultStyles, smallWebOpen: SWIFT.smallWebOpens };
+  const cases = { textSize: SWIFT.textSizes, theme: SWIFT.themes, palette: SWIFT.palettes, resultStyle: SWIFT.resultStyles, smallWebOpen: SWIFT.smallWebOpens };
   for (const [key, allowed] of Object.entries(cases)) {
     for (const value of allowed) {
       const { host, storage } = loadHost();

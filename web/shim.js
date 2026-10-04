@@ -18,7 +18,7 @@
     'combinedSearch', 'showInfobox', 'showRelated', 'showThumbnails', 'histerInGeneral', 'histerTab',
     'vaultInGeneral', 'vaultTab', 'webResults', 'searchHistory', 'previewPane', 'previewImages',
     'rememberOpened', 'showOpened', 'resultStyle', 'smallWebTab', 'smallWebOpen', 'searchFilters', 'semanticSearch', 'aiAnswer', 'histerCount', 'vaultCount', 'niwaURL',
-    'konbiniURL', 'newsBlurURL', 'theme', 'textSize', 'obsidianVault',
+    'konbiniURL', 'newsBlurURL', 'theme', 'palette', 'textSize', 'obsidianVault',
   ];
   // The notes' homes, from the build (the server passes them in); a
   // browser's own choice wins.
@@ -56,12 +56,13 @@
       const all = load();
       all.histerURL = ROOT;
       all.shioriSettings = withAddresses(all.shioriSettings);
-      // The house's shared theme and text size: a choice
+      // The house's shared appearance, theme and text size: a choice
       // made in any Machiya room on this device counts here too.
       const S = window.ShioriSearch;
       if (S) {
         const house = S.houseSettings(document.cookie, { mine: all.shioriSettings.textSize });
         if (house.theme) all.shioriSettings.theme = house.theme;
+        if (house.palette) all.shioriSettings.palette = house.palette;
         if (house.textSize) all.shioriSettings.textSize = house.textSize;
       }
       const out = {};
@@ -90,9 +91,9 @@
     for (const key of SETTABLE) if (key in values) next[key] = values[key];
     if (values.searchHistory === false) next.recentSearches = [];
     setSettings(next);
-    // Theme and text size are the house's too (the other rooms read them).
+    // Appearance, theme and text size are the house's too (the other rooms read them).
     const S = window.ShioriSearch;
-    for (const key of ['theme', 'textSize']) {
+    for (const key of ['theme', 'palette', 'textSize']) {
       const shared = S && key in values ? S.houseCookie(key, values[key], location.hostname) : null;
       if (shared) document.cookie = shared;
     }

@@ -6,6 +6,7 @@
     <meta name="color-scheme" content="light dark" />
     <title>Shiori</title>
     <link rel="stylesheet" href="search.css" />
+    <link rel="stylesheet" href="palettes.css" />
     <link rel="stylesheet" href="shiori-options.css" />
   </head>
   <body class="options">
@@ -57,7 +58,8 @@
         <div class="row"><span>Show Opened</span><span data-flag="showOpened" class="value">…</span></div>
         <div class="row"><span>Recent Searches</span><span data-flag="searchHistory" class="value">…</span></div>
         <div class="row"><span>Result Style</span><span id="result-style" class="value">…</span></div>
-        <div class="row"><span>Theme</span><span id="theme" class="value">…</span></div>
+        <div class="row"><span>Theme</span><span id="palette" class="value">…</span></div>
+        <div class="row"><span>Appearance</span><span id="theme" class="value">…</span></div>
         <div class="row"><span>Text Size</span><span id="text-size" class="value">…</span></div>
       </section>
       <section class="group">
@@ -76,6 +78,7 @@
       </p>
       <p class="note center">Change these in the Shiori app, or with the gear on the results page. Each device keeps its own. Rules for which pages Hister keeps live on the server.</p>
     </main>
+    <script src="search-core.js"></script>
     <script src="shiori-options.js"></script>
   </body>
 </html>

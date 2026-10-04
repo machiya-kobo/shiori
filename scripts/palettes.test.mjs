@@ -50,6 +50,13 @@ for (const [key, p] of Object.entries(table)) {
   }
 }
 
+test("the settings' whitelists know the same ten: SharedSettings.palettes and host-local.js", () => {
+  const keys = Object.keys(table);
+  const list = (text, pattern) => [...text.match(pattern)[1].matchAll(/["']([a-z-]+)["']/g)].map((m) => m[1]);
+  assert.deepEqual(list(read('../Shared/Settings/SharedSettings.swift'), /static let palettes = \[([^\]]*)\]/), keys);
+  assert.deepEqual(list(read('../patches/ext/host-local.js'), /const PALETTES = \[([^\]]*)\]/), keys);
+});
+
 test("search-core's PALETTES is the table's names and bar colours", () => {
   const S = core();
   assert.ok(S, 'search-core exports');

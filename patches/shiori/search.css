@@ -2,7 +2,9 @@
    engines, cached links, info box, categories, paging) in Tokyo Night
    (dark) and Tokyo Night Day (light). Text colours match the app's
    palette, all at least 4.5:1 on their surfaces. `data-theme` follows the
-   app's theme setting; with "system" the media query decides. */
+   app's appearance setting; with "system" the media query decides. The
+   Machiya rooms' other themes are palettes.css (the web app's), keyed off
+   `data-palette`. */
 
 :root {
   /* The frosted bar over a scrolling list, one look with the apps' Liquid

@@ -23,6 +23,9 @@
     settings = got.shioriSettings || {};
     if (settings.theme === 'night' || settings.theme === 'day') document.documentElement.dataset.theme = settings.theme;
     else delete document.documentElement.dataset.theme;
+    // The rooms' themes (palettes.css); Tokyo Night is search.css's own.
+    if (Object.hasOwn(S.PALETTES, settings.palette) && settings.palette !== 'tokyo-night') document.documentElement.dataset.palette = settings.palette;
+    else delete document.documentElement.dataset.palette;
   }
 
   const status = (text) => ($('status').textContent = text || '');

@@ -103,6 +103,10 @@ final class AppState {
             let fromPage = AppTheme.resolve(raw)
             if fromPage != theme { theme = fromPage }
         }
+        if let raw = shared?.string(forKey: SharedSettings.Key.palette) {
+            let fromPage = AppPalette.resolve(raw)
+            if fromPage != palette { palette = fromPage }
+        }
         if let raw = shared?.string(forKey: SharedSettings.Key.textSize) {
             let fromPage = TextSize.resolve(raw)
             if fromPage != textSize { textSize = fromPage }

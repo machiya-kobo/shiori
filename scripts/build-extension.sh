@@ -144,6 +144,8 @@ prepend content.js patches/safari-content-shim.js
 # duckduckgo.com redirect.
 cp -- patches/shiori/search.html patches/shiori/search.css patches/shiori/search.js \
     patches/shiori/search-core.js "$RESOURCES/"
+# The Machiya rooms' other nine themes, the web app's own (scripts/palettes.mjs).
+cp -- web/app/palettes.css "$RESOURCES/palettes.css"
 # The DuckDuckGo hand-off is Safari's alone (manifest.safari.json).
 if [[ "$TARGET" == safari ]]; then
     cp -- patches/shiori/redirect.js "$RESOURCES/shiori-redirect.js"

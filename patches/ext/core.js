@@ -710,6 +710,8 @@ const shioriMachiya = (() => {
     combinedSearch: true,
     searxngURL: '__SHIORI_SEARXNG_URL__',
     theme: 'system',
+    // One of the Machiya rooms' themes (S.PALETTES).
+    palette: 'tokyo-night',
     // The results page's options (the app's Settings → Search from Safari).
     showInfobox: true,
     showRelated: true,
