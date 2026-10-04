@@ -16,39 +16,49 @@ struct CodeResults: View {
         CodeList(query: query, sort: sort, filters: filters)
             .id(filters)
             .topBar {
-                HStack(spacing: 14) {
-                    Menu {
-                        Picker("Kind", selection: $filters.kind) {
-                            Text("Everything").tag(CodeDocs.Kind?.none)
-                            ForEach(CodeDocs.Kind.allCases, id: \.self) { kind in
-                                Text(kind.title).tag(CodeDocs.Kind?.some(kind))
+                // One line, as Sort · Group · Filter under it: a phone's
+                // width wrapped every label onto two lines. It scrolls
+                // sideways when it doesn't fit.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 18) {
+                        Menu {
+                            Picker("Kind", selection: $filters.kind) {
+                                Text("Everything").tag(CodeDocs.Kind?.none)
+                                ForEach(CodeDocs.Kind.allCases, id: \.self) { kind in
+                                    Text(kind.title).tag(CodeDocs.Kind?.some(kind))
+                                }
                             }
+                        } label: {
+                            Label(filters.kind?.title ?? "Everything", systemImage: "line.3.horizontal.decrease")
                         }
-                    } label: {
-                        Label(filters.kind?.title ?? "Everything", systemImage: "line.3.horizontal.decrease")
-                    }
-                    // Which forge: All Hosts, Forgejo or GitHub.
-                    Menu {
-                        Picker("Host", selection: $filters.host) {
-                            Text("All Hosts").tag(String?.none)
-                            ForEach(CodeDocs.hosts, id: \.key) { host in
-                                Text(host.name).tag(String?.some(host.key))
+                        .quietControl(active: filters.kind != nil)
+                        // Which forge: All Hosts, Forgejo or GitHub.
+                        Menu {
+                            Picker("Host", selection: $filters.host) {
+                                Text("All Hosts").tag(String?.none)
+                                ForEach(CodeDocs.hosts, id: \.key) { host in
+                                    Text(host.name).tag(String?.some(host.key))
+                                }
                             }
+                        } label: {
+                            Label(filters.host.map(CodeDocs.hostName) ?? "All Hosts", systemImage: "server.rack")
                         }
-                    } label: {
-                        Label(filters.host.map(CodeDocs.hostName) ?? "All Hosts", systemImage: "server.rack")
+                        .quietControl(active: filters.host != nil)
+                        Button { filters.open.toggle() } label: {
+                            Label("Open Only", systemImage: filters.open ? "checkmark.circle.fill" : "circle")
+                        }
+                        .quietControl(active: filters.open)
+                        Button { filters.privateOnly.toggle() } label: {
+                            Label("Private", systemImage: filters.privateOnly ? "checkmark.circle.fill" : "circle")
+                        }
+                        .quietControl(active: filters.privateOnly)
                     }
-                    Toggle("Open Only", isOn: $filters.open)
-                        .toggleStyle(.button)
-                    Toggle("Private", isOn: $filters.privateOnly)
-                        .toggleStyle(.button)
-                    Spacer()
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal)
                 }
-                .textStyle(.subheadline)
-                .buttonStyle(.borderless)
-                .tint(palette.tint(SearchScope.code.tint))
-                .padding(.horizontal)
-                .padding(.vertical, 6)
+                .fadesOverflow()
+                .padding(.vertical, 2)
             }
     }
 }

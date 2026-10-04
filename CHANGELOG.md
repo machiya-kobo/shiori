@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.5.2 (2026-10-05)
+
+### Fixed
+
+- The Code pill's filters (kind, host, Open Only, Private) sit on one
+  line in the apps, styled as Sort · Group · Filter and scrolling sideways
+  when they don't fit: on a phone every label wrapped onto two lines.
+
 ## 0.5.1 (2026-10-05)
 
 ### Added
