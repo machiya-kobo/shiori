@@ -3,7 +3,7 @@ import Testing
 @testable import HisterKit
 
 struct ElsewhereTests {
-    let instances = Elsewhere.instances(from: "redlib=https://redlib.example.ts.net/, invidious=https://invidious.example.ts.net,breezewiki=https://bw.example.ts.net/,unknown=https://x.example/,nitter=ftp://n.example/")
+    let instances = Elsewhere.instances(from: "redlib=https://redlib.example.ts.net/, invidious=https://invidious.example.ts.net,breezewiki=https://bw.example.ts.net/,libmedium=https://libmedium.example.ts.net/,unknown=https://x.example/,nitter=ftp://n.example/")
 
     private func links(_ url: String) -> [String] {
         Elsewhere.frontends(for: url, instances: instances).map { "\($0.name) \($0.url.absoluteString)" }
@@ -17,7 +17,7 @@ struct ElsewhereTests {
     }
 
     @Test func onlyKnownFrontEndsWithAWebAddressCount() {
-        #expect(instances.map(\.frontend.key) == ["redlib", "invidious", "breezewiki"])
+        #expect(instances.map(\.frontend.key) == ["redlib", "invidious", "breezewiki", "libmedium"])
         #expect(Elsewhere.instances(from: "").isEmpty)
     }
 
@@ -38,6 +38,10 @@ struct ElsewhereTests {
     @Test func fandomGoesToBreezeWiki() {
         #expect(links("https://zelda.fandom.com/wiki/Link") == ["BreezeWiki https://bw.example.ts.net/zelda/wiki/Link"])
         #expect(links("https://www.fandom.com/") == [])
+    }
+
+    @Test func mediumGoesToLibMedium() {
+        #expect(links("https://medium.com/@someone/a-post-123abc") == ["LibMedium https://libmedium.example.ts.net/@someone/a-post-123abc"])
     }
 
     @Test func otherSitesAndUnconfiguredFrontEndsGetNothing() {

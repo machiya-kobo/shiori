@@ -212,6 +212,20 @@ if "__SHIORI_SOURCE_URL__" not in s:
 open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_SOURCE_URL__", url))
 PY
 
+# The privacy front ends (Redlib, Invidious…) linked from the results
+# page's cards beside the archives; none when unset.
+SHIORI_FRONTENDS="${SHIORI_FRONTENDS:-$(yml SHIORI_FRONTENDS)}"
+python3 - "$RESOURCES/search.js" "$SHIORI_FRONTENDS" <<'PY'
+import sys
+p, value = sys.argv[1:]
+s = open(p, encoding="utf-8").read()
+if "__SHIORI_FRONTENDS__" not in s:
+    sys.exit("search.js lost the front ends placeholder")
+if value:
+    s = s.replace("__SHIORI_FRONTENDS__", value)
+open(p, "w", encoding="utf-8").write(s)
+PY
+
 # The neighbours' icons in the results page: neutral glyphs unless local.yml
 # (or the environment) names a folder holding their own logos (hister.png,
 # searxng.svg) in SHIORI_ROOM_LOGOS. The repository carries no other

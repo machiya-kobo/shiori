@@ -3,8 +3,8 @@ import Foundation
 /// A web page elsewhere: its copies on the Wayback Machine and archive.is,
 /// and the same page through a privacy front end (Redlib for Reddit,
 /// Invidious for YouTube…) when the build names one. Links only: Shiori
-/// never fetches any of them. `S.cachedURL` / `S.archiveURL` build the
-/// same archive links on the search page.
+/// never fetches any of them. `S.elsewhereLinks` / `S.frontendLinks` are
+/// the twins, with the same tests.
 public enum Elsewhere {
     /// The page on the Wayback Machine (its newest snapshot).
     public static func wayback(_ url: String) -> URL? {
@@ -45,7 +45,10 @@ public enum Elsewhere {
                  hosts: ["twitter.com", "www.twitter.com", "mobile.twitter.com", "x.com", "www.x.com", "mobile.x.com"]) { c in
             (c.path, c.percentEncodedQuery)
         },
-        Frontend(key: "scribe", name: "Scribe", hosts: ["medium.com", "www.medium.com"]) { c in
+        Frontend(key: "scribe", name: "Scribe", hosts: medium) { c in
+            (c.path, c.percentEncodedQuery)
+        },
+        Frontend(key: "libmedium", name: "LibMedium", hosts: medium) { c in
             (c.path, c.percentEncodedQuery)
         },
         Frontend(key: "rimgo", name: "rimgo", hosts: ["imgur.com", "www.imgur.com", "i.imgur.com", "m.imgur.com"]) { c in
@@ -63,6 +66,7 @@ public enum Elsewhere {
         },
     ]
 
+    static let medium: Set<String> = ["medium.com", "www.medium.com"]
     static let youTube: Set<String> = ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "www.youtube-nocookie.com", "youtube-nocookie.com"]
 
     /// youtu.be/<id> and /shorts/<id> become /watch?v=<id> (a start time kept).

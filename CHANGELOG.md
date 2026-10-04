@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.5.1 (2026-10-05)
+
+### Added
+
+- The web app's page menu (⋯) and the search page's cards (web results
+  and your pages) offer the same as the apps: Archive.org, Archive.is and
+  the build's privacy front ends. The web builds read `SHIORI_FRONTENDS`
+  from their environment, and Safari's results page from local.yml.
+- **LibMedium** for Medium articles, beside Scribe.
+
 ## 0.5.0 (2026-10-05)
 
 ### Added

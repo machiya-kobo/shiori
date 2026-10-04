@@ -109,8 +109,10 @@ holds the rules and the traps the code can't tell you.
   build both read it). Others: `SHIORI_SEARXNG_URL`, `SHIORI_NIWA_URL`
   (Kura), `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`, `SHIORI_ROOMS`,
   `SHIORI_STATUS_URL`, `SHIORI_SEARCH_PAGE_URL`, `SHIORI_SOURCE_URL`,
-  `SHIORI_FRONTENDS` (`redlib=https://…,invidious=https://…`: a page's
-  menu offers its Reddit or YouTube page there).
+  `SHIORI_FRONTENDS` (`redlib=https://…,invidious=https://…,libmedium=…`:
+  a web page's menu, and the search page's cards, offer the page there
+  beside Archive.org and Archive.is; `Elsewhere` / `S.elsewhereLinks`,
+  twins; the web builds take it from their environment).
 - The user's conventions are build defaults, empty in a public build:
   `SHIORI_OBSIDIAN_VAULT`, `SHIORI_AI_NEVER_SUGGEST`, `SHIORI_AI_NOT_TOPICS`,
   `SHIORI_RESERVED_COLLECTIONS` (comma lists). `SHIORI_ROOM_LOGOS` (a folder

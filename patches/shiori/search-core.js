@@ -234,6 +234,88 @@
     return 'https://archive.is/newest/' + url;
   }
 
+  // --- privacy front ends (HisterKit's Elsewhere is the twin) ----------------
+
+  const REDDIT = ['reddit.com', 'www.reddit.com', 'old.reddit.com', 'new.reddit.com', 'np.reddit.com', 'm.reddit.com', 'redd.it'];
+  const YOUTUBE = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'www.youtube-nocookie.com', 'youtube-nocookie.com'];
+  const MEDIUM = ['medium.com', 'www.medium.com'];
+  const samePage = (u) => ({ path: u.pathname, query: u.search.slice(1) });
+  /** youtu.be/<id> and /shorts/<id> become /watch?v=<id> (a start time kept). */
+  function youTubePage(u) {
+    const parts = u.pathname.split('/').filter(Boolean);
+    let id = null;
+    if (u.hostname.toLowerCase() === 'youtu.be') id = parts[0] || '';
+    else if (parts.length >= 2 && ['shorts', 'embed', 'live'].includes(parts[0])) id = parts[1];
+    if (id === null) return samePage(u);
+    if (!id) return null;
+    const start = u.searchParams.get('t') || u.searchParams.get('start');
+    const q = new URLSearchParams({ v: id });
+    if (start) q.set('t', start);
+    return { path: '/watch', query: q.toString() };
+  }
+  /** The front ends Shiori knows, keyed as SHIORI_FRONTENDS names them. */
+  const FRONTENDS = [
+    { key: 'redlib', name: 'Redlib', hosts: REDDIT, page: (u) => {
+      if (u.hostname.toLowerCase() !== 'redd.it') return samePage(u);
+      const id = u.pathname.split('/').filter(Boolean)[0];
+      return id ? { path: '/comments/' + id, query: '' } : null;
+    } },
+    { key: 'invidious', name: 'Invidious', hosts: YOUTUBE, page: youTubePage },
+    { key: 'piped', name: 'Piped', hosts: YOUTUBE, page: youTubePage },
+    { key: 'nitter', name: 'Nitter', hosts: ['twitter.com', 'www.twitter.com', 'mobile.twitter.com', 'x.com', 'www.x.com', 'mobile.x.com'], page: samePage },
+    { key: 'scribe', name: 'Scribe', hosts: MEDIUM, page: samePage },
+    { key: 'libmedium', name: 'LibMedium', hosts: MEDIUM, page: samePage },
+    { key: 'rimgo', name: 'rimgo', hosts: ['imgur.com', 'www.imgur.com', 'i.imgur.com', 'm.imgur.com'], page: samePage },
+    { key: 'libremdb', name: 'libremdb', hosts: ['imdb.com', 'www.imdb.com', 'm.imdb.com'], page: samePage },
+    { key: 'breezewiki', name: 'BreezeWiki', hosts: [], page: (u) => {
+      // <wiki>.fandom.com/wiki/Page → /<wiki>/wiki/Page.
+      const host = u.hostname.toLowerCase();
+      if (!host.endsWith('.fandom.com')) return null;
+      const wiki = host.slice(0, -'.fandom.com'.length);
+      return wiki && !wiki.includes('.') && wiki !== 'www' ? { path: '/' + wiki + u.pathname, query: u.search.slice(1) } : null;
+    } },
+  ];
+
+  /** The build's front ends (SHIORI_FRONTENDS, "redlib=https://…,invidious=…"): known names with an http(s) address. */
+  function frontendInstances(setting) {
+    return String(setting || '').split(',').map((entry) => {
+      const at = entry.indexOf('=');
+      if (at < 0) return null;
+      const frontend = FRONTENDS.find((f) => f.key === entry.slice(0, at).trim().toLowerCase());
+      let base = null;
+      try { base = new URL(entry.slice(at + 1).trim()); } catch (_) {}
+      return frontend && base && /^https?:$/.test(base.protocol) && base.hostname ? { frontend, base } : null;
+    }).filter(Boolean);
+  }
+
+  /** The page through each front end that stands in for its site: [{name, url}]. */
+  function frontendLinks(url, instances) {
+    if (!/^https?:\/\//i.test(String(url || ''))) return [];
+    let u;
+    try { u = new URL(url); } catch (_) { return []; }
+    const host = u.hostname.toLowerCase();
+    return (instances || []).map(({ frontend, base }) => {
+      const serves = frontend.hosts.includes(host) || (frontend.key === 'breezewiki' && host.endsWith('.fandom.com'));
+      const page = serves ? frontend.page(u) : null;
+      if (!page) return null;
+      const out = new URL(base.href);
+      out.pathname = out.pathname.replace(/\/$/, '') + (page.path || '/');
+      out.search = page.query ? '?' + page.query : '';
+      out.hash = u.hash;
+      return { name: frontend.name, url: out.href };
+    }).filter(Boolean);
+  }
+
+  /** A web page elsewhere, for a menu: Archive.org, Archive.is, then the front ends. */
+  function elsewhereLinks(url, instances) {
+    if (!/^https?:\/\//i.test(String(url || ''))) return [];
+    return [
+      { name: 'Archive.org', url: cachedURL(url) },
+      { name: 'Archive.is', url: archiveURL(url) },
+      ...frontendLinks(url, instances),
+    ];
+  }
+
   // --- vault notes (Hister's label:vault documents) ---------------------------
 
   /**
@@ -2369,6 +2451,9 @@
     duration,
     cachedURL,
     archiveURL,
+    frontendInstances,
+    frontendLinks,
+    elsewhereLinks,
     hasBang,
     webQuery,
     normalizeURL,

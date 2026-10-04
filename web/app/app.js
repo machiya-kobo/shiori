@@ -203,6 +203,8 @@ const SOURCE_URL = S.sourceLink(fromBuild('__SHIORI_SOURCE_URL__'));
  * through it, so without it neither is offered.
  */
 const SMALLWEB = fromBuild('__SHIORI_SMALLWEB_URL__') !== '';
+/** The build's privacy front ends (SHIORI_FRONTENDS: Redlib, Invidious…), for a page's menu. */
+const FRONTENDS = S.frontendInstances(fromBuild('__SHIORI_FRONTENDS__'));
 
 function fromBuild(value) {
   return value.startsWith('__') ? '' : value;
@@ -1693,6 +1695,15 @@ function pageMenu(doc, n) {
     if (!n && !file) items.push(item('Edit Label…', () => labelPicker(doc)));
     if (canSummarize(doc, n)) items.push(item('Summarize', () => summarize(doc, false)));
     items.push(item('Copy Link', () => copy(S.isLocalFile(doc.url) ? S.localFileURL(location.origin, doc.url) : doc.url)));
+    // A web page elsewhere, as the apps' menu has it: Archive.org,
+    // Archive.is and the build's front ends (never a note, a file or code:
+    // a note is Kura's, and archives can't reach a private forge). Links only.
+    if (!isNoteDoc(doc, n) && !file) {
+      for (const link of S.elsewhereLinks(doc.url, FRONTENDS)) {
+        items.push(item(link.name.startsWith('Archive.') ? `Open on ${link.name}` : `Open in ${link.name}`,
+          () => window.open(link.url, '_blank', 'noopener')));
+      }
+    }
     // Show As goes here, before Delete, once Hister names the extractors.
     const showAs = h('div', { class: 'show-as', role: 'none' });
     // No Delete for a work note (Hister never has one) or a file.

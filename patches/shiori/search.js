@@ -1785,7 +1785,7 @@
       saved ? relativeDate(saved) : null,
       markedSnippet(d.text),
       meta,
-      places(chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister')),
+      places(chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister'), ...elsewhere(d.url)),
     );
   }
 
@@ -1955,15 +1955,20 @@
     );
   }
 
+  // The build's privacy front ends (SHIORI_FRONTENDS: Redlib, Invidious…).
+  const FRONTENDS = S.frontendInstances(S.fromBuild('__SHIORI_FRONTENDS__'));
+
+  /** A web page elsewhere: the Wayback Machine, archive.is and the build's front ends (links only). */
+  function elsewhere(url) {
+    return S.elsewhereLinks(url, FRONTENDS).map((link) =>
+      el('a', { href: link.url, title: link.name.startsWith('Archive.') ? `Open on ${link.name}` : `Open in ${link.name}` },
+        link.name === 'Archive.org' ? 'cached' : link.name === 'Archive.is' ? 'archive.is' : link.name.toLowerCase()));
+  }
+
   function webCard(r) {
     // Not which engines found it (Google CSE, Bing…): where it is and when
     // is what a result needs.
-    const meta = el(
-      'div',
-      { class: 'meta' },
-      el('a', { href: S.cachedURL(r.url) }, 'cached'),
-      el('a', { href: S.archiveURL(r.url) }, 'archive.is'),
-    );
+    const meta = el('div', { class: 'meta' }, ...elsewhere(r.url));
     const li = el(
       'li',
       { class: 'card' },

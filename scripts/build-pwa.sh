@@ -53,7 +53,7 @@ for path in sys.argv[1:]:
         text = f.read()
     for placeholder, name in (("__SHIORI_NIWA_URL__", "SHIORI_NIWA_URL"), ("__SHIORI_KONBINI_URL__", "SHIORI_KONBINI_URL"),
                               ("__SHIORI_OBSIDIAN_VAULT__", "SHIORI_OBSIDIAN_VAULT"),
-                              ("__SHIORI_SOURCE_URL__", "SHIORI_SOURCE_URL"), ("__SHIORI_AI__", "SHIORI_AI"),
+                              ("__SHIORI_SOURCE_URL__", "SHIORI_SOURCE_URL"), ("__SHIORI_AI__", "SHIORI_AI"), ("__SHIORI_FRONTENDS__", "SHIORI_FRONTENDS"),
                               ("__SHIORI_SMALLWEB_URL__", "SHIORI_SMALLWEB_URL")):
         value = os.environ.get(name, "")
         if value:

@@ -1128,3 +1128,30 @@ test("code rows name their forge (CodeDocs twins)", () => {
   assert.deepEqual(Array.from(S.CODE_HOSTS, ([k]) => k), ['forgejo', 'github']);
   assert.equal(S.codeQuery('', { host: 'github' }), 'metadata.source:code metadata.code_host:github *');
 });
+
+// The same cases as ElsewhereTests.swift.
+test('a web page elsewhere: archives, and the front ends the build names (Elsewhere twins)', () => {
+  const instances = S.frontendInstances('redlib=https://redlib.example.ts.net/, invidious=https://invidious.example.ts.net,breezewiki=https://bw.example.ts.net/,libmedium=https://libmedium.example.ts.net/,unknown=https://x.example/,nitter=ftp://n.example/');
+  assert.deepEqual(Array.from(instances, (i) => i.frontend.key), ['redlib', 'invidious', 'breezewiki', 'libmedium']);
+  assert.equal(S.frontendInstances('').length, 0);
+  const links = (url) => Array.from(S.frontendLinks(url, instances), (l) => `${l.name} ${l.url}`);
+  assert.deepEqual(links('https://www.reddit.com/r/raspberry_pi/comments/abc/a_title/?sort=new'), ['Redlib https://redlib.example.ts.net/r/raspberry_pi/comments/abc/a_title/?sort=new']);
+  assert.deepEqual(links('https://old.reddit.com/r/unix/'), ['Redlib https://redlib.example.ts.net/r/unix/']);
+  assert.deepEqual(links('https://redd.it/abc123'), ['Redlib https://redlib.example.ts.net/comments/abc123']);
+  assert.deepEqual(links('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42'), ['Invidious https://invidious.example.ts.net/watch?v=dQw4w9WgXcQ&t=42']);
+  assert.deepEqual(links('https://youtu.be/dQw4w9WgXcQ?t=42'), ['Invidious https://invidious.example.ts.net/watch?v=dQw4w9WgXcQ&t=42']);
+  assert.deepEqual(links('https://www.youtube.com/shorts/abcDEF'), ['Invidious https://invidious.example.ts.net/watch?v=abcDEF']);
+  assert.deepEqual(links('https://www.youtube.com/@channel/videos'), ['Invidious https://invidious.example.ts.net/@channel/videos']);
+  assert.deepEqual(links('https://zelda.fandom.com/wiki/Link'), ['BreezeWiki https://bw.example.ts.net/zelda/wiki/Link']);
+  assert.deepEqual(links('https://www.fandom.com/'), []);
+  assert.deepEqual(links('https://medium.com/@someone/a-post-123abc'), ['LibMedium https://libmedium.example.ts.net/@someone/a-post-123abc']);
+  assert.deepEqual(links('https://a.example/r/unix/'), []);
+  assert.deepEqual(links('https://reddit.com.evil.example/r/x'), []);
+  assert.deepEqual(links('https://x.com/someone'), []);
+  assert.equal(S.frontendLinks('https://www.reddit.com/r/x', []).length, 0);
+  assert.deepEqual(JSON.parse(JSON.stringify(S.elsewhereLinks('https://a.example/x?y=1', []))), [
+    { name: 'Archive.org', url: 'https://web.archive.org/web/https://a.example/x?y=1' },
+    { name: 'Archive.is', url: 'https://archive.is/newest/https://a.example/x?y=1' },
+  ]);
+  assert.equal(S.elsewhereLinks('gemini://a.example/', instances).length, 0);
+});
