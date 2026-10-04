@@ -1069,11 +1069,9 @@ async function didYouMean(q, scope) {
   $('list-top').append(h('p', { class: 'correction' }, 'Did you mean ', h('a', { href: '#', onclick: (e) => (e.preventDefault(), (searchInput.value = fix), go('search', { q: fix, s: scope })) }, fix), '?'));
 }
 
-/** Your pages and your notes in All: the top five each, then "N results ›"
- *  ("How Many" is gone everywhere). */
-const ALL_COUNT = 5;
-/** How many of your pages, and of your notes, go among All's web results. */
-const MIX_COUNT = 3;
+/** Your pages and your notes in All: a page of each (as the Pages list's),
+ *  all of them among the web results. */
+const ALL_COUNT = 20;
 
 async function searchAll(container, q) {
   container.replaceChildren(h('div', { class: 'spinner' }));
@@ -1109,13 +1107,13 @@ async function searchAll(container, q) {
   const answer = answerCard(q);
   if (answer) container.append(answer);
   // Your pages and notes have no sections here, as on the search page:
-  // the top three of each go among the web results (a page after the first
-  // web result, a note after the second…), each row saying whose it is,
-  // and their totals go on the Pages and Notes pills.
+  // a page of each goes among the web results, pages and notes taking
+  // turns, spread evenly (S.alternate, S.mixCounts), each row saying whose
+  // it is, and their totals go on the Pages and Notes pills.
   const hiddenOpened = settings.showOpened === true ? 0 : ((pages && pages.opened) || []).filter((o) => !S.isNoteURL(o.url, settings.niwaURL, settings.konbiniURL)).length;
   if (pages) setSegmentCount('hister', Math.max((pages.total || 0) - hiddenOpened, pages.documents.length));
   if (notes && !notes.signIn) setSegmentCount('notes', Math.max(notes.total || 0, (notes.documents || []).length));
-  const mine = (reply, label) => ((reply && reply.documents) || []).slice(0, MIX_COUNT).map((d) => {
+  const mine = (reply, label) => ((reply && reply.documents) || []).slice(0, ALL_COUNT).map((d) => {
     const row = docRow(d);
     row.classList.add('mixed');
     row.querySelector('.title').dataset.label = respelled ? `${label} · for “${respelled}”` : label;
@@ -1123,9 +1121,8 @@ async function searchAll(container, q) {
   });
   const myPages = mine(pages, 'Your page');
   const myNotes = notes && notes.signIn ? [] : mine(notes, 'Your note');
-  const mix = [];
-  for (let i = 0; i < MIX_COUNT; i++) mix.push(myPages[i], myNotes[i]);
-  const rows = mix.filter(Boolean);
+  const mix = S.alternate(myPages, myNotes);
+  const rows = mix;
   if (notes && notes.signIn) container.append(h('section', { class: 'list-section' }, signInStatus(() => searchAll(container, q))));
   dropStaleSelection(container);
   if (!settings.webResults) {
@@ -1259,9 +1256,15 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
         ),
       );
     }
-    // Yours among them: one after each web row, the rest after the last.
+    // Yours among them, spread evenly from the first web row to the last.
     const webRows = [...list.children];
-    mix.filter(Boolean).forEach((row, i) => (webRows[i] ? webRows[i].after(row) : list.append(row)));
+    const counts = S.mixCounts(webRows.length, mix.length);
+    let next = 0;
+    webRows.forEach((row, i) => {
+      row.after(...mix.slice(next, next + counts[i]));
+      next += counts[i];
+    });
+    if (!webRows.length) list.append(...mix);
     // Not `null` as a child: replaceChildren writes it out as the text "null"
     // (it showed under All's Web heading).
     container.replaceChildren(...[embedded ? null : answerCard(q), list].filter(Boolean));
