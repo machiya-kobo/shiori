@@ -778,6 +778,9 @@
   /** The switcher's glyphs (24-point strokes, each a path's `d`), shared by both web pages: the house, and the menu's gear. */
   const ROOM_GLYPHS = {
     house: ['M3 11l9-7 9 7', 'M5 10v10h14V10', 'M10 20v-6h4v6'],
+    // The search fields' buttons, as the rooms' (vaultkit's form.search.bar).
+    clear: ['M6 6l12 12', 'M18 6 6 18'],
+    search: ['M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0z', 'm20 20-4-4'],
     gear: [
       'M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
       'M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
@@ -797,6 +800,33 @@
       svg.append(path);
     }
     return svg;
+  }
+
+  /**
+   * A search field's buttons, as the rooms' (vaultkit's form.search.bar)
+   * and Kagi's: an X that clears the field (shown once there's text: CSS,
+   * `:placeholder-shown`), and a magnifier that submits, as Return does
+   * (CSS shows it on phones). Placed after the input, its siblings.
+   */
+  function fieldButtons(input, submit) {
+    const button = (cls, label, glyph) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `field-button ${cls}`;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.append(roomGlyph(glyph));
+      return b;
+    };
+    const clear = button('field-clear', 'Clear', 'clear');
+    const go = button('field-go', 'Search', 'search');
+    clear.addEventListener('click', () => {
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    });
+    go.addEventListener('click', () => submit());
+    return [clear, go];
   }
 
   /**
@@ -1930,6 +1960,7 @@
     PALETTES,
     houseDomain,
     roomLinks,
+    fieldButtons,
     roomsSwitcher,
     roomGlyph,
     collectionAliases,

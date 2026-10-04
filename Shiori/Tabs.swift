@@ -275,6 +275,7 @@ struct ResultsScreen: View {
     /// last searched (after a pause in typing).
     @State private var text = ""
     @State private var searched = ""
+    @FocusState private var searching: Bool
 
     init(route: QueryRoute, windowField: Bool = false) {
         self.route = route
@@ -296,29 +297,9 @@ struct ResultsScreen: View {
         // Search within the list: its own field
         // on the iPhone; in the three columns the window's field does it.
         .topBar(if: !windowField) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(palette.secondaryText)
-                TextField("Search in \(route.title)", text: $text)
-                    .textFieldStyle(.plain)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                    .onSubmit { searched = text.trimmingCharacters(in: .whitespaces) }
-                if !text.isEmpty {
-                    Button("Clear", systemImage: "xmark.circle.fill") { text = "" }
-                        .labelStyle(.iconOnly)
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(palette.secondaryText)
-                }
+            TabSearchField(prompt: "Search in \(route.title)", text: $text, focus: $searching) {
+                searched = text.trimmingCharacters(in: .whitespaces)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(palette.surface, in: .capsule)
-            .padding(.horizontal)
-            .padding(.top, 6)
-            .topBarBackground()
         }
         .onAppear {
             guard windowField else { return }
@@ -509,12 +490,15 @@ extension SearchScreen {
     }
 }
 
-/// The iPhone tabs' search field, at the very top: the tabs have no title
-/// row. A field of the app's own, as a pushed list's: `.searchable` lives
-/// in the navigation bar's drawer, which kept an empty title row above it,
-/// and a search-role tab draws inline in iOS 27's tab bar. No
-/// capitalisation or correction (Hister matches the exact words); a tap
-/// into it selects what's there, as every search field does.
+/// The iPhone's search fields: the tabs' (at the very top: the tabs have
+/// no title row) and a pushed list's. A field of the app's own:
+/// `.searchable` lives in the navigation bar's drawer, which kept an empty
+/// title row above it, and a search-role tab draws inline in iOS 27's tab
+/// bar. As the rooms' and Kagi's: an X once there's text, and a magnifier
+/// at the end that submits, as Return does (`submit`; without one it
+/// puts the keyboard away). No capitalisation or correction (Hister
+/// matches the exact words); a tap into it selects what's there, as every
+/// search field does.
 struct TabSearchField: View {
     let prompt: String
     @Binding var text: String
@@ -524,9 +508,7 @@ struct TabSearchField: View {
     @State private var selection: TextSelection?
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(palette.secondaryText)
+        HStack(spacing: 4) {
             TextField(prompt, text: $text, selection: $selection)
                 .textFieldStyle(.plain)
                 .focused(focus)
@@ -535,16 +517,15 @@ struct TabSearchField: View {
                 #if os(iOS)
                 .textInputAutocapitalization(.never)
                 #endif
-                .onSubmit(submit)
+                .onSubmit(go)
             if !text.isEmpty {
-                Button("Clear", systemImage: "xmark.circle.fill") { text = "" }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(palette.secondaryText)
+                fieldButton("Clear", systemImage: "xmark") { text = "" }
             }
+            fieldButton("Search", systemImage: "magnifyingglass", action: go)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.leading, 16)
+        .padding(.trailing, 4)
+        .padding(.vertical, 2)
         .modifier(SearchFieldShape())
         .padding(.horizontal)
         .padding(.top, 6)
@@ -554,6 +535,23 @@ struct TabSearchField: View {
             // After the tap has placed its caret, or it would undo this.
             Task { selection = TextSelection(range: text.startIndex..<text.endIndex) }
         }
+    }
+
+    /// Return or the magnifier: the field's own submit, and the keyboard away.
+    private func go() {
+        submit()
+        focus.wrappedValue = false
+    }
+
+    /// A thin glyph in the secondary colour, 32 points with 44 to tap.
+    private func fieldButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(title, systemImage: systemImage, action: action)
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
+            .textStyle(.body)
+            .foregroundStyle(palette.secondaryText)
+            .frame(width: 32, height: 32)
+            .contentShape(.rect.inset(by: -6))
     }
 }
 

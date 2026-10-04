@@ -950,3 +950,31 @@ test("the Rooms menu's rows are the rooms': icon, name, role; here not a link; a
   // Without settings, no rule and no row for it.
   assert.equal(R.roomLinks(list, 'shiori').length, 7);
 });
+
+test("a search field's buttons: an X that clears it, a magnifier that submits", () => {
+  const node = (tagName) => ({
+    tagName: tagName.toUpperCase(), children: [], attrs: {}, listeners: {}, className: '', title: '', type: '',
+    setAttribute(k, v) { this.attrs[k] = v; },
+    append(...kids) { this.children.push(...kids); },
+    addEventListener(type, fn) { this.listeners[type] = fn; },
+  });
+  const ctx3 = { URL, URLSearchParams, Event, document: { createElement: node, createElementNS: (_, t) => node(t) } };
+  ctx3.globalThis = ctx3;
+  vm.createContext(ctx3);
+  vm.runInContext(source, ctx3);
+  const events = [];
+  let focused = 0;
+  const input = { value: 'pi', dispatchEvent: (e) => events.push(e.type), focus: () => focused++ };
+  let submitted = 0;
+  const [clear, go] = ctx3.ShioriSearch.fieldButtons(input, () => submitted++);
+  assert.equal(clear.className, 'field-button field-clear');
+  assert.equal(go.className, 'field-button field-go');
+  assert.equal(clear.type, 'button');
+  assert.equal(go.attrs['aria-label'], 'Search');
+  go.listeners.click();
+  assert.equal(submitted, 1);
+  clear.listeners.click();
+  assert.equal(input.value, '');
+  assert.deepEqual(events, ['input'], 'the field hears it, as if typed');
+  assert.equal(focused, 1);
+});

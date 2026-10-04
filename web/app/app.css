@@ -214,6 +214,26 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 .searchfield .ghost[hidden] { display: none; }
 .searchfield .ghost .typed { color: transparent; }
 .searchfield .ghost .rest { color: var(--secondary); pointer-events: auto; cursor: pointer; }
+/* A search field's buttons, as the rooms' (vaultkit's form.search.bar) and
+   Kagi's: the X once there's text, and on a phone a magnifier that submits.
+   20px line glyphs in 32px buttons, 44px to tap, in the secondary colour. */
+.field-button {
+  position: absolute; top: 50%; transform: translateY(-50%); right: 8px; z-index: 1;
+  width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: transparent;
+  color: var(--secondary); display: grid; place-items: center; cursor: pointer;
+}
+.field-button::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+.field-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+input:placeholder-shown ~ .field-clear { display: none; }
+.field-go { display: none; }
+.searchfield input[type="search"] { padding-right: 44px; }
+/* Ours, not WebKit's own X as well. */
+.searchfield input::-webkit-search-cancel-button { display: none; -webkit-appearance: none; }
+@media (max-width: 759px) {
+  .field-go { display: grid; }
+  .field-clear { right: 44px; }
+  .searchfield input[type="search"] { padding-right: 84px; }
+}
 /* One line ends the bar (field, pills, Sort · Group · Filter), as the apps. */
 /* No line between Sort · Group · Filter and the results: the cards start
    below them on their own. */
@@ -358,7 +378,6 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
     padding-top: calc(8px + env(safe-area-inset-top));
   }
 }
-
 /* Bottom tabs (narrow): the Machiya rooms' shared floating bar (vaultkit),
    edge to edge less 8px, its tabs sharing the width (five fit at 320px;
    centred and sized to its content, the bar's ends ran off a phone). */

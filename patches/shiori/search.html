@@ -50,7 +50,10 @@
       <form id="search" role="search" method="get" action="">
         <div class="field">
           <input id="q" name="q" type="search" placeholder="Search pages, notes and the web" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search" enterkeyhint="search" />
-          <button id="clear" type="button" aria-label="Clear" title="Clear search">×</button>
+          <!-- The X once there's text, and on a phone a magnifier that
+               submits, as the rooms' search field and Kagi's. -->
+          <button id="clear" class="field-button" type="button" aria-label="Clear" title="Clear search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>
+          <button id="go" class="field-button" type="submit" aria-label="Search" title="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"/><path d="m20 20-4-4"/></svg></button>
           <div id="recent" class="recent" hidden>
             <p class="recent-head" id="recent-head">Recent</p>
             <ul id="recent-list" aria-labelledby="recent-head"></ul>

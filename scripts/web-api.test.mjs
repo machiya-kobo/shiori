@@ -376,3 +376,19 @@ test("the web app's tab bar is the rooms' shared one: edge to edge, its tabs sha
   assert.match(bar, /-webkit-backdrop-filter: blur\(20px\) saturate\(180%\); backdrop-filter: blur\(20px\) saturate\(180%\)/);
   assert.match(css, /#tabs button > span \{[^}]*text-overflow: ellipsis/);
 });
+
+test("every phone search field has the rooms' X and submit magnifier", () => {
+  const app = read('../web/app/app.js');
+  const appCSS = read('../web/app/app.css');
+  const html = read('../patches/shiori/search.html');
+  const pageCSS = read('../patches/shiori/search.css');
+  // The web app's main field and a list's "Search in" field.
+  assert.match(app, /h\('div', \{ class: 'searchfield' \}, searchInput, ghost, \.\.\.searchButtons\)/);
+  assert.match(app, /h\('div', \{ class: 'searchfield' \}, field, \.\.\.fieldButtons\)/);
+  assert.match(appCSS, /input:placeholder-shown ~ \.field-clear \{ display: none; \}/);
+  assert.match(appCSS, /@media \(max-width: 759px\) \{\n  \.field-go \{ display: grid; \}/);
+  // The search page: its X (line glyph) and a submit magnifier, phones only.
+  assert.match(html, /<button id="go" class="field-button" type="submit"/);
+  assert.doesNotMatch(html, /title="Clear search">×</);
+  assert.match(pageCSS, /#go \{ display: none; \}\n@media \(max-width: 759px\) \{\n  #go \{ display: grid; \}/);
+});

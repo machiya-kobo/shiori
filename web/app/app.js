@@ -952,21 +952,27 @@ function viewList(params) {
     });
   };
   let timer = 0;
+  const apply = () => {
+    const next = new URLSearchParams(params);
+    if (field.value.trim()) next.set('in', field.value.trim()); else next.delete('in');
+    history.replaceState(null, '', `#/list?${next.toString()}`);
+    // The sort button's label follows (Best Match while searching); the
+    // field is the same element, re-placed, and keeps its focus.
+    const focused = document.activeElement === field;
+    drawControls();
+    if (focused) field.focus();
+    load();
+  };
   field.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(() => {
-      const next = new URLSearchParams(params);
-      if (field.value.trim()) next.set('in', field.value.trim()); else next.delete('in');
-      history.replaceState(null, '', `#/list?${next.toString()}`);
-      // The sort button's label follows (Best Match while searching); the
-      // field is the same element, re-placed, and keeps its focus.
-      const focused = document.activeElement === field;
-      drawControls();
-      if (focused) field.focus();
-      load();
-    }, field.value.trim() ? 350 : 0);
+    timer = setTimeout(apply, field.value.trim() ? 350 : 0);
   });
-  const drawControls = () => fill($('list-top'), h('div', { class: 'searchfield' }, field), controls('list', params, { search: !!field.value.trim() }));
+  // Its X, and on a phone its magnifier: the search at once, without the pause.
+  const fieldButtons = S.fieldButtons(field, () => {
+    clearTimeout(timer);
+    apply();
+  });
+  const drawControls = () => fill($('list-top'), h('div', { class: 'searchfield' }, field, ...fieldButtons), controls('list', params, { search: !!field.value.trim() }));
   drawControls();
   load();
 }
@@ -1905,7 +1911,7 @@ function showGhost(rest) {
   if (!rest) return;
   // The same box and type as the field, so the grey lines up with the text.
   const css = getComputedStyle(searchInput);
-  for (const p of ['font', 'letterSpacing', 'paddingLeft', 'paddingTop', 'borderLeftWidth', 'borderTopWidth', 'textIndent']) ghost.style[p] = css[p];
+  for (const p of ['font', 'letterSpacing', 'paddingLeft', 'paddingRight', 'paddingTop', 'borderLeftWidth', 'borderTopWidth', 'textIndent']) ghost.style[p] = css[p];
   ghost.style.borderStyle = 'solid';
   ghost.style.borderColor = 'transparent';
   // One line box exactly the field's content height: the field centres its
@@ -1975,7 +1981,12 @@ searchInput.addEventListener('keydown', (e) => {
   searchTo(searchInput.value, { record: true });
 });
 selectOnFocus(searchInput);
-$('search-top').append(h('div', { class: 'searchfield' }, searchInput, ghost));
+// The X and, on a phone, the magnifier (submits, as Return does).
+const searchButtons = S.fieldButtons(searchInput, () => {
+  clearTimeout(liveTimer);
+  searchTo(searchInput.value, { record: true });
+});
+$('search-top').append(h('div', { class: 'searchfield' }, searchInput, ghost, ...searchButtons));
 
 // --- Chrome: sidebar and tabs ----------------------------------------------------
 
