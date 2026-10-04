@@ -5,6 +5,10 @@
 // are wired to it: those need a browser, so their source is checked.
 // Run: node --test scripts/*.test.mjs
 
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -398,4 +402,32 @@ test('installed on an iPhone, the web app starts 24px under the status bar, as t
   const appCSS = read('../web/app/app.css');
   // Installed on an iPhone only: safe area + 24px.
   assert.match(appCSS, /@supports \(-webkit-touch-callout: none\) \{\n  @media \(display-mode: standalone\) and \(max-width: 759px\) \{[^}]*padding-top: calc\(24px \+ env\(safe-area-inset-top\)\);/);
+});
+
+test("the web app's modules parse (the other tests read them as text)", () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shiori-parse-'));
+  try {
+    for (const name of ['app.js', 'api.js', 'sw.js']) {
+      const copy = join(dir, name.replace(/\.js$/, '.mjs'));
+      writeFileSync(copy, read(`../web/app/${name}`));
+      const r = spawnSync(process.execPath, ['--check', copy], { encoding: 'utf8' });
+      assert.equal(r.status, 0, `${name}: ${r.stderr}`);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the web is searched only on purpose: Return, a recent search, Did you mean, the Web pill (each web search counts)', () => {
+  const app = read('../web/app/app.js');
+  // Typing searches with no w; Return (record) adds w=1.
+  assert.match(app, /go\('search', \{ q, s, \.\.\.\(record \? \{ w: '1' \} : \{\}\) \}, \{ replace: view === 'search' \}\);/);
+  assert.match(app, /item\(text, 'search', \{ q: text, s: params\.get\('s'\) \|\| 'all', w: '1' \}/);
+  assert.match(app, /go\('search', \{ q: fix, s: scope, w: '1' \}\)/);
+  assert.match(app, /keep\(\{ s, \.\.\.\(s === 'web' \? \{ w: '1' \} : \{\}\) \}\)/);
+  // All and Web ask the web only with it.
+  assert.match(app, /if \(!settings\.webResults \|\| !web\) \{/);
+  assert.match(app, /if \(web\) webList\(\$\('list'\), q\);/);
+  // Respellings come from the autocompleter, never a web search.
+  assert.doesNotMatch(app, /api\.web\([^)]*\)\.then\(\(d\) => d\.suggestions/);
 });

@@ -42,12 +42,20 @@ struct AllResults: View {
     /// 20), among the web's results (the rest on the Pages and Notes pills).
     static let count = 20
 
-    /// Not for a search of Hister syntax alone (label:bsd, @retro).
-    private var webOn: Bool { app.allSearch.webResults && app.searx != nil && !web.query.isEmpty }
+    /// Not for a search of Hister syntax alone (label:bsd, @retro), and
+    /// only for a search run on purpose (`SearchSession.webAllowed`): while
+    /// typing, yours alone.
+    private var webOn: Bool {
+        app.allSearch.webResults && app.searx != nil && !web.query.isEmpty && (session == nil || session?.webAllowed == query)
+    }
 
     var body: some View {
         content
             .task(id: "\(query)|\(app.searchPage.niwaURL)") { await load() }
+            // Return after typing: the web joins what's already shown.
+            .task(id: webOn) {
+                if webOn, web.phase == .idle { await web.load(searx: app.searx, hister: app.client) }
+            }
             .task {
                 try? await Task.sleep(for: .milliseconds(600))
                 holding = false

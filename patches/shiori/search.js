@@ -1418,13 +1418,15 @@
     return found(again) ? { ...again, closeMatches: close } : result;
   }
 
-  /** SearXNG's related searches for `text`, for a respelling; [] without it. */
+  /**
+   * SearXNG's autocompleter for `text`, for a respelling; [] without it.
+   * Never a web search for this: each search counts (a paid search API
+   * would charge it), and the autocompleter's respellings serve as well.
+   */
   async function webSuggestions(text) {
     if (!searxBase || !settings.webResults) return [];
-    const url = new URL(`${searxBase}search`);
-    url.search = new URLSearchParams({ q: text, format: 'json' }).toString();
-    const data = await fetchJSON(url.href, { timeout: WEB_TIMEOUT_MS });
-    return data.suggestions || [];
+    const json = await fetchJSON(`${searxBase}autocompleter?q=${encodeURIComponent(text)}`, { timeout: 3000 });
+    return Array.isArray(json) && Array.isArray(json[1]) ? json[1].filter((s) => typeof s === 'string') : [];
   }
 
   function isHTTP(u) {
@@ -2350,10 +2352,10 @@
   const started = performance.now();
   let data = pageState.web;
   // "wiki" as a word: Wikipedia's article first, with its Info card. The
-  // search without the word starts now, beside the main one, in case the
-  // typed search finds no article.
+  // search without the word runs only if the typed one finds no article in
+  // the reader's language (every web search counts: frugal, as AI is).
   const wikiWords = page === 1 && webLike ? S.wikiQuery(wq) : null;
-  const wikiAlt = wikiWords && !(data && data.shioriWiki) ? searx(wikiWords).catch(() => null) : null;
+  const wikiAlt = wikiWords && !(data && data.shioriWiki) ? () => searx(wikiWords).catch(() => null) : () => Promise.resolve(null);
   if (!data) {
     const url = new URL(`${searxBase}search`);
     url.search = new URLSearchParams({ q: wq, format: 'json', pageno: String(page), categories: webLike ? 'general' : category }).toString();
@@ -2512,7 +2514,7 @@
     let found = null;
     // None, or only one in another language: try the search without "wiki".
     if (!article || !readers(article)) {
-      const other = await alt;
+      const other = await alt();
       const better = other && S.wikipediaArticle(other.results, langs);
       if (better && (!article || readers(better))) {
         article = better;

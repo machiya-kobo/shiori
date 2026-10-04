@@ -139,16 +139,17 @@ final class AppState {
 
     /// The SearXNG instance, for the app's web search.
     var searx: SearxClient? { SearxClient(serverURL: searxngURL) }
-    /// The last text's related searches from SearXNG, shared by the lists
+    /// The last text's respellings from SearXNG's autocompleter, shared by the lists
     /// that ask at once (Search → All's pages and notes).
     @ObservationIgnored private var suggestionsFor: (text: String, task: Task<[String], Never>)?
 
-    /// SearXNG's related searches for `text`, for respelling a search that
+    /// SearXNG's autocompleter for `text` (never a web search), for respelling a search that
     /// found nothing; none without web results.
     func webSuggestions(for text: String) async -> [String] {
         guard allSearch.webResults, let searx else { return [] }
         if let cached = suggestionsFor, cached.text == text { return await cached.task.value }
-        let task = Task { (try? await searx.search(text).suggestions) ?? [] }
+        // The autocompleter's respellings, never a web search (each one counts).
+        let task = Task { await searx.autocomplete(text) }
         suggestionsFor = (text, task)
         return await task.value
     }

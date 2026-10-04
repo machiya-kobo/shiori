@@ -637,7 +637,8 @@ function resultsList(container, options) {
     try {
       const reply = await fetchPage(first);
       if (first && respell && !reply.total && !reply.documents.length && !reply.opened.length) {
-        const suggestions = await api.web(S.webQuery(respell.text) || respell.text).then((d) => d.suggestions || []).catch(() => []);
+        // The autocompleter's respellings, never a web search (each one counts).
+        const suggestions = await api.autocomplete(S.webQuery(respell.text) || respell.text).catch(() => []);
         const close = S.correctedQuery(respell.text, suggestions);
         if (close) {
           loading = false;
@@ -1054,10 +1055,13 @@ function viewSearch(params) {
     go('library', { s: scope }, { replace: true });
     return searchInput.focus();
   }
-  const keep = (next) => ({ q, ...next });
+  // The web only for a search run on purpose (w=1, searchTo); a tap on
+  // the Web pill is one too.
+  const web = params.get('w') === '1';
+  const keep = (next) => ({ q, ...(web ? { w: '1' } : {}), ...next });
   const listed = scope === 'hister' || scope === 'notes';
   fill($('list-top'), 
-    segments(scopes(), scope, (s) => go('search', keep({ s }), { replace: true })),
+    segments(scopes(), scope, (s) => go('search', keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), { replace: true })),
     listed ? controls('search', params, { search: true, notes: scope === 'notes' }) : null,
   );
   if (scope !== 'opened') didYouMean(q, scope);
@@ -1077,15 +1081,17 @@ function viewSearch(params) {
       empty: notes ? `No notes match “${q}”.` : `Nothing in your pages matches “${q}”.`,
       respell: { text: q, wrap: (t) => withWord(t, c.word), title: notes ? 'Your Notes' : 'Your Pages' },
     });
-  } else if (scope === 'web') webList($('list'), q);
-  else if (scope === 'smallweb') smallwebList($('list'), q);
+  } else if (scope === 'web') {
+    if (web) webList($('list'), q);
+    else $('list').replaceChildren(status('Search the Web', 'Press Return to search the web for this.'));
+  } else if (scope === 'smallweb') smallwebList($('list'), q);
   else if (scope === 'files') {
     shownList = { title: q };
     resultsList($('list'), { query: S.filesQuery(q), sort: '', group: '', source: 'pages', empty: `No files match “${q}”.` });
   } else if (scope === 'opened') {
     shownList = { title: 'Opened', feed: S.feedURL(location.origin, { opened: true }) };
     viewOpened($('list'), q);
-  } else searchAll($('list'), q);
+  } else searchAll($('list'), q, { web });
 }
 
 /**
@@ -1100,14 +1106,14 @@ async function didYouMean(q, scope) {
   const { view, params } = route();
   if (!fix || view !== 'search' || params.get('q') !== q) return;
   $('list-top').querySelector('.correction')?.remove();
-  $('list-top').append(h('p', { class: 'correction' }, 'Did you mean ', h('a', { href: '#', onclick: (e) => (e.preventDefault(), (searchInput.value = fix), go('search', { q: fix, s: scope })) }, fix), '?'));
+  $('list-top').append(h('p', { class: 'correction' }, 'Did you mean ', h('a', { href: '#', onclick: (e) => (e.preventDefault(), (searchInput.value = fix), go('search', { q: fix, s: scope, w: '1' })) }, fix), '?'));
 }
 
 /** Your pages and your notes in All: a page of each (as the Pages list's),
  *  all of them among the web results. */
 const ALL_COUNT = 20;
 
-async function searchAll(container, q) {
+async function searchAll(container, q, { web = true } = {}) {
   container.replaceChildren(h('div', { class: 'spinner' }));
   // Pages from Hister (which sends no notes), notes from Kura.
   const both = (text) => Promise.all([
@@ -1120,7 +1126,8 @@ async function searchAll(container, q) {
   // Nothing of yours: the web's spelling (as the search page), marked.
   let respelled = '';
   if (!found(pages) && !found(notes)) {
-    const suggestions = await api.web(S.webQuery(q) || q).then((d) => d.suggestions || []).catch(() => []);
+    // The autocompleter's respellings, never a web search (each one counts).
+    const suggestions = await api.autocomplete(S.webQuery(q) || q).catch(() => []);
     const close = S.correctedQuery(q, suggestions);
     if (close) {
       [pages, notes] = await both(close);
@@ -1157,16 +1164,18 @@ async function searchAll(container, q) {
   const myNotes = notes && notes.signIn ? [] : mine(notes, 'Your note');
   const mix = S.alternate(myPages, myNotes);
   const rows = mix;
-  if (notes && notes.signIn) container.append(h('section', { class: 'list-section' }, signInStatus(() => searchAll(container, q))));
+  if (notes && notes.signIn) container.append(h('section', { class: 'list-section' }, signInStatus(() => searchAll(container, q, { web }))));
   dropStaleSelection(container);
-  if (!settings.webResults) {
+  if (!settings.webResults || !web) {
     if (rows.length) container.append(h('ul', { class: 'rows' }, rows));
     else if (!container.children.length) container.replaceChildren(status('Nothing Found', `Nothing matches “${q}”.`));
+    // While typing: yours only; Return adds the web (each web search counts).
+    if (settings.webResults && !web) container.append(h('p', { class: 'more web-on-return' }, 'Press Return to add the web.'));
     return;
   }
-  const web = h('div', {}, h('div', { class: 'spinner' }));
-  container.append(web);
-  webList(web, q, { embedded: true, mix });
+  const webBox = h('div', {}, h('div', { class: 'spinner' }));
+  container.append(webBox);
+  webList(webBox, q, { embedded: true, mix });
 }
 
 /**
@@ -1957,8 +1966,11 @@ function searchTo(text, { record = false } = {}) {
   const s = scopeOf(params);
   if (!q) return view === 'search' && go('library', { s }, { replace: true });
   if (record) recordSearch(q);
-  // While typing, one history entry for the whole search.
-  go('search', { q, s }, { replace: view === 'search' });
+  // While typing, one history entry for the whole search. Only a search
+  // run on purpose (Return, the magnifier) asks the web (w=1): each web
+  // search counts (a paid search API would charge it), so live typing
+  // searches your pages and notes alone. Frugal, as AI is.
+  go('search', { q, s, ...(record ? { w: '1' } : {}) }, { replace: view === 'search' });
 }
 
 // No suggestions under the field (as in the apps): recent searches are in the sidebar. Instead, type-ahead: the rest
@@ -2093,7 +2105,7 @@ function sidebar(current) {
     // The search on screen, then the recent ones, five in all, as the Mac's
     // sidebar has them: the history, now there's no list under the field.
     ...sidebarSearches(view === 'search' ? q : null).map((text) =>
-      item(text, 'search', { q: text, s: params.get('s') || 'all' }, 'search', view === 'search' && q === text)),
+      item(text, 'search', { q: text, s: params.get('s') || 'all', w: '1' }, 'search', view === 'search' && q === text)),
     Object.keys(aliases).length ? h('h2', {}, 'Collections') : null,
     ...Object.keys(aliases).sort().map((a) => {
       const row = item(S.collectionTitle(a), 'list', { q: a, t: S.collectionTitle(a) }, S.collectionIcon(a), view === 'list' && q === a);

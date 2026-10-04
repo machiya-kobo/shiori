@@ -136,7 +136,9 @@ struct LibraryView: View {
             guard !Task.isCancelled else { return }
             run(recording: false)
         }
-        .onChange(of: session.scope) { _, _ in
+        .onChange(of: session.scope) { _, scope in
+            // A tap on the Web pill asks the web: that's on purpose.
+            if scope == .web { session.webAllowed = session.text.trimmingCharacters(in: .whitespaces) }
             if scopeSetBySearch {
                 scopeSetBySearch = false
             } else if case .search = item {
@@ -159,6 +161,7 @@ struct LibraryView: View {
             if case .search(let query) = new, query != session.submitted {
                 session.text = query
                 session.submitted = query
+                session.webAllowed = query
             }
         }
         .onAppear {
@@ -208,7 +211,10 @@ struct LibraryView: View {
     private func run(recording: Bool = true) {
         let query = session.text.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { return }
-        if recording { app.recordSearch(query) }
+        if recording {
+            app.recordSearch(query)
+            session.webAllowed = query
+        }
         session.submitted = query
         item = .search(query)
         session.selected = nil

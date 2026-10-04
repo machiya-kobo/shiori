@@ -327,6 +327,12 @@ holds the rules and the traps the code can't tell you.
 - Asset addresses carry the build (`?v=<commit>`; the web app's, and its
   service worker's cache name, a hash of the built files); unstamped placeholders
   read as empty (`S.fromBuild`).
+- **Web searches are frugal** (each counts: a paid search API would
+  charge it, as AI is kept frugal): the web is asked only for a search run
+  on purpose (Return, a recent search, Did you mean, the Web pill;
+  `SearchSession.webAllowed`, the web app's `w=1`). Live typing searches
+  your pages and notes alone. Respellings come from the autocompleter,
+  never a `/search`; the "wiki" second search runs only when needed.
 - **`replaceChildren`/`append` write a `null` child out as the text "null"**:
   filter first.
 - The web app's list fills its column with the frosted bars laid over its top

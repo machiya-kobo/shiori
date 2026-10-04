@@ -68,6 +68,11 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
     var text = ""
     /// The search being shown, if any.
     var submitted: String?
+    /// The search run on purpose (Return, a recent search, the Web pill),
+    /// the only one the web is asked for: each web search counts (a paid
+    /// search API would charge it), so typing alone searches your pages and
+    /// notes. Frugal, as AI is.
+    var webAllowed: String?
     var scope = SearchScope.all
     var selected: StoredPage?
     /// A collection's or label's list on screen in the three columns (Mac,
@@ -112,6 +117,7 @@ struct SearchResultsView: View {
     let showScope: (SearchScope) -> Void
     let search: (String) -> Void
 
+    @Environment(SearchSession.self) private var session: SearchSession?
     @State private var model: ResultsModel?
     @State private var webModel: WebResultsModel?
     @State private var smallWebModel: SmallWebModel?
@@ -144,7 +150,14 @@ struct SearchResultsView: View {
             } else if scope == .opened {
                 OpenedListView(filter: query)
             } else if let webModel {
-                WebResultsList(model: webModel, search: search)
+                if session == nil || session?.webAllowed == query {
+                    WebResultsList(model: webModel, search: search)
+                } else {
+                    ContentUnavailableView(
+                        "Search the Web", systemImage: "globe",
+                        description: Text("Press Return to search the web for this."))
+                        .themedBackground()
+                }
             } else if let smallWebModel {
                 SmallWebResultsList(model: smallWebModel)
             } else if let model {

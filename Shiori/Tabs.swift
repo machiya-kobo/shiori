@@ -457,7 +457,11 @@ struct SearchScreen: View {
         .onChange(of: searchFocused) { _, focused in
             if focused { app.reloadRecentSearches() }
         }
-        .onChange(of: session.scope) { _, _ in run(recording: false) }
+        .onChange(of: session.scope) { _, scope in
+            // A tap on the Web pill asks the web: that's on purpose.
+            if scope == .web { session.webAllowed = session.text.trimmingCharacters(in: .whitespaces) }
+            run(recording: false)
+        }
         .task { await app.loadCardsIfNeeded() }
         .onChange(of: session.text) { _, new in
             if new.isEmpty { session.submitted = nil }
@@ -487,7 +491,10 @@ extension SearchScreen {
             session.submitted = nil
             return
         }
-        if recording { app.recordSearch(query) }
+        if recording {
+            app.recordSearch(query)
+            session.webAllowed = query
+        }
         session.submitted = query
     }
 }
