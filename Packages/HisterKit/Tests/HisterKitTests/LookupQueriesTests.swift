@@ -6,7 +6,7 @@ import Testing
 /// The same cases as search-core.test.mjs's "the saved-page lookup goes in batches" test.
 struct LookupQueriesTests {
     @Test func batchesShortEnoughToSend() {
-        let urls = (0..<130).map { "https://github.com/zacbir/hister/issues/\(1000 + $0)?tab=comments&sort=newest-first-\($0)" }
+        let urls = (0..<130).map { "https://code.example.com/project/issues/\(1000 + $0)?tab=comments&sort=newest-first-\($0)" }
         let queries = HisterClient.lookupQueries(urls)
         #expect(queries.count > 1)
         for q in queries {

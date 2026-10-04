@@ -1028,7 +1028,7 @@ test('the pills: order and visibility from one setting (PillOrder twins)', () =>
 });
 
 test('the saved-page lookup goes in batches short enough to send (no 414; HisterKit twins)', () => {
-  const urls = Array.from({ length: 130 }, (_, i) => `https://github.com/zacbir/hister/issues/${1000 + i}?tab=comments&sort=newest-first-${i}`);
+  const urls = Array.from({ length: 130 }, (_, i) => `https://code.example.com/project/issues/${1000 + i}?tab=comments&sort=newest-first-${i}`);
   const queries = S.urlLookupQueries(urls);
   assert.ok(queries.length > 1);
   for (const q of queries) {
