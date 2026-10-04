@@ -16,6 +16,22 @@ import Testing
         #expect(LabelPolicy.decide(cloud: nil, onDevice: answer(["alpha"], .high, .appleIntelligence)) == .suggest(labels: ["alpha"], newLabel: nil))
     }
 
+    @Test func chosenAppleIntelligencesFirstChoiceIsApplied() {
+        // Alone (no cloud engine), and when the cloud isn't sure.
+        #expect(LabelPolicy.decide(cloud: nil, onDevice: answer(["alpha", "beta"], .low, .appleIntelligence), applyOnDevice: true)
+            == .apply(label: "alpha", by: .appleIntelligence, agreed: false))
+        #expect(LabelPolicy.decide(cloud: answer(["beta"], .medium, .anthropic), onDevice: answer(["alpha"], .low, .appleIntelligence), applyOnDevice: true)
+            == .apply(label: "alpha", by: .appleIntelligence, agreed: false))
+        // The cloud's sure answer still wins; a held label is only suggested; no answer, nothing.
+        #expect(LabelPolicy.decide(cloud: answer(["beta"], .high, .anthropic), onDevice: answer(["alpha"], .high, .appleIntelligence), applyOnDevice: true)
+            == .apply(label: "beta", by: .anthropic, agreed: false))
+        var trust = LabelTrust()
+        trust.held = ["alpha"]
+        #expect(LabelPolicy.decide(cloud: nil, onDevice: answer(["alpha"], .high, .appleIntelligence), trust: trust, applyOnDevice: true)
+            == .suggest(labels: ["alpha"], newLabel: nil))
+        #expect(LabelPolicy.decide(cloud: nil, onDevice: nil, applyOnDevice: true) == .nothing)
+    }
+
     @Test func anUnmeasuredCloudEngineOnlySuggests() {
         let decision = LabelPolicy.decide(cloud: answer(["gamma"], .high, .openAI), onDevice: nil)
         #expect(decision == .suggest(labels: ["gamma"], newLabel: nil))

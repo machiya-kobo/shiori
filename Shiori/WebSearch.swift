@@ -129,6 +129,7 @@ struct WebResultsList: View {
         case .loaded:
             if model.results.isEmpty {
                 ContentUnavailableView.search(text: model.query)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .themedBackground()
             } else {
                 list

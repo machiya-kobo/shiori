@@ -28,13 +28,24 @@ public enum LabelPolicy {
     /// `trust` is learnt from the user: a label they keep undoing is only
     /// ever suggested; one whose suggestions they always accept is applied
     /// on a cloud "medium" too.
-    public static func decide(cloud: LabelSuggestion?, onDevice: LabelSuggestion?, trust: LabelTrust = LabelTrust()) -> LabelDecision {
+    ///
+    /// `applyOnDevice` (Settings → AI → Apply Apple Intelligence's Labels,
+    /// the user's choice: right most of the time, and corrected later):
+    /// when the cloud didn't settle it, Apple Intelligence's first choice is
+    /// applied rather than suggested, unless the user keeps undoing that
+    /// label (held).
+    public static func decide(
+        cloud: LabelSuggestion?, onDevice: LabelSuggestion?, trust: LabelTrust = LabelTrust(), applyOnDevice: Bool = false
+    ) -> LabelDecision {
         if let cloud, trusted.contains(cloud.provider), let label = cloud.labels.first, !trust.held.contains(label) {
             if cloud.confidence == .high { return .apply(label: label, by: cloud.provider, agreed: onDevice?.labels.first == label) }
             if onDevice?.labels.first == label { return .apply(label: label, by: cloud.provider, agreed: true) }
             if cloud.confidence == .medium, trust.trustedAtMedium.contains(label) {
                 return .apply(label: label, by: cloud.provider, agreed: false)
             }
+        }
+        if applyOnDevice, let first = onDevice?.labels.first, !trust.held.contains(first) {
+            return .apply(label: first, by: .appleIntelligence, agreed: cloud?.labels.first == first)
         }
         var ordered: [String] = []
         if let first = onDevice?.labels.first { ordered.append(first) }

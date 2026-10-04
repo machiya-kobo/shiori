@@ -93,6 +93,12 @@ says so ("Summarized by Claude").
   agree; everything else waits in Suggested Labels with the reason. Every
   applied label is logged with Undo, and a label undone twice is held for
   review. The page's label is re-read before writing.
+- **Apply Apple Intelligence's Labels** (off by default): when Anthropic
+  doesn't settle a page, or isn't used, Apple Intelligence's first choice is
+  applied instead of suggested, and so is its choice for each waiting
+  suggestion on the next run. For a user who'd rather correct than review:
+  every one is in the Undo list (the last 1,000), and a label undone twice
+  is held, only suggested from then on.
 - **Never Suggested** lists labels the AI never applies or suggests (the
   build's `SHIORI_AI_NEVER_SUGGEST` by default). `vault` and the build's
   `SHIORI_AI_NOT_TOPICS` are never offered.

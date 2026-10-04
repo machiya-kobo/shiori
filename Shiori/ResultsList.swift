@@ -55,6 +55,7 @@ struct ResultsList<Empty: View>: View {
             FailureView(error: error, hasServer: app.client != nil) {
                 Task { await load() }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .themedBackground()
         default:
             if visible.isEmpty {

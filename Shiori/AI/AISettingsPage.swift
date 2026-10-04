@@ -40,6 +40,9 @@ struct AISettingsPage: View {
 
         Section {
             Toggle("Label New Pages", isOn: $app.ai.autoLabel)
+            if app.ai.autoLabel, app.ai.appleIntelligence {
+                Toggle("Apply Apple Intelligence's Labels", isOn: $app.ai.applyAppleLabels)
+            }
             Toggle("Keep Collections Current", isOn: $app.ai.autoCollections)
             SuggestCollectionsButton()
             if app.ai.autoLabel {
@@ -148,8 +151,10 @@ struct AISettingsPage: View {
 
     private var autoLabelFooter: String {
         var text = "New pages without a label are labelled while Shiori is open: Anthropic's sure answers are applied, and every other page waits in Suggested Labels, with Apple Intelligence's suggestion first. Pages you've labelled are never changed; every automatic label can be undone. At most \(AutoLabeller.dailyCloudLimit) Anthropic requests a day."
-        if app.ai.cloud != .anthropic {
-            text += " Without Anthropic as the AI provider, every page waits for you."
+        if app.ai.applyAppleLabels {
+            text += " Apply Apple Intelligence's Labels: when Anthropic doesn't settle a page (or isn't used), Apple Intelligence's first choice is applied rather than suggested, the waiting suggestions too; undo any you disagree with, and a label you undo twice goes back to being only suggested."
+        } else if app.ai.cloud != .anthropic {
+            text += " Without Anthropic as the AI provider, every page waits for you, unless Apply Apple Intelligence's Labels is on."
         }
         text += " Turn it on on one device (the Mac is the natural home), so each page is asked about once."
         text += " Never Suggested: labels the AI never applies or suggests, here or in Edit Label (you can still use them yourself)."

@@ -5,6 +5,25 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The tag also releases Shiori for Firefox. The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.3.3 (2026-10-04)
+
+### Added
+
+- **Apply Apple Intelligence's Labels** (Settings → AI → Automatic
+  Labels, off by default): when Anthropic doesn't settle a page, or isn't
+  used, Apple Intelligence's first choice is applied instead of waiting in
+  Suggested Labels, and the waiting suggestions are applied the same way.
+  Each can be undone; a label undone twice is only suggested again.
+
+### Fixed
+
+- On the Mac, clearing the search field now goes back to the Library's
+  newest (0.3.2's fix reached only the iPad).
+- On the Mac, a search that finds nothing fills the column: the pills, Did
+  you mean and "No Results" stayed at the top instead of floating
+  mid-column. The same for the web's and Small Web's empty answers and a
+  failed list.
+
 ## 0.3.2 (2026-10-04)
 
 ### Added

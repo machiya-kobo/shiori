@@ -249,7 +249,9 @@ struct LabellingState: Codable {
                     neighbours: similar, corrections: learnt, content: .page)
             }
 
-            switch LabelPolicy.decide(cloud: cloud, onDevice: onDevice, trust: LabelStat.trust(state.stats)) {
+            switch LabelPolicy.decide(
+                cloud: cloud, onDevice: onDevice, trust: LabelStat.trust(state.stats), applyOnDevice: app.ai.applyAppleLabels
+            ) {
             case .apply(let label, let by, let agreed):
                 do {
                     try await app.setLabel(label, url: document.url)
@@ -259,7 +261,7 @@ struct LabellingState: Codable {
                             appleLabel: onDevice?.labels.first, cloudConfidence: cloud?.confidence.rawValue),
                         at: 0)
                     state.stats[label, default: LabelStat()].applied += 1
-                    state.applied = Array(state.applied.prefix(300))
+                    state.applied = Array(state.applied.prefix(Self.appliedKept))
                     applied += 1
                 } catch {
                     lastMessage = "Hister didn't take a label: \(error.userMessage)"
@@ -289,13 +291,32 @@ struct LabellingState: Codable {
     /// engines picked the same label is applied (the agreement rule came
     /// after it was queued); one made before the engines' answers were
     /// stored is put back to be asked again; a never-suggested label comes
-    /// off the offer.
+    /// off the offer. With Apply Apple Intelligence's Labels on, Apple's
+    /// choice for a waiting page is applied (undoable, as any).
+    /// How many automatic labels the Undo list keeps: enough for a backlog
+    /// of waiting suggestions applied at once (Apply Apple Intelligence's
+    /// Labels) to stay undoable.
+    static let appliedKept = 1000
+
     private func revisitWaiting(app: AppState, excluded: Set<String>) async {
+        let held = LabelStat.trust(state.stats).held
         for suggestion in state.pending {
             guard app.ai.enabled, app.ai.autoLabel else { return }
             if suggestion.reason.isEmpty {
                 state.pending.removeAll { $0.url == suggestion.url }
                 state.seen[suggestion.url] = nil
+                continue
+            }
+            if app.ai.applyAppleLabels, let label = suggestion.appleLabel, !excluded.contains(label), !held.contains(label) {
+                guard (try? await app.setLabel(label, url: suggestion.url)) != nil else { return }
+                state.pending.removeAll { $0.url == suggestion.url }
+                state.applied.insert(
+                    AppliedLabel(
+                        url: suggestion.url, title: suggestion.title, label: label, previous: "", by: .appleIntelligence, at: Date(),
+                        agreed: suggestion.cloudLabel == label, appleLabel: label, cloudConfidence: suggestion.cloudConfidence),
+                    at: 0)
+                state.stats[label, default: LabelStat()].applied += 1
+                state.applied = Array(state.applied.prefix(Self.appliedKept))
                 continue
             }
             if let label = suggestion.cloudLabel, label == suggestion.appleLabel, !excluded.contains(label),

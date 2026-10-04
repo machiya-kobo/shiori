@@ -23,6 +23,10 @@ nonisolated struct AISettings: Equatable {
     /// runs where the user chooses (one device, not every one paying
     /// twice for the same page).
     var autoLabel = false
+    /// Apply Apple Intelligence's Labels (the user's choice): its first
+    /// choice is applied, not suggested, when the cloud doesn't settle a
+    /// page; each can be undone, and a label undone twice is held.
+    var applyAppleLabels = false
     /// Labels the AI never uses, applying or suggesting: the user adds
     /// them by hand. Leaving them out of the list also makes the model
     /// choose among the rest. The default is the build's
@@ -69,11 +73,12 @@ nonisolated struct AISettings: Equatable {
         static let anthropicModel = "aiAnthropicModel"
         static let openAIModel = "aiOpenAIModel"
         static let autoLabel = "aiAutoLabel"
+        static let applyAppleLabels = "aiApplyAppleLabels"
         static let neverSuggest = "aiNeverSuggest"
         static let autoCollections = "aiAutoCollections"
         static let all = [
             enabled, appleIntelligence, localEnabled, localURL, localModel, cloud, anthropicModel, openAIModel, autoLabel,
-            neverSuggest, autoCollections,
+            applyAppleLabels, neverSuggest, autoCollections,
         ]
     }
 
@@ -96,6 +101,7 @@ nonisolated struct AISettings: Equatable {
         text(Key.anthropicModel, &anthropicModel)
         text(Key.openAIModel, &openAIModel)
         flag(Key.autoLabel, &autoLabel)
+        flag(Key.applyAppleLabels, &applyAppleLabels)
         if let stored = defaults.stringArray(forKey: Key.neverSuggest) { neverSuggest = stored }
         flag(Key.autoCollections, &autoCollections)
         // An emptied model field means the default again.
@@ -114,6 +120,7 @@ nonisolated struct AISettings: Equatable {
         defaults.set(anthropicModel, forKey: Key.anthropicModel)
         defaults.set(openAIModel, forKey: Key.openAIModel)
         defaults.set(autoLabel, forKey: Key.autoLabel)
+        defaults.set(applyAppleLabels, forKey: Key.applyAppleLabels)
         defaults.set(neverSuggest, forKey: Key.neverSuggest)
         defaults.set(autoCollections, forKey: Key.autoCollections)
     }

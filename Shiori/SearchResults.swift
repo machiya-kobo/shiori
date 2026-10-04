@@ -164,6 +164,7 @@ struct SearchResultsView: View {
                     ContentUnavailableView(
                         "Search the Web", systemImage: "globe",
                         description: Text("Press Return to search the web for this."))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .themedBackground()
                 }
             } else if let smallWebModel {

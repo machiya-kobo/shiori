@@ -154,6 +154,9 @@ struct AllResults: View {
                     ContentUnavailableView.search(text: query)
                 }
             }
+            // The whole column: sized to itself, the Mac's column shrank
+            // around it, and the pills and Did you mean floated mid-column.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .themedBackground()
         } else {
             ResultsListContainer {
