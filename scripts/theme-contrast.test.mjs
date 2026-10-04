@@ -61,6 +61,8 @@ function tintMix(selector) {
   assert.ok(m, `no --tint-mix in ${selector}`);
   return Number(m[1]) / 100;
 }
+// Every card's tint: pages, notes, opened, files, code, Small Web.
+const CARD_TINTS = ['accent', 'notes', 'tab-news', 'kept', 'tab-videos', 'smallweb'];
 function mix(a, b, p) {
   const ch = (h, i) => parseInt(h.slice(i, i + 2), 16);
   return '#' + [1, 3, 5].map((i) => Math.round(ch(a, i) * p + ch(b, i) * (1 - p)).toString(16).padStart(2, '0')).join('');
@@ -69,7 +71,7 @@ for (const [name, selector] of [['night', ':root {'], ['day', ':root[data-theme=
   test(`${name}: text on a tinted card is at least 4.5:1`, () => {
     const v = themes[name];
     const p = tintMix(selector);
-    for (const tint of ['accent', 'notes', 'tab-news']) {
+    for (const tint of CARD_TINTS) {
       const bg = mix(v[tint], v.card, p);
       for (const fg of TEXT) {
         const r = ratio(v[fg], bg);
@@ -102,7 +104,7 @@ for (const [name, selector] of [['night', ':root {'], ['day', ':root[data-theme=
     const v = appThemes[name];
     const p = tintMix(selector);
     for (const fg of [...TEXT, 'danger']) {
-      for (const bg of [v.bg, v.card, ...['accent', 'notes', 'tab-news'].map((t) => mix(v[t], v.card, p))]) {
+      for (const bg of [v.bg, v.card, ...CARD_TINTS.map((t) => mix(v[t], v.card, p))]) {
         const r = ratio(v[fg], bg);
         assert.ok(r >= 4.5, `--${fg} ${v[fg]} on ${bg} is ${r.toFixed(2)}:1`);
       }

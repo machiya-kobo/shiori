@@ -31,7 +31,17 @@
 
   function load() {
     try {
-      return JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+      const all = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+      // Result Style back to Tint, once, whatever was saved before (the
+      // user's call, 0.5.0); a style chosen after that is kept.
+      if (!localStorage.getItem('shioriResultStyleReset')) {
+        localStorage.setItem('shioriResultStyleReset', '1');
+        if (all.shioriSettings && all.shioriSettings.resultStyle) {
+          all.shioriSettings.resultStyle = 'tint';
+          localStorage.setItem(KEY, JSON.stringify(all));
+        }
+      }
+      return all;
     } catch (_) {
       return {};
     }

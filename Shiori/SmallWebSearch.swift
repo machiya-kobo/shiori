@@ -145,7 +145,9 @@ struct SmallWebItem: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .listRowBackground(palette.background)
+        // Small Web's teal, as its pill (the web's own results stay plain).
+        .listRowBackground(ResultBar(kind: .smallweb, palette: palette, style: app.searchPage.resultStyle))
+        .resultSeparator(app.searchPage.resultStyle)
         .help(direct ? "Open in a Gemini App" : "Open Through the Gateway")
         .contextMenu {
             Button("Open Through the Gateway", systemImage: "globe") { open(direct: false) }

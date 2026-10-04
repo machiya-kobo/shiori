@@ -5,6 +5,25 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.5.0 (2026-10-05)
+
+### Added
+
+- **Open on Archive.org and Open on Archive.is** in a web page's long-press
+  and right-click menu (the apps; not for notes, files or code), and
+  **Open in Redlib, Invidious…** for a Reddit or YouTube page when the
+  build names your front ends (`SHIORI_FRONTENDS` in local.yml; also
+  Piped, Nitter, Scribe, rimgo, libremdb and BreezeWiki). Links only.
+- **Small Web results are tinted teal**, as their pill, in every Result
+  Style (the web's own results stay plain).
+
+### Changed
+
+- **Result Style is back to Tint** on every device, once: a style chosen
+  earlier is replaced, and one chosen from now on is kept.
+- The rooms' light themes darken a few text colours a shade, so every
+  text colour reads at 4.5:1 on the files, code and Small Web cards too.
+
 ## 0.4.0 (2026-10-05)
 
 ### Removed

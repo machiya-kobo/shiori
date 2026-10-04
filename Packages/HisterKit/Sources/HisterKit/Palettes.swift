@@ -17,8 +17,8 @@ extension AppPalette {
                 hex: Palette.Hex(
                     background: 0xFDF6E3, surface: 0xFFFBF0, raised: 0xEEE8D5,
                     text: 0x586E75, secondaryText: 0x5B6F76, accent: 0x1E70A9,
-                    highlight: 0x876600, danger: 0xCF2624,
-                    chips: [0x1E70A9, 0x1F7770, 0xC52B76, 0x647300, 0xBB4414, 0xCF2624, 0x876600, 0x1F7770]),
+                    highlight: 0x876600, danger: 0xCF2623,
+                    chips: [0x1E70A9, 0x1F7770, 0xC52B76, 0x627000, 0xBB4514, 0xCF2623, 0x876600, 0x1F7770]),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "nord", name: "Nord",
@@ -33,8 +33,8 @@ extension AppPalette {
                 hex: Palette.Hex(
                     background: 0xECEFF4, surface: 0xF6F8FB, raised: 0xE5E9F0,
                     text: 0x2E3440, secondaryText: 0x3B4252, accent: 0x4C6D94,
-                    highlight: 0x8B6418, danger: 0xB14852,
-                    chips: [0x4C6D94, 0x347385, 0x8A5C82, 0x587241, 0xA85237, 0xB14852, 0x8B6418, 0x447271]),
+                    highlight: 0x896218, danger: 0xB14852,
+                    chips: [0x4C6D94, 0x337183, 0x885B81, 0x587241, 0xA85237, 0xB14852, 0x896218, 0x447271]),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "dracula", name: "Dracula",
@@ -64,9 +64,9 @@ extension AppPalette {
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xEFF1F5, surface: 0xF8F9FB, raised: 0xE6E9EF,
-                    text: 0x4C4F69, secondaryText: 0x5C5F77, accent: 0x125EF5,
-                    highlight: 0x945E13, danger: 0xD20F39,
-                    chips: [0x125EF5, 0x03729E, 0x8839EF, 0x317A20, 0xB94401, 0xD20F39, 0x945E13, 0x13777C]),
+                    text: 0x4C4F69, secondaryText: 0x5C5F77, accent: 0x0D5AF5,
+                    highlight: 0x925D13, danger: 0xD00F38,
+                    chips: [0x0D5AF5, 0x03709C, 0x8737EF, 0x307820, 0xB64301, 0xD00F38, 0x925D13, 0x12757A]),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "gruvbox", name: "Gruvbox",
@@ -81,8 +81,8 @@ extension AppPalette {
                 hex: Palette.Hex(
                     background: 0xFBF1C7, surface: 0xF9F5D7, raised: 0xEBDBB2,
                     text: 0x3C3836, secondaryText: 0x504945, accent: 0x076678,
-                    highlight: 0x8E5D10, danger: 0x9D0006,
-                    chips: [0x076678, 0x076678, 0x8F3F71, 0x6D690C, 0xAF3A03, 0x9D0006, 0x8E5D10, 0x3D7252]),
+                    highlight: 0x8C5B10, danger: 0x9D0006,
+                    chips: [0x076678, 0x076678, 0x8F3F71, 0x6B670C, 0xAF3A03, 0x9D0006, 0x8C5B10, 0x3C6F50]),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "rose-pine", name: "Rosé Pine",
@@ -128,9 +128,9 @@ extension AppPalette {
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xFDF6E3, surface: 0xFFFBEF, raised: 0xEFEBD4,
-                    text: 0x5C6A72, secondaryText: 0x5C6A72, accent: 0x2D7298,
-                    highlight: 0x8D6500, danger: 0xD80C09,
-                    chips: [0x2D7298, 0x2D7298, 0xC12991, 0x637001, 0xAF4F09, 0xD80C09, 0x8D6500, 0x26785A]),
+                    text: 0x5C6A72, secondaryText: 0x5C6A72, accent: 0x2C7196,
+                    highlight: 0x8A6300, danger: 0xD60C09,
+                    chips: [0x2C7196, 0x2C7196, 0xBE298F, 0x627001, 0xAD4E09, 0xD60C09, 0x8A6300, 0x26785A]),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "ayu", name: "Ayu",
@@ -144,9 +144,9 @@ extension AppPalette {
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xFCFCFC, surface: 0xFFFFFF, raised: 0xF0F0F0,
-                    text: 0x5C6166, secondaryText: 0x5C6166, accent: 0x1772B4,
-                    highlight: 0x9C620B, danger: 0xDC1717,
-                    chips: [0x1772B4, 0x257692, 0x8A56BE, 0x5A7800, 0xB65005, 0xDC1717, 0x9C620B, 0x2C7B62]),
+                    text: 0x5C6166, secondaryText: 0x5C6166, accent: 0x1771B2,
+                    highlight: 0x99600B, danger: 0xD71717,
+                    chips: [0x1771B2, 0x247490, 0x8954BD, 0x587500, 0xB44F05, 0xD71717, 0x99600B, 0x2B7960]),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
     ]
 }

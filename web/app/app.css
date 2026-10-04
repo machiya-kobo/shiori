@@ -315,6 +315,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .doc-row.opened-row { --tint: var(--tab-news); }
 .doc-row.file-row { --tint: var(--kept); }
 .doc-row.code-row { --tint: var(--tab-videos); }
+.doc-row.smallweb-row { --tint: var(--smallweb); }
 /* A code row: what it is, its repo, its state, a lock when private. */
 .code-glyph { display: inline-grid; place-items: center; color: var(--tab-videos); font-weight: 700; }
 .code-state { font-weight: 600; }

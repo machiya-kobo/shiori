@@ -48,6 +48,11 @@ settings:
     # plain http(s) address; empty shows nothing. The web builds read it
     # from the environment.
     SHIORI_SOURCE_URL: ""
+    # Your privacy front ends, offered in a page's menu for the sites they
+    # stand in for: "redlib=https://redlib.example.ts.net/,invidious=…".
+    # Known: redlib, invidious, piped, nitter, scribe, rimgo, libremdb,
+    # breezewiki. Empty offers none (Archive.org and Archive.is still are).
+    SHIORI_FRONTENDS: ""
     # The Rooms menu shows neutral glyphs for Hister and SearXNG. A folder
     # (relative to the checkout, or absolute) holding their own logos,
     # hister.png and searxng.svg, puts those in instead. Keep it out of the

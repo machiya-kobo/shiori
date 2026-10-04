@@ -98,7 +98,7 @@ private struct ResultActionsHost: ViewModifier {
 /// (`Palette.tintOpacity`, `tintBase`).
 struct ResultBar: View {
     enum Kind {
-        case page, note, opened, file, code
+        case page, note, opened, file, code, smallweb
     }
 
     let kind: Kind
@@ -110,15 +110,18 @@ struct ResultBar: View {
     let palette: Palette
     let style: String
 
-    private var color: Color {
+    private var tint: Palette.Tint {
         switch kind {
-        case .page: palette.tint(SearchScope.hister.tint)
-        case .note: palette.tint(SearchScope.notes.tint)
-        case .opened: palette.tint(SearchScope.opened.tint)
-        case .file: palette.tint(SearchScope.files.tint)
-        case .code: palette.tint(SearchScope.code.tint)
+        case .page: SearchScope.hister.tint
+        case .note: SearchScope.notes.tint
+        case .opened: SearchScope.opened.tint
+        case .file: SearchScope.files.tint
+        case .code: SearchScope.code.tint
+        case .smallweb: SearchScope.smallweb.tint
         }
     }
+
+    private var color: Color { palette.tint(tint) }
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -343,6 +346,7 @@ struct WebItem: View {
                 Link(destination: url) { Label("Open in Safari", systemImage: "safari") }
                 ShareLink(item: url) { Label("Share…", systemImage: "square.and.arrow.up") }
                 Button("Copy Link", systemImage: "link") { Pasteboard.copy(url) }
+                ElsewhereLinks(url: result.url)
             }
         }
     }

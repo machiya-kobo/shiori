@@ -30,7 +30,7 @@ settings:
     SWIFT_APPROACHABLE_CONCURRENCY: YES
     CODE_SIGN_STYLE: Automatic
     CURRENT_PROJECT_VERSION: 1
-    MARKETING_VERSION: "0.4.0"
+    MARKETING_VERSION: "0.5.0"
     # iOS App Groups are "group."-prefixed; macOS ones carry the team ID
     # instead, which needs no provisioning (the macOS targets override this).
     SHIORI_APP_GROUP: group.$(SHIORI_BUNDLE_PREFIX).shiori
@@ -83,6 +83,8 @@ targetTemplates:
         # Where the source is (AGPL-3.0 section 13), for Settings → About;
         # unset, no Source link is shown.
         ShioriSourceURL: $(SHIORI_SOURCE_URL)
+        # Privacy front ends for a page's menu (Elsewhere), from local.yml.
+        ShioriFrontends: $(SHIORI_FRONTENDS)
         # The App Group the app shares with its extensions (see SHIORI_APP_GROUP).
         ShioriAppGroup: $(SHIORI_APP_GROUP)
         ITSAppUsesNonExemptEncryption: false

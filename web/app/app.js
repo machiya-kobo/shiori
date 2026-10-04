@@ -177,6 +177,13 @@ const DEFAULTS = {
   // Which of Kura's vaults the Notes lists search: 'all', or one's name.
   notesVault: 'all',
 };
+// Result Style back to Tint, once, whatever was saved before (the user's
+// call, 0.5.0); a style chosen after that is kept.
+if (!readLocal('shioriResultStyleReset')) {
+  const saved = readLocal('shioriAppSettings');
+  if (saved && saved.resultStyle) writeLocal('shioriAppSettings', { ...saved, resultStyle: 'tint' });
+  writeLocal('shioriResultStyleReset', true);
+}
 let settings = { ...DEFAULTS, ...readLocal('shioriAppSettings') };
 // The house's shared choices: theme and text size set in
 // any Machiya room on this device count here too, and ours count there.
@@ -1288,7 +1295,8 @@ async function smallwebList(container, q) {
   const row = (r) =>
     h(
       'li',
-      { class: 'row web-row smallweb-row' },
+      // Tinted in Small Web's teal, as the pill (the web's own rows stay plain).
+      { class: 'row web-row doc-row smallweb-row' },
       h('span', { class: 'icon' }, icon('globe')),
       h(
         'div',

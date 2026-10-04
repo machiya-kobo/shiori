@@ -51,6 +51,8 @@
 	<string>$(SHIORI_SERVER_URL)</string>
 	<key>ShioriDefaultSmallwebURL</key>
 	<string>$(SHIORI_SMALLWEB_URL)</string>
+	<key>ShioriFrontends</key>
+	<string>$(SHIORI_FRONTENDS)</string>
 	<key>ShioriSourceURL</key>
 	<string>$(SHIORI_SOURCE_URL)</string>
 </dict>

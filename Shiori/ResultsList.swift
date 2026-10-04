@@ -212,12 +212,40 @@ struct DocumentLinks: View {
             Button("Copy Link", systemImage: "link") {
                 Pasteboard.copy(url)
             }
+            // A web page's copies and front ends (not a note, a file or code:
+            // archives can't reach a private forge, and a note is Kura's).
+            if app.noteLinks(for: document) == nil, document.code == nil {
+                ElsewhereLinks(url: document.url)
+            }
         }
         // Not a work note: Hister never has one.
         if let client = app.client, !Notes.isPrivateNote(document.url) {
             Link(destination: client.webPreviewURL(for: document.url)) {
                 Label("Open in Hister", systemImage: "magnifyingglass")
             }
+        }
+    }
+}
+
+/// A web page elsewhere: on Archive.org and Archive.is, and through the
+/// build's privacy front ends that stand in for its site (`Elsewhere`).
+/// Links only, opened in the browser.
+struct ElsewhereLinks: View {
+    let url: String
+
+    /// The build's front ends (`SHIORI_FRONTENDS`), read once.
+    static let instances = Elsewhere.instances(
+        from: (Bundle.main.object(forInfoDictionaryKey: "ShioriFrontends") as? String) ?? "")
+
+    var body: some View {
+        if let wayback = Elsewhere.wayback(url) {
+            Link(destination: wayback) { Label("Open on Archive.org", systemImage: "building.columns") }
+        }
+        if let archive = Elsewhere.archiveToday(url) {
+            Link(destination: archive) { Label("Open on Archive.is", systemImage: "archivebox") }
+        }
+        ForEach(Elsewhere.frontends(for: url, instances: Self.instances), id: \.url) { frontend in
+            Link(destination: frontend.url) { Label("Open in \(frontend.name)", systemImage: "eye.slash") }
         }
     }
 }

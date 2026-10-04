@@ -19,7 +19,9 @@ export const TEXT = ['text', 'secondary', 'accent', 'kept', 'visited', 'tab-gene
   'notes', 'konbini', 'niwa', 'web', 'obsidian', 'smallweb', 'danger'];
 // The tinted surfaces text sits on: cards (Pages, Notes, Opened), and the
 // heading rows and panels (Web; AI Answer and Info wear All's tab-general).
-export const TINTS = ['accent', 'notes', 'tab-news', 'tab-general', 'web'];
+// Every tinted surface: the cards (pages, notes, opened, files, code, Small
+// Web) and the heading rows and panels (All, Web).
+export const TINTS = ['accent', 'notes', 'tab-news', 'tab-general', 'web', 'kept', 'tab-videos', 'smallweb'];
 
 function rgb(hex) { return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255); }
 function hex(c) { return '#' + c.map((v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join(''); }

@@ -35,8 +35,9 @@ holds the rules and the traps the code can't tell you.
   small-web gateway, SearXNG, the visited site's favicon and PDFs (upstream
   behaviour). With Machiya's identity file, Kura's `POST /api/pair`
   (pairing a device) and, from the web app, Kura's `/api/prefs` (theme and
-  text size, as the rooms keep them). NewsBlur, status pages and the Wayback Machine and archive.is
-  copies are only ever opened as links.
+  text size, as the rooms keep them). NewsBlur, status pages, the Wayback Machine and archive.is
+  copies and the build's privacy front ends (`SHIORI_FRONTENDS`, Redlib,
+  Invidious…: `Elsewhere`) are only ever opened as links.
   `gemini://`/`gopher://` links are handed to the system, never fetched. No
   analytics. AI providers only when the user switches AI on, and only from
   the app.
@@ -107,7 +108,9 @@ holds the rules and the traps the code can't tell you.
 - `SHIORI_SERVER_URL` is the server's one home (Info.plist and the extension
   build both read it). Others: `SHIORI_SEARXNG_URL`, `SHIORI_NIWA_URL`
   (Kura), `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`, `SHIORI_ROOMS`,
-  `SHIORI_STATUS_URL`, `SHIORI_SEARCH_PAGE_URL`, `SHIORI_SOURCE_URL`.
+  `SHIORI_STATUS_URL`, `SHIORI_SEARCH_PAGE_URL`, `SHIORI_SOURCE_URL`,
+  `SHIORI_FRONTENDS` (`redlib=https://…,invidious=https://…`: a page's
+  menu offers its Reddit or YouTube page there).
 - The user's conventions are build defaults, empty in a public build:
   `SHIORI_OBSIDIAN_VAULT`, `SHIORI_AI_NEVER_SUGGEST`, `SHIORI_AI_NOT_TOPICS`,
   `SHIORI_RESERVED_COLLECTIONS` (comma lists). `SHIORI_ROOM_LOGOS` (a folder
@@ -264,6 +267,11 @@ holds the rules and the traps the code can't tell you.
 - **Text size: `.textStyle(.headline)`, never `.font(.headline)`**: macOS has
   no Dynamic Type; `macTextScale` scales the Mac, and `@ScaledMetric` sizes
   need it too.
+- **Result cards are tinted in their pill's colour** (Result Style, Tint
+  by default): pages blue, notes orange, opened purple, files green, code
+  red, Small Web teal; the web's own results stay plain. Every card tint
+  is in the contrast tests (`palettes.mjs` `TINTS`, `CARD_TINTS`,
+  `SnippetAndSuggestionTests`).
 - **Liquid Glass stays on the system chrome**: the theme colours only the
   content layer. Every text colour is at least 4.5:1 on its background and
   surface (`SnippetAndSuggestionTests`, `theme-contrast.test.mjs`).

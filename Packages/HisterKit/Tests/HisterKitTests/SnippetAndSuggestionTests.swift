@@ -147,10 +147,10 @@ struct ThemeTests {
         // Lists sit on the background; Settings rows, sheets and cards on
         // the surface; result cards (Result Style → Tint) on the page's or
         // surface's colour tinted in their pill's: Pages blue, Notes orange,
-        // Opened purple. (Raised is for borders, placeholders and a
+        // Opened purple, Files green, Code red, Small Web teal. (Raised is for borders, placeholders and a
         // moment's press, never text.)
         let base = palette.tintsOverSurface ? h.surface : h.background
-        let tinted = [Palette.Tint.blue, .orange, .purple].map { mix(h.chips[$0.rawValue], base, palette.tintOpacity) }
+        let tinted = [Palette.Tint.blue, .orange, .purple, .green, .red, .teal].map { mix(h.chips[$0.rawValue], base, palette.tintOpacity) }
         for backdrop in [h.background, h.surface] + tinted {
             for colour in [h.text, h.secondaryText, h.accent, h.danger] + h.chips {
                 #expect(ratio(colour, backdrop) >= 4.5, "\(name): \(Palette.css(colour)) on \(Palette.css(backdrop))")

@@ -887,6 +887,8 @@ struct SearchPageOptions: Equatable {
     /// "tint", "solid", "bar" or "none": how your pages, notes and opened pages
     /// stand apart in lists (`ResultBar`).
     var resultStyle = "tint"
+    /// Set once Result Style has been put back to Tint (0.5.0).
+    static let resultStyleResetKey = "resultStyleTintReset"
     /// Labels and collections lead the search field's suggestions.
     var labelSuggestions = true
     /// The user's NewsBlur, for "Subscribe in NewsBlur" (opened in the browser).
@@ -941,6 +943,12 @@ struct SearchPageOptions: Equatable {
         flag(K.semanticSearch, &semanticSearch)
         flag(K.foldRepeats, &foldRepeats)
         flag(K.showOpened, &showOpened)
+        // Tint, once, whatever was saved before (the user’s call, 0.5.0); a
+        // style chosen after that is kept.
+        if !defaults.bool(forKey: Self.resultStyleResetKey) {
+            defaults.set("tint", forKey: K.resultStyle)
+            defaults.set(true, forKey: Self.resultStyleResetKey)
+        }
         if let v = defaults.string(forKey: K.resultStyle), SharedSettings.resultStyles.contains(v) { resultStyle = v }
         flag(K.labelSuggestions, &labelSuggestions)
         if let v = defaults.string(forKey: K.newsBlurURL) { newsBlurURL = v }

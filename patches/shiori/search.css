@@ -292,7 +292,7 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
    Notes green, opened purple) with an outline in it. The fill is the most each theme allows with every text
    colour at 4.5:1 or better: --tint-mix, 9% dark, 8% light (theme-contrast.test.mjs). */
 .hister-card { --tint: var(--accent); }
-.hister-card, .vault-card {
+.hister-card, .vault-card, .smallweb-card {
   background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card));
   border: 1px solid color-mix(in srgb, var(--tint) 55%, transparent);
 }
@@ -302,6 +302,8 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
 .file-card { --tint: var(--kept); }
 /* The owner's repos (code-import's): red, the one hue left. */
 .code-card { --tint: var(--tab-videos); }
+/* Small Web (Gemini and Gopher): its pill's teal. The web's own results stay plain. */
+.smallweb-card { --tint: var(--smallweb); }
 .code-glyph { color: var(--tab-videos); font-weight: 700; }
 .code-state { font-weight: 600; }
 .code-host { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); }
@@ -314,11 +316,11 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
 .code-filters button[aria-pressed="true"] { border-color: var(--tab-videos); color: var(--tab-videos); }
 /* Settings → Result Style: a plain card with a hairline (Solid), a bar down
    the leading edge, or plain. */
-body[data-result-style="solid"] :is(.hister-card, .vault-card) { background: var(--card); border-color: var(--line); }
-body[data-result-style="bar"] :is(.hister-card, .vault-card) {
+body[data-result-style="solid"] :is(.hister-card, .vault-card, .smallweb-card) { background: var(--card); border-color: var(--line); }
+body[data-result-style="bar"] :is(.hister-card, .vault-card, .smallweb-card) {
   background: var(--card); border-color: transparent; box-shadow: var(--shadow), inset 3px 0 0 var(--tint);
 }
-body[data-result-style="none"] :is(.hister-card, .vault-card) { background: var(--card); border-color: transparent; }
+body[data-result-style="none"] :is(.hister-card, .vault-card, .smallweb-card) { background: var(--card); border-color: transparent; }
 /* A folded run of one site (Fold Repeated Sites), as the app's row. */
 .fold-row { list-style: none; margin: 2px 0 10px; }
 .fold-more {
