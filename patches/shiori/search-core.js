@@ -45,14 +45,56 @@
    * since Hister stores whichever the page used.
    */
   function urlLookupQuery(urls) {
+    const unique = lookupForms(urls);
+    return unique.length ? `url:(${unique.join('|')})` : '';
+  }
+
+  /** Each URL with and without its trailing slash, once; none holding ( ) | " or a space. */
+  function lookupForms(urls) {
     const safe = [];
     for (const u of urls) {
       if (!u || /[()|\s"]/.test(u)) continue;
       safe.push(u);
       safe.push(u.endsWith('/') ? u.slice(0, -1) : u + '/');
     }
-    const unique = [...new Set(safe)];
-    return unique.length ? `url:(${unique.join('|')})` : '';
+    return [...new Set(safe)];
+  }
+
+  // A query's longest: the hosted pages' nginx answers 414 past its 8 KB
+  // request line, and the query goes out JSON-wrapped and percent-encoded
+  // (about half as long again), so 2,000 characters stays near 3.5 KB.
+  const LOOKUP_MAX = 2000;
+
+  /**
+   * urlLookupQuery in batches, each query at most `max` characters (one
+   * URL longer than that alone is left out): the marks for a long list of
+   * web results take a few searches, not one too long to send.
+   */
+  function urlLookupQueries(urls, max = LOOKUP_MAX) {
+    const out = [];
+    let batch = [];
+    const query = (list) => `url:(${list.join('|')})`;
+    // A URL and its other form stay in one batch.
+    const pairs = [];
+    const forms = lookupForms(urls);
+    for (let i = 0; i < forms.length; i++) {
+      const a = forms[i];
+      const b = forms[i + 1];
+      if (b !== undefined && (b === a + '/' || a === b + '/')) {
+        pairs.push([a, b]);
+        i++;
+      } else pairs.push([a]);
+    }
+    for (const pair of pairs) {
+      if (query(pair).length > max) continue;
+      if (batch.length && query([...batch, ...pair]).length > max) {
+        out.push(query(batch));
+        batch = [];
+      }
+      batch.push(...pair);
+    }
+    if (batch.length) out.push(query(batch));
+    return out;
   }
 
   /**
@@ -2114,6 +2156,8 @@
     fieldButtons,
     histerToken,
     histerHeaders,
+    urlLookupQueries,
+    LOOKUP_MAX,
     mixCounts,
     alternate,
     PILLS,

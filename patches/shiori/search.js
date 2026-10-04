@@ -2565,13 +2565,13 @@
     window.addEventListener('load', () => window.scrollTo(0, y), { once: true });
   }
 
-  /** One Hister search marks the web results already saved (visited) or kept. */
+  /** A few Hister searches (S.urlLookupQueries) mark the web results already saved (visited) or kept. */
   async function markSaved(cards) {
-    const lookup = S.urlLookupQuery(cards.map(([r]) => r.url));
-    if (!lookup || !histerBase) return;
+    const lookups = S.urlLookupQueries(cards.map(([r]) => r.url));
+    if (!lookups.length || !histerBase) return;
     try {
-      const known = await histerSearch(lookup, 100);
-      const labels = S.savedLabels(known.documents);
+      const replies = await Promise.all(lookups.map((q) => histerSearch(q, 100).catch(() => null)));
+      const labels = S.savedLabels(replies.flatMap((r) => (r && r.documents) || []));
       for (const [r, card] of cards) {
         const key = S.normalizeURL(r.url);
         if (!labels.has(key)) continue;

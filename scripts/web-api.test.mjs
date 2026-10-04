@@ -189,9 +189,10 @@ test("the web app marks web results you already have, with the search page's loo
   const app = read('../web/app/app.js');
   assert.match(app, /markSaved\(list, shown\.map\(\(r\) => r\.url\)\);/);
   const fn = app.slice(app.indexOf('async function markSaved('), app.indexOf('// --- Preview -----'));
-  assert.match(fn, /S\.urlLookupQuery\(urls\)/);
-  assert.match(fn, /S\.savedLabels\(known\.documents\)/);
-  assert.match(read('../patches/shiori/search.js'), /const labels = S\.savedLabels\(known\.documents\);/);
+  // In batches short enough to send (a single lookup got 414 from nginx).
+  assert.match(fn, /S\.urlLookupQueries\(urls\)/);
+  assert.match(fn, /S\.savedLabels\(replies\.flatMap/);
+  assert.match(read('../patches/shiori/search.js'), /const lookups = S\.urlLookupQueries\(cards\.map/);
 });
 
 test("the web app's Settings are a tab on a phone, with no title row on the tabs' own views", () => {

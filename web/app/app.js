@@ -1285,14 +1285,14 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
 /**
  * Web results you already have, marked as the search page marks them: the
  * page's label as its chip, or "visited" for one with none (one Hister
- * lookup, S.urlLookupQuery and S.savedLabels). Best effort.
+ * lookup per batch, S.urlLookupQueries and S.savedLabels). Best effort.
  */
 async function markSaved(list, urls) {
-  const lookup = S.urlLookupQuery(urls);
-  if (!lookup) return;
+  const lookups = S.urlLookupQueries(urls);
+  if (!lookups.length) return;
   try {
-    const known = await api.search(lookup, { limit: 100 });
-    const labels = S.savedLabels(known.documents);
+    const replies = await Promise.all(lookups.map((q) => api.search(q, { limit: 100 }).catch(() => null)));
+    const labels = S.savedLabels(replies.flatMap((r) => (r && r.documents) || []));
     for (const row of list.querySelectorAll('.web-row')) {
       const key = S.normalizeURL(row.dataset.url || '');
       if (!labels.has(key)) continue;

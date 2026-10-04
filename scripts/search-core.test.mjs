@@ -1026,3 +1026,22 @@ test('the pills: order and visibility from one setting (PillOrder twins)', () =>
   assert.ok(S.pillsChanged([], among, 'all', { shown: false }).includes('all'));
   assert.equal(S.pillsChanged([], among, 'web', { shown: false }).length, S.PILL_KEYS.length);
 });
+
+test('the saved-page lookup goes in batches short enough to send (no 414; HisterKit twins)', () => {
+  const urls = Array.from({ length: 130 }, (_, i) => `https://github.com/zacbir/hister/issues/${1000 + i}?tab=comments&sort=newest-first-${i}`);
+  const queries = S.urlLookupQueries(urls);
+  assert.ok(queries.length > 1);
+  for (const q of queries) {
+    assert.ok(q.length <= S.LOOKUP_MAX, q.length);
+    // The request as the pages send it, under 4 KB (nginx refuses past its 8 KB request line).
+    const line = `/search?format=json&query=${encodeURIComponent(JSON.stringify({ text: S.histerText(q), limit: 100 }))}`;
+    assert.ok(line.length < 4096, line.length);
+  }
+  // Every URL is asked, with its other form beside it in the same batch.
+  for (const u of urls) assert.ok(queries.some((q) => q.includes(`(${u}|${u}/`) || q.includes(`|${u}|${u}/`)), u);
+  // A URL too long alone is left out; ( ) | stay out as before; nothing: no query.
+  assert.deepEqual(Array.from(S.urlLookupQueries(['https://a.example/' + 'x'.repeat(2100), 'https://b.example/'])), ['url:(https://b.example/|https://b.example)']);
+  assert.deepEqual(Array.from(S.urlLookupQueries(['https://w.example/a_(b)'])), []);
+  assert.deepEqual(Array.from(S.urlLookupQueries([])), []);
+  assert.deepEqual(Array.from(S.urlLookupQueries(['https://a.example/x', 'https://b.example/'], 2000)), ['url:(https://a.example/x|https://a.example/x/|https://b.example/|https://b.example)']);
+});

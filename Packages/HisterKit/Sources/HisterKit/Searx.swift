@@ -141,23 +141,52 @@ public struct SearxClient: Sendable {
 
 extension HisterClient {
     /// Which of these URLs Hister has, and their labels ("" = visited, not
-    /// kept), in one search: url:(a|a/|b|…). URLs with ( ) | or spaces
-    /// can't go in the alternation and are skipped.
+    /// kept), in a few searches: url:(a|a/|b|…) in batches short enough to
+    /// send (`lookupQueries`). URLs with ( ) | or spaces can't go in the
+    /// alternation and are skipped.
     public func savedLabels(for urls: [String]) async -> [String: String] {
-        var alternatives: [String] = []
-        for u in urls where u.rangeOfCharacter(from: CharacterSet(charactersIn: "()|\" \t")) == nil {
-            alternatives.append(u)
-            alternatives.append(u.hasSuffix("/") ? String(u.dropLast()) : u + "/")
+        let queries = Self.lookupQueries(urls)
+        guard !queries.isEmpty else { return [:] }
+        let pages = await withTaskGroup(of: SearchPage?.self) { group in
+            for query in queries { group.addTask { try? await search(query, limit: 100) } }
+            return await group.reduce(into: [SearchPage]()) { if let page = $1 { $0.append(page) } }
         }
-        guard !alternatives.isEmpty,
-            let page = try? await search("url:(\(alternatives.joined(separator: "|")))", limit: 100)
-        else { return [:] }
         var labels: [String: String] = [:]
-        for d in page.documents {
+        for d in pages.flatMap(\.documents) {
             labels[d.url] = d.label
             labels[d.url.hasSuffix("/") ? String(d.url.dropLast()) : d.url + "/"] = d.label
         }
         return labels
+    }
+
+    /// A query's longest: a proxy in front of Hister (the hosted pages'
+    /// nginx) answers 414 past its 8 KB request line, and the query goes
+    /// out JSON-wrapped and percent-encoded, about half as long again.
+    public static let lookupMax = 2000
+
+    /// `url:(a|a/|b|…)` in batches of at most `max` characters, a URL and
+    /// its other form together (one URL longer than that alone is left
+    /// out). `S.urlLookupQueries` in search-core.js is the twin.
+    public static func lookupQueries(_ urls: [String], max: Int = lookupMax) -> [String] {
+        var pairs: [[String]] = []
+        var seen = Set<String>()
+        for u in urls where !u.isEmpty && u.rangeOfCharacter(from: CharacterSet(charactersIn: "()|\"").union(.whitespacesAndNewlines)) == nil {
+            let other = u.hasSuffix("/") ? String(u.dropLast()) : u + "/"
+            let fresh = [u, other].filter { seen.insert($0).inserted }
+            if !fresh.isEmpty { pairs.append(fresh) }
+        }
+        func query(_ list: [String]) -> String { "url:(\(list.joined(separator: "|")))" }
+        var out: [String] = []
+        var batch: [String] = []
+        for pair in pairs where query(pair).count <= max {
+            if !batch.isEmpty, query(batch + pair).count > max {
+                out.append(query(batch))
+                batch = []
+            }
+            batch += pair
+        }
+        if !batch.isEmpty { out.append(query(batch)) }
+        return out
     }
 }
 
