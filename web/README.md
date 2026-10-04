@@ -29,7 +29,7 @@ origin):
 | `/` (with any `?q=…`), `/_shiori/*`, and for the web app `/sw.js` and `/manifest.webmanifest` | the built files (`/` is `index.html`) |
 | `/searx/*` | SearXNG, `/searx` removed (the page asks for `search?format=json` and `image_proxy`) |
 | `/konbini/*` | Konbini, `/konbini` removed (only `api/cards`) |
-| `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/api/prefs`, `/kura/feed.xml` | Kura, `/kura` removed: your notes, and (signed in) your theme and text size. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
+| `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/api/prefs`, `/kura/feed.xml` | Kura, `/kura` removed: your notes, and (signed in) your theme, appearance and text size. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
 | `/smallweb/*` | the small-web gateway, `/smallweb` removed (`api/search`, `api/save`): Gemini and Gopher, and the web app's Add Page (any http(s), gemini or gopher page; its `SMALLWEB_ORIGINS` must include this host's origin) |
 | anything else | the Hister host as it is: Hister's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (companion services, not part of this repository: README; the pages ask for `/shiori/ai/*` only when built with `SHIORI_AI=1`) |
 
@@ -57,7 +57,7 @@ this host too. So the host must:
   (Hister, SearXNG, the gateway): only the rooms read it.
 
 The pages only read the rooms, with one exception: signed in, the web app
-keeps your theme and text size in step with the rooms through Kura's
+keeps your theme (one of the rooms' ten), appearance and text size in step with the rooms through Kura's
 `/api/prefs` (read on launch, `PUT` on a change, as the rooms' machiya.js
 does; any failure is silent and the device's own choice stays). Kura
 accepts that `PUT` only from its own origin (`KURA_PUBLIC_URL`), so through
@@ -96,6 +96,15 @@ is dropped at once, so a reload never shares again. Without
 `share_target`.
 
 ## What it keeps where
+
+- Themes: Settings → Theme offers the Machiya rooms' ten (Tokyo Night,
+  Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa,
+  Everforest, Ayu) and Appearance (System, Light, Dark), shared with the
+  rooms like the text size (cookie `machiya_palette`, Kura's `palette`).
+  `web/app/palettes.css` is made by `node scripts/palettes.mjs` from
+  `web/app/palettes.json`, the rooms' table from machiya's
+  `vaultkit/palettes.py` (the script's header says how to refresh it); the
+  search page keeps Tokyo Night.
 
 - Settings: this browser's localStorage, changed in the page's gear.
   Nothing is shared between devices. Some start from the build, from the

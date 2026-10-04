@@ -111,7 +111,7 @@ test('the search page and the web app read the vaults through S.loadVaults, and 
 test("the web app's look sets the theme-color metas from S.themeColorMetas", () => {
   const app = read('../web/app/app.js');
   const look = app.slice(app.indexOf('function applyLook()'), app.indexOf('function recordSearch('));
-  assert.match(look, /S\.themeColorMetas\(theme\)/);
+  assert.match(look, /S\.themeColorMetas\(theme, palette\)/);
   assert.match(look, /meta\[name="theme-color"\]/);
 });
 

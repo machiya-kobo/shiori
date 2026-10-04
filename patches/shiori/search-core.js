@@ -938,7 +938,7 @@
 
   /**
    * The house's settings from `document.cookie`, in Shiori's terms:
-   * { theme, textSize, hidden: [room keys] }, each only when set. `mine`
+   * { theme, palette, textSize, hidden: [room keys] }, each only when set. `mine`
    * is Shiori's own text size: a cookie that's just its house rounding
    * ("medium" is written as "small") doesn't replace it. `steps`: 'apple'
    * (the search page) or 'rooms' (the web app), HOUSE_STEPS.
@@ -949,6 +949,7 @@
     const out = { hidden: [] };
     const theme = c.machiya_theme === 'auto' ? 'system' : c.machiya_theme;
     if (['system', 'night', 'day'].includes(theme)) out.theme = theme;
+    if (Object.hasOwn(PALETTES, c.machiya_palette)) out.palette = c.machiya_palette;
     const size = c.machiya_textSize;
     if (toSize[size] && toHouse[mine] !== size) out.textSize = toSize[size];
     for (const [name, value] of Object.entries(c)) {
@@ -958,13 +959,35 @@
   }
 
   /**
+   * The Machiya rooms' ten themes (vaultkit/palettes.py): the key the house
+   * shares (cookie machiya_palette, Kura's prefs `palette`), its name, and the
+   * browser bar's colour in each variant (the rooms' --dark). The colours
+   * themselves are web/app/palettes.css (scripts/palettes.mjs); a test keeps
+   * this list and that table the same.
+   */
+  const PALETTES = {
+    'tokyo-night': { name: 'Tokyo Night', night: '#16161e', day: '#d0d5e3' },
+    'solarized': { name: 'Solarized', night: '#00212b', day: '#eee8d5' },
+    'nord': { name: 'Nord', night: '#272c36', day: '#e5e9f0' },
+    'dracula': { name: 'Dracula', night: '#21222c', day: '#f3efdd' },
+    'catppuccin': { name: 'Catppuccin', night: '#181825', day: '#e6e9ef' },
+    'gruvbox': { name: 'Gruvbox', night: '#1d2021', day: '#ebdbb2' },
+    'rose-pine': { name: 'Rosé Pine', night: '#14121d', day: '#f2e9e1' },
+    'kanagawa': { name: 'Kanagawa', night: '#16161d', day: '#e5ddb0' },
+    'everforest': { name: 'Everforest', night: '#232a2e', day: '#efebd4' },
+    'ayu': { name: 'Ayu', night: '#07090d', day: '#f0f0f0' },
+  };
+
+  /**
    * The browser bar's colours for a theme, as the rooms set them
    * (vaultkit's shell): one for Night or Day, else a pair the system's
-   * light or dark picks. [{content, media}], media '' for none.
+   * light or dark picks. [{content, media}], media '' for none. `palette`:
+   * one of PALETTES (Tokyo Night when unknown).
    */
-  function themeColorMetas(theme) {
-    const NIGHT = '#16161e';
-    const DAY = '#d0d5e3';
+  function themeColorMetas(theme, palette = 'tokyo-night') {
+    const bars = PALETTES[palette] || PALETTES['tokyo-night'];
+    const NIGHT = bars.night;
+    const DAY = bars.day;
     if (theme === 'night') return [{ content: NIGHT, media: '' }];
     if (theme === 'day') return [{ content: DAY, media: '' }];
     return [
@@ -982,7 +1005,7 @@
   }
 
   /**
-   * The cookie that shares a Shiori setting with the other rooms (theme or
+   * The cookie that shares a Shiori setting with the other rooms (theme, palette or
    * textSize), or null for a setting the house doesn't share. `steps` as
    * for houseSettings.
    */
@@ -993,10 +1016,11 @@
     return `machiya_${key}=${encodeURIComponent(house)}; path=/; max-age=31536000; samesite=lax${domain ? `; domain=${domain}` : ''}`;
   }
 
-  /** A Shiori theme or text size in the house's words ("night", "large"), or '' for one it doesn't share. */
+  /** A Shiori theme, palette or text size in the house's words ("night", "large"), or '' for one it doesn't share. */
   function houseValue(key, value, steps = 'apple') {
     let house;
     if (key === 'theme' && ['system', 'night', 'day'].includes(value)) house = value;
+    else if (key === 'palette' && Object.hasOwn(PALETTES, value)) house = value;
     else if (key === 'textSize' && houseSteps(steps).toHouse[value]) house = houseSteps(steps).toHouse[value];
     return house || '';
   }
@@ -1827,6 +1851,7 @@
     houseCookie,
     houseValue,
     themeColorMetas,
+    PALETTES,
     houseDomain,
     roomLinks,
     roomsSwitcher,

@@ -166,7 +166,7 @@ async function copy(text) {
 // --- Settings: this browser's own (nothing is shared between devices) --------
 
 const DEFAULTS = {
-  theme: 'system', textSize: 'system', previewImages: true, rememberOpened: true, searchHistory: true,
+  theme: 'system', palette: 'tokyo-night', textSize: 'system', previewImages: true, rememberOpened: true, searchHistory: true,
   histerCount: 5, vaultCount: 3, webResults: true,
   // The build's SHIORI_OBSIDIAN_VAULT, else none.
   obsidianVault: fromBuild('__SHIORI_OBSIDIAN_VAULT__'),
@@ -182,6 +182,7 @@ let settings = { ...DEFAULTS, ...readLocal('shioriAppSettings') };
 // any Machiya room on this device count here too, and ours count there.
 const HOUSE = S.houseSettings(document.cookie, { mine: settings.textSize, steps: 'rooms' });
 if (HOUSE.theme) settings.theme = HOUSE.theme;
+if (HOUSE.palette) settings.palette = HOUSE.palette;
 if (HOUSE.textSize) settings.textSize = HOUSE.textSize;
 let recents = readLocal('shioriAppRecents') || [];
 
@@ -222,7 +223,7 @@ function changeSetting(key, value, { fromKura = false } = {}) {
   applyLook();
   // Signed in to Machiya: the rooms' copy follows (a choice made here wins
   // over Kura's answer still on its way).
-  if (key === 'theme' || key === 'textSize') {
+  if (key === 'theme' || key === 'palette' || key === 'textSize') {
     if (!fromKura) lookChangedHere = true;
     if (!fromKura && kuraAccount.status === 200) pushPrefs();
   }
@@ -254,9 +255,13 @@ function applyLook() {
   const theme = settings.theme === 'day' || settings.theme === 'night' ? settings.theme : '';
   if (theme) document.documentElement.dataset.theme = theme;
   else delete document.documentElement.dataset.theme;
+  // The rooms' themes (palettes.css): Tokyo Night is the page's own colours.
+  const palette = Object.hasOwn(S.PALETTES, settings.palette) ? settings.palette : 'tokyo-night';
+  if (palette !== 'tokyo-night') document.documentElement.dataset.palette = palette;
+  else delete document.documentElement.dataset.palette;
   // The browser's (and the installed app's) bar follows the chosen theme:
   // one colour for Night or Day, the system's pair for System.
-  const metas = S.themeColorMetas(theme);
+  const metas = S.themeColorMetas(theme, palette);
   const shown = [...document.querySelectorAll('meta[name="theme-color"]')];
   if (shown.length !== metas.length || metas.some((m, i) => shown[i].content !== m.content || (shown[i].media || '') !== m.media)) {
     shown.forEach((m) => m.remove());
@@ -279,7 +284,9 @@ let kuraAccount = { status: -1 };
 let lookChangedHere = false;
 
 function pushPrefs() {
-  void api.putKuraPrefs({ theme: S.houseValue('theme', settings.theme) || 'system', text_size: S.houseValue('textSize', settings.textSize, 'rooms') || 'standard' });
+  void api.putKuraPrefs({ theme: S.houseValue('theme', settings.theme) || 'system',
+    palette: S.houseValue('palette', settings.palette) || 'tokyo-night',
+    text_size: S.houseValue('textSize', settings.textSize, 'rooms') || 'standard' });
 }
 
 async function loadKuraAccount() {
@@ -288,6 +295,7 @@ async function loadKuraAccount() {
   if (status !== 200 || lookChangedHere) return;
   const theme = prefs.theme === 'auto' ? 'system' : prefs.theme;
   if (['system', 'night', 'day'].includes(theme) && theme !== settings.theme) changeSetting('theme', theme, { fromKura: true });
+  if (Object.hasOwn(S.PALETTES, prefs.palette) && prefs.palette !== settings.palette) changeSetting('palette', prefs.palette, { fromKura: true });
   const size = typeof prefs.text_size === 'string' && /^[a-z]+$/.test(prefs.text_size)
     ? S.houseSettings(`machiya_textSize=${prefs.text_size}`, { mine: settings.textSize, steps: 'rooms' }).textSize
     : undefined;
@@ -1692,7 +1700,8 @@ function viewSettings() {
       'div',
       { class: 'settings' },
       group('Appearance', [
-        choice('theme', 'Theme', [['system', 'System'], ['night', 'Tokyo Night'], ['day', 'Tokyo Night Day']]),
+        choice('palette', 'Theme', Object.entries(S.PALETTES).map(([key, p]) => [key, p.name])),
+        choice('theme', 'Appearance', [['system', 'System'], ['day', 'Light'], ['night', 'Dark']]),
         // The rooms' five sizes by their names (Standard is the system's),
         // with Medium and the two largest of the app's.
         choice('textSize', 'Text Size', [['xSmall', 'Extra Small'], ['small', 'Small'], ['medium', 'Medium'], ['system', 'Standard'], ['large', 'Large'], ['xLarge', 'Extra Large'], ['xxLarge', 'Extra Extra Large'], ['xxxLarge', 'Largest']]),

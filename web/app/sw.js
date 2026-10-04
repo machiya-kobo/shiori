@@ -10,6 +10,7 @@ const SHELL = [
   '/_shiori/api.js',
   '/_shiori/app.css',
   '/_shiori/theme.css',
+  '/_shiori/palettes.css',
   '/_shiori/search-core.js',
   '/_shiori/web-icon-64.png',
   '/_shiori/icon-256.png',

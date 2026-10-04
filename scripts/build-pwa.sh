@@ -21,7 +21,7 @@ status=${2:-}
 rm -rf -- "$out"
 mkdir -p -- "$out/_shiori"
 cp -- web/app/index.html web/app/manifest.webmanifest "$out/"
-cp -- web/app/app.js web/app/api.js web/app/app.css patches/shiori/search-core.js "$out/_shiori/"
+cp -- web/app/app.js web/app/api.js web/app/app.css web/app/palettes.css patches/shiori/search-core.js "$out/_shiori/"
 # The neighbours' icons (Hister, SearXNG): neutral glyphs unless the build
 # names a folder holding their own logos (hister.png, searxng.svg) in
 # SHIORI_ROOM_LOGOS. The repository carries no other project's logo.
@@ -94,7 +94,7 @@ with open(worker, "rb") as f:
 print(h.hexdigest()[:12])
 PY
 )
-stamp() { sed -i.bak -E "s#(/_shiori/(app|api|search-core)\.js|/_shiori/(app|theme)\.css)([\"'])#\1?v=$version\4#g" "$1" && rm -f -- "$1.bak"; }
+stamp() { sed -i.bak -E "s#(/_shiori/(app|api|search-core)\.js|/_shiori/(app|theme|palettes)\.css)([\"'])#\1?v=$version\4#g" "$1" && rm -f -- "$1.bak"; }
 sed "s/__VERSION__/$version/" web/app/sw.js >"$out/sw.js"
 stamp "$out/index.html"
 stamp "$out/sw.js"
