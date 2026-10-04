@@ -770,10 +770,13 @@
     { key: 'kura', name: 'Kura', tint: 'notes' },
     { key: 'hister', name: 'Hister', tint: 'secondary', neighbour: true },
     { key: 'searxng', name: 'SearXNG', tint: 'secondary', neighbour: true },
+    // The house itself: Machiya's landing and status page (SHIORI_ROOMS'
+    // machiya=…), last, in a section of its own, as vaultkit's menu has it.
+    { key: 'machiya', name: 'Machiya', tint: 'accent', house: true },
   ];
 
   /** Each room's one-word role in the menu, as the rooms say it (vaultkit's switcher). */
-  const ROOM_ROLES = { shiori: 'search', konbini: 'board', niwa: 'garden', kura: 'notes', hister: 'pages', searxng: 'the web' };
+  const ROOM_ROLES = { shiori: 'search', konbini: 'board', niwa: 'garden', kura: 'notes', hister: 'pages', searxng: 'the web', machiya: 'status' };
 
   /** The switcher's glyphs (24-point strokes, each a path's `d`), shared by both web pages: the house, and the menu's gear. */
   const ROOM_GLYPHS = {
@@ -841,6 +844,8 @@
     const rule = () => document.createElement('hr');
     for (const r of list) {
       if (r.neighbour && out.length && !out.some((n) => n.tagName === 'HR')) out.push(rule());
+      // The house: after its own rule.
+      if (r.house && out.length) out.push(rule());
       const here = r.key === current;
       const row = document.createElement(here ? 'b' : 'a');
       row.className = 'room' + (r.neighbour ? ' neighbour' : '') + (here ? ' here' : '');

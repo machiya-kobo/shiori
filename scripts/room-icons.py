@@ -3,8 +3,8 @@
 
     scripts/room-icons.py [--logos DIR] [FILE…]
 
-The rooms' icons are the Machiya rooms' home-screen icons, copied to
-assets/rooms/. The neighbours, Hister and SearXNG, get neutral line glyphs
+The rooms' icons are the Machiya rooms' home-screen icons, and the house's
+(machiya.svg, its landing and status page), copied to assets/rooms/. The neighbours, Hister and SearXNG, get neutral line glyphs
 (assets/rooms/neutral/): the repository carries no other project's logo.
 `--logos DIR` puts their own logos in instead, read from DIR (hister.png
 and searxng.svg, which a build keeps outside the repository and names in
@@ -21,7 +21,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ROOMS = ["shiori.svg", "konbini.svg", "niwa.svg", "kura.svg"]
+ROOMS = ["shiori.svg", "konbini.svg", "niwa.svg", "kura.svg", "machiya.svg"]
 NEUTRAL = ["neutral/hister.svg", "neutral/searxng.svg"]
 LOGOS = ["hister.png", "searxng.svg"]
 START = "/* ROOM ICONS (scripts/room-icons.py from assets/rooms/; don't edit by hand) */"

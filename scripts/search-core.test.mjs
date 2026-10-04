@@ -934,11 +934,11 @@ test("the Rooms menu's rows are the rooms': icon, name, role; here not a link; a
   vm.createContext(ctx2);
   vm.runInContext(source, ctx2);
   const R = ctx2.ShioriSearch;
-  const list = R.rooms('konbini=https://k.example/,niwa=https://n.example/,kura=https://ku.example/,hister=https://h.example/,searxng=https://s.example/', 'https://shiori.example');
+  const list = R.rooms('konbini=https://k.example/,niwa=https://n.example/,kura=https://ku.example/,hister=https://h.example/,searxng=https://s.example/,machiya=https://m.example/', 'https://shiori.example');
   let opened = 0;
   const rows = R.roomLinks(list, 'shiori', { settings: { href: '#/settings', open: () => opened++ } });
   const shape = Array.from(rows, (r) => (r.tagName === 'HR' ? '—' : `${r.tagName === 'B' ? '*' : ''}${r.children.map((c) => c.text || '').join('|')}`));
-  assert.deepEqual(shape, ['*|Shiori|here', '|Konbini|board', '|Niwa|garden', '|Kura|notes', '—', '|Hister|pages', '|SearXNG|the web', '—', '|Settings']);
+  assert.deepEqual(shape, ['*|Shiori|here', '|Konbini|board', '|Niwa|garden', '|Kura|notes', '—', '|Hister|pages', '|SearXNG|the web', '—', '|Machiya|status', '—', '|Settings']);
   assert.equal(rows[0].attrs['aria-current'], 'page');
   assert.equal(rows[0].href, '', 'the room you are in is not a link');
   assert.equal(rows[1].href, 'https://k.example/');
@@ -947,8 +947,9 @@ test("the Rooms menu's rows are the rooms': icon, name, role; here not a link; a
   assert.equal(settings.href, '#/settings');
   settings.listeners.click({ preventDefault() {} });
   assert.equal(opened, 1);
-  // Without settings, no rule and no row for it.
-  assert.equal(R.roomLinks(list, 'shiori').length, 7);
+  // The house is linked to its status page; without settings, no rule and no row for it.
+  assert.equal(rows[8].href, 'https://m.example/');
+  assert.equal(R.roomLinks(list, 'shiori').length, 9);
 });
 
 test("a search field's buttons: an X that clears it, a magnifier that submits", () => {

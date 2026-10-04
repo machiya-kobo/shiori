@@ -111,7 +111,9 @@ is dropped at once, so a reload never shares again. Without
   environment of `build-web.sh` and `build-pwa.sh` (all optional):
   - `SHIORI_NIWA_URL` (Kura's address; the name is older than Kura), `SHIORI_KONBINI_URL`: the notes' homes;
   - `SHIORI_OBSIDIAN_VAULT`: the vault notes open in, in Obsidian;
-  - `SHIORI_ROOMS`: the Rooms menu, as `key=url,…`;
+  - `SHIORI_ROOMS`: the Rooms menu, as `key=url,…` (shiori, konbini, niwa,
+    kura, hister, searxng, and machiya for the house's landing and status
+    page: "Machiya · status", last before Settings);
   - `SHIORI_SMALLWEB_URL`: the small-web gateway's address; set, the web
     app offers Add Page and its manifest a share target (above). The pages
     still reach the gateway at `/smallweb/` on their own host;
