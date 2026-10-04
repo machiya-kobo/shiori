@@ -89,7 +89,7 @@ test('typing searches Hister as every Shiori search does: last word a prefix, ne
   let asked = null;
   const { type, omnibox } = load({ hister: (q) => ((asked = q), { documents: [] }) });
   await type('paper lant');
-  assert.deepEqual(plain(asked), { text: 'paper lant* -label:vault -metadata.source:vault -type:local', limit: 6 });
+  assert.deepEqual(plain(asked), { text: 'paper (lant|lant*) -label:vault -metadata.source:vault -type:local', limit: 6 });
   assert.match(omnibox.defaultSuggestion.description, / in Shiori$/);
 });
 
@@ -124,7 +124,7 @@ test('fast typing sends one search, for the latest text', async () => {
   const { type } = load({ hister: (q) => (asked.push(q.text), { documents: [page('https://a.example/', q.text)] }) });
   const first = type('lan');
   const last = await type('lantern');
-  assert.deepEqual(asked, ['lantern* -label:vault -metadata.source:vault -type:local']);
+  assert.deepEqual(asked, ['(lantern|lantern*) -label:vault -metadata.source:vault -type:local']);
   assert.equal(last[0].title, undefined, 'only content and description are suggested');
   void first;
 });
@@ -158,7 +158,7 @@ test('Enter on a suggestion opens it and tells Hister it was opened for that sea
   assert.deepEqual(plain(opened), [['update', 3, 'https://b.example/x']]);
   const history = fetched.find((f) => f.url === BASE + 'api/history');
   assert.ok(history, 'api/history was sent');
-  assert.deepEqual(JSON.parse(history.init.body), { url: 'https://b.example/x', title: 'Lanterns', query: 'lant* -label:vault -metadata.source:vault -type:local' });
+  assert.deepEqual(JSON.parse(history.init.body), { url: 'https://b.example/x', title: 'Lanterns', query: '(lant|lant*) -label:vault -metadata.source:vault -type:local' });
 });
 
 test('with Remember What You Open off, an opened suggestion is not told to Hister', async () => {

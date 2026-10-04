@@ -701,14 +701,20 @@
    * The last word as a prefix ("hist" → "hist*"): Hister and Kura match
    * whole words, so "hist" finds nothing that "history" would. Only a plain word of two or more characters with a
    * letter, not after a trailing space or inside an open quote.
+   *
+   * `union` (Hister's): the word or its prefix, "(hist|hist*)". Hister's
+   * prefix alone misses most body-text matches of a whole word
+   * ("concurrency*" found 1 page of 45), and its (a|b) is a union, so this
+   * finds everything either does, highlighted. Kura has no (a|b): it
+   * keeps "hist*".
    */
-  function prefixLastWord(text) {
+  function prefixLastWord(text, { union = false } = {}) {
     const t = String(text || '');
     if (!t || /\s$/.test(t)) return t;
     if ((t.match(/"/g) || []).length % 2) return t;
     const word = t.split(/\s+/).pop();
     if ([...word].length < 2 || !/\p{L}/u.test(word) || !/^[\p{L}\p{N}]+$/u.test(word)) return t;
-    return t + '*';
+    return union ? `${t.slice(0, t.length - word.length)}(${word}|${word}*)` : t + '*';
   }
 
   /**
@@ -761,7 +767,7 @@
 
   /** A Hister search as sent: the last word a prefix, never the notes, and never the files unless it asks. */
   function histerText(text) {
-    const sent = excludingNotes(prefixLastWord(String(text || '').trim()));
+    const sent = excludingNotes(prefixLastWord(String(text || '').trim(), { union: true }));
     if (asksForFiles(sent) || sent.split(/\s+/).includes(FILES_EXCLUSION)) return sent;
     return `${sent} ${FILES_EXCLUSION}`;
   }
@@ -769,6 +775,9 @@
   /** A query as typed, from one sent (the Opened list shows it). */
   function typedQuery(text) {
     const shown = String(text || '').split(/\s+/).filter((w) => w && !EXCLUSION_TERMS.includes(w) && w !== FILES_EXCLUSION).join(' ');
+    // "(word|word*)" as sent now, "word*" before.
+    const union = shown.match(/^(.*?)\(([\p{L}\p{N}]+)\|\2\*\)$/u);
+    if (union) return union[1] + union[2];
     return shown.endsWith('*') ? shown.slice(0, -1) : shown;
   }
 

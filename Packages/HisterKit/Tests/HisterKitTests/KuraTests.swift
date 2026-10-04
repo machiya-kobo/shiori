@@ -103,7 +103,17 @@ struct KuraLiveTests {
     }
 
     @Test func histerNeverGetsTheNotesOrTheFiles() {
-        #expect(SearchText.forHister("hist") == "hist* -label:vault -metadata.source:vault -type:local")
+        #expect(SearchText.forHister("hist") == "(hist|hist*) -label:vault -metadata.source:vault -type:local")
+        #expect(SearchText.forHister("raspberry pi") == "raspberry (pi|pi*) -label:vault -metadata.source:vault -type:local")
+        // Kura keeps the plain prefix (it has no (a|b)).
+        #expect(SearchText.prefixLastWord("raspberry pi") == "raspberry pi*")
+        #expect(SearchText.prefixLastWord("raspberry pi", union: true) == "raspberry (pi|pi*)")
+        #expect(SearchText.prefixLastWord("町家", union: true) == "(町家|町家*)")
+        // Opened results show the search as typed, either form.
+        for sent in ["rust* -label:vault -metadata.source:vault", "(rust|rust*) -label:vault -metadata.source:vault -type:local"] {
+            #expect(OpenedEntry(id: 1, url: "https://a.example/", title: "A", query: sent, added: .now).typedQuery == "rust")
+        }
+        #expect(OpenedEntry(id: 1, url: "https://a.example/", title: "A", query: SearchText.forHister("raspberry pi"), added: .now).typedQuery == "raspberry pi")
         #expect(SearchText.forHister("*") == "* -label:vault -metadata.source:vault -type:local")
         #expect(SearchText.forHister("") == "-label:vault -metadata.source:vault -type:local")
         // Once, however often it's applied.
@@ -116,7 +126,7 @@ struct KuraLiveTests {
         #expect(LocalFiles.query("pi setup") == "type:local pi setup")
         #expect(LocalFiles.query("") == "type:local *")
         // The last typed word still a prefix; the notes still left out; no -type:local.
-        #expect(SearchText.forHister(LocalFiles.query("pi set")) == "type:local pi set* -label:vault -metadata.source:vault")
+        #expect(SearchText.forHister(LocalFiles.query("pi set")) == "type:local pi (set|set*) -label:vault -metadata.source:vault")
         #expect(SearchText.forHister(LocalFiles.query("")) == "type:local * -label:vault -metadata.source:vault")
         #expect(LocalFiles.asked(in: "a type:local b"))
         #expect(!LocalFiles.asked(in: "a -type:local"))

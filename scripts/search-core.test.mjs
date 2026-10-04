@@ -519,19 +519,26 @@ test('the last plain word is a prefix', () => {
 });
 
 test('Hister never gets the notes or the files', () => {
-  assert.equal(S.histerText('hist'), 'hist* -label:vault -metadata.source:vault -type:local');
+  assert.equal(S.histerText('hist'), '(hist|hist*) -label:vault -metadata.source:vault -type:local');
+  assert.equal(S.histerText('raspberry pi'), 'raspberry (pi|pi*) -label:vault -metadata.source:vault -type:local');
+  // Kura keeps the plain prefix (it has no (a|b)).
+  assert.equal(S.prefixLastWord('raspberry pi'), 'raspberry pi*');
+  assert.equal(S.prefixLastWord('raspberry pi', { union: true }), 'raspberry (pi|pi*)');
+  assert.equal(S.prefixLastWord('町家', { union: true }), '(町家|町家*)');
   assert.equal(S.histerText('*'), '* -label:vault -metadata.source:vault -type:local');
   assert.equal(S.histerText(''), '-label:vault -metadata.source:vault -type:local');
   // Once, however often it's applied.
   assert.equal(S.histerText('x -label:vault -metadata.source:vault'), 'x -label:vault -metadata.source:vault -type:local');
   assert.equal(S.histerText(S.histerText('x')), S.histerText('x'));
   assert.equal(S.typedQuery('rust* -label:vault -metadata.source:vault -type:local'), 'rust');
+  assert.equal(S.typedQuery('(rust|rust*) -label:vault -metadata.source:vault -type:local'), 'rust');
+  assert.equal(S.typedQuery(S.histerText('raspberry pi')), 'raspberry pi');
 });
 
 test('the Files tab asks for the files and only them (LocalFiles twins)', () => {
   assert.equal(S.filesQuery('pi setup'), 'type:local pi setup');
   assert.equal(S.filesQuery(''), 'type:local *');
-  assert.equal(S.histerText(S.filesQuery('pi set')), 'type:local pi set* -label:vault -metadata.source:vault');
+  assert.equal(S.histerText(S.filesQuery('pi set')), 'type:local pi (set|set*) -label:vault -metadata.source:vault');
   assert.equal(S.histerText(S.filesQuery('')), 'type:local * -label:vault -metadata.source:vault');
   assert.ok(S.asksForFiles('a type:local b'));
   assert.ok(!S.asksForFiles('a -type:local'));

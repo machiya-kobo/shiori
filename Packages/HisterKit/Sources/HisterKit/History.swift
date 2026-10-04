@@ -17,6 +17,11 @@ public struct OpenedEntry: Sendable, Equatable, Hashable, Identifiable, Decodabl
     /// The search as it was typed, for showing.
     public var typedQuery: String {
         let shown = Notes.withoutExclusion(query)
+        // "(word|word*)" as sent now (`SearchText.forHister`), "word*" before.
+        if shown.hasSuffix("*)"), let open = shown.lastIndex(of: "("), let bar = shown[open...].firstIndex(of: "|") {
+            let word = shown[shown.index(after: open)..<bar]
+            if !word.isEmpty, shown[shown.index(after: bar)...] == "\(word)*)" { return String(shown[..<open]) + word }
+        }
         return shown.hasSuffix("*") ? String(shown.dropLast()) : shown
     }
 

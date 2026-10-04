@@ -9,6 +9,25 @@ import Testing
 struct LiveServerTests {
     let client = HisterClient(serverURL: ProcessInfo.processInfo.environment["HISTER_LIVE_URL"] ?? "")!
 
+    /// The apps offer a sign-in exactly when the sign-in helper on Hister's
+    /// host says Hister has users (`hister: "ok"`); without a helper, or with
+    /// user handling off, none is offered and Hister answers as before.
+    @Test func signInIsOfferedOnlyWhenHisterHasUsers() async throws {
+        var request = URLRequest(url: client.baseURL.appending(path: "machiya/healthz"))
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let state: String? = await {
+            guard let (data, response) = try? await URLSession.shared.data(for: request),
+                (response as? HTTPURLResponse)?.statusCode == 200
+            else { return nil }
+            return (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["hister"] as? String
+        }()
+        #expect(await HisterAccount.available(server: client.baseURL) == (state == "ok"))
+        if state != "ok" {
+            // No users: an anonymous search works, and nothing reads as signed out.
+            _ = try await client.search("*", limit: 1)
+        }
+    }
+
     @Test func recentPagesDecodeAndPage() async throws {
         let first = try await client.search("*", sort: .newest, limit: 10)
         #expect(first.documents.count == 10)
