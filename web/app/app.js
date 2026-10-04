@@ -777,13 +777,21 @@ const KURA_BASE = location.origin + '/kura/';
 let shownList = null;
 const withWord = (query, word) => (word ? `${query} ${word}` : query);
 
+/** A total on a pill (All's search finds Pages' and Notes'): "Pages 31". */
+function setSegmentCount(value, n) {
+  const pill = document.querySelector(`#list-top .segments button[data-value="${value}"]`);
+  if (!pill || !n) return;
+  pill.querySelector('.pill-count')?.remove();
+  pill.append(h('span', { class: 'pill-count' }, n.toLocaleString()));
+}
+
 function segments(choices, current, onpick) {
   return fadeEdges(
     h(
       'div',
       { class: 'segments', role: 'group' },
       choices.map(([value, title, tint]) =>
-        h('button', { type: 'button', 'aria-pressed': String(value === current), 'data-tint': tint || 'blue', onclick: () => onpick(value) }, title),
+        h('button', { type: 'button', 'aria-pressed': String(value === current), 'data-tint': tint || 'blue', 'data-value': value, onclick: () => onpick(value) }, title),
       ),
     ),
   );
@@ -1064,6 +1072,8 @@ async function didYouMean(q, scope) {
 /** Your pages and your notes in All: the top five each, then "N results ›"
  *  ("How Many" is gone everywhere). */
 const ALL_COUNT = 5;
+/** How many of your pages, and of your notes, go among All's web results. */
+const MIX_COUNT = 3;
 
 async function searchAll(container, q) {
   container.replaceChildren(h('div', { class: 'spinner' }));
@@ -1095,51 +1105,37 @@ async function searchAll(container, q) {
     const seen = new Set();
     pages.documents = [...opened, ...pages.documents].filter((d) => isPage(d) && !seen.has(d.url) && seen.add(d.url)).slice(0, ALL_COUNT);
   }
-  const suffix = respelled ? ` · for “${respelled}”` : '';
   container.replaceChildren();
   const answer = answerCard(q);
   if (answer) container.append(answer);
-  // No "You Opened" here: it only grows, and pushed the rest down. It's on
-  // Pages and Opened.
-  const section = (title, reply, scope, total = reply && reply.total) => {
-    const docs = (reply && reply.documents) || [];
-    if (!docs.length) return;
-    total = Math.max(total || 0, docs.length);
-    // In its pill's colour, with the full count, as the search page and the
-    // apps have it: Pages blue, Notes green.
-    // The count is the link to the full search when there's more than the
-    // five, in place of a "More in …" row under them, which looked out of
-    // place there.
-    const count = total > docs.length
-      ? h('a', { class: 'count', href: '#', onclick: (e) => (e.preventDefault(), go('search', { q, s: scope })) }, `${S.countText(docs.length, total)} ›`)
-      : h('span', { class: 'count' }, S.countText(docs.length, total));
-    const ul = h('ul', { class: 'rows' });
-    const rows = folder(ul);
-    for (const d of docs) rows.add(d);
-    rows.flush();
-    // Heading and rows in one box, so the heading sticks while its own rows
-    // scroll by and the next section's pushes it off.
-    container.append(h('section', { class: 'list-section' },
-      h('div', { class: 'section-head tinted', 'data-tint': scope === 'notes' ? 'orange' : 'blue' }, h('span', {}, title), count), ul));
-  };
-  // Hister's total counts the pages you opened: hidden (Show Opened off),
-  // they leave the count, as on the search page and in the apps. (It has
-  // no notes: Kura has them.)
+  // Your pages and notes have no sections here, as on the search page:
+  // the top three of each go among the web results (a page after the first
+  // web result, a note after the second…), each row saying whose it is,
+  // and their totals go on the Pages and Notes pills.
   const hiddenOpened = settings.showOpened === true ? 0 : ((pages && pages.opened) || []).filter((o) => !S.isNoteURL(o.url, settings.niwaURL, settings.konbiniURL)).length;
-  section('Your Pages' + suffix, pages, 'hister', pages && (pages.total || 0) - hiddenOpened);
+  if (pages) setSegmentCount('hister', Math.max((pages.total || 0) - hiddenOpened, pages.documents.length));
+  if (notes && !notes.signIn) setSegmentCount('notes', Math.max(notes.total || 0, (notes.documents || []).length));
+  const mine = (reply, label) => ((reply && reply.documents) || []).slice(0, MIX_COUNT).map((d) => {
+    const row = docRow(d);
+    row.classList.add('mixed');
+    row.querySelector('.title').dataset.label = respelled ? `${label} · for “${respelled}”` : label;
+    return row;
+  });
+  const myPages = mine(pages, 'Your page');
+  const myNotes = notes && notes.signIn ? [] : mine(notes, 'Your note');
+  const mix = [];
+  for (let i = 0; i < MIX_COUNT; i++) mix.push(myPages[i], myNotes[i]);
+  const rows = mix.filter(Boolean);
   if (notes && notes.signIn) container.append(h('section', { class: 'list-section' }, signInStatus(() => searchAll(container, q))));
-  else section('Your Notes' + suffix, notes, 'notes');
   dropStaleSelection(container);
   if (!settings.webResults) {
-    if (!container.children.length) container.replaceChildren(status('Nothing Found', `Nothing matches “${q}”.`));
+    if (rows.length) container.append(h('ul', { class: 'rows' }, rows));
+    else if (!container.children.length) container.replaceChildren(status('Nothing Found', `Nothing matches “${q}”.`));
     return;
   }
   const web = h('div', {}, h('div', { class: 'spinner' }));
-  // The same kind of heading as Your Pages and Your Notes: in its pill's
-  // colour (Web yellow), its link the whole Web tab.
-  const more = h('a', { class: 'count', href: '#', onclick: (e) => (e.preventDefault(), go('search', { q, s: 'web' })) }, 'All Web Results ›');
-  container.append(h('section', { class: 'list-section' }, h('div', { class: 'section-head tinted', 'data-tint': 'yellow' }, h('span', {}, 'Web'), more), web));
-  webList(web, q, { embedded: true });
+  container.append(web);
+  webList(web, q, { embedded: true, mix });
 }
 
 /**
@@ -1229,14 +1225,20 @@ async function wikipediaFirst(results, wq) {
   return S.wikiFirst(results, article, found);
 }
 
-async function webList(container, q, { embedded = false } = {}) {
+/**
+ * The web's results. `mix` (All): your pages and notes, in order, one after
+ * each web row from the first (a hole skipped); without web results, theirs
+ * is the list.
+ */
+async function webList(container, q, { embedded = false, mix = [] } = {}) {
   if (!embedded) container.replaceChildren(h('div', { class: 'spinner' }));
   const wq = S.webQuery(q);
-  if (!wq) return container.replaceChildren(status('Hister Only', 'That query is Hister syntax only, so the web isn’t searched.'));
+  const mineOnly = (...rest) => container.replaceChildren(...[...rest, mix.some(Boolean) ? h('ul', { class: 'rows' }, mix.filter(Boolean)) : null].filter(Boolean));
+  if (!wq) return mineOnly(status('Hister Only', 'That query is Hister syntax only, so the web isn’t searched.'));
   try {
     const data = await api.web(wq);
     const results = (await wikipediaFirst(data.results || [], wq)).filter((r) => typeof r.url === 'string' && /^https?:/.test(r.url));
-    if (!results.length) return container.replaceChildren(status('No Web Results', ''));
+    if (!results.length) return mix.some(Boolean) ? mineOnly() : container.replaceChildren(status('No Web Results', ''));
     const list = h('ul', { class: 'rows' });
     const shown = results.slice(0, embedded ? 10 : 30);
     for (const r of shown) {
@@ -1257,13 +1259,16 @@ async function webList(container, q, { embedded = false } = {}) {
         ),
       );
     }
+    // Yours among them: one after each web row, the rest after the last.
+    const webRows = [...list.children];
+    mix.filter(Boolean).forEach((row, i) => (webRows[i] ? webRows[i].after(row) : list.append(row)));
     // Not `null` as a child: replaceChildren writes it out as the text "null"
     // (it showed under All's Web heading).
     container.replaceChildren(...[embedded ? null : answerCard(q), list].filter(Boolean));
     if (!embedded) dropStaleSelection(container);
     markSaved(list, shown.map((r) => r.url));
   } catch (error) {
-    container.replaceChildren(status("The Web Search Didn't Answer", '', () => webList(container, q, { embedded })));
+    mineOnly(status("The Web Search Didn't Answer", '', () => webList(container, q, { embedded, mix })));
   }
 }
 

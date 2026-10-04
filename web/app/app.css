@@ -100,6 +100,10 @@ button { font: inherit; color: inherit; }
 .answer-card .answer-head { color: var(--tint); }
 .answer-card .answer-head svg { stroke: var(--tint); }
 .answer-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; border: 0; background: none; cursor: pointer; font-weight: 600; color: var(--text); text-align: left; }
+/* A compact row, as the search page's AI Answer, Info and Related. */
+.answer-card { border-radius: 10px; }
+.answer-card > .answer-head { padding: 7px 12px; gap: 6px; font-size: 0.8125rem; }
+.answer-card > .answer-head svg { width: 13px; height: 13px; }
 .answer-head svg { width: 16px; height: 16px; stroke: var(--secondary); fill: none; stroke-width: 1.8; }
 .answer-head .chevron-icon { display: inline-flex; transition: transform 0.15s; }
 .answer-head[aria-expanded="true"] .chevron-icon { transform: rotate(90deg); }
@@ -206,6 +210,13 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 .segments button[data-tint="yellow"] { --tab: var(--web); }
 .segments button[data-tint="teal"] { --tab: var(--smallweb); }
 .segments button[data-tint="green"] { --tab: var(--kept); }
+/* Their totals on the Pages and Notes pills ("Pages 31"), as the search page. */
+.segments .pill-count { margin-left: 5px; font-weight: 400; font-variant-numeric: tabular-nums; }
+/* All: your top pages and notes among the web rows, each title led by whose it is. */
+.row.mixed .title::before {
+  content: attr(data-label); display: block; margin-bottom: 2px; color: var(--tint);
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
+}
 
 .searchfield { margin: 0 12px 8px; position: relative; }
 /* Type-ahead: the typed text again, invisible, then the rest in grey, laid
