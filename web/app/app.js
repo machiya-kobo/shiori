@@ -1129,7 +1129,10 @@ async function searchAll(container, q) {
     return;
   }
   const web = h('div', {}, h('div', { class: 'spinner' }));
-  container.append(h('section', { class: 'list-section' }, h('div', { class: 'section-head' }, 'Web'), web));
+  // The same kind of heading as Your Pages and Your Notes: in its pill's
+  // colour (Web yellow), its link the whole Web tab.
+  const more = h('a', { class: 'count', href: '#', onclick: (e) => (e.preventDefault(), go('search', { q, s: 'web' })) }, 'All Web Results ›');
+  container.append(h('section', { class: 'list-section' }, h('div', { class: 'section-head tinted', 'data-tint': 'yellow' }, h('span', {}, 'Web'), more), web));
   webList(web, q, { embedded: true });
 }
 

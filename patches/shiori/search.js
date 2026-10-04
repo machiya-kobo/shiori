@@ -2348,6 +2348,14 @@
   placeSide();
   $('web-title').textContent = category === 'general' ? 'Web' : CATEGORIES.find(([c]) => c === category)[1];
   const count = data.number_of_results > 0 ? `${data.number_of_results.toLocaleString()} results · ` : '';
+  if (category === 'general') {
+    // On All, Web folds as Your Pages and Your Notes do, its open or shut
+    // remembered with theirs; its count is SearXNG's, when it gives one.
+    $('web-title').hidden = true;
+    $('web-head').hidden = false;
+    $('web-count').textContent = count.replace(/ · $/, '');
+    fold($('web'), true);
+  }
   $('timing').textContent = cached ? count.replace(/ · $/, '') : `${count}${seconds} s`;
   const slow = (data.unresponsive_engines || []).map((e) => (Array.isArray(e) ? e[0] : e));
   $('engines').textContent = slow.length ? `No answer from ${slow.join(', ')}` : '';
@@ -2478,7 +2486,8 @@
     const first = (() => {
       for (const el of main.children) {
         if (el === slot || el.hidden || el.id === 'skeleton' || el.classList.contains('correction') || !el.offsetHeight) continue;
-        if (el.id === 'web') return el.querySelector('.panel:not([hidden]), .card') || el;
+        // Web on All: its heading row, as Your Pages' is.
+        if (el.id === 'web') return (!$('web-head').hidden && $('web-head')) || el.querySelector('.panel:not([hidden]), .card') || el;
         return el.matches('.fold:not(.panel)') ? el.querySelector('.fold-head') : el;
       }
       return null;

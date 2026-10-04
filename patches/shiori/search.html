@@ -103,17 +103,26 @@
           <p class="more"><a id="vault-more" href="#">All Your Notes ›</a></p>
         </div></div>
       </section>
-      <section id="web" aria-labelledby="web-title" hidden>
+      <!-- The web's results, and every other tab's list. On All it folds as
+           Your Pages and Your Notes do (web-head); on a tab of its own it has
+           a plain heading (web-title). -->
+      <section id="web" class="fold" data-fold="web" aria-labelledby="web-title" hidden>
         <h2 id="web-title">Web</h2>
-        <section id="suggestions" class="fold panel" data-fold="related" hidden>
-          <button class="fold-head" type="button" aria-expanded="false">
-            <span class="chevron" aria-hidden="true"></span><span>Related Searches</span>
-          </button>
-          <div class="fold-body"><div><ul id="suggestion-list"></ul></div></div>
-        </section>
-        <p id="web-status" class="status" role="status"></p>
-        <ol id="web-results" class="results"></ol>
-        <div id="images" class="image-grid" hidden></div>
+        <button id="web-head" class="fold-head" type="button" aria-expanded="true" hidden>
+          <span class="chevron" aria-hidden="true"></span><span>Web</span>
+          <span id="web-count" class="count"></span>
+        </button>
+        <div class="fold-body"><div>
+          <section id="suggestions" class="fold panel" data-fold="related" hidden>
+            <button class="fold-head" type="button" aria-expanded="false">
+              <span class="chevron" aria-hidden="true"></span><span>Related Searches</span>
+            </button>
+            <div class="fold-body"><div><ul id="suggestion-list"></ul></div></div>
+          </section>
+          <p id="web-status" class="status" role="status"></p>
+          <ol id="web-results" class="results"></ol>
+          <div id="images" class="image-grid" hidden></div>
+        </div></div>
       </section>
       <p class="more"><a id="hister-more-tab" href="#" hidden>Open in Hister ›</a></p>
       <nav id="pages" class="pages" aria-label="Pages" hidden>

@@ -385,23 +385,25 @@ a.link-chip:hover, a.link-chip:focus-visible { background: color-mix(in srgb, cu
    reads as the top of that tab. */
 #hister > .fold-head { --tint: var(--accent); }
 #vault > .fold-head { --tint: var(--notes); }
+/* Web on All folds the same way, in the Web pill's yellow. */
+#web > .fold-head { --tint: var(--web); }
 /* The AI answer covers the whole search: the All pill's colour. A panel,
    so the whole card wears it (only the row is tinted on the other two). */
-#answer { --tint: var(--tab-general); border: 1px solid var(--tint); background: color-mix(in srgb, var(--tint) 12%, var(--card)); }
+#answer { --tint: var(--tab-general); border: 1px solid var(--tint); background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card)); }
 #answer > .fold-head { color: var(--tint); }
 /* Info too: about the whole search, like the answer. */
-.infobox { --tint: var(--tab-general); border: 1px solid var(--tint); background: color-mix(in srgb, var(--tint) 12%, var(--card)); }
+.infobox { --tint: var(--tab-general); border: 1px solid var(--tint); background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card)); }
 .infobox > .fold-head { color: var(--tint); }
-#hister > .fold-head, #vault > .fold-head {
+#hister > .fold-head, #vault > .fold-head, #web > .fold-head {
   color: var(--tint); border: 1px solid var(--tint);
-  background: color-mix(in srgb, var(--tint) 12%, var(--card));
+  background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card));
 }
 .fold-head .count { margin-left: auto; font-weight: 400; font: -apple-system-footnote; }
 /* Section headings stay under the header while their section scrolls by,
    as the apps' list headers do: Your Pages and Your
    Notes (their rows are opaque), and Web, frosted. --header-h is the
    header's height (search.js keeps it). */
-#hister > .fold-head[aria-expanded="true"], #vault > .fold-head[aria-expanded="true"] {
+#hister > .fold-head[aria-expanded="true"], #vault > .fold-head[aria-expanded="true"], #web > .fold-head[aria-expanded="true"] {
   position: sticky; top: calc(var(--header-h, 0px) + 6px); z-index: 1;
 }
 #web-title {
@@ -625,9 +627,11 @@ body.home header {
   position: static; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none;
   padding-top: max(12vh, 40px); text-align: center;
 }
-.home-brand { margin-bottom: 22px; }
-.home-brand img { width: 72px; height: 72px; border-radius: 16px; display: block; margin: 0 auto 10px; }
-.home-brand h1 { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+/* The mark and the name on one row, centred, the mark the title's line
+   high: the rooms' brand (logo, then word), larger. */
+.home-brand { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 22px; }
+.home-brand img { width: 2.4rem; height: 2.4rem; border-radius: 0.55rem; display: block; flex: none; }
+.home-brand h1 { margin: 0; font-size: 2rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
 .home-brand p { margin: 4px 0 0; color: var(--secondary); }
 body.home #search { max-width: 36rem; margin: 0 auto; text-align: left; }
 body.home #q { font-size: 1.15em; padding-top: 14px; padding-bottom: 14px; }

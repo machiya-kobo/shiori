@@ -96,7 +96,7 @@ button { font: inherit; color: inherit; }
 /* The AI answer at the top of a search: a row that opens into the
    search page's answer (citations, the cited results, who wrote it). */
 /* Tinted like the search page's: the All pill's colour, as the answer covers the whole search. */
-.answer-card { --tint: var(--tab-general); margin: 10px 12px 4px; background: color-mix(in srgb, var(--tint) 12%, var(--card)); border: 1px solid var(--tint); border-radius: 12px; }
+.answer-card { --tint: var(--tab-general); margin: 10px 12px 4px; background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card)); border: 1px solid var(--tint); border-radius: 12px; }
 .answer-card .answer-head { color: var(--tint); }
 .answer-card .answer-head svg { stroke: var(--tint); }
 .answer-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; border: 0; background: none; cursor: pointer; font-weight: 600; color: var(--text); text-align: left; }
@@ -118,9 +118,10 @@ button { font: inherit; color: inherit; }
 .section-head.tinted {
   --tint: var(--accent); display: flex; align-items: center; margin: 10px 12px 6px; padding: 7px 12px;
   color: var(--tint); border: 1px solid var(--tint); border-radius: 10px;
-  background: color-mix(in srgb, var(--tint) 12%, var(--card));
+  background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card));
 }
 .section-head.tinted[data-tint="orange"] { --tint: var(--notes); }
+.section-head.tinted[data-tint="yellow"] { --tint: var(--web); }
 .section-head.tinted .count { margin-left: auto; font-weight: 400; font-size: 0.8125rem; }
 .section-head.tinted a.count { color: inherit; text-decoration: none; font-weight: 600; }
 .text-button { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; }
