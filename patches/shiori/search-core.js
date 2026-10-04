@@ -1766,6 +1766,25 @@
     return /^mc[hd]_[A-Za-z0-9_.-]{8,4096}$/.test(token) ? token : '';
   }
 
+  // --- Hister's token (the Hister login's phase 1: docs/signing-in.md) ------------
+  // The owner's one Hister token, sent as `X-Access-Token` by every Hister
+  // caller that holds one: Safari's extension (from the app's Keychain),
+  // Firefox's (its settings field), the apps, Linux. Unset, nothing is sent,
+  // as before. Never in a URL, never logged. HisterKit's HisterToken is the
+  // twin, with the same tests.
+
+  /** A token as stored: printable ASCII, no spaces, 8 to 512 characters (Hister's own are 26); '' otherwise. */
+  function histerToken(raw) {
+    const token = String(raw == null ? '' : raw).trim();
+    return /^[\x21-\x7e]{8,512}$/.test(token) ? token : '';
+  }
+
+  /** `headers` with `X-Access-Token` added when there's a token, else as they are. */
+  function histerHeaders(token, headers = {}) {
+    const t = histerToken(token);
+    return t ? { ...headers, 'X-Access-Token': t } : { ...headers };
+  }
+
   /** A device's label for pairing: no control characters, at most 64 characters, `fallback` when empty. */
   function machiyaDevice(raw, fallback = 'Shiori') {
     const label = [...String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u007f]/g, '').trim()].slice(0, 64).join('').trim();
@@ -1966,6 +1985,8 @@
     houseDomain,
     roomLinks,
     fieldButtons,
+    histerToken,
+    histerHeaders,
     roomsSwitcher,
     roomGlyph,
     collectionAliases,

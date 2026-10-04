@@ -109,7 +109,10 @@
   // Your Pages and Your Notes in All: the top five each, then "N results ›"
   // to the full search ("How Many" is gone).
   const ALL_COUNT = 5;
-  const stored = await chrome.storage.local.get(['histerURL', 'shioriSettings', PAGE_CACHE_KEY, FOLDS_KEY]);
+  const stored = await chrome.storage.local.get(['histerURL', 'histerToken', PAGE_CACHE_KEY, FOLDS_KEY, 'shioriSettings']);
+  // Hister's token where this device has one (the extension; the hosted
+  // page has none: its host signs it in), sent as X-Access-Token.
+  const histerAuth = (headers = {}) => S.histerHeaders(stored.histerToken, headers);
   const settings = {
     showInfobox: true,
     showRelated: true,
@@ -452,7 +455,7 @@
       return (rules = { aliases, labels: S.labelsFromAliases(aliases).labels });
     }
     try {
-      const reply = await fetchJSON(`${histerBase}api/rules`, { headers: { Accept: 'application/json' } });
+      const reply = await fetchJSON(`${histerBase}api/rules`, { headers: histerAuth({ Accept: 'application/json' }) });
       const aliases = S.collectionAliases((reply && reply.aliases) || {});
       rules = { aliases, labels: S.labelsFromAliases(aliases).labels };
       try {
@@ -678,7 +681,7 @@
         const other = S.noteVault(url);
         const p = other
           ? { title: card?.querySelector('.title')?.textContent || url, content: ((await fetchJSON(`${kuraBase}api/note?${new URLSearchParams({ path: S.notePath(url, []) || '', vault: other })}`, { timeout: 10000, room: true })) || {}).html }
-          : await fetchJSON(`${histerBase}api/preview?url=${encodeURIComponent(url)}`, { timeout: 10000 });
+          : await fetchJSON(`${histerBase}api/preview?url=${encodeURIComponent(url)}`, { timeout: 10000, headers: histerAuth() });
         if (current !== url) return;
         let host = url;
         try {
@@ -1322,7 +1325,7 @@
     // The last word a prefix, never the notes (those are Kura's).
     const query = JSON.stringify({ text: S.histerText(text), limit, ...extra });
     return fetchJSON(`${histerBase}search?format=json&query=${encodeURIComponent(query)}`, {
-      headers: { Accept: 'application/json' },
+      headers: histerAuth({ Accept: 'application/json' }),
     });
   }
 
@@ -1395,7 +1398,7 @@
     const send = () =>
       fetch(`${histerBase}api/history`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: histerAuth({ 'Content-Type': 'application/json' }),
         // As the search was sent: Hister matches the exact text.
         body: JSON.stringify({ url, title, query }),
         credentials: 'omit',

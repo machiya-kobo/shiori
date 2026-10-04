@@ -16,10 +16,10 @@
   let current = null; // { controller, timer } of the search under way
 
   async function stored() {
-    const got = await chrome.storage.local.get(['histerURL', 'shioriSettings']);
+    const got = await chrome.storage.local.get(['histerURL', 'histerToken', 'shioriSettings']);
     let base = typeof got.histerURL === 'string' ? got.histerURL.trim() : '';
     if (base && !base.endsWith('/')) base += '/';
-    return { base, settings: got.shioriSettings || {} };
+    return { base, token: got.histerToken || '', settings: got.shioriSettings || {} };
   }
 
   const isWeb = (url) => /^https?:\/\//i.test(String(url || ''));
@@ -54,11 +54,11 @@
     mine.timer = setTimeout(async () => {
       let list = [];
       try {
-        const { base, settings } = await stored();
+        const { base, token, settings } = await stored();
         if (!base) throw new Error('no server');
         const body = JSON.stringify({ text: S.histerText(query), limit: LIMIT });
         const r = await fetch(`${base}search?format=json&query=${encodeURIComponent(body)}`, {
-          headers: { Accept: 'application/json' },
+          headers: S.histerHeaders(token, { Accept: 'application/json' }),
           signal: controller.signal,
         });
         if (r.ok) list = suggestions(await r.json(), settings);
@@ -74,11 +74,11 @@
    *  vault's note, shared or not: the keyword drops notes, and whether a
    *  vault is still shared would need Kura asked (fail closed). */
   async function recordOpened(url, title, query) {
-    const { base, settings } = await stored();
+    const { base, token, settings } = await stored();
     if (!base || settings.rememberOpened === false || S.noteVault(url) !== null) return;
     await fetch(`${base}api/history`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: S.histerHeaders(token, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ url, title, query: S.histerText(query) }),
       credentials: 'omit',
     }).catch(() => {});

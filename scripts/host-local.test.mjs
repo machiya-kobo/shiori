@@ -14,6 +14,8 @@ import assert from 'node:assert/strict';
 const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
 const hostSource = read('../patches/ext/host-local.js');
 const coreSource = read('../patches/ext/core.js');
+// After core.js, as the build bundles them: core reaches it only at run time.
+const searchCoreSource = read('../patches/shiori/search-core.js');
 const swift = read('../Shared/Settings/SharedSettings.swift');
 
 // --- SharedSettings.swift, read as text ---
@@ -120,7 +122,7 @@ function loadCore(storage = fakeStorage({}), network = async () => new Response(
   };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  vm.runInContext(hostSource + '\n' + coreSource, ctx);
+  vm.runInContext(hostSource + '\n' + coreSource + '\n' + searchCoreSource, ctx);
   // From a tab (a content script or the results page) unless `sender` says otherwise.
   const send = (request, sender = { tab: { id: 7 } }) =>
     new Promise((resolve) => {
@@ -361,6 +363,24 @@ test('only the settings page sets the server, and only to an http(s) address', a
   ];
   for (const [request, sender] of tries) assert.equal((await send(request, sender)).ok, false, JSON.stringify([request, sender]));
   assert.equal(storage.data.histerURL, 'https://kept.example/');
+});
+
+test("Hister's token: only the settings page sets it, checked, and never hears it back", async () => {
+  const storage = fakeStorage({ histerURL: 'https://h.example/' });
+  const { send } = loadCore(storage);
+  assert.deepEqual(plain(await send({ shiori: 'hister-token-status' }, SETTINGS_PAGE)), { ok: true, set: false });
+  const saved = await send({ shiori: 'set-hister-token', token: '  ABCDEFGHJKLMNPQRSTUVWXYZ23 ' }, SETTINGS_PAGE);
+  assert.deepEqual(plain(saved), { ok: true, set: true });
+  assert.equal(storage.data.histerToken, 'ABCDEFGHJKLMNPQRSTUVWXYZ23');
+  // Not from a tab or another page; nothing malformed.
+  assert.equal((await send({ shiori: 'set-hister-token', token: 'EVILEVILEVILEVIL' }, { tab: { id: 7 }, url: 'https://duckduckgo.com/' })).ok, false);
+  assert.equal((await send({ shiori: 'set-hister-token', token: 'EVILEVILEVILEVIL' }, { url: 'moz-extension://x/search.html', tab: { id: 7 } })).ok, false);
+  assert.equal((await send({ shiori: 'set-hister-token', token: 'has a space' }, SETTINGS_PAGE)).invalid, true);
+  assert.equal(storage.data.histerToken, 'ABCDEFGHJKLMNPQRSTUVWXYZ23');
+  assert.equal((await send({ shiori: 'hister-token-status' }, { tab: { id: 7 } })).ok, false);
+  // Empty clears it.
+  assert.deepEqual(plain(await send({ shiori: 'set-hister-token', token: '' }, SETTINGS_PAGE)), { ok: true, set: false });
+  assert.equal('histerToken' in storage.data, false);
 });
 
 test('the queue is counted, and Retry sends it', async () => {

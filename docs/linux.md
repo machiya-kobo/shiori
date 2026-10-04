@@ -92,6 +92,13 @@ a private vault is never cached, exported or sent to Hister.
   never to Hister, the gateway or the web app, and a request carrying it
   follows no redirect. To sign out, delete the line; revoke it on the
   server with `identity device revoke` or `identity token revoke`.
+- **Hister's token** (when the server has users): `"histerToken": "…"` in
+  the same file, 0600, your Hister user's one token (Hister keeps one per
+  user). Sent as `X-Access-Token` only to the config's `server`, by origin
+  (`linux/src/hister.js`): never the gateway, Kura or the web app, and a
+  request carrying it follows no redirect. Unset, nothing is sent.
+  `shiori status` says whether it's set and warns when others can read the
+  file.
 - The HTTP client (`linux/gjs/http.js`, libsoup 3) refuses hosts the config
   doesn't name, except the page `shiori save` was asked to download. The
   network itself (your tailnet's or LAN's access rules) is the real

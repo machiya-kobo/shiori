@@ -42,10 +42,13 @@ public enum SearchSort: String, Sendable, CaseIterable {
 ///
 /// Every request carries `Origin: hister://`, which Hister requires of
 /// non-browser clients (without it searches fail with 500 and writes with
-/// 403). There is no token: the network the server sits on is the gate.
+/// 403). With a token (`HisterToken`) every request also carries
+/// `X-Access-Token`; without one, nothing more is sent.
 public struct HisterClient: Sendable {
     public let baseURL: URL
     private let session: URLSession
+    /// Hister's token, checked; nil sends none. Never logged.
+    private let token: String?
 
     /// For the package's network code; replies that don't decode are
     /// logged here rather than vanishing into `.badResponse`.
@@ -64,7 +67,7 @@ public struct HisterClient: Sendable {
     }()
 
     /// Returns nil unless `serverURL` is an absolute http(s) URL.
-    public init?(serverURL: String, session: URLSession = HisterClient.defaultSession) {
+    public init?(serverURL: String, token: String? = nil, session: URLSession = HisterClient.defaultSession) {
         var s = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !s.isEmpty else { return nil }
         if !s.hasSuffix("/") { s += "/" }
@@ -73,7 +76,11 @@ public struct HisterClient: Sendable {
         else { return nil }
         self.baseURL = url
         self.session = session
+        self.token = HisterToken.clean(token)
     }
+
+    /// Whether requests carry a token (for Settings; never the token itself).
+    public var sendsToken: Bool { token != nil }
 
     // MARK: Reads
 
@@ -208,6 +215,7 @@ public struct HisterClient: Sendable {
         var request = URLRequest(url: components.url!)
         request.httpMethod = method
         request.setValue("hister://", forHTTPHeaderField: "Origin")
+        if let token { request.setValue(token, forHTTPHeaderField: HisterToken.header) }
         if let accept { request.setValue(accept, forHTTPHeaderField: "Accept") }
         if let body {
             request.httpBody = body
@@ -220,7 +228,8 @@ public struct HisterClient: Sendable {
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: request)
+            // A redirect elsewhere never takes the token along.
+            (data, response) = try await session.data(for: request, delegate: token == nil ? nil : TokenKeepingRedirects())
         } catch let error as URLError where error.code == .cancelled {
             throw .cancelled
         } catch is CancellationError {

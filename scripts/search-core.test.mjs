@@ -979,3 +979,17 @@ test("a search field's buttons: an X that clears it, a magnifier that submits", 
   assert.deepEqual(events, ['input'], 'the field hears it, as if typed');
   assert.equal(focused, 1);
 });
+
+test("Hister's token: sent as X-Access-Token only when there is a sound one (HisterToken twins)", () => {
+  const plain = (v) => JSON.parse(JSON.stringify(v));
+  assert.equal(S.histerToken('  ABCDEFGHJKLMNPQRSTUVWXYZ23  '), 'ABCDEFGHJKLMNPQRSTUVWXYZ23');
+  assert.equal(S.histerToken('short'), '');
+  assert.equal(S.histerToken('has a space in it'), '');
+  assert.equal(S.histerToken('line\nbreak-token'), '');
+  assert.equal(S.histerToken('tökén-with-umlauts'), '');
+  assert.equal(S.histerToken('x'.repeat(513)), '');
+  assert.equal(S.histerToken(null), '');
+  assert.deepEqual(plain(S.histerHeaders('ABCDEFGHJKLMNPQRSTUVWXYZ23', { Accept: 'application/json' })), { Accept: 'application/json', 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' });
+  assert.deepEqual(plain(S.histerHeaders('', { Accept: 'application/json' })), { Accept: 'application/json' });
+  assert.deepEqual(plain(S.histerHeaders(undefined)), {});
+});

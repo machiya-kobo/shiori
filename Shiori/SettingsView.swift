@@ -177,6 +177,9 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.surface)
 
+            HisterTokenSection()
+                .listRowBackground(palette.surface)
+
             WaitingSection()
                 .listRowBackground(palette.surface)
             case .search:
@@ -452,7 +455,7 @@ struct SettingsView: View {
     private func checkConnection() async {
         save()
         let checked = draft
-        guard let client = HisterClient(serverURL: checked) else { return }
+        guard let client = HisterClient(serverURL: checked, token: app.histerToken) else { return }
         check = .checking
         let result: ConnectionCheck
         do {

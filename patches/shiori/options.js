@@ -63,7 +63,10 @@
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 6000);
   try {
-    const reply = await fetch(`${server}api/stats`, { headers: { Accept: 'application/json' }, signal: controller.signal });
+    // Hister's token from the app (the background keeps it): this request's header only.
+    const { histerToken } = await chrome.storage.local.get(['histerToken']);
+    const headers = histerToken ? { Accept: 'application/json', 'X-Access-Token': histerToken } : { Accept: 'application/json' };
+    const reply = await fetch(`${server}api/stats`, { headers, signal: controller.signal });
     if (!reply.ok) throw new Error(String(reply.status));
     const stats = await reply.json().catch(() => ({}));
     const count = Number(stats.doc_count);

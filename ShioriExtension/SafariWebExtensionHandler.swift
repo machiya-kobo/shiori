@@ -4,7 +4,8 @@ import SafariServices
 /// shared App Group: it answers with the app's combined-search settings,
 /// records how many captures the offline queue holds, adds searches
 /// made from Safari to the recent searches, and hands the extension the
-/// Machiya sign-in from the Keychain (`machiya`). Page data never crosses
+/// Machiya sign-in and Hister's token from the Keychain (`machiya`,
+/// `hister`). Page data never crosses
 /// into native code.
 ///
 /// `nonisolated`: the project defaults to MainActor, and Safari creates
@@ -39,6 +40,14 @@ nonisolated final class SafariWebExtensionHandler: NSObject, NSExtensionRequestH
             let token = MachiyaKeychain.token
             if !token.isEmpty {
                 reply = ["token": token, "principal": MachiyaKeychain.principal]
+            }
+        case "hister":
+            // Hister's token (Settings → Server), sent as X-Access-Token;
+            // set and removed only in the app (which checked it; the
+            // background checks it again). None: an empty reply.
+            let token = HisterKeychain.token
+            if !token.isEmpty {
+                reply = ["token": token]
             }
         case "recent":
             if let query = message?["q"] as? String { SharedSettings.recordSearch(query) }

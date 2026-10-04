@@ -205,10 +205,10 @@
         let done = true;
         const expired = Date.now() - (head.queuedAt ?? Date.now()) > MAX_AGE_MS;
         if (item && !expired) {
-          // Upstream's optional access token, read fresh at replay and never
-          // stored with the queued item. Shiori's server has no login (so
-          // it's normally unset), but a token-protected Hister would
-          // otherwise refuse every replay and the queue would drop them.
+          // Hister's token (histerToken: from the app on Safari, the settings
+          // page on Firefox), read fresh at replay and never stored with the
+          // queued item. Unset while the server has no users; with users, a
+          // replay without it would be refused and the queue would drop it.
           const { histerToken } = await storage.get(['histerToken']);
           const headers = { ...item.headers };
           if (histerToken) headers['X-Access-Token'] = histerToken;
@@ -554,6 +554,29 @@
         );
         return true;
       }
+      // Hister's token (Firefox: the settings page sets it; on Safari the
+      // app does). Checked here, kept in histerToken for upstream's
+      // background and Shiori's pages; the page is told only whether one is
+      // set, never the token. '' clears it.
+      if (request.shiori === 'set-hister-token' || request.shiori === 'hister-token-status') {
+        if (!fromSettings || !shioriHost.ownsHisterToken || !globalThis.ShioriSearch) {
+          sendResponse({ ok: false });
+          return false;
+        }
+        const run = async () => {
+          if (request.shiori === 'set-hister-token') {
+            const raw = String(request.token == null ? '' : request.token).trim();
+            const token = globalThis.ShioriSearch.histerToken(raw);
+            if (raw && !token) return { ok: false, invalid: true };
+            if (token) await chrome.storage.local.set({ histerToken: token });
+            else await chrome.storage.local.remove('histerToken');
+          }
+          const { histerToken } = await chrome.storage.local.get(['histerToken']);
+          return { ok: true, set: !!histerToken };
+        };
+        run().then(sendResponse, () => sendResponse({ ok: false }));
+        return true;
+      }
       // What the whitelist would keep of a settings file, before it's applied.
       if (request.shiori === 'judge-settings') {
         if (!fromSettings || typeof shioriHost.judge !== 'function' || !request.values || typeof request.values !== 'object') {
@@ -792,6 +815,14 @@ const shioriMachiya = (() => {
       }
     }
     await chrome.storage.local.set(changes);
+    // Hister's token, from the app (Safari): kept where upstream's background
+    // and Shiori's pages read it (histerToken), gone when the app has none.
+    if (!shioriHost.ownsHisterToken && typeof shioriHost.histerToken === 'function' && globalThis.ShioriSearch) {
+      const token = globalThis.ShioriSearch.histerToken(await shioriHost.histerToken());
+      const current = (await chrome.storage.local.get(['histerToken'])).histerToken || '';
+      if (token && token !== current) await chrome.storage.local.set({ histerToken: token });
+      if (!token && current) await chrome.storage.local.remove('histerToken');
+    }
   }
 
   // Going Back from Shiori's page reloads DuckDuckGo as a fresh navigation

@@ -23,6 +23,7 @@ import { parseArgs, saveLinksTarget } from '../src/cli.js';
 import { QuickSearch } from './quick.js';
 import { save, sendWaiting, waitingStatus } from './save.js';
 import { pairedMessage, signInStatus } from '../src/machiya.js';
+import { histerTokenStatus } from '../src/hister.js';
 
 installURL(globalThis);
 // search-core.js sets globalThis.ShioriSearch, once URL exists.
@@ -67,7 +68,10 @@ const APP_ID = GLib.getenv('FLATPAK_ID') || 'io.github.machiya_kobo.Shiori';
     } catch (e) {
       r = { code: 1, message: `shiori: ${e.message}` };
     }
-    if (early.command === 'status') r.message += '\n' + signInStatus(config, configMode(), globalThis.ShioriSearch);
+    if (early.command === 'status') {
+      r.message += '\n' + histerTokenStatus(config, configMode(), globalThis.ShioriSearch);
+      r.message += '\n' + signInStatus(config, configMode(), globalThis.ShioriSearch);
+    }
     (r.code !== 0 ? printerr : print)(r.message);
     System.exit(r.code);
   }

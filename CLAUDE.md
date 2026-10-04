@@ -226,6 +226,15 @@ holds the rules and the traps the code can't tell you.
 
 ## Hister API quirks
 
+- **Hister's token** (`X-Access-Token`, for a server with users): the
+  owner's one token per user, entered once per device (Settings → Server,
+  `HisterKeychain`; Safari's extension asks the app by the `hister` native
+  message; Firefox's settings field; Linux `histerToken`). It goes only to
+  the Hister server (never the gateway, which also gets `Origin:
+  hister://`), never in a URL, a log, a settings file or the offline queue
+  (drain re-reads it), and follows no redirect elsewhere. Unset, nothing
+  is sent. `HisterToken` / `S.histerToken` are twins. The hosted pages
+  never hold it.
 - Every request needs `Origin: hister://`. `limit`, `sort` and `highlight`
   only work inside the JSON `query=` parameter. `*` with sort `date` is
   "recent".

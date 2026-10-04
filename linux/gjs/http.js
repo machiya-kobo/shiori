@@ -3,11 +3,14 @@
 // (docs/linux.md). Hister gets `Origin: hister://`, as from HisterKit.
 // The Machiya sign-in (config.json's machiyaToken) goes only where
 // search-core's host rule allows (../src/machiya.js), and a request that
-// carries it follows no redirect.
+// carries it follows no redirect. Hister's token (config.json's
+// histerToken) goes only to the configured server (../src/hister.js),
+// under the same no-redirect rule.
 
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup?version=3.0';
 import { roomHeaders } from '../src/machiya.js';
+import { histerHeaders } from '../src/hister.js';
 
 const session = new Soup.Session({ timeout: 15, user_agent: 'Shiori-Linux' });
 
@@ -44,8 +47,10 @@ export function requestJSON(config, url, { method = 'GET', body = null, hister =
     if (hister) headers.append('Origin', 'hister://');
     const auth = signIn && !hister ? roomHeaders(config, url, globalThis.ShioriSearch).Authorization : undefined;
     if (auth) headers.append('Authorization', auth);
-    // libsoup would carry the header along a redirect: a signed-in request follows none.
-    if (auth || !redirects) message.set_flags(Soup.MessageFlags.NO_REDIRECT);
+    const token = hister ? histerHeaders(config, url, globalThis.ShioriSearch)['X-Access-Token'] : undefined;
+    if (token) headers.append('X-Access-Token', token);
+    // libsoup would carry the header along a redirect: a request with a token follows none.
+    if (auth || token || !redirects) message.set_flags(Soup.MessageFlags.NO_REDIRECT);
     if (body !== null) {
       const bytes = new TextEncoder().encode(typeof body === 'string' ? body : JSON.stringify(body));
       message.set_request_body_from_bytes('application/json', new GLib.Bytes(bytes));

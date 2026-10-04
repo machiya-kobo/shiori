@@ -18,6 +18,10 @@
 //                       Never stored here: asked again when needed.
 //   ownsMachiya         whether the extension's pages may sign in and out
 //                       (here no: the app's Settings → Notes does)
+//   histerToken()       Hister's token, from the app's Keychain ('' when
+//                       unset or unreachable), sent as X-Access-Token
+//   ownsHisterToken     whether the extension's settings page sets it
+//                       (here no: the app's Settings → Server does)
 const shioriHost = (() => {
   const APP_ID = '__SHIORI_APP_ID__';
   const canSend = () =>
@@ -45,5 +49,14 @@ const shioriHost = (() => {
       }
     },
     ownsMachiya: false,
+    async histerToken() {
+      try {
+        const reply = await send({ type: 'hister' });
+        return reply && typeof reply.token === 'string' ? reply.token : '';
+      } catch (_) {
+        return '';
+      }
+    },
+    ownsHisterToken: false,
   };
 })();

@@ -36,7 +36,8 @@ nonisolated enum Saver {
     static func save(_ input: Input, label: String?, via: String) async -> Outcome {
         let defaults = SharedSettings.defaults
         let serverURL = defaults?.string(forKey: SharedSettings.Key.serverURL) ?? ""
-        guard let client = HisterClient(serverURL: serverURL) else {
+        // Hister's token from the Keychain, when this device has one.
+        guard let client = HisterClient(serverURL: serverURL, token: HisterKeychain.token) else {
             return .failed("Set your Hister server in Shiori's Settings first.")
         }
         return await save(input, label: label, via: via, client: client, outbox: SharedSettings.outboxDirectory.map(Outbox.init))

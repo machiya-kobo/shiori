@@ -11,6 +11,7 @@ import * as outbox from '../linux/src/outbox.js';
 import { parseArgs, saveLinksTarget } from '../linux/src/cli.js';
 import { providerQuery, providerResults, activation } from '../linux/src/provider.js';
 import { roomHeaders, roomOrigins, signInStatus, pairedMessage } from '../linux/src/machiya.js';
+import { histerHeaders, histerTokenStatus } from '../linux/src/hister.js';
 
 const plain = (v) => JSON.parse(JSON.stringify(v));
 
@@ -242,7 +243,29 @@ test('the token goes to the configured Kura only, read with the shim as GJS read
 test("Hister's requests never carry the token, and a signed-in request follows no redirect", () => {
   const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
   assert.match(http, /const auth = signIn && !hister \? roomHeaders\(config, url, globalThis\.ShioriSearch\)\.Authorization : undefined;/);
-  assert.match(http, /if \(auth \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
+  assert.match(http, /if \(auth \|\| token \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
+});
+
+test("Hister's token goes to the configured server only, as X-Access-Token", () => {
+  const S = shimmedCore();
+  const config = { ...CONFIG, histerToken: 'ABCDEFGHJKLMNPQRSTUVWXYZ23' };
+  assert.deepEqual(plain(histerHeaders(config, 'https://hister.example/search?query=x', S)), { 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' });
+  assert.deepEqual(plain(histerHeaders(config, 'https://HISTER.example:443/api/add', S)), { 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' });
+  for (const url of [
+    'https://smallweb.example/api/save', 'https://kura.example/api/search', 'https://shiori.example/',
+    'https://hister.example@evil.example/', 'https://u:p@hister.example/', 'http://hister.example/', 'https://hister.example:8443/',
+  ]) {
+    assert.deepEqual(plain(histerHeaders(config, url, S)), {}, url);
+  }
+  assert.deepEqual(plain(histerHeaders(CONFIG, 'https://hister.example/search', S)), {});
+  assert.deepEqual(plain(histerHeaders({ ...config, histerToken: 'not a token' }, 'https://hister.example/search', S)), {});
+  assert.match(histerTokenStatus(CONFIG, 0o600, S), /no token/);
+  assert.match(histerTokenStatus({ histerToken: 'no' }, 0o600, S), /isn’t a token/);
+  assert.equal(histerTokenStatus(config, 0o100600, S), 'Hister: a token in config.json.');
+  assert.match(histerTokenStatus(config, 0o100644, S), /mode 644\): chmod 600/);
+  const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
+  assert.match(http, /const token = hister \? histerHeaders\(config, url, globalThis\.ShioriSearch\)\['X-Access-Token'\] : undefined;/);
+  assert.match(http, /if \(auth \|\| token \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
 });
 
 test("status says who can read the token, and pair prints the line to add", () => {

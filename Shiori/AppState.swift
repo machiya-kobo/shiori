@@ -16,7 +16,7 @@ final class AppState {
         didSet {
             UserDefaults.standard.set(serverURL, forKey: Keys.serverURL)
             SharedSettings.defaults?.set(serverURL, forKey: SharedSettings.Key.serverURL)
-            client = HisterClient(serverURL: serverURL)
+            client = HisterClient(serverURL: serverURL, token: histerToken)
             rules = Rules(aliases: [:])
             rulesLoaded = false
             capabilities = nil
@@ -162,6 +162,28 @@ final class AppState {
     /// Machiya when the device is (`machiyaSignIn`).
     var notesKura: KuraClient? {
         KuraClient(serverURL: searchPage.niwaURL, signIn: machiyaSignIn)
+    }
+
+    // MARK: Hister's token
+
+    /// Hister's access token (Settings → Server), from the Keychain
+    /// (`HisterKeychain`, never UserDefaults): every request to Hister
+    /// carries it as `X-Access-Token`; empty, none does. Read at launch
+    /// and after every change; never shown back or logged.
+    private(set) var histerToken = HisterKeychain.token
+
+    /// Keeps a token (or removes it, when empty) and rebuilds the client.
+    /// Nil when kept, else what to tell the person.
+    func setHisterToken(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let token = HisterToken.clean(trimmed)
+        if !trimmed.isEmpty && token == nil { return "That isn't a token: it's 8 to 512 characters with no spaces." }
+        guard HisterKeychain.save(token ?? "") else { return "The Keychain didn't keep it. Try again." }
+        histerToken = HisterKeychain.token
+        client = HisterClient(serverURL: serverURL, token: histerToken)
+        rulesLoaded = false
+        capabilities = nil
+        return nil
     }
 
     // MARK: Machiya sign-in
@@ -470,7 +492,7 @@ final class AppState {
         palette = AppPalette.resolve(
             SharedSettings.defaults?.string(forKey: SharedSettings.Key.palette)
                 ?? defaults.string(forKey: AppPalette.storageKey))
-        client = HisterClient(serverURL: stored ?? fallback)
+        client = HisterClient(serverURL: stored ?? fallback, token: HisterKeychain.token)
 
         let shared = SharedSettings.defaults
         combinedSearch = shared?.object(forKey: SharedSettings.Key.combinedSearch) as? Bool ?? true

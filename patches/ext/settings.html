@@ -29,7 +29,15 @@
           <p id="server-error" class="error" role="alert" hidden></p>
         </form>
         <div class="row"><span>Status</span><span id="status" class="value" aria-live="polite">Checking…</span></div>
-        <p class="note">Pages you visit go only to this server, and its rules decide which it keeps.</p>
+        <form id="token-form" class="field" novalidate>
+          <label for="token">Access Token</label>
+          <div class="inline">
+            <input id="token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Not set" />
+            <button type="submit">Save</button>
+          </div>
+          <p id="token-error" class="error" role="alert" hidden></p>
+        </form>
+        <p class="note">Pages you visit go only to this server, and its rules decide which it keeps. The access token is your Hister user's (from <kbd>pass</kbd>; Hister keeps one per user): it stays in this browser, goes only to this server as <kbd>X-Access-Token</kbd>, and is never in a settings file. Saving an empty field removes it.</p>
       </section>
 
       <section class="group" aria-labelledby="h-access">

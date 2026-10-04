@@ -85,7 +85,11 @@
     let text = "Can't reach it (check the address, your network or VPN)";
     let ok = false;
     try {
-      const reply = await fetch(base + 'api/stats', { headers: { Accept: 'application/json' }, signal: controller.signal });
+      // Hister's token, as the background stored it (checked there): this
+      // request's header only, never shown.
+      const { histerToken } = await chrome.storage.local.get(['histerToken']);
+      const headers = histerToken ? { Accept: 'application/json', 'X-Access-Token': histerToken } : { Accept: 'application/json' };
+      const reply = await fetch(base + 'api/stats', { headers, signal: controller.signal });
       if (!reply.ok) throw new Error(String(reply.status));
       const count = Number((await reply.json().catch(() => ({}))).doc_count);
       text = Number.isFinite(count) ? `Connected · ${count.toLocaleString()} pages` : 'Connected';
@@ -117,6 +121,28 @@
     await checkServer();
     void showQueue();
   });
+
+  // --- Hister's token ---
+  // Kept by the background (histerToken); this page learns only whether
+  // one is set, and never shows it back.
+
+  async function showToken() {
+    const reply = await send({ shiori: 'hister-token-status' });
+    $('token').value = '';
+    $('token').placeholder = reply && reply.ok && reply.set ? 'Saved (type to replace)' : 'Not set';
+  }
+  $('token-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const reply = await send({ shiori: 'set-hister-token', token: $('token').value });
+    if (!reply || !reply.ok) {
+      showError($('token-error'), reply && reply.invalid ? "That isn't a token: it's 8 to 512 characters with no spaces." : "Couldn't save it; try again.");
+      return;
+    }
+    showError($('token-error'), '');
+    await showToken();
+    await checkServer();
+  });
+  void showToken();
 
   // --- Machiya sign-in ---
   // The background pairs and keeps the token (core.js, shioriMachiya); this

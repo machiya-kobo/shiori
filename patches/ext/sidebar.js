@@ -16,8 +16,11 @@
 
   let base = '';
   let settings = {};
+  // Hister's token where this device has one, sent as X-Access-Token.
+  let token = '';
   async function load() {
-    const got = await chrome.storage.local.get(['histerURL', 'shioriSettings']);
+    const got = await chrome.storage.local.get(['histerURL', 'histerToken', 'shioriSettings']);
+    token = got.histerToken || '';
     base = String(got.histerURL || '').trim();
     if (base && !base.endsWith('/')) base += '/';
     settings = got.shioriSettings || {};
@@ -33,7 +36,7 @@
   async function search(text, limit, extra = {}, signal) {
     if (!base) throw new Error('no server');
     const query = JSON.stringify({ text: S.histerText(text), limit, highlight: 'HTML', ...extra });
-    const r = await fetch(`${base}search?format=json&query=${encodeURIComponent(query)}`, { headers: { Accept: 'application/json' }, signal });
+    const r = await fetch(`${base}search?format=json&query=${encodeURIComponent(query)}`, { headers: S.histerHeaders(token, { Accept: 'application/json' }), signal });
     if (!r.ok) throw new Error(String(r.status));
     return r.json();
   }
@@ -70,7 +73,7 @@
     if (!base || !query || settings.rememberOpened === false || S.noteVault(url) !== null) return;
     fetch(`${base}api/history`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: S.histerHeaders(token, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ url, title, query: S.histerText(query) }),
       credentials: 'omit',
     }).catch(() => {});

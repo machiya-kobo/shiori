@@ -35,8 +35,12 @@
   const SHOW_MS = 6000;
   const withSlash = (u) => (u && !u.endsWith('/') ? u + '/' : u || '');
 
+  // Hister's token where this device has one (sent as X-Access-Token),
+  // read with the server each time.
+  let token = '';
   async function stored() {
-    const got = await chrome.storage.local.get(['histerURL', 'shioriSettings']);
+    const got = await chrome.storage.local.get(['histerURL', 'histerToken', 'shioriSettings']);
+    token = got.histerToken || '';
     return { base: withSlash(String(got.histerURL || '').trim()), settings: got.shioriSettings || {} };
   }
 
@@ -48,7 +52,7 @@
     const q = S.urlLookupQuery(urls);
     if (!q) return false;
     const r = await fetch(`${base}search?format=json&query=${encodeURIComponent(JSON.stringify({ text: q, limit: 20 }))}`, {
-      headers: { Accept: 'application/json' },
+      headers: S.histerHeaders(token, { Accept: 'application/json' }),
     });
     if (!r.ok) throw new Error(`Hister answered ${r.status}`);
     const docs = (await r.json()).documents || [];
@@ -131,7 +135,7 @@
     const body = { url: page.url, title: titleIn(page.html), html: page.html, metadata: { via: 'context-menu' } };
     let r;
     try {
-      r = await fetch(`${base}api/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      r = await fetch(`${base}api/add`, { method: 'POST', headers: S.histerHeaders(token, { 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
     } catch (_) {
       return { outcome: 'failed', reason: 'Hister is out of reach, and its skip rules are unknown here yet' };
     }

@@ -17,6 +17,8 @@ import ShioriAIOnDevice
 // (-a openai for OpenAI). Read through `security`, so a rebuilt tool
 // doesn't prompt; any process of the user's can read it the same way,
 // which is why it's a separate, spend-capped key, not the main one.
+// Hister's token, when the server has users, the same way: HISTER_TOKEN,
+// else `-a hister` (sent as X-Access-Token, never in a URL).
 
 /// The key for a provider: the environment's, else this Mac's keychain item.
 func apiKey(_ variable: String, account: String) -> String {
@@ -105,6 +107,9 @@ struct Page {
 }
 
 enum Hister {
+    /// Hister's token, or "" (read once).
+    static let token = apiKey("HISTER_TOKEN", account: "hister")
+
     static func get(_ server: String, _ path: String, _ query: [URLQueryItem]) async throws -> Any {
         var components = URLComponents(string: server + path)!
         components.queryItems = query
@@ -114,6 +119,7 @@ enum Hister {
         components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
         var request = URLRequest(url: components.url!)
         request.setValue("hister://", forHTTPHeaderField: "Origin")
+        if !token.isEmpty { request.setValue(token, forHTTPHeaderField: "X-Access-Token") }
         request.timeoutInterval = 30
         let (data, _) = try await URLSession.shared.data(for: request)
         return try JSONSerialization.jsonObject(with: data)

@@ -121,6 +121,11 @@ const shioriHost = (() => {
     clearMachiya: () => storage().remove(MACHIYA_KEY),
     // No app: the settings page signs in and out.
     ownsMachiya: true,
+    /** Hister's token: the settings page keeps it in histerToken, as upstream's page did. */
+    async histerToken() {
+      return (await storage().get(['histerToken'])).histerToken || '';
+    },
+    ownsHisterToken: true,
   };
 })();
 
