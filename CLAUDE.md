@@ -286,6 +286,9 @@ holds the rules and the traps the code can't tell you.
   iOS 26 and macOS 26, so the system's frosted edge runs under it (an inset
   made a floating slab, or let content show through). Older systems keep the
   theme's background. `topBarBackground()` must be a view, not a colour fill.
+- **SwiftUI never runs `.task` on a view whose body is empty**: a check
+  that decides whether a view shows must live outside it (AppState, the
+  parent), or the view never shows (it hid Sign in to Hister).
 - **A `listRowBackground` view must not read the environment** (crash on the
   Mac): pass the palette in.
 - Rows added to a Mac `List` already on screen draw squashed for a moment:
