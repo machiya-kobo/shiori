@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The tag also releases Shiori for Firefox. The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.3.1 (2026-10-04)
+
+### Fixed
+
+- The search page gives the web 10 seconds, not 4: on a phone's mobile
+  data through the tailnet, ordinary searches ran past 4 and showed "Web
+  results didn't answer". That line now has Try Again beside Search
+  DuckDuckGo.
+
 ## 0.3.0 (2026-10-04)
 
 ### Added
