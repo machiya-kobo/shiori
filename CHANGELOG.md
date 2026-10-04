@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The tag also releases Shiori for Firefox. The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.2.1 (2026-10-04)
+
+### Changed
+
+- The apps' Sign in to Hister starts with **Sign In with Saved Password**:
+  Hister's own sign-in page in a Safari sheet, where Passwords or
+  Bitwarden offer the saved login for the site (the app's own fields can't
+  be matched to the site without Associated Domains, which needs a paid
+  developer team). The name and password fields follow it.
+
 ## 0.2.0 (2026-10-04)
 
 Everything since 0.1.0.
@@ -22,6 +32,8 @@ Everything since 0.1.0.
   caller can send Hister's access token (Settings → Server → Access Token;
   Firefox's settings page; Linux's config). Nothing changes while Hister
   has no users.
+- Kura and Konbini in Hister sign-in mode get the signed-in device's id,
+  or Hister's access token when it isn't signed in.
 - **Signing in to Machiya**: pairing with a code or a pasted token, sent
   only to the configured Kura and Konbini.
 - **Files**: the folders Hister watches, on their own pill.

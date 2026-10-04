@@ -250,7 +250,8 @@ on, [Sign in to Machiya](#sign-in-to-machiya).
 Shiori needs no sign-in while Hister has no users (the default). When Hister has them (`app.user_handling`, v0.20.0+,
 with Machiya's sign-in helper on Hister's host), each Shiori signs in once:
 
-- **The apps:** Settings → Server → Sign in to Hister, with a name and password or Sign In with the Browser (shown only
+- **The apps:** Settings → Server → Sign in to Hister, with Sign In with Saved Password (Hister's page, where your saved
+  password is offered) or a name and password (shown only
   while Hister has users), and Access Token for your Hister user's token. Both stay in the Keychain.
 - **Safari's extension** takes the token from the app; **Firefox** has an Access Token field on its settings page.
 - **The hosted pages** send you to Hister's sign-in when it asks, and back.

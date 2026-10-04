@@ -68,6 +68,12 @@ struct HisterSignInSection: View {
                     if working { ProgressView().controlSize(.small) }
                 }
             } else {
+                // First: Hister's own sign-in page in a Safari sheet, where
+                // Safari's AutoFill (Passwords, Bitwarden) offers the saved
+                // login for the site. The app's own fields can't be matched
+                // to the site without Associated Domains (a paid team's).
+                Button("Sign In with Saved Password…", systemImage: "key.fill", action: signInWithBrowser)
+                    .disabled(working)
                 TextField("Name", text: $username, prompt: Text("Name"))
                     .textContentType(.username)
                     #if os(iOS)
@@ -82,8 +88,6 @@ struct HisterSignInSection: View {
                         .disabled(working || username.trimmingCharacters(in: .whitespaces).isEmpty || password.isEmpty)
                     if working { ProgressView().controlSize(.small) }
                 }
-                Button("Sign In with the Browser…", action: signInWithBrowser)
-                    .disabled(working)
             }
             if let problem {
                 Label(problem, systemImage: "exclamationmark.triangle")
@@ -93,7 +97,7 @@ struct HisterSignInSection: View {
         } header: {
             Text("Sign in to Hister")
         } footer: {
-            Text("Your Hister has users: sign in once on this device. The session stays in this device's Keychain and goes only to your Hister (and the rooms get an id for it, never the session). Sign In with the Browser opens Hister's sign-in page privately, for its other ways in. Sign Out ends the session everywhere; Hister's sessions page lists every device.")
+            Text("Your Hister has users: sign in once on this device. The session stays in this device's Keychain and goes only to your Hister (and the rooms get an id for it, never the session). Sign In with Saved Password opens Hister's sign-in page privately, where your saved password (or the tailnet's sign-in) is offered; or type your name and password below. Sign Out ends the session everywhere; Hister's sessions page lists every device.")
         }
         .buttonStyle(.borderless)
     }
