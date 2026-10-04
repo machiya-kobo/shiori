@@ -257,7 +257,8 @@ with Machiya's sign-in helper on Hister's host), each Shiori signs in once:
 - **The hosted pages** send you to Hister's sign-in when it asks, and back.
 - **Linux:** `shiori sign-in` (a small window), `shiori sign-out`, and `"histerToken"` in config.json.
 
-The session and token go only to your Hister; the rooms get an opaque id instead. [docs/signing-in.md](docs/signing-in.md)
+The session goes only to your Hister. The rooms (Kura, Konbini) get an opaque id when you're signed in, else the token, so
+they know who's asking; nothing goes anywhere else. [docs/signing-in.md](docs/signing-in.md)
 has the details.
 
 ## Sign in to Machiya

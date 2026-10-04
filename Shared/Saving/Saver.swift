@@ -117,6 +117,24 @@ extension Saver {
 
     static let notAPage = "A file, not a web page: not saved."
 
+    /// Hister's exact answer before a save (`HisterClient.holds`): held,
+    /// or why it couldn't be asked. Nil means it doesn't hold the page.
+    /// A lookup that fails never reads as "not held": `api/add` would
+    /// replace a stored page's metadata.
+    private static func heldOutcome(_ url: String, client: HisterClient) async -> LinkOutcome? {
+        do {
+            return try await client.holds(url) ? .alreadyInHister : nil
+        } catch .cancelled where Task.isCancelled {
+            return .cancelled
+        } catch .signedOut {
+            return .failed("Hister wants you signed in: Settings → Server.")
+        } catch .unreachable, .untrusted, .cancelled {
+            return .failed("Hister is out of reach, so this couldn't be checked: try again later.")
+        } catch {
+            return .failed("Couldn't ask Hister whether it has this page.")
+        }
+    }
+
     /// Saves one of a note's links (Shiori saves pages into Hister; the
     /// other rooms only look up what it holds).
     /// - Never a URL Hister holds: it's looked up right before the save
@@ -138,7 +156,7 @@ extension Saver {
         }
         guard let url = URL(string: link.url) else { return .failed("That isn't a web address.") }
         if SaveLinks.looksLikeFile(link.url) { return .failed(Self.notAPage) }
-        if !(await client.savedLabels(for: [link.url])).isEmpty { return .alreadyInHister }
+        if let held = await heldOutcome(link.url, client: client) { return held }
         // An http:// link is tried as https:// first: the apps' transport
         // security refuses plain http (a short link such as go.example
         // answers on https too), and Hister keeps whatever address it lands on.
@@ -157,7 +175,7 @@ extension Saver {
         }
         // A file, not a page (a package, an image): nothing for Hister to read.
         guard !fetched.html.isEmpty else { return .failed(Self.notAPage) }
-        if fetched.url != link.url, !(await client.savedLabels(for: [fetched.url])).isEmpty { return .alreadyInHister }
+        if fetched.url != link.url, let held = await heldOutcome(fetched.url, client: client) { return held }
         let page = NewPage(
             url: fetched.url, title: fetched.title.isEmpty ? (link.text.isEmpty ? (url.host() ?? link.url) : link.text) : fetched.title,
             html: fetched.html, label: label, via: "note-links", ignoreSkipRules: anyway,

@@ -43,9 +43,10 @@ public enum SearchSort: String, Sendable, CaseIterable {
 
 /// A client for one Hister server's HTTP API.
 ///
-/// Every request carries `Origin: hister://`, which Hister requires of
-/// non-browser clients (without it searches fail with 500 and writes with
-/// 403). With a token (`HisterToken`) every request also carries
+/// Every request carries `Origin: hister://`, which Hister's CSRF check
+/// requires of a non-browser client's writes (403 without it); searches
+/// ask for JSON (`Accept: application/json`), which Hister answers from any
+/// origin. With a token (`HisterToken`) every request also carries
 /// `X-Access-Token`, and signed in (`HisterAccount`) `Cookie: hister=…`
 /// (cookies are otherwise off: the session never sets one itself); without
 /// them, nothing more is sent.
@@ -194,6 +195,23 @@ public struct HisterClient: Sendable {
         let matched = try await deleteRequest(query: query, dryRun: true)
         guard matched == 1 else { throw .unexpectedMatchCount(matched) }
         _ = try await deleteRequest(query: query, dryRun: false)
+    }
+
+    /// Whether Hister holds this exact address, or it with or without a
+    /// trailing slash (`HEAD api/document`: 200 or 404, no body). Exact for
+    /// every address, unlike a `url:(…)` search, which can't take `( ) |`;
+    /// a failed lookup throws rather than reading as "not held".
+    public func holds(_ url: String) async throws(HisterError) -> Bool {
+        let twin = url.hasSuffix("/") ? String(url.dropLast()) : url + "/"
+        for candidate in [url, twin] {
+            do {
+                _ = try await send(makeRequest("api/document", query: [URLQueryItem(name: "url", value: candidate)], method: "HEAD"))
+                return true
+            } catch .notFound {
+                continue
+            }
+        }
+        return false
     }
 
     /// `url:"…"`, with quotes and backslashes escaped.

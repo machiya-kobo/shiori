@@ -94,9 +94,11 @@ a private vault is never cached, exported or sent to Hister.
   server with `identity device revoke` or `identity token revoke`.
 - **Hister's token** (when the server has users): `"histerToken": "…"` in
   the same file, 0600, your Hister user's one token (Hister keeps one per
-  user). Sent as `X-Access-Token` only to the config's `server`, by origin
-  (`linux/src/hister.js`): never the gateway, Kura or the web app, and a
-  request carrying it follows no redirect. Unset, nothing is sent.
+  user). Sent as `X-Access-Token` to the config's `server`, by origin
+  (`linux/src/hister.js`), and, while you're not signed in, to the
+  config's Kura and Konbini, which in Hister sign-in mode read it to know
+  who's asking (`linux/src/machiya.js`); never the gateway or the web app,
+  and a request carrying it follows no redirect. Unset, nothing is sent.
   `shiori status` says whether it's set and warns when others can read the
   file.
 - **Signing in to Hister** (when it has users, docs/signing-in.md):

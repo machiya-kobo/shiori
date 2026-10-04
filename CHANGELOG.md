@@ -5,6 +5,23 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.5.4 (2026-10-05)
+
+### Fixed
+
+- **Save This Note's Links asks Hister exactly whether it has a page**
+  (`HEAD /api/document`, the address and its trailing-slash twin) before
+  saving, in the apps and on Linux. The search it used couldn't take an
+  address with `( ) |`, and a lookup that failed read as "not held", so a
+  page Hister had could be saved again and its metadata replaced. Now a
+  lookup that fails stops the save and says why.
+
+### Changed
+
+- The docs say where Hister's token goes: to Hister, and to the
+  configured Kura and Konbini, which read it when they use Hister's
+  sign-in (a signed-in app sends them its id instead).
+
 ## 0.5.3 (2026-10-05)
 
 ### Added

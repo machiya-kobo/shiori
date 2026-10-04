@@ -21,9 +21,13 @@ struct LinkSaverTests {
         outbox = Outbox(directory: FileManager.default.temporaryDirectory.appending(path: "linksaver-\(UUID().uuidString)"))
     }
 
-    /// Hister: a search finds `known`; an add answers `status`.
+    /// Hister: a search, or a document lookup, finds `known`; an add answers `status`.
     func hister(known: [String] = [], add status: Int = 201) {
         StubProtocol.handle(Self.host) { request in
+            if request.url!.path() == "/api/document" {
+                let asked = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "url" }?.value
+                return (known.contains(asked ?? "") ? 200 : 404, Data())
+            }
             if request.url!.path().hasSuffix("/search") || request.url!.path() == "/search" {
                 let docs = known.map { #"{"url":"\#($0)","title":"T","domain":"a.example","label":"","added":1,"updated":1,"favicon_key":""}"# }
                 return (200, Data(#"{"total":\#(known.count),"documents":[\#(docs.joined(separator: ","))]}"#.utf8))
@@ -53,6 +57,24 @@ struct LinkSaverTests {
     @Test func aPageHisterHoldsIsNeverSent() async {
         hister(known: ["https://a.example/post"])
         #expect(await Saver.saveLink(link, label: nil, anyway: false, client: client, outbox: outbox, fetch: fetch) == .alreadyInHister)
+        #expect(adds().isEmpty)
+    }
+
+    @Test func anAddressASearchCantTakeIsStillLookedUpExactly() async {
+        // ( ) | can't go in a url:(…) search; Hister's document lookup takes any address.
+        let wiki = LinkToSave(url: "https://a.example/wiki/Pi_(film)", text: "Pi", notePath: "Notes/Sample.md", noteTitle: "Sample")
+        hister(known: ["https://a.example/wiki/Pi_(film)"])
+        #expect(await Saver.saveLink(wiki, label: nil, anyway: false, client: client, outbox: outbox, fetch: fetch) == .alreadyInHister)
+        #expect(adds().isEmpty)
+    }
+
+    @Test func aLookupThatFailsNeverReadsAsNotHeld() async {
+        StubProtocol.handle(Self.host) { request in
+            request.url!.path() == "/api/document" ? (500, Data()) : (201, Data())
+        }
+        if case .failed = await Saver.saveLink(link, label: nil, anyway: false, client: client, outbox: outbox, fetch: fetch) {} else {
+            Issue.record("a failed lookup must not save")
+        }
         #expect(adds().isEmpty)
     }
 

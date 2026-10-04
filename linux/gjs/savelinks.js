@@ -59,6 +59,23 @@ export async function heldURLs(config, urls) {
   return held;
 }
 
+/**
+ * Whether Hister holds this exact address, or it with or without a trailing
+ * slash (HEAD api/document: 200 or 404). Throws when Hister can't say: a
+ * failed lookup never reads as "not held" (HisterClient.holds is the twin).
+ */
+export async function holds(config, url) {
+  const server = withSlash(config.server);
+  if (!server) throw new Error('No Hister server is set.');
+  const twin = url.endsWith('/') ? url.slice(0, -1) : url + '/';
+  for (const candidate of [url, twin]) {
+    const r = await requestJSON(config, `${server}api/document?${new URLSearchParams({ url: candidate })}`, { method: 'HEAD', hister: true });
+    if (r.status === 200) return true;
+    if (r.status !== 404) throw new Error(`Hister answered ${r.status}.`);
+  }
+  return false;
+}
+
 /** The labels Hister's aliases name, for the tag candidates. */
 async function labels(config) {
   const server = withSlash(config.server);
@@ -94,13 +111,22 @@ export async function findLinks(config, target) {
  */
 export async function saveLink(config, row, { label = null, anyway = false, store = fileStore() } = {}) {
   if (S().isSmallWebLink(row.url)) return saveThroughGateway(config, row);
-  // Hister out of reach: not known to hold it; the send fails and it's queued.
   if (S().linkLooksLikeFile(row.url)) return { outcome: 'failed', reason: 'A file, not a web page: not saved.' };
-  const isHeld = async (url) => (await heldURLs(config, [url]).catch(() => new Set())).has(url);
-  if (await isHeld(row.url)) return { outcome: 'held' };
+  // Hister's exact answer, or nothing is saved: api/add would replace a
+  // held page's metadata.
+  const held = async (url) => {
+    try {
+      return (await holds(config, url)) ? { outcome: 'held' } : null;
+    } catch (error) {
+      return { outcome: 'failed', reason: `Couldn't check whether Hister has it: ${error.message}` };
+    }
+  };
+  const before = await held(row.url);
+  if (before) return before;
   const fetched = await fetchPage(row.url);
   if (!fetched.html) return { outcome: 'failed', reason: "Couldn't download this page, or it isn't a web page." };
-  if (fetched.url !== row.url && (await isHeld(fetched.url))) return { outcome: 'held' };
+  const after = fetched.url !== row.url ? await held(fetched.url) : null;
+  if (after) return after;
   const host = (() => {
     try {
       return new URL(row.url).host;

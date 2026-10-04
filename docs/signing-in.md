@@ -28,10 +28,12 @@ page and app flow) and turns a Hister session into an opaque id,
 The apps also take the token (Settings → Server → Access Token), and send
 it beside a sign-in; either is enough for Hister.
 
-**Where they go.** The session and the token only to the configured Hister
-server, by origin; the `mhs_` id only to the rooms, under the same host
-rule as Machiya's token (below; rooms in Hister mode refuse the identity
-file's tokens, so a signed-in app sends the id in their place). Nothing
+**Where they go.** The session only to the configured Hister server, by
+origin. The token to Hister, and to the configured Kura and Konbini under
+the same host rule as Machiya's token (below): rooms in Hister sign-in
+mode read it to know who's asking (they refuse the identity file's
+tokens). A signed-in app sends the rooms its `mhs_` id in its place; the
+id never goes to Hister. Nothing
 follows a redirect to another origin with any of them, none is ever in a
 URL or a log, and the offline capture queue stores none (its replays read
 the token afresh).

@@ -222,9 +222,11 @@ holds the rules and the traps the code can't tell you.
 - **Hister's token** (`X-Access-Token`, for a server with users): the
   owner's one token per user, entered once per device (Settings → Server,
   `HisterKeychain`; Safari's extension asks the app by the `hister` native
-  message; Linux `histerToken`). It goes only to
-  the Hister server (never the gateway, which also gets `Origin:
-  hister://`), never in a URL, a log, a settings file or the offline queue
+  message; Linux `histerToken`). It goes to the Hister server and, under
+  Machiya's host rule, to the configured Kura and Konbini (rooms in Hister
+  sign-in mode read it to know who's asking; a signed-in app sends them
+  its `mhs_` id instead); never to the gateway (which also gets `Origin:
+  hister://`), SearXNG or anything else, never in a URL, a log, a settings file or the offline queue
   (drain re-reads it), and follows no redirect elsewhere. Unset, nothing
   is sent. `HisterToken` / `S.histerToken` are twins. The hosted pages
   never hold it.
