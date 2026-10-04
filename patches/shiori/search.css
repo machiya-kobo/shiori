@@ -394,8 +394,6 @@ a.link-chip:hover, a.link-chip:focus-visible { background: color-mix(in srgb, cu
    reads as the top of that tab. */
 #hister > .fold-head { --tint: var(--accent); }
 #vault > .fold-head { --tint: var(--notes); }
-/* Web on All folds the same way, in the Web pill's yellow. */
-#web > .fold-head { --tint: var(--web); }
 /* The AI answer covers the whole search: the All pill's colour. A panel,
    so the whole card wears it (only the row is tinted on the other two). */
 #answer { --tint: var(--tab-general); border: 1px solid var(--tint); background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card)); }
@@ -403,7 +401,7 @@ a.link-chip:hover, a.link-chip:focus-visible { background: color-mix(in srgb, cu
 /* Info too: about the whole search, like the answer. */
 .infobox { --tint: var(--tab-general); border: 1px solid var(--tint); background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card)); }
 .infobox > .fold-head { color: var(--tint); }
-#hister > .fold-head, #vault > .fold-head, #web > .fold-head {
+#hister > .fold-head, #vault > .fold-head {
   color: var(--tint); border: 1px solid var(--tint);
   background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card));
 }
@@ -412,7 +410,7 @@ a.link-chip:hover, a.link-chip:focus-visible { background: color-mix(in srgb, cu
    as the apps' list headers do: Your Pages and Your
    Notes (their rows are opaque), and Web, frosted. --header-h is the
    header's height (search.js keeps it). */
-#hister > .fold-head[aria-expanded="true"], #vault > .fold-head[aria-expanded="true"], #web > .fold-head[aria-expanded="true"] {
+#hister > .fold-head[aria-expanded="true"], #vault > .fold-head[aria-expanded="true"] {
   position: sticky; top: calc(var(--header-h, 0px) + 6px); z-index: 1;
 }
 #web-title {
@@ -438,6 +436,23 @@ a.link-chip:hover, a.link-chip:focus-visible { background: color-mix(in srgb, cu
   background: var(--card); border-radius: 14px; box-shadow: var(--shadow); margin-top: 10px; padding: 0 14px;
 }
 .infobox h3 { margin: 0 0 8px; font: -apple-system-title3; font-weight: 700; color: var(--text); }
+/* AI Answer, Info and Related Searches: compact rows, each opening on its
+   own (the approved layout: not chips, which read as the tab pills). */
+:is(#answer, .infobox, #suggestions) { margin-top: 6px; border-radius: 10px; }
+:is(#answer, .infobox, #suggestions) > .fold-head {
+  min-height: 0; padding: 7px 2px; gap: 6px; font: -apple-system-footnote; font-weight: 600;
+}
+:is(#answer, .infobox, #suggestions) > .fold-head .chevron { width: 6px; height: 6px; }
+#suggestions { border: 1px solid var(--line2); }
+
+/* All: your top pages and notes among the web results, each card's title
+   led by whose it is, in its pill's colour. */
+.card.mixed > .title::before {
+  content: attr(data-label); display: block; margin-bottom: 3px; color: var(--tint);
+  font: -apple-system-caption1; font-weight: 600; letter-spacing: 0.02em;
+}
+/* Their totals on the Pages and Notes pills ("Pages 31"). */
+#categories .pill-count { margin-left: 5px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .infobox .figure {
   float: right; width: 38%; max-width: 160px; aspect-ratio: 1; object-fit: contain;
   margin: 0 0 8px 12px; border-radius: 10px; background: #fff;

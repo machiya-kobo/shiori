@@ -51,6 +51,9 @@
     hasFiles = localStorage.getItem(FILES_KEY) === '1';
   } catch (_) {}
   let header = null;
+  // Counts on the Pages and Notes pills (All's searches find them), kept so
+  // the header's redraws (a settings change) keep them.
+  const pillCounts = {};
   try {
     header = JSON.parse(localStorage.getItem(HEADER_KEY) || 'null');
   } catch (_) {}
@@ -1196,6 +1199,7 @@
       ...categories.map(([cat, name]) => {
         const a = el('a', { href: link({ cat, p: 1 }), 'data-cat': cat }, name);
         if (cat === current) a.setAttribute('aria-current', 'page');
+        if (pillCounts[cat]) a.append(el('span', { class: 'pill-count' }, pillCounts[cat]));
         return a;
       }),
     );
@@ -2136,6 +2140,12 @@
   if (category === 'general') didYouMeanLine(suggest());
 
   let histerDocs = [];
+  // On All your pages and notes have no sections: their top three each go
+  // among the web results (mixIn, below), each card saying whose it is,
+  // and their totals go on the Pages and Notes pills.
+  const MIX_COUNT = 3;
+  let myPages = [];
+  let myNotes = [];
   const showHister = category === 'general' && settings.histerInGeneral && page === 1 && !!histerBase;
   const showVault = category === 'general' && settings.vaultInGeneral && page === 1 && !!kuraBase;
   // Your notes, from Kura (Hister's queries leave them out).
@@ -2148,6 +2158,37 @@
           saveState();
           return r;
         });
+  /** A count on a pill (Pages, Notes), kept for the header's redraws. */
+  function setPillCount(cat, n) {
+    if (!n) return;
+    pillCounts[cat] = n.toLocaleString();
+    const pill = document.querySelector(`#categories a[data-cat="${cat}"]`);
+    if (!pill) return;
+    pill.querySelector('.pill-count')?.remove();
+    pill.append(el('span', { class: 'pill-count' }, pillCounts[cat]));
+  }
+
+  /**
+   * Your pages and notes among the web results: a page after the first,
+   * a note after the second, and so on (each kind's top three), each card
+   * saying whose it is; after the last web result what's left over. With
+   * no web results, the list is theirs.
+   */
+  function mixIn() {
+    const mine = [];
+    for (let i = 0; i < MIX_COUNT; i++) mine.push(myPages[i], myNotes[i]);
+    const list = $('web-results');
+    const web = [...list.children];
+    mine.filter(Boolean).forEach((card, i) => {
+      card.classList.add('mixed');
+      const title = card.querySelector('.title');
+      if (title) title.dataset.label = card.classList.contains('vault-card') ? 'Your note' : 'Your page';
+      if (web[i]) web[i].after(card);
+      else list.append(card);
+    });
+    if (mine.some(Boolean)) $('web').hidden = false;
+  }
+
   /** A section with nothing to show: its heading, faded, and why. */
   function emptySection(section, count, why) {
     section.classList.add('empty');
@@ -2174,30 +2215,14 @@
       // toward it (it showed 6 with 5 chosen).
       first.cards = first.cards.slice(0, ALL_COUNT);
       first.docs = first.docs.slice(0, Math.max(0, ALL_COUNT - first.cards.length));
-      if (!first.cards.length && !first.docs.length) {
-        // Only notes matched (they're under Your Notes): a faded line, not
-        // a section's worth of space.
-        emptySection($('hister'), $('hister-count'), 'Only in your notes');
-        return;
-      }
-      for (const card of first.cards) $('hister-results').append(card);
-      appendFolded($('hister-results'), first.docs, histerCard);
-      // What's on screen: the pages you opened (lifted to the top) and
-      // the rest; it read "2 shown" beside three cards.
+      if (!first.cards.length && !first.docs.length) return;
+      // The pages you opened (lifted to the top) first, then the rest.
+      myPages = [...first.cards, ...first.docs.map(histerCard)].slice(0, MIX_COUNT);
       const shown = first.cards.length + first.docs.length;
       // Hister counts the pages you opened in its total: hidden (Show
       // Opened off), they leave the count too.
       const hiddenOpened = settings.showOpened === true ? 0 : (result.history || []).filter((h) => isHTTP(h.url) && !S.isNoteURL(h.url, niwaBase, konbiniBase)).length;
-      const total = Math.max((result.total || 0) - hiddenOpened, shown);
-      $('hister-count').textContent = S.countText(shown, total);
-      // After the five: the full search on its tab (or in Hister without
-      // one), named for where it goes; the count is on the heading (not on
-      // both). None when the five are all there is.
-      $('hister-more').href = settings.histerTab ? link({ cat: 'hister', p: 1 }) : `${histerBase}?q=${encodeURIComponent(q)}`;
-      $('hister-more').textContent = settings.histerTab ? 'More in Pages ›' : 'More in Hister ›';
-      $('hister-more').parentElement.hidden = total <= shown;
-      fold($('hister'));
-      $('hister').hidden = false;
+      setPillCount('hister', Math.max((result.total || 0) - hiddenOpened, shown));
     } catch (_) {
       // Hister unreachable: the web block (or the fallback) carries on.
     }
@@ -2215,14 +2240,8 @@
       if (result.closeMatches) $('vault-title').textContent = `Your Notes · for “${result.closeMatches}”`;
       if (!vaultDocs.length) return;
       const cards = await konbiniCards();
-      for (const d of vaultDocs) $('vault-results').append(vaultCard(d, cards));
-      $('vault-count').textContent = S.countText(vaultDocs.length, result.total || 0);
-      // The rest on the Notes tab (without it, none: they're Kura's).
-      $('vault-more').href = link({ cat: 'vault', p: 1 });
-      $('vault-more').textContent = 'More in Notes ›';
-      $('vault-more').parentElement.hidden = !settings.vaultTab || (result.total || 0) <= vaultDocs.length;
-      fold($('vault'));
-      $('vault').hidden = false;
+      myNotes = vaultDocs.slice(0, MIX_COUNT).map((d) => vaultCard(d, cards));
+      setPillCount('vault', Math.max(result.total || 0, vaultDocs.length));
     } catch (error) {
       // Kura wants the sign-in: said where the notes would be.
       if (error && error.status === 401) {
@@ -2239,6 +2258,7 @@
   if (!wq || !settings.webResults) {
     await histerDone;
     await vaultDone;
+    mixIn();
     if (!histerDocs.length && !vaultDocs.length) {
       showStatus(settings.webResults ? 'No pages in Hister match.' : 'Nothing in your pages or notes matches.');
     }
@@ -2284,6 +2304,7 @@
           "Web results didn't answer. ",
           el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'),
         );
+        mixIn();
         return restoreScroll();
       }
       await histerDone;
@@ -2321,8 +2342,8 @@
     for (const s of list) {
       $('suggestion-list').append(el('li', {}, el('a', { href: link({ q: s, p: 1 }) }, s)));
     }
-    // Open by default; folded, it stays folded (fold() remembers it).
-    fold($('suggestions'), true);
+    // A compact row, shut until opened (then remembered, as fold() does).
+    fold($('suggestions'));
     $('suggestions').hidden = false;
   }
   if (settings.showRelated && page === 1 && category === 'general') {
@@ -2344,14 +2365,9 @@
   placeSide();
   $('web-title').textContent = category === 'general' ? 'Web' : CATEGORIES.find(([c]) => c === category)[1];
   const count = data.number_of_results > 0 ? `${data.number_of_results.toLocaleString()} results · ` : '';
-  if (category === 'general') {
-    // On All, Web folds as Your Pages and Your Notes do, its open or shut
-    // remembered with theirs; its count is SearXNG's, when it gives one.
-    $('web-title').hidden = true;
-    $('web-head').hidden = false;
-    $('web-count').textContent = count.replace(/ · $/, '');
-    fold($('web'), true);
-  }
+  // On All the web's results need no heading: they're the list, your
+  // pages and notes among them.
+  if (category === 'general') $('web-title').hidden = true;
   $('timing').textContent = cached ? count.replace(/ · $/, '') : `${count}${seconds} s`;
   const slow = (data.unresponsive_engines || []).map((e) => (Array.isArray(e) ? e[0] : e));
   $('engines').textContent = slow.length ? `No answer from ${slow.join(', ')}` : '';
@@ -2384,6 +2400,7 @@
     });
     markSaved(cards);
   }
+  if (category === 'general' && page === 1) mixIn();
 
   // Paging, as SearXNG does it.
   if (results.length) {
@@ -2482,8 +2499,7 @@
     const first = (() => {
       for (const el of main.children) {
         if (el === slot || el.hidden || el.id === 'skeleton' || el.classList.contains('correction') || !el.offsetHeight) continue;
-        // Web on All: its heading row, as Your Pages' is.
-        if (el.id === 'web') return (!$('web-head').hidden && $('web-head')) || el.querySelector('.panel:not([hidden]), .card') || el;
+        if (el.id === 'web') return el.querySelector('.panel:not([hidden]), .card') || el;
         return el.matches('.fold:not(.panel)') ? el.querySelector('.fold-head') : el;
       }
       return null;
