@@ -88,4 +88,7 @@ cat >"$out/_shiori/opensearch.xml" <<XML
 </OpenSearchDescription>
 XML
 
+# For the house's status page: Shiori's version, the commit, when.
+python3 scripts/status-json.py "$out"
+
 echo "==> Web page in $out (for $base)"

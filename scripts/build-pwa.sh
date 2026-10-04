@@ -99,5 +99,8 @@ sed "s/__VERSION__/$version/" web/app/sw.js >"$out/sw.js"
 stamp "$out/index.html"
 stamp "$out/sw.js"
 sed -i.bak "s#from './api.js'#from './api.js?v=$version'#" "$out/_shiori/app.js" && rm -f -- "$out/_shiori/app.js.bak"
+# For the house's status page: Shiori's version, the commit, when. After
+# the hash above, so the time doesn't make every build a new version.
+python3 scripts/status-json.py "$out"
 
 echo "==> Web app in $out ($version)"

@@ -178,3 +178,20 @@ test('without SHIORI_SMALLWEB_URL the build offers no Add Page and no share targ
   assert.match(app, /const add = SMALLWEB \? h\('button', \{ type: 'button', class: 'add-tab'/);
   assert.equal(app.match(/addPage\(/g).length, 4, 'defined, the +, the tab, the share');
 });
+
+// --- status.json: what the house's status page reads of a hosted build ---
+
+test('both web builds publish _shiori/status.json: version, build, built, and nothing else', () => {
+  const project = read('../project.yml').match(/MARKETING_VERSION:\s*"?([0-9][0-9A-Za-z.\-]*)/)[1];
+  for (const out of [build(), buildWeb()]) {
+    try {
+      const status = JSON.parse(read(join(out, '_shiori', 'status.json')));
+      assert.deepEqual(Object.keys(status).sort(), ['build', 'built', 'version']);
+      assert.equal(status.version, project);
+      assert.match(status.build, /^[0-9a-f]{7,}(-dirty)?$/);
+      assert.match(status.built, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+    }
+  }
+});

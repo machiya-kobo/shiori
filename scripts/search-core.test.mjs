@@ -945,7 +945,7 @@ test("the Rooms menu's rows are the rooms': icon, name, role; here not a link; a
   let opened = 0;
   const rows = R.roomLinks(list, 'shiori', { settings: { href: '#/settings', open: () => opened++ } });
   const shape = Array.from(rows, (r) => (r.tagName === 'HR' ? '—' : `${r.tagName === 'B' ? '*' : ''}${r.children.map((c) => c.text || '').join('|')}`));
-  assert.deepEqual(shape, ['*|Shiori|here', '|Konbini|board', '|Niwa|garden', '|Kura|notes', '—', '|Hister|pages', '|SearXNG|the web', '—', '|Machiya|status', '—', '|Settings']);
+  assert.deepEqual(shape, ['*|Shiori|here', '|Konbini|board', '|Niwa|garden', '|Kura|notes', '—', '|Hister|pages', '|SearXNG|the web', '—', '|Machiya|home', '—', '|Settings']);
   assert.equal(rows[0].attrs['aria-current'], 'page');
   assert.equal(rows[0].href, '', 'the room you are in is not a link');
   assert.equal(rows[1].href, 'https://k.example/');

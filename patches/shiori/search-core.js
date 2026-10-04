@@ -827,7 +827,7 @@
   ];
 
   /** Each room's one-word role in the menu, as the rooms say it (vaultkit's switcher). */
-  const ROOM_ROLES = { shiori: 'search', konbini: 'board', niwa: 'garden', kura: 'notes', hister: 'pages', searxng: 'the web', machiya: 'status' };
+  const ROOM_ROLES = { shiori: 'search', konbini: 'board', niwa: 'garden', kura: 'notes', hister: 'pages', searxng: 'the web', machiya: 'home' };
 
   /** The switcher's glyphs (24-point strokes, each a path's `d`), shared by both web pages: the house, and the menu's gear. */
   const ROOM_GLYPHS = {
