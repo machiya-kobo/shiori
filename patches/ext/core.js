@@ -754,6 +754,8 @@ const shioriMachiya = (() => {
     rememberOpened: true,
     showOpened: false,
     resultStyle: 'tint',
+    // The pills' order and which show (S.pillSetting): [] is the default.
+    pills: [],
     smallWebTab: true,
     smallWebOpen: 'gateway',
     smallwebURL: '',

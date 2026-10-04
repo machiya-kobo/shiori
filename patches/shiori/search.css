@@ -532,6 +532,16 @@ body.pending footer { visibility: hidden; }
   min-height: 44px; padding: 6px 14px; font: -apple-system-body;
 }
 .setting + .setting { border-top: 1px solid var(--line); }
+/* The pills' order and which show (S.pillEditor). */
+.pill-editor { list-style: none; margin: 0; padding: 0; }
+.pill-row { gap: 8px; }
+.pill-row .pill-name { flex: 1; }
+.pill-move {
+  border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 8px;
+  min-width: 32px; min-height: 32px; font: inherit; cursor: pointer;
+}
+.pill-move:disabled { opacity: 0.35; cursor: default; }
+.pill-row .switch:disabled { opacity: 0.45; cursor: default; }
 .setting.disabled { opacity: 0.45; }
 .setting select {
   font: -apple-system-body; color: var(--secondary); background: transparent; border: 0; text-align: right; max-width: 55%;

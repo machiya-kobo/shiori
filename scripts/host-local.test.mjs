@@ -218,6 +218,7 @@ test('the payload is what was set plus the recent searches, keyed as the app sen
   for (const k of [...SWIFT.urlKeys, ...SWIFT.payloadStrings]) everything[k] = 'https://example.org/';
   const expected = [...SWIFT.payloadSingles, ...SWIFT.payloadFlags, ...SWIFT.payloadCounts, ...SWIFT.payloadStrings];
   for (const k of expected) if (!(k in everything) && k !== 'recentSearches') everything[k] = 'night';
+  everything.pills = ['notes'];
   const full = await loadHost(fakeStorage({ shioriLocalSettings: everything })).host.settings();
   assert.deepEqual(Object.keys(full).sort(), [...new Set(expected)].sort());
 });
@@ -430,4 +431,20 @@ test("when this device's store fails, a change is refused, never kept unjudged",
   const reply = await send({ shiori: 'set-settings', values: { theme: 'day', anthropicKey: 'sk-x' } });
   assert.equal(reply.ok, false);
   assert.equal('anthropicKey' in (storage.data.shioriSettings || {}), false);
+});
+
+test('the pills setting: the same keys as PillOrder and S.PILL_KEYS, checked the same way', async () => {
+  const pillSwift = read('../Shared/Settings/PillOrder.swift');
+  const swiftKeys = JSON.parse(pillSwift.match(/static let keys = (\[[^\]]*\])/)[1]);
+  const coreKeys = JSON.parse(searchCoreSource.match(/const PILLS = (\[[\s\S]*?\]);/)[1].replace(/'/g, '"').replace(/,\s*\]/g, ']')).map(([k]) => k);
+  assert.deepEqual(coreKeys, swiftKeys);
+  const hostKeys = JSON.parse(hostSource.match(/const PILL_KEYS = (\[[^\]]*\]);/)[1].replace(/'/g, '"'));
+  assert.deepEqual(hostKeys, swiftKeys);
+  const { host } = loadHost();
+  await host.setSettings({ pills: ['notes', '-web', '-all'] });
+  assert.deepEqual(plain((await host.settings()).pills), ['notes', '-web', 'all']);
+  await host.setSettings({ pills: ['notes', 'evil'] });
+  assert.deepEqual(plain((await host.settings()).pills), ['notes', '-web', 'all']);
+  await host.setSettings({ pills: [] });
+  assert.deepEqual(plain((await host.settings()).pills), []);
 });

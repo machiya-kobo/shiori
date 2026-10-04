@@ -17,7 +17,7 @@
   const SETTABLE = [
     'combinedSearch', 'showInfobox', 'showRelated', 'showThumbnails', 'histerInGeneral', 'histerTab',
     'vaultInGeneral', 'vaultTab', 'webResults', 'searchHistory', 'previewPane', 'previewImages',
-    'rememberOpened', 'showOpened', 'resultStyle', 'smallWebTab', 'smallWebOpen', 'searchFilters', 'semanticSearch', 'aiAnswer', 'histerCount', 'vaultCount', 'niwaURL',
+    'rememberOpened', 'showOpened', 'resultStyle', 'pills', 'smallWebTab', 'smallWebOpen', 'searchFilters', 'semanticSearch', 'aiAnswer', 'histerCount', 'vaultCount', 'niwaURL',
     'konbiniURL', 'newsBlurURL', 'theme', 'palette', 'textSize', 'obsidianVault',
   ];
   // The notes' homes, from the build (the server passes them in); a

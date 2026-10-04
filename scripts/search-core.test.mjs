@@ -1006,3 +1006,23 @@ test('All spreads your pages and notes evenly among the web results (MixedResult
   assert.deepEqual(plain(S.alternate(['p1', 'p2', 'p3'], ['n1'])), ['p1', 'n1', 'p2', 'p3']);
   assert.deepEqual(plain(S.alternate([], ['n1', 'n2'])), ['n1', 'n2']);
 });
+
+test('the pills: order and visibility from one setting (PillOrder twins)', () => {
+  const plain = (v) => JSON.parse(JSON.stringify(v));
+  assert.deepEqual(plain(S.pillSetting(['notes', '-web', 'all'])), ['notes', '-web', 'all']);
+  assert.deepEqual(plain(S.pillSetting(['-all', 'pages'])), ['all', 'pages']);
+  assert.deepEqual(plain(S.pillSetting(['notes', 'notes'])), []);
+  assert.deepEqual(plain(S.pillSetting(['notes', 'bogus'])), []);
+  assert.deepEqual(plain(S.pillSetting('notes')), []);
+  assert.deepEqual(plain(S.pillSetting([1])), []);
+  assert.deepEqual(plain(S.orderPills(['all', 'pages', 'notes', 'web', 'smallweb'], [])), ['all', 'pages', 'notes', 'web', 'smallweb']);
+  assert.deepEqual(plain(S.orderPills(['all', 'pages', 'notes', 'web', 'smallweb'], ['notes', '-web', 'all'])), ['notes', 'all', 'pages', 'smallweb']);
+  // Up and down among a surface's own pills, past ones it doesn't have.
+  const among = ['all', 'pages', 'notes', 'web'];
+  assert.deepEqual(plain(S.pillsChanged([], among, 'web', { by: -1 })).slice(0, 4), ['all', 'pages', 'web', 'notes']);
+  assert.deepEqual(plain(S.pillsChanged(['all', 'images', 'pages'], among, 'pages', { by: -1 })).slice(0, 3), ['pages', 'images', 'all']);
+  assert.deepEqual(plain(S.pillsChanged([], among, 'all', { by: -1 })).slice(0, 2), ['all', 'pages']);
+  assert.ok(S.pillsChanged([], among, 'web', { shown: false }).includes('-web'));
+  assert.ok(S.pillsChanged([], among, 'all', { shown: false }).includes('all'));
+  assert.equal(S.pillsChanged([], among, 'web', { shown: false }).length, S.PILL_KEYS.length);
+});

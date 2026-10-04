@@ -81,6 +81,8 @@ nonisolated enum SharedSettings {
         static let smallwebURL = "smallwebURL"
         static let smallWebTab = "smallWebTab"
         static let smallWebOpen = "smallWebOpen"
+        /// The pills' order and which show (`PillOrder`).
+        static let pills = "pills"
         /// The Hister server, for the share extension and shortcuts.
         static let serverURL = "serverURL"
         /// The server's topic labels, cached for the share sheet's picker.
@@ -148,6 +150,9 @@ nonisolated enum SharedSettings {
         if let value = values[Key.palette] as? String, palettes.contains(value) { set(value, Key.palette) }
         if let value = values[Key.resultStyle] as? String, resultStyles.contains(value) { set(value, Key.resultStyle) }
         if let value = values[Key.smallWebOpen] as? String, smallWebOpens.contains(value) { set(value, Key.smallWebOpen) }
+        if let value = values[Key.pills] as? [Any], value.isEmpty || !PillOrder.clean(value).isEmpty {
+            set(PillOrder.clean(value), Key.pills)
+        }
         if values[Key.searchHistory] as? Bool == false { clearRecentSearches(in: defaults) }
         return wrote
     }
@@ -216,6 +221,7 @@ nonisolated enum SharedSettings {
         ] {
             if let value = defaults.string(forKey: key) { payload[key] = value }
         }
+        if let pills = defaults.array(forKey: Key.pills) { payload[Key.pills] = PillOrder.clean(pills) }
         payload[Key.recentSearches] = recentSearches(in: defaults)
         return payload
     }

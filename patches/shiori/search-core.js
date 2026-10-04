@@ -1766,6 +1766,109 @@
     return /^mc[hd]_[A-Za-z0-9_.-]{8,4096}$/.test(token) ? token : '';
   }
 
+  // --- The pills: their order, and which show (a per-device setting) ----------------
+  // `pills` holds the keys in the person's order, a hidden one with a
+  // leading "-" (["all", "notes", "pages", "-web", …]); keys it doesn't
+  // name keep their default places after it. All is never hidden. Each
+  // surface lists the pills it has (the search page has no Opened, the
+  // apps no Images); its own conditions (Show Opened, a Files folder, Web
+  // Results) still apply. HisterKit-free twin: Shared/Settings PillOrder.
+
+  const PILLS = [
+    ['all', 'All'], ['pages', 'Pages'], ['notes', 'Notes'], ['web', 'Web'], ['images', 'Images'],
+    ['videos', 'Videos'], ['news', 'News'], ['smallweb', 'Small Web'], ['files', 'Files'], ['opened', 'Opened'],
+  ];
+  const PILL_KEYS = PILLS.map(([key]) => key);
+
+  /** The setting, checked: known keys, each once, All shown; [] for anything else. */
+  function pillSetting(raw) {
+    if (!Array.isArray(raw) || raw.length > PILL_KEYS.length) return [];
+    const out = [];
+    const seen = new Set();
+    for (const item of raw) {
+      if (typeof item !== 'string') return [];
+      const hidden = item.startsWith('-');
+      const key = hidden ? item.slice(1) : item;
+      if (!PILL_KEYS.includes(key) || seen.has(key)) return [];
+      seen.add(key);
+      out.push(hidden && key !== 'all' ? '-' + key : key);
+    }
+    return out;
+  }
+
+  /** Every pill, [{key, shown}], in the setting's order, then the rest in theirs. */
+  function pillList(raw) {
+    const setting = pillSetting(raw);
+    const named = setting.map((item) => ({ key: item.replace(/^-/, ''), shown: !item.startsWith('-') }));
+    const known = new Set(named.map((p) => p.key));
+    return [...named, ...PILL_KEYS.filter((key) => !known.has(key)).map((key) => ({ key, shown: true }))];
+  }
+
+  /** Of the pills a surface has (`available`, keys), those to show, in order. */
+  function orderPills(available, raw) {
+    const have = new Set(available);
+    return pillList(raw).filter((p) => p.shown && have.has(p.key)).map((p) => p.key);
+  }
+
+  /** The setting after moving `key` one place (`by` −1 or 1) among `among`'s keys, or showing/hiding it. */
+  function pillsChanged(raw, among, key, { by = 0, shown } = {}) {
+    const list = pillList(raw);
+    const at = list.findIndex((p) => p.key === key);
+    if (at < 0) return pillSetting(raw);
+    if (typeof shown === 'boolean' && key !== 'all') list[at].shown = shown;
+    if (by) {
+      const visible = list.map((p, i) => [p, i]).filter(([p]) => among.includes(p.key));
+      const pos = visible.findIndex(([p]) => p.key === key);
+      const other = visible[pos + by];
+      if (other) [list[at], list[other[1]]] = [list[other[1]], list[at]];
+    }
+    return list.map((p) => (p.shown ? p.key : '-' + p.key));
+  }
+
+  /**
+   * The settings' editor for the pills a surface has (`items`: [[key,
+   * label]]): each row its name, Move Up, Move Down and a switch.
+   * `onChange(next, control)` gets the new setting and the used control's
+   * label (to focus it again after a redraw).
+   */
+  function pillEditor(items, raw, onChange, doc = globalThis.document) {
+    const among = items.map(([key]) => key);
+    const label = Object.fromEntries(items);
+    const list = doc.createElement('ul');
+    list.className = 'pill-editor';
+    const shownList = pillList(raw).filter((p) => among.includes(p.key));
+    shownList.forEach((p, i) => {
+      const row = doc.createElement('li');
+      row.className = 'setting pill-row';
+      const name = doc.createElement('span');
+      name.className = 'pill-name';
+      name.dataset.pill = p.key;
+      name.textContent = label[p.key];
+      const button = (text, title, by, disabled) => {
+        const b = doc.createElement('button');
+        b.type = 'button';
+        b.className = 'pill-move';
+        b.textContent = text;
+        b.title = title;
+        b.setAttribute('aria-label', title);
+        b.disabled = disabled;
+        b.addEventListener('click', () => onChange(pillsChanged(raw, among, p.key, { by }), title));
+        return b;
+      };
+      const toggle = doc.createElement('input');
+      toggle.type = 'checkbox';
+      toggle.setAttribute('role', 'switch');
+      toggle.className = 'switch';
+      toggle.checked = p.shown;
+      toggle.disabled = p.key === 'all';
+      toggle.setAttribute('aria-label', `Show ${label[p.key]}`);
+      toggle.addEventListener('change', () => onChange(pillsChanged(raw, among, p.key, { shown: toggle.checked }), `Show ${label[p.key]}`));
+      row.append(name, button('↑', `Move ${label[p.key]} Up`, -1, i === 0), button('↓', `Move ${label[p.key]} Down`, 1, i === shownList.length - 1), toggle);
+      list.append(row);
+    });
+    return list;
+  }
+
   // --- All: your pages and notes among the web results ------------------------------
   // HisterKit's MixedResults is the twin, with the same tests.
 
@@ -2013,6 +2116,13 @@
     histerHeaders,
     mixCounts,
     alternate,
+    PILLS,
+    PILL_KEYS,
+    pillSetting,
+    pillList,
+    orderPills,
+    pillsChanged,
+    pillEditor,
     roomsSwitcher,
     roomGlyph,
     collectionAliases,

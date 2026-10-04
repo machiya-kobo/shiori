@@ -32,6 +32,22 @@ const shioriHost = (() => {
   const PALETTES = ['tokyo-night', 'solarized', 'nord', 'dracula', 'catppuccin', 'gruvbox', 'rose-pine', 'kanagawa', 'everforest', 'ayu'];
   const RESULT_STYLES = ['tint', 'solid', 'bar', 'none'];
   const SMALL_WEB_OPENS = ['gateway', 'direct'];
+  // PillOrder.keys: the pills' order and which show (`pills`).
+  const PILL_KEYS = ['all', 'pages', 'notes', 'web', 'images', 'videos', 'news', 'smallweb', 'files', 'opened'];
+  /** PillOrder.clean: known keys, each once, All shown; [] for anything else. */
+  function cleanPills(raw) {
+    if (!Array.isArray(raw) || raw.length > PILL_KEYS.length) return [];
+    const out = [];
+    const seen = new Set();
+    for (const item of raw) {
+      if (typeof item !== 'string') return [];
+      const key = item.replace(/^-/, '');
+      if (!PILL_KEYS.includes(key) || seen.has(key)) return [];
+      seen.add(key);
+      out.push(item.startsWith('-') && key !== 'all' ? item : key);
+    }
+    return out;
+  }
   // What extensionPayload passes on as it is stored.
   const STRING_KEYS = [
     'searxngURL', 'theme', 'obsidianVault', 'niwaURL', 'konbiniURL', 'textSize', 'serverURL',
@@ -65,6 +81,7 @@ const shioriHost = (() => {
     oneOf('palette', PALETTES);
     oneOf('resultStyle', RESULT_STYLES);
     oneOf('smallWebOpen', SMALL_WEB_OPENS);
+    if (Array.isArray(values.pills) && (!values.pills.length || cleanPills(values.pills).length)) store.pills = cleanPills(values.pills);
     if (values.searchHistory === false) delete store.recentSearches;
     return store;
   }
@@ -77,6 +94,7 @@ const shioriHost = (() => {
       for (const key of [...FLAG_KEYS.filter((k) => k !== 'semanticSearch'), ...COUNT_KEYS, ...STRING_KEYS]) {
         if (key in store) out[key] = store[key];
       }
+      if (Array.isArray(store.pills)) out.pills = cleanPills(store.pills);
       out.recentSearches = historyOn(store) ? (store.recentSearches || []).slice(0, RECENT_LIMIT) : [];
       return out;
     },

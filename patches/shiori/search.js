@@ -230,7 +230,15 @@
 
   // Every source can be switched off on its own (the app's Settings): Hister
   // and the vault each in General and as a tab, and the web results.
-  const CATEGORIES = [
+  // The pills in the order the person set, less the ones they hid
+  // (settings.pills, S.orderPills); the conditions below still apply.
+  const PILL_OF = { general: 'all', hister: 'pages', vault: 'notes' };
+  const pillKey = (cat) => PILL_OF[cat] || cat;
+  const inPillOrder = (cats) => {
+    const order = S.orderPills(cats.map(([c]) => pillKey(c)), settings.pills);
+    return order.map((key) => cats.find(([c]) => pillKey(c) === key));
+  };
+  const CATEGORIES = inPillOrder([
     // Shown as "All" (as in the app); still SearXNG's general category.
     ['general', 'All'],
     // Your pages are "Pages", as in the app; "Hister" is the server.
@@ -248,7 +256,7 @@
     ...(settings.smallWebTab !== false && smallwebBase ? [['smallweb', 'Small Web']] : []),
     // The folders Hister watches (type:local), once it has some files.
     ...(hasFiles && histerBase ? [['files', 'Files']] : []),
-  ];
+  ]);
   const category = CATEGORIES.some(([c]) => c === params.get('cat')) ? params.get('cat') : 'general';
   // All and Web are SearXNG's general results; Web without yours mixed in.
   const webLike = category === 'general' || category === 'web';
@@ -277,7 +285,7 @@
         try {
           localStorage.setItem(FILES_KEY, found ? '1' : '0');
         } catch (_) {}
-        nextHeader.categories = found ? [...CATEGORIES, ['files', 'Files']] : CATEGORIES.filter(([c]) => c !== 'files');
+        nextHeader.categories = found ? inPillOrder([...CATEGORIES, ['files', 'Files']]) : CATEGORIES.filter(([c]) => c !== 'files');
         drawHeader(nextHeader);
         try {
           localStorage.setItem(HEADER_KEY, JSON.stringify(nextHeader));
@@ -1018,6 +1026,8 @@
       { key: 'aiAnswer', label: 'AI Answer', needs: 'webResults' },
       { key: 'showThumbnails', label: 'Thumbnails', needs: 'webResults' },
     ]],
+    // Their order, and which show (S.pillEditor).
+    ['Pills', [{ action: 'pills' }]],
     ['Small Web', [
       { key: 'smallWebTab', label: 'Small Web Tab' },
       { key: 'smallWebOpen', label: 'Open Results', options: [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']], needs: 'smallWebTab' },
@@ -1051,6 +1061,18 @@
         const off = row.needs && !settings[row.needs];
         const id = `setting-${row.key || row.action}`;
         let control;
+        if (row.action === 'pills') {
+          const items = S.PILLS.filter(([key]) => key !== 'opened' && (key !== 'files' || hasFiles));
+          group.append(
+            S.pillEditor(items, settings.pills, (next, control) => {
+              change({ pills: next });
+              // The sheet was redrawn: the keyboard stays on what was used.
+              const again = [...$('settings-body').querySelectorAll('.pill-editor [aria-label]')].find((n) => n.getAttribute('aria-label') === control);
+              (again && !again.disabled ? again : $('settings-body').querySelector('.pill-editor .switch'))?.focus();
+            }),
+          );
+          continue;
+        }
         if (row.action === 'clear-recent') {
           control = el('button', { type: 'button', class: 'link', id, disabled: !recent.length || !settings.searchHistory }, row.label);
           control.addEventListener('click', () => {
