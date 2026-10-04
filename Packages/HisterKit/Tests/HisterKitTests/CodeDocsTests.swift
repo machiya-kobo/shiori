@@ -31,6 +31,14 @@ struct CodeDocsTests {
         #expect(pages[2].code == nil)
     }
 
+    @Test func rowsNameTheirForge() {
+        #expect(CodeDocs.hostName("forgejo") == "Forgejo")
+        #expect(CodeDocs.hostName("github") == "GitHub")
+        #expect(CodeDocs.hostName("gitea") == "gitea")
+        #expect(CodeDocs.hosts.map(\.key) == ["forgejo", "github"])
+        #expect(CodeDocs.query("", filters: .init(host: "github")) == "metadata.source:code metadata.code_host:github *")
+    }
+
     @Test func theRepoNote() {
         #expect(CodeDocs.notePath(repoName: "machiya-kobo/kura") == "Repos/kura.git.md")
         #expect(CodeDocs.notePath(repoName: "o/a b") == nil)

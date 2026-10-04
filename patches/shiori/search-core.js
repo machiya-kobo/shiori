@@ -811,6 +811,14 @@
     const words = String(typed || '').trim();
     return `${terms.join(' ')} ${words || '*'}`;
   }
+  // The forges code-import reads, for the host filter and each row's badge.
+  const CODE_HOSTS = [['forgejo', 'Forgejo'], ['github', 'GitHub']];
+  /** A host's name for a row ("forgejo" → "Forgejo"); an unknown one as given. */
+  function codeHostName(host) {
+    const known = CODE_HOSTS.find(([k]) => k === host);
+    return known ? known[1] : String(host || '');
+  }
+
   /** A code document (Hister's metadata.source "code"). */
   function isCodeDoc(doc) {
     return !!(doc && doc.metadata && doc.metadata.source === 'code');
@@ -2306,6 +2314,8 @@
     asksForCode,
     codeRepoKey,
     CODE_KINDS,
+    CODE_HOSTS,
+    codeHostName,
     codeQuery,
     isCodeDoc,
     codeInfo,

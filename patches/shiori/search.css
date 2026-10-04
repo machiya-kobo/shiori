@@ -304,6 +304,7 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
 .code-card { --tint: var(--tab-videos); }
 .code-glyph { color: var(--tab-videos); font-weight: 700; }
 .code-state { font-weight: 600; }
+.code-host { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); }
 .code-state.open { color: var(--kept); }
 .code-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 12px; }
 .code-filters select, .code-filters button {

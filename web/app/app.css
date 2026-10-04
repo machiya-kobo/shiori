@@ -318,6 +318,8 @@ input:placeholder-shown ~ .field-clear { display: none; }
 /* A code row: what it is, its repo, its state, a lock when private. */
 .code-glyph { display: inline-grid; place-items: center; color: var(--tab-videos); font-weight: 700; }
 .code-state { font-weight: 600; }
+/* Which forge a code row is on: a small outlined badge. */
+.code-host { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); }
 .code-state.open { color: var(--kept); }
 /* The Code pill's filters, above the list. */
 .code-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 16px; }

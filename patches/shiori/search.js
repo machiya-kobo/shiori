@@ -1836,6 +1836,8 @@
       el('a', { class: 'title', href: d.url }, d.title || d.url),
       el('div', { class: 'url' },
         el('span', { class: 'code-glyph', role: 'img', 'aria-label': kindName }, glyph), ' ',
+        // Which forge it's on: most are Forgejo, and the rows looked alike.
+        code.host ? el('span', { class: 'code-host' }, S.codeHostName(code.host)) : null, code.host ? ' ' : null,
         code.private ? el('span', { title: 'Private', 'aria-label': 'Private' }, '🔒 ') : null,
         el('span', { class: 'crumbs' }, code.repoName || d.domain || '',
           code.state ? el('span', { class: `code-state${code.state === 'open' ? ' open' : ''}` }, ` · ${code.state}`) : null)),
@@ -1848,7 +1850,7 @@
 
   /** The Code tab's filters: kind, Open Only, Private, kept in the address (ck, co, cp). */
   function codeFiltersFromAddress() {
-    return { kind: params.get('ck') || undefined, open: params.get('co') === '1', private: params.get('cp') === '1' };
+    return { kind: params.get('ck') || undefined, host: params.get('ch') || undefined, open: params.get('co') === '1', private: params.get('cp') === '1' };
   }
   function codeFilterBar() {
     const f = codeFiltersFromAddress();
@@ -1864,12 +1866,17 @@
       ...S.CODE_KINDS.map(([value, name]) => el('option', { value }, name)));
     kind.value = f.kind || '';
     kind.addEventListener('change', () => go('ck', kind.value));
+    // Which forge: All Hosts, Forgejo or GitHub.
+    const host = el('select', { 'aria-label': 'Host' }, el('option', { value: '' }, 'All Hosts'),
+      ...S.CODE_HOSTS.map(([value, name]) => el('option', { value }, name)));
+    host.value = f.host || '';
+    host.addEventListener('change', () => go('ch', host.value));
     const toggle = (key, on, text) => {
       const b = el('button', { type: 'button', 'aria-pressed': on ? 'true' : 'false' }, text);
       b.addEventListener('click', () => go(key, on ? '' : '1'));
       return b;
     };
-    return el('div', { class: 'code-filters', role: 'group', 'aria-label': 'Filters' }, kind, toggle('co', f.open, 'Open Only'), toggle('cp', f.private, 'Private'));
+    return el('div', { class: 'code-filters', role: 'group', 'aria-label': 'Filters' }, kind, host, toggle('co', f.open, 'Open Only'), toggle('cp', f.private, 'Private'));
   }
 
   /**

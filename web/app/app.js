@@ -419,6 +419,11 @@ function codeList(container, q, { sort = '' } = {}) {
     h('option', { value: '' }, 'Everything'),
     ...S.CODE_KINDS.map(([value, name]) => h('option', { value, selected: codeFilters.kind === value }, name)));
   kind.addEventListener('change', () => ((codeFilters = { ...codeFilters, kind: kind.value || undefined }), draw()));
+  // Which forge: All Hosts, Forgejo or GitHub.
+  const host = h('select', { 'aria-label': 'Host' },
+    h('option', { value: '' }, 'All Hosts'),
+    ...S.CODE_HOSTS.map(([value, name]) => h('option', { value, selected: codeFilters.host === value }, name)));
+  host.addEventListener('change', () => ((codeFilters = { ...codeFilters, host: host.value || undefined }), draw()));
   const toggle = (key, text) => {
     const b = h('button', { type: 'button', 'aria-pressed': codeFilters[key] ? 'true' : 'false' }, text);
     b.addEventListener('click', () => {
@@ -428,7 +433,7 @@ function codeList(container, q, { sort = '' } = {}) {
     });
     return b;
   };
-  container.replaceChildren(h('div', { class: 'code-filters', role: 'group', 'aria-label': 'Filters' }, kind, toggle('open', 'Open Only'), toggle('private', 'Private')), box);
+  container.replaceChildren(h('div', { class: 'code-filters', role: 'group', 'aria-label': 'Filters' }, kind, host, toggle('open', 'Open Only'), toggle('private', 'Private')), box);
   draw();
 }
 
@@ -445,6 +450,8 @@ function codeRow(doc, code) {
       {},
       h('div', { class: 'title' }, doc.title || doc.url),
       h('div', { class: 'meta' },
+        // Which forge it's on: most are Forgejo, and the rows looked alike.
+        code.host ? [h('span', { class: `code-host code-host-${code.host}` }, S.codeHostName(code.host)), ' '] : null,
         code.private ? h('span', { 'aria-label': 'Private', title: 'Private' }, '🔒 ') : null,
         h('span', { class: 'domain' }, code.repoName || doc.domain || hostOf(doc.url)),
         code.state ? [' · ', h('span', { class: `code-state${code.state === 'open' ? ' open' : ''}` }, code.state)] : null,

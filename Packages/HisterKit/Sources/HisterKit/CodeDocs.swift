@@ -41,6 +41,14 @@ public enum CodeDocs {
         }
     }
 
+    /// The forges code-import reads, for the host filter and each row's badge.
+    public static let hosts: [(key: String, name: String)] = [("forgejo", "Forgejo"), ("github", "GitHub")]
+
+    /// A host's name for a row ("forgejo" → "Forgejo"); an unknown one as given.
+    public static func hostName(_ host: String) -> String {
+        hosts.first { $0.key == host }?.name ?? host
+    }
+
     /// A query that asks for code: `metadata.source:code` among its words.
     public static func asked(in text: String) -> Bool {
         text.split(whereSeparator: \.isWhitespace).contains { $0 == term }

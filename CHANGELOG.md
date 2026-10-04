@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The tag also releases Shiori for Firefox. The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.3.5 (2026-10-04)
+
+### Changed
+
+- **Code rows say which forge they're on** (Forgejo or GitHub, from the
+  document's `code_host`), and the Code pill's filters gain **All Hosts /
+  Forgejo / GitHub**. Most rows are Forgejo's, and without the badge they
+  read as GitHub's.
+
 ## 0.3.4 (2026-10-04)
 
 ### Changed

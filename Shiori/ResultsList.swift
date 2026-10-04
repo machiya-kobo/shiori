@@ -281,7 +281,14 @@ struct DocumentRow: View {
                     .lineLimit(2)
                 HStack(spacing: 6) {
                     if let code = document.code {
-                        // Where it is: the repo, its state, a lock when private.
+                        // Which forge (most are Forgejo, and the rows looked alike),
+                        // the repo, its state, a lock when private.
+                        if !code.host.isEmpty {
+                            Text(CodeDocs.hostName(code.host))
+                                .textStyle(.caption2, weight: .semibold)
+                                .padding(.horizontal, 5)
+                                .overlay(Capsule().strokeBorder(palette.secondaryText.opacity(0.5)))
+                        }
                         if code.isPrivate {
                             Image(systemName: "lock.fill")
                                 .textStyle(.caption)

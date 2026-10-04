@@ -1120,3 +1120,11 @@ test('code never folds by site (one forge holds every repo)', () => {
   assert.equal(items.length, 4);
   assert.ok(items.every((i) => i.page));
 });
+
+test("code rows name their forge (CodeDocs twins)", () => {
+  assert.equal(S.codeHostName('forgejo'), 'Forgejo');
+  assert.equal(S.codeHostName('github'), 'GitHub');
+  assert.equal(S.codeHostName('gitea'), 'gitea');
+  assert.deepEqual(Array.from(S.CODE_HOSTS, ([k]) => k), ['forgejo', 'github']);
+  assert.equal(S.codeQuery('', { host: 'github' }), 'metadata.source:code metadata.code_host:github *');
+});

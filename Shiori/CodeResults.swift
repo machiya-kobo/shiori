@@ -27,6 +27,17 @@ struct CodeResults: View {
                     } label: {
                         Label(filters.kind?.title ?? "Everything", systemImage: "line.3.horizontal.decrease")
                     }
+                    // Which forge: All Hosts, Forgejo or GitHub.
+                    Menu {
+                        Picker("Host", selection: $filters.host) {
+                            Text("All Hosts").tag(String?.none)
+                            ForEach(CodeDocs.hosts, id: \.key) { host in
+                                Text(host.name).tag(String?.some(host.key))
+                            }
+                        }
+                    } label: {
+                        Label(filters.host.map(CodeDocs.hostName) ?? "All Hosts", systemImage: "server.rack")
+                    }
                     Toggle("Open Only", isOn: $filters.open)
                         .toggleStyle(.button)
                     Toggle("Private", isOn: $filters.privateOnly)
