@@ -235,10 +235,11 @@ holds the rules and the traps the code can't tell you.
 - Delete is by query: dry-run first, refuse unless exactly one page matches.
 - `api/add` replaces a page's metadata (last writer wins) but keeps its label
   when the add has none. Provenance in metadata is best effort.
-- **Every Hister query ends in ` -label:vault -metadata.source:vault`**
-  (`SearchText.forHister` / `S.histerText`, applied inside the clients):
-  notes come from Kura. There's no `NOT` and no exclude parameter; a negated
-  field works with exact totals.
+- **Every Hister query ends in ` -label:vault -metadata.source:vault
+  -type:local`** (`SearchText.forHister` / `S.histerText`, applied inside
+  the clients): notes come from Kura, files only on the Files pill (a query
+  with `type:local` keeps them). There's no `NOT` and no exclude parameter;
+  a negated field works with exact totals.
 - The last typed word is searched as a prefix (`prefixLastWord`): Hister and
   Kura match whole words.
 - `url:` needs the exact stored URL; marks use one search, `url:(a|a/|b…)`.
@@ -364,6 +365,17 @@ holds the rules and the traps the code can't tell you.
 - `gemini://`/`gopher://`: through the small-web gateway's `POST /api/save`
   (202 with the canonical URL; 429 waited out); the batch label goes on once
   the page arrives (the gateway sets none).
+
+## Files
+
+- The folders Hister watches (its `indexer.directories`): documents of
+  `type:local` (domain `local`, a `file://` address). Only the Files pill
+  (or tab) shows them, after Small Web, and only while Hister has some
+  (`LocalFiles` / `S.filesQuery`, twins); never in All or any other list.
+- A file opens from Hister's copy (`/api/file?id=<address>`), is never
+  recorded as opened, labelled or deleted, and never folds by site. No AI:
+  `AIContent.localFile` makes `EngineChain.eligible` empty, on-device
+  engines included. Files queries go into Recent like any other.
 
 ## Small Web
 
