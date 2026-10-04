@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { TABLE_PATH, CSS_PATH, SWIFT_PATH, TEXT, TINTS, css, swift, bars, variant, ratio, mix, luminance } from './palettes.mjs';
+import { TABLE_PATH, CSS_PATH, SWIFT_PATH, TEXT, TINTS, css, swift, bars, variant, roomsShadow, ratio, mix, luminance } from './palettes.mjs';
 
 const table = JSON.parse(readFileSync(TABLE_PATH, 'utf8'));
 const read = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -55,6 +55,38 @@ test("the settings' whitelists know the same ten: SharedSettings.palettes and ho
   const list = (text, pattern) => [...text.match(pattern)[1].matchAll(/["']([a-z-]+)["']/g)].map((m) => m[1]);
   assert.deepEqual(list(read('../Shared/Settings/SharedSettings.swift'), /static let palettes = \[([^\]]*)\]/), keys);
   assert.deepEqual(list(read('../patches/ext/host-local.js'), /const PALETTES = \[([^\]]*)\]/), keys);
+});
+
+test("the Rooms menu's text reads at 4.5:1 on the rooms' panel and current row, every variant", () => {
+  for (const [key, p] of Object.entries(table)) {
+    for (const mode of ['dark', 'light']) {
+      const v = variant(p[mode], mode);
+      assert.equal(v['rooms-bg'], p[mode].dark, key);
+      assert.equal(v['rooms-on'], p[mode].hl, key);
+      for (const fg of ['rooms-text', 'rooms-muted']) {
+        for (const bg of ['rooms-bg', 'rooms-on']) {
+          const r = ratio(v[fg], v[bg]);
+          assert.ok(r >= 4.5, `${key} ${mode}: --${fg} ${v[fg]} on --${bg} ${v[bg]} is ${r.toFixed(2)}:1`);
+        }
+      }
+    }
+  }
+});
+
+test("search.css's Tokyo Night has the generator's Rooms menu colours", () => {
+  const css = read('../patches/shiori/search.css');
+  const block = (selector) => {
+    const at = css.indexOf(selector);
+    return css.slice(css.indexOf('{', at) + 1, css.indexOf('}', at));
+  };
+  const tokens = (body) => Object.fromEntries([...body.matchAll(/--(rooms-[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  const want = (mode) => {
+    const v = variant(table['tokyo-night'][mode], mode);
+    return { 'rooms-bg': v['rooms-bg'], 'rooms-on': v['rooms-on'], 'rooms-text': v['rooms-text'], 'rooms-muted': v['rooms-muted'], 'rooms-shadow': roomsShadow(v, mode === 'light') };
+  };
+  assert.deepEqual(tokens(block(':root {')), want('dark'));
+  assert.deepEqual(tokens(block(':root:not([data-theme="night"]) {')), want('light'));
+  assert.deepEqual(tokens(block(':root[data-theme="day"] {')), want('light'));
 });
 
 test("search-core's PALETTES is the table's names and bar colours", () => {

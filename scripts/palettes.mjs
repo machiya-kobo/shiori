@@ -80,7 +80,21 @@ export function variant(room, mode) {
   }
   ['accent', 'visited', 'konbini', 'kept', 'notes', 'danger', 'hit', 'obsidian']
     .forEach((t, i) => { v[`chip${i}`] = v[t]; });
+  // The Rooms menu, as the rooms draw it (vaultkit's switcher): their --dark
+  // panel, the current row on their --hl, in either variant. Its text is
+  // Shiori's, moved in lightness only where it would be under 4.5:1 there
+  // (the rooms' own is 3.99:1 in Tokyo Night Day).
+  v['rooms-bg'] = room.dark;
+  v['rooms-on'] = room.hl;
+  v['rooms-text'] = readableOn(v.text, [room.dark, room.hl], light);
+  v['rooms-muted'] = readableOn(v.secondary, [room.dark, room.hl], light);
   return v;
+}
+
+/** The rooms' second shadow (their --shadow-2): black in dark, the text's colour in light. */
+export function roomsShadow(v, light) {
+  const [r, g, b] = rgb(v.text).map((c) => Math.round(c * 255));
+  return light ? `0 1px 2px rgb(${r} ${g} ${b} / 0.12), 0 6px 18px rgb(${r} ${g} ${b} / 0.12)` : '0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25)';
 }
 
 function decl(v, light) {
@@ -92,7 +106,9 @@ function decl(v, light) {
     ['tab-general', 'tab-images', 'tab-videos', 'tab-news'],
     ['notes', 'konbini', 'niwa', 'web', 'obsidian', 'smallweb', 'danger'],
     ['chip0', 'chip1', 'chip2', 'chip3', 'chip4', 'chip5', 'chip6', 'chip7'],
+    ['rooms-bg', 'rooms-on', 'rooms-text', 'rooms-muted'],
   ].map((keys) => keys.map((k) => `--${k}: ${v[k]};`).join(' '));
+  rows.push(`--rooms-shadow: ${roomsShadow(v, light)};`);
   rows.push(`--highlight: rgb(${r} ${g} ${b} / ${light ? '0.22' : '0.30'}); --tint-mix: ${v['tint-mix']}%;`);
   rows.push(light ? `--shadow: 0 1px 2px rgb(${sr} ${sg} ${sb} / 0.12); color-scheme: light;` : '--shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;');
   return rows;
