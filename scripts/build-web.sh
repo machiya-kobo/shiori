@@ -33,15 +33,28 @@ fi
 cp -- assets/icon-32.png assets/icon-256.png assets/web-icon-64.png "$out/_shiori/"
 
 # The page, with its files under /_shiori/ (the root's other paths are
-# Hister's), the shim first, an icon, and the OpenSearch link.
-sed \
-  -e 's#href="search.css"#href="/_shiori/search.css"#' \
-  -e 's#href="palettes.css"#href="/_shiori/palettes.css"#' \
-  -e 's#<script src="search-core.js"></script>#<script src="/_shiori/web-shim.js"></script>\n    <script src="/_shiori/search-core.js"></script>#' \
-  -e 's#<script src="search.js"></script>#<script src="/_shiori/search.js"></script>#' \
-  -e 's#src="assets/icons/icon-256.png"#src="/_shiori/icon-256.png"#' \
-  -e 's#</title>#</title>\n    <link rel="icon" href="/_shiori/web-icon-64.png" />\n    <link rel="apple-touch-icon" href="/_shiori/icon-256.png" />\n    <link rel="search" type="application/opensearchdescription+xml" title="Shiori" href="/_shiori/opensearch.xml" />#' \
-  patches/shiori/search.html >"$out/index.html"
+# Hister's), the shim first, an icon, and the OpenSearch link. In Python:
+# BSD sed (OpenBSD's, the Mac's) writes "\n" in a replacement as a plain n.
+python3 - patches/shiori/search.html "$out/index.html" <<'PY'
+import sys
+src, dst = sys.argv[1:]
+html = open(src, encoding="utf-8").read()
+for old, new in (
+    ('href="search.css"', 'href="/_shiori/search.css"'),
+    ('href="palettes.css"', 'href="/_shiori/palettes.css"'),
+    ('<script src="search-core.js"></script>',
+     '<script src="/_shiori/web-shim.js"></script>\n    <script src="/_shiori/search-core.js"></script>'),
+    ('<script src="search.js"></script>', '<script src="/_shiori/search.js"></script>'),
+    ('src="assets/icons/icon-256.png"', 'src="/_shiori/icon-256.png"'),
+    ('</title>', '</title>\n    <link rel="icon" href="/_shiori/web-icon-64.png" />'
+                 '\n    <link rel="apple-touch-icon" href="/_shiori/icon-256.png" />'
+                 '\n    <link rel="search" type="application/opensearchdescription+xml" title="Shiori" href="/_shiori/opensearch.xml" />'),
+):
+    if old not in html:
+        sys.exit("search.html lost " + old)
+    html = html.replace(old, new, 1)
+open(dst, "w", encoding="utf-8").write(html)
+PY
 
 python3 scripts/status-link.py "$out/index.html" "$status"
 # The Machiya rooms for the switcher: SHIORI_ROOMS (and the notes' homes

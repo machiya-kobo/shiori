@@ -5,6 +5,33 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.5.5 (2026-10-05)
+
+### Fixed
+
+- On the search page, a web result's cached and archive.is links (and its
+  front ends) sit in the card's bottom row, left-aligned, as your pages'
+  do: on a phone they stood alone between the address and the text.
+- `linux/install-desktop.sh` installs only the launcher where there's no
+  Cinnamon (it failed there), and says that the menu search and hotkey
+  change your running desktop session (`--remove` undoes them).
+- The search page's build no longer writes a stray `n` into its HTML on
+  the BSDs and the Mac (their `sed`).
+- `tools/screenshots` waits for a visible result; the README's screenshots
+  are new.
+
+### Changed
+
+- **Linux: the Cinnamon menu provider is `shiori@machiya-kobo.github.io`.**
+  Re-run `linux/install-desktop.sh`: it removes the old provider and
+  switches the new one on.
+- The Flatpak builds into `~/.cache/shiori-flatpak` (it was `/tmp`).
+- Docs: the Quickstart's BSD steps run as root and point at a Hister
+  elsewhere; back up `~/.config/shiori/config.json` before the Linux steps;
+  what Linux needs without the Flatpak; the whole command list; the Code
+  pill and Sign In with Tailscale in the feature list; the AI skill's page
+  queries leave code out (`@pages`), and it never queries code.
+
 ## 0.5.4 (2026-10-05)
 
 ### Fixed
@@ -125,7 +152,7 @@ hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 ### Added
 
 - The apps' Sign in to Hister starts with **Sign In with Tailscale** when
-  Hister offers its tailnet sign-in (`oauthProviders` has "oidc"): the
+  Hister offers an OIDC sign-in (`oauthProviders` has "oidc"): the
   sign-in sheet goes straight to it, one tap with no form, once the
   sign-in helper takes the provider; until then it opens the sign-in page
   a tap from it.
@@ -142,7 +169,7 @@ hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 ### Fixed
 
 - The search page gives the web 10 seconds, not 4: on a phone's mobile
-  data through the tailnet, ordinary searches ran past 4 and showed "Web
+  data through the VPN, ordinary searches ran past 4 and showed "Web
   results didn't answer". That line now has Try Again beside Search
   DuckDuckGo.
 
@@ -150,7 +177,7 @@ hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
 ### Added
 
-- **Code**: a pill for the owner's repos in Hister (code-import's repo
+- **Code**: a pill for your repos in Hister (code-import's repo
   cards, READMEs and docs, issues, pull requests and releases), after
   Files, on every Shiori. Searched as you type, with a count on the pill;
   filters for the kind, Open Only and Private; each row shows what it is,

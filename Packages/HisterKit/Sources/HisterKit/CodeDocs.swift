@@ -1,6 +1,6 @@
 import Foundation
 
-/// The owner's repos in Hister (code-import, `metadata.source:code`): repo
+/// Your repos in Hister (code-import, `metadata.source:code`): repo
 /// cards, READMEs and docs, issues, PRs and releases, each at its forge
 /// URL. Only the Code pill shows them: every other Hister query leaves them
 /// out (`SearchText.forHister`). Metadata values a query matches are single

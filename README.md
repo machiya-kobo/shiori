@@ -10,14 +10,14 @@ Hister is a self-hosted personal search engine: its browser extension sends the 
 
 <p>
   <img src="docs/screenshots/shiori-library-dark.png" alt="The web app's Library in the dark theme: collections and labels in the sidebar, sample pages in the list, one open in the preview" width="49%">
-  <img src="docs/screenshots/shiori-search-light.png" alt="Shiori for &quot;lantern&quot; in the light theme: the sample pages under Your Pages" width="49%">
+  <img src="docs/screenshots/shiori-search-light.png" alt="Shiori for &quot;lantern&quot; in the light theme: the sample pages marked Your page among the invented web results, with an Info card" width="49%">
 </p>
 <p>
   <img src="docs/screenshots/shiori-library-light.png" alt="The web app's Library in the light theme, a sample page open" width="49%">
   <img src="docs/screenshots/shiori-library-phone-light.png" alt="The web app's Library at phone width" width="24%">
 </p>
 
-The web app and Shiori with the Quickstart's sample pages and Machiya's sample vault; the Info card and web results are invented too (`tools/screenshots` makes them).
+The web app and Shiori with the Quickstart's sample pages; the Info card and web results are invented too (`tools/screenshots` makes them).
 
 ## Quickstart
 
@@ -35,18 +35,20 @@ sudo apt-get update
 sudo apt-get install -y git curl python3 podman flatpak flatpak-builder dbus-bin
 ```
 
+On the BSDs, run the package block as root: a fresh FreeBSD or NetBSD has no `sudo`, and OpenBSD's `doas` needs an `/etc/doas.conf` first.
+
 *OpenBSD* (the web pages):
 
 <!-- quickstart: packages-openbsd -->
 ```bash
-doas pkg_add python%3 git curl bash
+pkg_add python%3 git curl bash
 ```
 
 *FreeBSD* (the web pages):
 
 <!-- quickstart: packages-freebsd -->
 ```bash
-sudo pkg install -y python3 git curl bash
+pkg install -y python3 git curl bash
 ```
 
 *NetBSD* (the web pages; its packages name Python by version, so give it a `python3`):
@@ -54,9 +56,11 @@ sudo pkg install -y python3 git curl bash
 <!-- quickstart: packages-netbsd -->
 ```bash
 export PKG_PATH="https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r | cut -d_ -f1)/All"
-sudo -E pkg_add python313 git-base curl bash
-sudo ln -sf /usr/pkg/bin/python3.13 /usr/pkg/bin/python3
+pkg_add python313 git-base curl bash
+ln -sf /usr/pkg/bin/python3.13 /usr/pkg/bin/python3
 ```
+
+The BSDs have no podman or docker for Hister: run it on another machine (or natively, as Machiya's [docs/install/bsd.md](https://github.com/machiya-kobo/machiya/blob/main/docs/install/bsd.md) describes) and point step 2's `HISTER_URL` at it. Without a Hister, the results check below has nothing to show.
 
 Then get the code (`git clone https://github.com/machiya-kobo/shiori && cd shiori`); the Mac and iOS builds also need `git submodule update --init` (the Safari extension is built from Hister's own).
 
@@ -119,13 +123,13 @@ Check that both answer, and that Hister is reached through them:
 <!-- quickstart: pages-check -->
 ```bash
 curl -s http://localhost:8765/_shiori/opensearch.xml | grep -o '<ShortName>[^<]*</ShortName>'
-curl -s http://localhost:8766/manifest.webmanifest | grep -o '"name": *"[^"]*"'
+curl -s http://localhost:8766/manifest.webmanifest | python3 -c 'import json,sys; print(json.load(sys.stdin)["name"])'
 ```
 
 <!-- quickstart-expect: pages-check -->
 ```text
 <ShortName>Shiori</ShortName>
-"name": "Shiori"
+Shiori
 ```
 
 <!-- quickstart: results-check -->
@@ -154,7 +158,9 @@ flatpak install --user -y flathub org.gnome.Platform//49 org.gnome.Sdk//49
 linux/flatpak/build.sh
 ```
 
-Tell it where Hister and the web app are, and search from the command line as the desktop search does (over SSH, with no desktop, put `dbus-run-session --` in front of `flatpak run`):
+The bundle (`shiori.flatpak`, to install elsewhere) lands in `~/.cache/shiori-flatpak/`.
+
+Tell it where Hister and the web app are, and search from the command line as the desktop search does (over SSH, with no desktop, put `dbus-run-session --` in front of `flatpak run`). This writes `~/.config/shiori/config.json`: if you already have one, back it up first (`cp ~/.config/shiori/config.json ~/.config/shiori/config.json.bak`).
 
 <!-- quickstart: linux-check -->
 ```bash
@@ -169,9 +175,11 @@ flatpak run io.github.machiya_kobo.Shiori provider-search lantern \
 Bending bamboo frames with steam
 Candle or LED inside a paper lantern?
 Folding a chōchin lantern
+Kyoto's summer lantern festival
+Restoring an old paper lantern
 ```
 
-`flatpak run io.github.machiya_kobo.Shiori` opens the window on the web app; `linux/install-desktop.sh` adds the `shiori` command, Cinnamon's menu search and Ctrl+Alt+Space ([docs/linux.md](docs/linux.md)).
+`flatpak run io.github.machiya_kobo.Shiori` opens the window on the web app; `linux/install-desktop.sh` adds the `shiori` command and, on Cinnamon, the menu search and Ctrl+Alt+Space; it changes your running desktop session's settings, and `--remove` undoes it ([docs/linux.md](docs/linux.md)).
 
 **4. The Mac, iPhone and iPad apps** (not machine-tested). On a Mac with Xcode 27 and [Homebrew](https://brew.sh): `git submodule update --init`, `brew bundle`, `cp local.yml.example local.yml`, and in `local.yml` set `DEVELOPMENT_TEAM` (Xcode → Settings → Accounts), `SHIORI_BUNDLE_PREFIX` (a reverse-DNS prefix of your own, such as `io.github.you`) and `SHIORI_SERVER_URL` (`http://<this machine's address>:4433/`). Then `scripts/install-mac.sh` installs the Mac app, and `scripts/deploy-device.sh` an iPhone or iPad (`DEVICE_NAME` in `local.env`). Turn the Safari extension on as in [Turn it on](#turn-it-on).
 
@@ -189,7 +197,7 @@ docker rm -f shiori-hister
 
 ### B. As one of the Machiya services
 
-Clone `machiya`, `kura`, `niwa`, `konbini` and `shiori` side by side in one directory, and bring the stack up with the [Machiya Quickstart](https://github.com/machiya-kobo/machiya#quickstart): Hister, SearXNG, Kura with the sample vault, Konbini and Niwa on this machine's ports. Then, in `shiori`, build the pages with the rooms' addresses (the stack's defaults; change them if yours differ). `SHIORI_NIWA_URL` is your Kura (the name is older than Kura):
+Clone `machiya`, `kura`, `niwa`, `konbini` and `shiori` side by side in one directory, and bring the stack up with the [Machiya Quickstart](https://github.com/machiya-kobo/machiya#quickstart): Hister, SearXNG, Kura with the sample vault, Konbini and Niwa on this machine's ports. The reference stack starts with no sign-in (no Hister users, no identity file). Then, in `shiori`, build the pages with the rooms' addresses (the stack's defaults; change them if yours differ). `SHIORI_NIWA_URL` is your Kura (the name is older than Kura):
 
 <!-- quickstart: stack-pages-build -->
 ```bash
@@ -226,10 +234,11 @@ curl -s 'http://localhost:8765/kura/api/search?q=lantern&limit=50' \
 Lantern festival kit
 ```
 
-<http://localhost:8765/?q=lantern> now has **Your Notes** from the sample vault (the stack's Hister holds the notes and nothing else; for pages too, fill it with part A's `tools/quickstart/seed-hister.py http://127.0.0.1:4433/`) (each with its Kura page and Konbini card) and the web from SearXNG; the web app's Notes tab lists the vault, and the house button switches between the rooms. Add `SHIORI_SMALLWEB_URL` (and a `SMALLWEB_URL` route) for Gemini and Gopher, and `SHIORI_SOURCE_URL` (your fork's address) for the About page's Source link. The Linux app takes Kura the same way:
+<http://localhost:8765/?q=lantern> now has **Your Notes** from the sample vault (the stack's Hister holds the notes and nothing else; for pages too, fill it with part A's `tools/quickstart/seed-hister.py http://127.0.0.1:4433/`) (each with its Kura page and Konbini card) and the web from SearXNG; the web app's Notes tab lists the vault, and the house button switches between the rooms. Add `SHIORI_SMALLWEB_URL` (and a `SMALLWEB_URL` route) for Gemini and Gopher, and `SHIORI_SOURCE_URL` (your fork's address) for the About page's Source link. The Linux app takes Kura the same way (this replaces `~/.config/shiori/config.json` again: back up your own first):
 
 <!-- quickstart: stack-linux-check -->
 ```bash
+mkdir -p ~/.config/shiori
 echo '{"webApp": "http://localhost:8766/", "server": "http://127.0.0.1:4433/", "kura": "http://127.0.0.1:8083/"}' > ~/.config/shiori/config.json
 flatpak run io.github.machiya_kobo.Shiori provider-search lantern \
   | python3 -c 'import json,sys; print(*sorted(r["name"] for r in json.load(sys.stdin) if r["kind"] == "note"), sep="\n")' | grep -x 'Lantern festival kit'
@@ -250,9 +259,9 @@ on, [Sign in to Machiya](#sign-in-to-machiya).
 Shiori needs no sign-in while Hister has no users (the default). When Hister has them (`app.user_handling`, v0.20.0+,
 with Machiya's sign-in helper on Hister's host), each Shiori signs in once:
 
-- **The apps:** Settings → Server → Sign in to Hister, with Sign In with Saved Password (Hister's page, where your saved
-  password is offered) or a name and password (shown only
-  while Hister has users), and Access Token for your Hister user's token. Both stay in the Keychain.
+- **The apps:** Settings → Server → Sign in to Hister (shown only while Hister has users): first **Sign In with
+  Tailscale** when Hister offers its OIDC sign-in, else **Sign In with Saved Password** (Hister's page, where your saved
+  password is offered), or a name and password; and Access Token for your Hister user's token. Both stay in the Keychain.
 - **Safari's extension** takes the token from the app.
 - **The hosted pages** send you to Hister's sign-in when it asks, and back.
 - **Linux:** `shiori sign-in` (a small window), `shiori sign-out`, and `"histerToken"` in config.json.
@@ -286,6 +295,7 @@ revoke it on the server. [docs/signing-in.md](docs/signing-in.md) has the detail
 - **Search scopes**: All (your top pages, your top notes, then the web, like All in Safari's results), Hister, Notes and Web.
 - **Notes**: your Obsidian notes, from Kura (a notes search and reader; optional). Search them on their own (Search → Notes). A note opens in Obsidian, with its Kura page and Konbini card a tap away.
 - **Files**: the folders your Hister server watches (its [local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)), on a Files pill of their own once it has some, in the apps, the web app and the search page. A file opens from Hister's copy; it's never labelled, deleted, recorded as opened or given to an AI.
+- **Code**: your repos as Hister holds them (repo cards, READMEs and docs, issues, pull requests and releases, imported by a companion importer), on a Code pill of their own once Hister has some, in the apps, the web app and the search page. Filter by kind, forge, open or private; each row opens at its forge. Code is never labelled, deleted or folded, and only an on-device model may summarize it.
 - **Search history**: tap a search field (in the app, or on Safari's results page) for your last 5 searches, one list for both. Switch it off, or clear it, in Settings → Search History; it stays on the device.
 - **Themes**: the Machiya rooms' ten (Tokyo Night, Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa, Everforest, Ayu), each light and dark (Settings → Appearance: Theme, and Appearance to follow the system or pick one). Per device. Shiori's search page (Safari's results page and the hosted page) follows the app's, and on the hosted page it is shared with the rooms.
 - **Text size**: follow the system, or pick a size for Shiori alone (Settings → Appearance), on the Mac too. It covers Safari's results page as well.

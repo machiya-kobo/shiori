@@ -292,7 +292,7 @@ struct DocumentView: View {
     /// A file from the folders Hister watches: opened from Hister's copy;
     /// never labelled, deleted, or given to a model.
     private var localFile: Bool { app.isLocalFile(document.url) }
-    /// The owner's repos (code-import's): never labelled or deleted here,
+    /// Your repos (code-import's): never labelled or deleted here,
     /// and summarized on the device only (`AIContent.code`).
     private var code: Bool { document.code != nil }
 

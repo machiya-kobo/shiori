@@ -414,7 +414,7 @@ let listSearch = ''; // the query the list came from, for Remember What You Open
 let lastPage = null;
 
 /**
- * The Code pill: the owner's repos in Hister (code-import's), searched as
+ * The Code pill: your repos in Hister (code-import's), searched as
  * you type (Hister's own index: nothing spent), never in All or any other
  * list. Above it, the kind, Open Only and Private, as metadata terms
  * (S.codeQuery), kept for this visit.
@@ -1108,7 +1108,7 @@ function viewList(params) {
 // Notes wear Kura's orange and the web Shiori's lens yellow (the Machiya
 // rooms' colours).
 // Files: the folders Hister watches, green (a hue no room wears).
-// Code: the owner's repos (code-import's), red, the one hue left.
+// Code: your repos (code-import's), red, the one hue left.
 const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['opened', 'Opened', 'purple']];
 /** The pills: Opened only while Show Opened is on (off by default); Files only while Hister has some. */
 const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || settings.smallWebTab !== false) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs));
@@ -1121,7 +1121,7 @@ const scopes = () => {
 };
 /** Hister holds files from folders it watches (`type:local`): asked once at launch, before the first draw. */
 let hasLocalFiles = false;
-/** Hister holds the owner's repos (metadata.source:code): asked with the files. */
+/** Hister holds your repos (metadata.source:code): asked with the files. */
 let hasCodeDocs = false;
 async function loadLocalFiles() {
   api.search(S.codeQuery(''), { limit: 1 }).then((r) => (hasCodeDocs = r.total > 0)).catch(() => {});
@@ -1520,7 +1520,7 @@ function answerCard(q) {
   return h('section', { class: 'answer-card' }, head, body);
 }
 const summaries = new Map();
-// Never code: the server's AI isn't on the device (the owner's rule: code stays there).
+// Never code: the server's AI isn't on the device (code stays on the device).
 const canSummarize = (doc, n) => aiOn && !n && !S.isCodeDoc(doc) && S.summarizable(doc.url, doc.label);
 
 function summaryCard(doc, state) {

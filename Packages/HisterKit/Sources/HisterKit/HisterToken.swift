@@ -1,6 +1,6 @@
 import Foundation
 
-/// Hister's access token: the owner's one token per user, sent as
+/// Hister's access token: your Hister user's one token, sent as
 /// `X-Access-Token` by every Hister caller that holds one (the apps, the
 /// share extension, Safari's extension through the app). Unset, nothing is
 /// sent. Never in a URL, never logged. `S.histerToken` / `S.histerHeaders`

@@ -160,4 +160,4 @@ in the top two, and how often a "high" answer is right. Only an engine
 whose "high" answers you've measured as reliable should apply labels on
 its own.
 
-Shiori trusts only Anthropic to apply labels on its own.
+Shiori applies labels on its own only from Anthropic's sure answers (or both engines agreeing), and from Apple Intelligence's first choice when you switch on Apply Apple Intelligence's Labels; every applied label can be undone.

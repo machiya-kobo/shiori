@@ -70,6 +70,9 @@ location / {                                        # Hister's routes, /shiori/a
   `Cookie` replacement **and** `proxy_hide_header Set-Cookie`.
 - `/kura/` and `/konbini/` get `Cookie: machiya_sso=$cookie_machiya_sso`
   only; the rooms check it themselves.
+- The cookie's name is the helper's default. If you rename it
+  (`MACHIYA_SSO_COOKIE`), nginx's variable follows the name:
+  `$cookie_<name>` in both places above.
 - The pages: a 401 (nginx) or 403 (Hister) from Hister's routes sends the
   page to `<hister>/machiya/signin?return=<the page>` (the `hister` entry
   of `SHIORI_ROOMS` at build time; without it they just fail as before);

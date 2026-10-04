@@ -487,7 +487,7 @@ final class AppState {
 
     // MARK: Code
 
-    /// Hister holds the owner's repos (code-import, `metadata.source:code`):
+    /// Hister holds your repos (code-import, `metadata.source:code`):
     /// the Code pill shows only then. Asked with the files.
     private(set) var hasCodeDocs = false
 

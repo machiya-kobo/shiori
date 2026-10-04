@@ -53,7 +53,7 @@
   try {
     hasFiles = localStorage.getItem(FILES_KEY) === '1';
   } catch (_) {}
-  // The same for the owner's repos (code-import's, metadata.source:code).
+  // The same for your repos (code-import's, metadata.source:code).
   const CODE_KEY = 'shioriHasCode';
   let hasCode = false;
   try {
@@ -266,7 +266,7 @@
     ...(settings.smallWebTab !== false && smallwebBase ? [['smallweb', 'Small Web']] : []),
     // The folders Hister watches (type:local), once it has some files.
     ...(hasFiles && histerBase ? [['files', 'Files']] : []),
-    // The owner's repos (code-import's), once Hister has some.
+    // Your repos (code-import's), once Hister has some.
     ...(hasCode && histerBase ? [['code', 'Code']] : []),
   ]);
   const category = CATEGORIES.some(([c]) => c === params.get('cat')) ? params.get('cat') : 'general';
@@ -1809,7 +1809,7 @@
   }
 
   /**
-   * A code document (the owner's repos, code-import's): its kind's glyph,
+   * A code document (your repos, code-import's): its kind's glyph,
    * the repo, its state and a lock when private on the address line; opens
    * at its forge. No summarize (code stays on the device: the hosted AI
    * isn't) and no label. The repo's note in Kura joins its places when Kura
@@ -1969,8 +1969,10 @@
 
   function webCard(r) {
     // Not which engines found it (Google CSE, Bing…): where it is and when
-    // is what a result needs.
-    const meta = el('div', { class: 'meta' }, ...elsewhere(r.url));
+    // is what a result needs. Its copies and front ends go in the bottom
+    // row, as your pages' places do: on the date line, with no date there,
+    // they sat alone between the address and the text on a phone.
+    const where = places(...elsewhere(r.url));
     const li = el(
       'li',
       { class: 'card' },
@@ -1999,7 +2001,7 @@
     }
     const snippet = boldSnippet(S.decodeEntities(r.content));
     if (snippet) li.append(snippet);
-    li.append(meta);
+    li.append(where);
     return li;
   }
 
@@ -2165,7 +2167,7 @@
     const vault = category === 'vault';
     // Files: Hister's watched folders, the same search asking for them alone.
     const files = category === 'files';
-    // Code: the owner's repos, with their filters.
+    // Code: your repos, with their filters.
     const code = category === 'code';
     $('web').hidden = false;
     $('web-title').textContent = vault ? 'Your Notes' : files ? 'Your Files' : code ? 'Your Code' : 'Your Pages';

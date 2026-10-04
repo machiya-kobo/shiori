@@ -25,6 +25,13 @@ No AI, no rule editor, nothing the web view already does.
 distributions' GTK and libadwaita are too old; the runtime brings them and
 WebKitGTK 6).
 
+Without the Flatpak (`linux/install-desktop.sh`'s launcher then runs the
+checkout under GJS), the system needs gjs and the typelibs for GTK 4,
+libadwaita 1.5 or later, WebKitGTK 6 and libsoup 3. On Debian 13:
+`sudo apt-get install gjs gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-webkit-6.0
+gir1.2-soup-3.0`. Even the commands with no window load WebKit, so all of
+them are needed.
+
 - **The window** is an `AdwApplicationWindow` with a WebKitGTK view on the
   **live web app**. Same-origin, so Hister's write protection and the
   service worker work as in a browser, and every server rebuild updates the
@@ -35,12 +42,13 @@ WebKitGTK 6).
   opens, Escape closes.
 - **The command line** (`linux/src/cli.js`): `shiori`, `--quick`,
   `search <words>`, `save <url> [label]`, `send`, `status`,
-  `pair <code> [device]`,
+  `save-links [--folder] <note or folder> [label] [--dry-run]`,
+  `sign-in`, `sign-out`, `pair <code> [device]`,
   `provider-search <words>`, and `shiori://` / `kura://` links. One
   `GApplication`, so a second invocation talks to the running one.
-  Commands with no window (`save`, `send`, `status`, `pair`,
-  `provider-search`, `--help`) run before the application starts, so they work without a
-  display: over SSH, from cron or a script.
+  Commands with no window (`save`, `send`, `status`, `save-links`, `pair`,
+  `sign-out`, `provider-search`, `--help`) run before the application
+  starts, so they work without a display: over SSH, from cron or a script.
 - **The desktop search provider**: Cinnamon's menu providers are JS files
   outside any Flatpak, so a thin one (`linux/cinnamon/`) runs
   `shiori provider-search <words>` (JSON, ~0.15 s) and shows the latest
@@ -126,8 +134,11 @@ a private vault is never cached, exported or sent to Hister.
   Kept thin.
 - `linux/flatpak/`: the manifest, desktop file, launcher and `build.sh`
   (builds, installs for the user, writes a bundle).
-- `linux/install-desktop.sh` puts the launcher, the menu provider and the
-  hotkey in your session; `--remove` undoes it.
+- `linux/install-desktop.sh` puts the launcher in `~/.local/bin` and, on
+  Cinnamon, the menu provider and the hotkey in your session. Those two
+  are your **running desktop session's** settings (gsettings), whatever
+  `HOME` says; `--remove` undoes them. Without Cinnamon's settings it
+  installs the launcher only.
 - Testing on any x86_64 Linux with gjs, Xvfb and Node:
   `gjs -m linux/gjs/selftest.js`, `linux/headless.sh OUT.png [args]` (the
   window on Xvfb in its own D-Bus session; `SHIORI_RUN="flatpak run
@@ -139,4 +150,6 @@ a private vault is never cached, exported or sent to Hister.
 
 The Flatpak is `io.github.machiya_kobo.Shiori` (the GitHub organisation, `machiya-kobo`, with its hyphen as an underscore, as Flatpak IDs need), and the
 GApplication takes its ID from `FLATPAK_ID`. The Cinnamon menu provider's
-uuid is `shiori@machiya-kobo.github.io`.
+uuid is `shiori@machiya-kobo.github.io` (it was another `shiori@…` before
+0.5.5: re-run `linux/install-desktop.sh`, which removes the old provider
+and switches the new one on).

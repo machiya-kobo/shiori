@@ -31,7 +31,7 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .smallweb: .teal
         // The folders Hister watches: green, a hue no room wears.
         case .files: .green
-        // The owner's repos (code-import): red, the one hue left.
+        // Your repos (code-import): red, the one hue left.
         case .code: .red
         case .opened: .purple
         }
@@ -134,7 +134,7 @@ struct SearchResultsView: View {
         // The folders Hister watches (`type:local`), here and nowhere else.
         case .files:
             _model = State(initialValue: ResultsModel(query: LocalFiles.query(query)))
-        // The owner's repos (`metadata.source:code`): CodeResults, with its filters.
+        // Your repos (`metadata.source:code`): CodeResults, with its filters.
         case .code: break
         case .opened: break
         }

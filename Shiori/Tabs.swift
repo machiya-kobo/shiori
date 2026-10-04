@@ -228,7 +228,7 @@ struct RecentScreen: View {
                     description: Text("Type in the search field and press Return to search Gemini and Gopher."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .themedBackground()
-            // The owner's repos, newest first, with the Code pill's filters.
+            // Your repos, newest first, with the Code pill's filters.
             case .code:
                 CodeResults(query: "", sort: .newest)
             case .files:

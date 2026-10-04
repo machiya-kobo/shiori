@@ -168,7 +168,8 @@ def main():
                                               timezone_id="UTC", locale="en-US")
                 page = context.new_page()
                 page.goto(url)
-                page.get_by_text(ready).first.wait_for(timeout=30000)
+                # Visible only: the search page keeps hidden headings (#hister-title) with the same words.
+                page.locator("text=%s >> visible=true" % ready).first.wait_for(timeout=30000)
                 for step in steps:
                     step(page)
                 page.mouse.move(viewport["width"] - 2, viewport["height"] - 2)  # no hover underline
@@ -194,7 +195,8 @@ def main():
 
             for scheme in ("light", "dark"):
                 shot("library", app_url + "/", DESKTOP, scheme, "Folding a chōchin lantern", (open_page,))
-                shot("search", site_url + "/?q=lantern", DESKTOP, scheme, "Your Pages", (open_sections,))
+                # All mixes your pages into the web's results (no "Your Pages" section since 0.2.0).
+                shot("search", site_url + "/?q=lantern", DESKTOP, scheme, "Folding a chōchin lantern", (open_sections,))
             shot("library-phone", app_url + "/", PHONE, "light", "Folding a chōchin lantern")
             browser.close()
     finally:

@@ -59,7 +59,7 @@ and optionally `HISTER_USERS_TOKEN`); the stubs cover the helper.
 # Signing in to Machiya
 
 When the Machiya rooms run with Machiya's identity file
-(`MACHIYA_IDENTITY_FILE`, Machiya's `docs/plans/identity.md`), Kura,
+(`MACHIYA_IDENTITY_FILE`, Machiya's `docs/identity.md`), Kura,
 Konbini and Niwa ask who is calling: a request without a proof gets **401**,
 one whose principal has no grant **403**. Without the file they behave as
 before, and none of this is needed.

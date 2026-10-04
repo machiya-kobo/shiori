@@ -62,8 +62,8 @@ nonisolated enum SharedKeychain {
 }
 
 /// Hister's credentials, in the Keychain under the service "Hister":
-/// - the access token (Settings → Server → Access Token): the owner's one
-///   token per user, entered once per device, sent as `X-Access-Token` by
+/// - the access token (Settings → Server → Access Token): your Hister user's
+///   one token, entered once per device, sent as `X-Access-Token` by
 ///   the app, the share extension and (through the `hister` native
 ///   message) Safari's extension;
 /// - the app's own sign-in (Settings → Server → Sign in to Hister): its

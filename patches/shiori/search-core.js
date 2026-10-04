@@ -889,8 +889,8 @@
     try { return decodeURIComponent(rest); } catch (_) { return rest; }
   }
 
-  // --- Code: the owner's repos (code-import, metadata.source:code) ---------------------
-  // Repo cards, READMEs and docs, issues, PRs and releases from the owner's
+  // --- Code: your repos (code-import, metadata.source:code) ---------------------
+  // Repo cards, READMEs and docs, issues, PRs and releases from your
   // forges, each at its real forge URL. Only the Code pill shows them:
   // every other Hister query leaves them out. Their metadata values a
   // query matches are single lowercase tokens (Hister can't match "/" in
@@ -2205,7 +2205,7 @@
   }
 
   // --- Hister's token (the Hister login's phase 1: docs/signing-in.md) ------------
-  // The owner's one Hister token, sent as `X-Access-Token` by every Hister
+  // The user's one Hister token, sent as `X-Access-Token` by every Hister
   // caller that holds one: Safari's extension (from the app's Keychain),
   // the apps, Linux. Unset, nothing is sent,
   // as before. Never in a URL, never logged. HisterKit's HisterToken is the

@@ -2,12 +2,14 @@
 # Builds Shiori for Linux as a Flatpak (the GNOME 49 runtime), installs it
 # for the current user, and writes a single-file bundle to share:
 #
-#   linux/flatpak/build.sh [OUT_DIR]     (default /tmp/shiori-flatpak)
+#   linux/flatpak/build.sh [OUT_DIR]     (default ~/.cache/shiori-flatpak)
 #
 # Needs flatpak-builder and org.gnome.Sdk//49 (flatpak install --user flathub org.gnome.Sdk//49).
 set -eu
 cd "$(dirname "$0")/../.."
-out=${1:-/tmp/shiori-flatpak}
+# Your cache, not /tmp: a shared /tmp is anyone's to read, and it's often
+# a small tmpfs.
+out=${1:-${XDG_CACHE_HOME:-$HOME/.cache}/shiori-flatpak}
 mkdir -p "$out"
 # Its state beside the build: flatpak-builder wants both on one filesystem,
 # and /tmp often isn't the checkout's.

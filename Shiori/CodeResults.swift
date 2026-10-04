@@ -1,7 +1,7 @@
 import HisterKit
 import SwiftUI
 
-/// The Code pill: the owner's repos in Hister (code-import's repo cards,
+/// The Code pill: your repos in Hister (code-import's repo cards,
 /// READMEs and docs, issues, PRs and releases), searched as you type (it's
 /// Hister's own index: nothing is spent), never shown anywhere else. Above
 /// the list, the kind and Open Only, as metadata terms (`CodeDocs.query`).

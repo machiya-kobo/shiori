@@ -220,7 +220,7 @@ holds the rules and the traps the code can't tell you.
 ## Hister API quirks
 
 - **Hister's token** (`X-Access-Token`, for a server with users): the
-  owner's one token per user, entered once per device (Settings → Server,
+  user's one token, entered once per device (Settings → Server,
   `HisterKeychain`; Safari's extension asks the app by the `hister` native
   message; Linux `histerToken`). It goes to the Hister server and, under
   Machiya's host rule, to the configured Kura and Konbini (rooms in Hister
@@ -411,7 +411,7 @@ holds the rules and the traps the code can't tell you.
 
 ## Code
 
-- The owner's repos (code-import, `metadata.source:code`: repo cards,
+- Your repos (code-import, `metadata.source:code`: repo cards,
   READMEs and docs, issues, PRs, releases, each at its forge URL). Only
   the Code pill shows them, after Files, while Hister has some
   (`CodeDocs` / `S.codeQuery`, twins), with a count from All; never in
