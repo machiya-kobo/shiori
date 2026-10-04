@@ -16,7 +16,7 @@
   --text: #c0caf5; --secondary: #a9b1d6; --accent: #7aa2f7;
   --hit: #e0af68; --highlight: rgb(224 175 104 / 0.30); --kept: #9ece6a; --visited: #7dcfff;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35);
-  --tab-general: #7dcfff; --tab-images: #e0af68; --tab-videos: #f7768e; --tab-news: #bb9af7;
+  --tab-general: #7dcfff; --tab-images: #9ece6a; --tab-videos: #f7768e; --tab-news: #bb9af7;
   /* The Machiya rooms' colours: notes
      wear Kura's orange, cards Konbini's magenta, the garden Niwa's green.
      The web and Images take Shiori's second hue, the lens's yellow, since
@@ -37,7 +37,7 @@
     --text: #3760bf; --secondary: #4c5a8f; --accent: #155fc5;
     --hit: #7a5e36; --highlight: rgb(140 108 62 / 0.22); --kept: #506b34; --visited: #006b8f;
     --shadow: 0 1px 2px rgb(55 96 191 / 0.12);
-    --tab-general: #006b8f; --tab-images: #7a5e36; --tab-videos: #bd204c; --tab-news: #802cee;
+    --tab-general: #006b8f; --tab-images: #506b34; --tab-videos: #bd204c; --tab-news: #802cee;
   --notes: #9a5000; --konbini: #802cee; --niwa: #506b34; --web: #7a5e36; --obsidian: #0d6e5c; --smallweb: #0d6e5c;
     --tint-mix: 8%;
     --chip0: #155fc5; --chip1: #006b8f; --chip2: #802cee; --chip3: #506b34;
@@ -52,7 +52,7 @@
   --text: #3760bf; --secondary: #4c5a8f; --accent: #155fc5;
   --hit: #7a5e36; --highlight: rgb(140 108 62 / 0.22); --kept: #506b34; --visited: #006b8f;
   --shadow: 0 1px 2px rgb(55 96 191 / 0.12);
-  --tab-general: #006b8f; --tab-images: #7a5e36; --tab-videos: #bd204c; --tab-news: #802cee;
+  --tab-general: #006b8f; --tab-images: #506b34; --tab-videos: #bd204c; --tab-news: #802cee;
   --notes: #9a5000; --konbini: #802cee; --niwa: #506b34; --web: #7a5e36; --obsidian: #0d6e5c; --smallweb: #0d6e5c;
   --tint-mix: 8%;
   --chip0: #155fc5; --chip1: #006b8f; --chip2: #802cee; --chip3: #506b34;
@@ -309,6 +309,14 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
 .code-host { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); }
 .code-state.open { color: var(--kept); }
 .code-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 12px; }
+/* Pages, Notes, Files and Code: the vault and the sort in a row above the
+   list, not the header (it crowded a phone's). Nothing shown, no row. */
+.list-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 12px; }
+.list-controls:not(:has(> :not([hidden]))) { display: none; }
+.list-controls select {
+  font: inherit; font-size: 0.875rem; color: var(--text); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer;
+}
 .code-filters select, .code-filters button {
   font: inherit; font-size: 0.875rem; color: var(--text); background: transparent;
   border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer;

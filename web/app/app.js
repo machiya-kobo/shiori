@@ -19,7 +19,12 @@ function h(tag, attrs = {}, ...children) {
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v === undefined || v === null || v === false) continue;
     if (k === 'class') el.className = v;
-    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'href') {
+      // Every link the app makes: the web, Shiori's own schemes or its own
+      // pages, never javascript: or data: from a stored address.
+      const href = S.linkHref(String(v), location.href);
+      if (href) el.setAttribute('href', href);
+    } else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
     else if (k === 'style') el.setAttribute('style', v);
     else el.setAttribute(k, v === true ? '' : v);
   }
@@ -205,6 +210,12 @@ const SOURCE_URL = S.sourceLink(fromBuild('__SHIORI_SOURCE_URL__'));
 const SMALLWEB = fromBuild('__SHIORI_SMALLWEB_URL__') !== '';
 /** The build's privacy front ends (SHIORI_FRONTENDS: Redlib, Invidious…), for a page's menu. */
 const FRONTENDS = S.frontendInstances(fromBuild('__SHIORI_FRONTENDS__'));
+
+/** A new tab on a link the app may open (S.linkHref): never javascript: or data:. */
+function openTab(url) {
+  const href = S.linkHref(String(url || ''), location.href);
+  if (href) window.open(href, '_blank', 'noopener');
+}
 
 function fromBuild(value) {
   return value.startsWith('__') ? '' : value;
@@ -1585,7 +1596,7 @@ async function showPreview(doc, { extractor = '' } = {}) {
   const bar = $('preview-bar');
   const pane = $('preview');
   // Where it opens, as the apps' toolbar: plain symbols in one group, then ⋯.
-  const open = (url) => window.open(url, '_blank', 'noopener');
+  const open = (url) => openTab(url);
   const places = n
     ? [
         n.obsidian ? iconButton('note', 'Edit in Obsidian', () => (location.href = n.obsidian)) : null,
@@ -1701,7 +1712,7 @@ function pageMenu(doc, n) {
     if (!isNoteDoc(doc, n) && !file) {
       for (const link of S.elsewhereLinks(doc.url, FRONTENDS)) {
         items.push(item(link.name === 'Original' ? `Open Original on ${link.site}` : link.name.startsWith('Archive.') ? `Open on ${link.name}` : `Open in ${link.name}`,
-          () => window.open(link.url, '_blank', 'noopener')));
+          () => openTab(link.url)));
       }
     }
     // Show As goes here, before Delete, once Hister names the extractors.
@@ -2357,13 +2368,13 @@ const keyboard = (() => {
     const doc = docOf(row);
     if (!doc) {
       const url = hrefOf(row);
-      if (url) window.open(url, '_blank', 'noopener');
+      if (url) openTab(url);
       return;
     }
     if (settings.rememberOpened && listSearch) api.recordOpened(doc.url, doc.title || '', listSearch);
     const n = note(doc);
     if (n && n.obsidian) location.href = n.obsidian;
-    else window.open(n && n.niwa ? n.niwa : hrefOf(row), '_blank', 'noopener');
+    else openTab(n && n.niwa ? n.niwa : hrefOf(row));
   }
   const KEYS = [
     ['j / k', 'Next / previous result'], ['h / l', 'Previous / next pill'], ['Enter, o', 'Open the result'],

@@ -245,7 +245,7 @@ struct DocumentItem: View {
                             Button("Label", systemImage: "tag") { actions.label(document) }
                                 .tint(palette.accent)
                         }
-                        if let url = URL(string: document.url) {
+                        if let url = SafeHref.url(document.url) {
                             Button("Open in Browser", systemImage: "safari") {
                                 actions.opened(document)
                                 openURL(url)
@@ -329,7 +329,7 @@ struct WebItem: View {
 
     var body: some View {
         Button {
-            if let url = URL(string: result.url) { openURL(url) }
+            if let url = SafeHref.url(result.url) { openURL(url) }
         } label: {
             WebRow(result: result, query: query, saved: saved)
         }
@@ -342,7 +342,7 @@ struct WebItem: View {
         .contextMenu {
             Button("Save to Hister…", systemImage: "bookmark") { actions.save(result) }
             Divider()
-            if let url = URL(string: result.url) {
+            if let url = SafeHref.url(result.url) {
                 Link(destination: url) { Label("Open in Safari", systemImage: "safari") }
                 ShareLink(item: url) { Label("Share…", systemImage: "square.and.arrow.up") }
                 Button("Copy Link", systemImage: "link") { Pasteboard.copy(url) }

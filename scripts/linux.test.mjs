@@ -5,6 +5,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { ShimURL, ShimURLSearchParams, installURL } from '../linux/src/url.js';
 import { newPage, addRequest, titleIn, capped, MAX_HTML_CHARACTERS } from '../linux/src/page.js';
 import * as outbox from '../linux/src/outbox.js';
@@ -332,4 +334,12 @@ test("Hister's sign-in on Linux: the file, the cookie, the rooms' id, the reques
   const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
   assert.match(http, /const cookie = hister && credentials \? histerCookie\(config, url\) : '';/);
   assert.match(http, /if \(auth \|\| token \|\| cookie \|\| Object\.keys\(extra\)\.length \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
+});
+
+// The modules and search-core in real GJS, where it's installed (the Linux
+// test machines; skipped on a Mac).
+test('the GJS self-test passes (linux/gjs/selftest.js)', { skip: spawnSync('gjs', ['--version']).error ? 'no gjs here' : false }, () => {
+  const r = spawnSync('gjs', ['-m', fileURLToPath(new URL('../linux/gjs/selftest.js', import.meta.url))], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.doesNotMatch(r.stdout, /FAIL/);
 });

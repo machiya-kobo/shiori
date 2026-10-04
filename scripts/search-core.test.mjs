@@ -1170,3 +1170,49 @@ test('a web page elsewhere: archives, and the front ends the build names (Elsewh
     { name: 'Archive.is', url: 'https://archive.is/newest/https://www.reddit.com/r/unix/' },
   ]);
 });
+
+// The same cases as SafeHrefTests.swift.
+test('a stored address becomes a link only when it is the web (SafeHref twins)', () => {
+  assert.equal(S.safeHref('https://a.example/x?y=1'), 'https://a.example/x?y=1');
+  assert.equal(S.safeHref('http://a.example'), 'http://a.example/');
+  for (const bad of ['javascript://example.com/%0Aalert(document.domain)', 'JavaScript:alert(1)', ' \tjava\nscript:alert(1)',
+    'data:text/html,<script>alert(1)</script>', 'vbscript:x', 'file:///etc/passwd', 'obsidian://open?vault=x', '', '   ', null, 42, 'not a url']) {
+    assert.equal(S.safeHref(bad), '', String(bad));
+  }
+  const page = 'https://search.example/?q=x';
+  assert.equal(S.linkHref('obsidian://open?vault=v&file=a', page), 'obsidian://open?vault=v&file=a');
+  assert.equal(S.linkHref('gemini://g.example/', page), 'gemini://g.example/');
+  assert.equal(S.linkHref('?q=y&p=2', page), 'https://search.example/?q=y&p=2');
+  assert.equal(S.linkHref('#settings', page), 'https://search.example/?q=x#settings');
+  assert.equal(S.linkHref('search.html?q=z', 'safari-web-extension://abc/search.html'), 'safari-web-extension://abc/search.html?q=z');
+  assert.equal(S.linkHref('safari-web-extension://other/search.html', 'safari-web-extension://abc/search.html'), '');
+  for (const bad of ['javascript://example.com/%0Aalert(1)', 'data:text/html,x', 'file:///etc/passwd', ' java\tscript:alert(1)']) {
+    assert.equal(S.linkHref(bad, page), '', bad);
+  }
+});
+
+test("Hister's token goes only with redirect: 'error' (S.histerFetchOptions)", () => {
+  const plain = (v) => JSON.parse(JSON.stringify(v));
+  const T = 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
+  assert.deepEqual(plain(S.histerFetchOptions(T, { method: 'POST', headers: { Accept: 'application/json' } })),
+    { method: 'POST', headers: { Accept: 'application/json', 'X-Access-Token': T }, redirect: 'error' });
+  assert.deepEqual(plain(S.histerFetchOptions('', { headers: { Accept: 'application/json' } })), { headers: { Accept: 'application/json' } });
+  assert.deepEqual(plain(S.histerFetchOptions('not a token')), {});
+});
+
+test("a page's own Settings keep only what SharedSettings.apply would, and never an address", () => {
+  const plain = (v) => JSON.parse(JSON.stringify(v));
+  const swift = readFileSync(new URL('../Shared/Settings/SharedSettings.swift', import.meta.url), 'utf8');
+  const keyName = (k) => k.trim().replace(/^Key\./, '');
+  const flags = swift.match(/static let flagKeys = \[([^\]]*)\]/)[1].split(',').map(keyName).filter(Boolean);
+  assert.deepEqual(Array.from(S.PAGE_FLAG_KEYS), flags);
+  for (const [key, list] of [['resultStyle', 'resultStyles'], ['smallWebOpen', 'smallWebOpens'], ['palette', 'palettes'], ['textSize', 'textSizes']]) {
+    const values = [...swift.match(new RegExp(`static let ${list} = \\[([^\\]]*)\\]`))[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(Array.from(S.PAGE_CHOICES[key]), values, key);
+  }
+  assert.deepEqual(plain(S.pageSettings({
+    theme: 'day', showInfobox: false, histerCount: 10, pills: ['all', '-web'], obsidianVault: 'Sample',
+    niwaURL: 'https://evil.example/', searxngURL: 'https://evil.example/', aiEnabled: true, histerCount2: 1, palette: 'nope', textSize: 'huge',
+  })), { showInfobox: false, histerCount: 10, theme: 'day', obsidianVault: 'Sample', pills: ['all', '-web'] });
+  assert.deepEqual(plain(S.pageSettings(null)), {});
+});

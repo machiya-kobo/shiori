@@ -224,6 +224,50 @@
     return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
   }
 
+  // --- safe links (HisterKit's SafeHref is the twin) --------------------------
+
+  /**
+   * A stored or fetched address (Hister's, Kura's, SearXNG's…) as a link
+   * or a navigation: http(s) only, parsed as the browser would (it drops
+   * tabs, newlines and leading control characters, so "java\tscript:" is
+   * javascript:), else ''. `javascript://example.com/%0Aalert(1)` is a
+   * valid URL with a host: only the scheme tells. A file:// page goes
+   * through localFileURL (Hister's copy), never here.
+   */
+  function safeHref(url) {
+    if (typeof url !== 'string' || !url.trim()) return '';
+    let u;
+    try {
+      u = new URL(url);
+    } catch (_) {
+      return '';
+    }
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : '';
+  }
+
+  // The schemes Shiori itself builds links in, besides the web's.
+  const LINK_SCHEMES = ['http:', 'https:', 'gemini:', 'gopher:', 'obsidian:'];
+
+  /**
+   * Any href a page sets (its element builder): the web, the schemes Shiori
+   * builds (Obsidian, Gemini, Gopher), or one of the page's own (relative to
+   * `base`, the page's address: the extension's search.html?q=…), else ''.
+   * Never javascript:, data:, file: or any other.
+   */
+  function linkHref(value, base) {
+    if (typeof value !== 'string' || !value.trim()) return '';
+    let u, own;
+    try {
+      own = new URL(base);
+      u = new URL(value, own);
+    } catch (_) {
+      return '';
+    }
+    if (LINK_SCHEMES.includes(u.protocol)) return u.href;
+    // Same scheme and host (an extension page's origin reads "null").
+    return u.protocol === own.protocol && own.host && u.host === own.host ? u.href : '';
+  }
+
   /** SearXNG's "cached" link: the page on the Wayback Machine. */
   function cachedURL(url) {
     return 'https://web.archive.org/web/' + url;
@@ -2031,6 +2075,44 @@
   const PILL_KEYS = PILLS.map(([key]) => key);
 
   /** The setting, checked: known keys, each once, All shown; [] for anything else. */
+  // --- what a page's own Settings may change (SharedSettings.apply's twin) ----
+
+  const PAGE_FLAG_KEYS = [
+    'combinedSearch', 'showInfobox', 'showRelated', 'showThumbnails', 'histerInGeneral',
+    'histerTab', 'vaultInGeneral', 'vaultTab', 'webResults', 'searchHistory', 'previewPane',
+    'previewImages', 'rememberOpened', 'searchFilters', 'semanticSearch', 'foldRepeats',
+    'labelSuggestions', 'aiAnswer', 'showOpened', 'smallWebTab',
+  ];
+  const PAGE_COUNT_KEYS = ['histerCount', 'vaultCount'];
+  const PAGE_COUNTS = [3, 5, 10, 20];
+  const PAGE_CHOICES = {
+    textSize: ['system', 'xSmall', 'small', 'medium', 'large', 'xLarge', 'xxLarge', 'xxxLarge'],
+    theme: ['system', 'day', 'night'],
+    palette: ['tokyo-night', 'solarized', 'nord', 'dracula', 'catppuccin', 'gruvbox', 'rose-pine', 'kanagawa', 'everforest', 'ayu'],
+    resultStyle: ['tint', 'solid', 'bar', 'none'],
+    smallWebOpen: ['gateway', 'direct'],
+  };
+
+  /**
+   * What a page's own Settings (the results page's gear) may keep where no
+   * app judges it: SharedSettings.apply's keys, types and values, and never
+   * an address (searxngURL, niwaURL, konbiniURL…): those decide where the
+   * sign-ins go, so only the app sets them. Anything else is dropped.
+   */
+  function pageSettings(values) {
+    const out = {};
+    if (!values || typeof values !== 'object') return out;
+    for (const key of PAGE_FLAG_KEYS) if (typeof values[key] === 'boolean') out[key] = values[key];
+    for (const key of PAGE_COUNT_KEYS) if (Number.isInteger(values[key]) && PAGE_COUNTS.includes(values[key])) out[key] = values[key];
+    for (const [key, allowed] of Object.entries(PAGE_CHOICES)) {
+      if (typeof values[key] === 'string' && allowed.includes(values[key])) out[key] = values[key];
+    }
+    const vault = values.obsidianVault;
+    if (typeof vault === 'string' && vault !== '' && [...vault].length <= 200) out.obsidianVault = vault;
+    if (Array.isArray(values.pills) && (!values.pills.length || pillSetting(values.pills).length)) out.pills = pillSetting(values.pills);
+    return out;
+  }
+
   function pillSetting(raw) {
     if (!Array.isArray(raw) || raw.length > PILL_KEYS.length) return [];
     const out = [];
@@ -2221,6 +2303,18 @@
   function histerHeaders(token, headers = {}) {
     const t = histerToken(token);
     return t ? { ...headers, 'X-Access-Token': t } : { ...headers };
+  }
+
+  /**
+   * A fetch's options for Hister: the token's header where there is one,
+   * and then `redirect: 'error'`, so the token never follows a redirect to
+   * another host (fetch keeps custom headers across one). Without a token,
+   * `init` as given.
+   */
+  function histerFetchOptions(token, init = {}) {
+    const t = histerToken(token);
+    if (!t) return { ...init };
+    return { ...init, headers: { ...(init.headers || {}), 'X-Access-Token': t }, redirect: 'error' };
   }
 
   /** A device's label for pairing: no control characters, at most 64 characters, `fallback` when empty. */
@@ -2432,6 +2526,10 @@
     roomLinks,
     fieldButtons,
     histerToken,
+    histerFetchOptions,
+    pageSettings,
+    PAGE_FLAG_KEYS,
+    PAGE_CHOICES,
     histerHeaders,
     asksForCode,
     codeRepoKey,
@@ -2492,6 +2590,8 @@
     duration,
     cachedURL,
     archiveURL,
+    safeHref,
+    linkHref,
     frontendInstances,
     frontendLinks,
     originalLink,

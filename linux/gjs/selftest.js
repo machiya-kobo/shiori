@@ -27,7 +27,7 @@ function check(name, got, want) {
 
 check('URL is the shim', typeof URL === 'function' && new URL('https://www.Example.com:443/a?b=1').host, 'www.example.com');
 check('normalizeURL', S.normalizeURL('https://www.Example.com/a/b/?utm_source=x&q=1'), 'example.com/a/b?q=1');
-check('histerText', S.histerText('machi'), 'machi* -label:vault -metadata.source:vault -type:local');
+check('histerText', S.histerText('machi'), '(machi|machi*) -label:vault -metadata.source:vault -type:local -metadata.source:code');
 const tokenConfig = { server: 'https://h.example/', smallweb: 'https://sw.example/', histerToken: 'ABCDEFGHJKLMNPQRSTUVWXYZ23' };
 check('histerHeaders (server)', histerHeaders(tokenConfig, 'https://h.example/search', S), { 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' });
 check('histerHeaders (gateway)', histerHeaders(tokenConfig, 'https://sw.example/api/save', S), {});

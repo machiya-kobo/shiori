@@ -5,6 +5,35 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.5.7 (2026-10-05)
+
+### Security
+
+- **A stored address is a link only when it's the web.** A page in Hister
+  whose address was `javascript:…` became a link that ran script on the
+  search page (and could on the web app). Every link the pages draw now
+  goes through one check (`S.linkHref`/`S.safeHref`, HisterKit's
+  `SafeHref` in the apps): http(s), and only the schemes Shiori builds
+  itself (Obsidian, Gemini, Gopher).
+- **Hister's token never follows a redirect.** Safari's extension sent
+  `X-Access-Token` along a redirect to another host; every request
+  carrying it now refuses redirects.
+- **Only Shiori's own pages change its settings in Safari.** A web page's
+  content script could ask the extension to change them, and with the app
+  out of reach any value was kept (addresses decide where the sign-ins
+  go). Now only the extension's pages may, and without the app only what
+  the app's own whitelist allows is kept, never an address.
+
+### Fixed
+
+- On the search page, Images has its own colour (green): it was the same
+  yellow as Web, side by side, in every theme.
+- On the search page's Pages, Notes, Files and Code, the vault and the
+  sort sit in a row above the list instead of the header, which crowded a
+  phone's.
+- Linux's GJS self-test expected an old query; the Node tests run it
+  where gjs is installed.
+
 ## 0.5.6 (2026-10-05)
 
 ### Fixed

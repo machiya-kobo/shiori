@@ -222,6 +222,8 @@
               headers,
               body: item.body,
               credentials: 'include',
+              // The token never follows a redirect to another host.
+              ...(histerToken ? { redirect: 'error' } : {}),
             });
           } catch (_) {
             return; // still offline; keep everything
@@ -350,6 +352,11 @@
     const url = requestURL(input);
     const method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
     const endpoint = url ? await histerEndpoint(url) : '';
+    // A request to Hister carrying its token (upstream's own, Shiori's)
+    // never follows a redirect: fetch would keep the header for any host.
+    if (endpoint && init && Object.keys(plainHeaders(init.headers)).some((k) => k.toLowerCase() === 'x-access-token')) {
+      init = { ...init, redirect: 'error' };
+    }
 
     if (endpoint === 'api/rules' && method === 'GET') {
       try {
@@ -750,6 +757,11 @@ const shioriMachiya = (() => {
     await chrome.storage.local.set({ [LEFT_KEY]: left });
   }
 
+  /** An extension page of this extension (the results page, its settings), never a content script. */
+  const fromOwnPage = (sender) =>
+    !!sender && typeof sender.url === 'string' && typeof chrome.runtime.getURL === 'function' &&
+    sender.url.startsWith(chrome.runtime.getURL('')) && (!sender.id || sender.id === chrome.runtime.id);
+
   const onMessage = chrome.runtime.onMessage;
   const addListener = onMessage.addListener.bind(onMessage);
   onMessage.addListener = function withoutShioriMessages(listener) {
@@ -783,14 +795,21 @@ const shioriMachiya = (() => {
     if (request.shiori === 'set-settings') {
       // The results page's own Settings: into the host (the app's App
       // Group, the one home for them), then a fresh copy back for the page.
-      if (!request.values || typeof request.values !== 'object') return false;
+      // Only the extension's own pages, never a content script: a web page
+      // could otherwise move where the sign-ins go.
+      if (!request.values || typeof request.values !== 'object' || !fromOwnPage(sender)) {
+        sendResponse({ ok: false });
+        return false;
+      }
       Promise.resolve()
         .then(() => shioriHost.setSettings(request.values))
         .then(
           () => refreshSettings({ after: true }).then(readSettings),
           async () => {
-            // No app to answer: keep the change here, until the app has a say.
-            const next = { ...(await readSettings()), ...request.values };
+            // No app to answer: keep the change here, until the app has a
+            // say: only what the app's whitelist would keep, never an address.
+            const judged = globalThis.ShioriSearch ? globalThis.ShioriSearch.pageSettings(request.values) : {};
+            const next = { ...(await readSettings()), ...judged };
             await chrome.storage.local.set({ [SETTINGS_KEY]: next });
             return next;
           },

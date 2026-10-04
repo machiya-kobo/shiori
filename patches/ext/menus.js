@@ -50,9 +50,8 @@
   async function holds(base, urls) {
     const q = S.urlLookupQuery(urls);
     if (!q) return false;
-    const r = await fetch(`${base}search?format=json&query=${encodeURIComponent(JSON.stringify({ text: q, limit: 20 }))}`, {
-      headers: S.histerHeaders(token, { Accept: 'application/json' }),
-    });
+    const r = await fetch(`${base}search?format=json&query=${encodeURIComponent(JSON.stringify({ text: q, limit: 20 }))}`,
+      S.histerFetchOptions(token, { headers: { Accept: 'application/json' } }));
     if (!r.ok) throw new Error(`Hister answered ${r.status}`);
     const docs = (await r.json()).documents || [];
     const wanted = new Set(urls.flatMap((u) => [u, u.endsWith('/') ? u.slice(0, -1) : u + '/']));
@@ -134,7 +133,7 @@
     const body = { url: page.url, title: titleIn(page.html), html: page.html, metadata: { via: 'context-menu' } };
     let r;
     try {
-      r = await fetch(`${base}api/add`, { method: 'POST', headers: S.histerHeaders(token, { 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+      r = await fetch(`${base}api/add`, S.histerFetchOptions(token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
     } catch (_) {
       return { outcome: 'failed', reason: 'Hister is out of reach, and its skip rules are unknown here yet' };
     }

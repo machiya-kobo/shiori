@@ -3,7 +3,7 @@
 :root[data-palette="solarized"] {
   --bg: #002b36; --card: #00212b; --raised: #073642; --line: #0a3542; --line2: #2b5662;
   --text: #93a1a1; --secondary: #839496; --accent: #3295da; --hit: #b58900; --kept: #859900; --visited: #2aa198;
-  --tab-general: #2aa198; --tab-images: #b58900; --tab-videos: #e56865; --tab-news: #de66a0;
+  --tab-general: #2aa198; --tab-images: #859900; --tab-videos: #e56865; --tab-news: #de66a0;
   --notes: #e96833; --konbini: #de66a0; --niwa: #859900; --web: #b58900; --obsidian: #2aa198; --smallweb: #2aa198; --danger: #e56865;
   --chip0: #3295da; --chip1: #2aa198; --chip2: #de66a0; --chip3: #859900; --chip4: #e96833; --chip5: #e56865; --chip6: #b58900; --chip7: #2aa198;
   --rooms-bg: #00212b; --rooms-on: #073642; --rooms-text: #93a1a1; --rooms-muted: #8b9b9d;
@@ -14,7 +14,7 @@
 :root[data-palette="solarized"][data-theme="day"] {
   --bg: #fdf6e3; --card: #fffbf0; --raised: #eee8d5; --line: #e6dfc8; --line2: #d3cbb0;
   --text: #586e75; --secondary: #5b6f76; --accent: #1e70a9; --hit: #876600; --kept: #627000; --visited: #1f7770;
-  --tab-general: #1f7770; --tab-images: #876600; --tab-videos: #cf2623; --tab-news: #c52b76;
+  --tab-general: #1f7770; --tab-images: #627000; --tab-videos: #cf2623; --tab-news: #c52b76;
   --notes: #bb4514; --konbini: #c52b76; --niwa: #627000; --web: #876600; --obsidian: #1f7770; --smallweb: #1f7770; --danger: #cf2623;
   --chip0: #1e70a9; --chip1: #1f7770; --chip2: #c52b76; --chip3: #627000; --chip4: #bb4514; --chip5: #cf2623; --chip6: #876600; --chip7: #1f7770;
   --rooms-bg: #eee8d5; --rooms-on: #fffbf0; --rooms-text: #566b72; --rooms-muted: #586c73;
@@ -26,7 +26,7 @@
   :root[data-palette="solarized"]:not([data-theme="night"]) {
     --bg: #fdf6e3; --card: #fffbf0; --raised: #eee8d5; --line: #e6dfc8; --line2: #d3cbb0;
     --text: #586e75; --secondary: #5b6f76; --accent: #1e70a9; --hit: #876600; --kept: #627000; --visited: #1f7770;
-    --tab-general: #1f7770; --tab-images: #876600; --tab-videos: #cf2623; --tab-news: #c52b76;
+    --tab-general: #1f7770; --tab-images: #627000; --tab-videos: #cf2623; --tab-news: #c52b76;
     --notes: #bb4514; --konbini: #c52b76; --niwa: #627000; --web: #876600; --obsidian: #1f7770; --smallweb: #1f7770; --danger: #cf2623;
     --chip0: #1e70a9; --chip1: #1f7770; --chip2: #c52b76; --chip3: #627000; --chip4: #bb4514; --chip5: #cf2623; --chip6: #876600; --chip7: #1f7770;
     --rooms-bg: #eee8d5; --rooms-on: #fffbf0; --rooms-text: #566b72; --rooms-muted: #586c73;
@@ -39,7 +39,7 @@
 :root[data-palette="nord"] {
   --bg: #2e3440; --card: #272c36; --raised: #3b4252; --line: #373e4c; --line2: #4c566a;
   --text: #eceff4; --secondary: #d8dee9; --accent: #8aa7c5; --hit: #ebcb8b; --kept: #a3be8c; --visited: #88c0d0;
-  --tab-general: #88c0d0; --tab-images: #ebcb8b; --tab-videos: #d39299; --tab-news: #bb99b5;
+  --tab-general: #88c0d0; --tab-images: #a3be8c; --tab-videos: #d39299; --tab-news: #bb99b5;
   --notes: #d5947f; --konbini: #bb99b5; --niwa: #a3be8c; --web: #ebcb8b; --obsidian: #8fbcbb; --smallweb: #8fbcbb; --danger: #d39299;
   --chip0: #8aa7c5; --chip1: #88c0d0; --chip2: #bb99b5; --chip3: #a3be8c; --chip4: #d5947f; --chip5: #d39299; --chip6: #ebcb8b; --chip7: #8fbcbb;
   --rooms-bg: #272c36; --rooms-on: #3b4252; --rooms-text: #eceff4; --rooms-muted: #aeb6c4;
@@ -50,7 +50,7 @@
 :root[data-palette="nord"][data-theme="day"] {
   --bg: #eceff4; --card: #f6f8fb; --raised: #e5e9f0; --line: #d8dee9; --line2: #c2cad6;
   --text: #2e3440; --secondary: #3b4252; --accent: #4c6d94; --hit: #896218; --kept: #587241; --visited: #337183;
-  --tab-general: #337183; --tab-images: #896218; --tab-videos: #b14852; --tab-news: #885b81;
+  --tab-general: #337183; --tab-images: #587241; --tab-videos: #b14852; --tab-news: #885b81;
   --notes: #a85237; --konbini: #885b81; --niwa: #587241; --web: #896218; --obsidian: #447271; --smallweb: #447271; --danger: #b14852;
   --chip0: #4c6d94; --chip1: #337183; --chip2: #885b81; --chip3: #587241; --chip4: #a85237; --chip5: #b14852; --chip6: #896218; --chip7: #447271;
   --rooms-bg: #e5e9f0; --rooms-on: #f6f8fb; --rooms-text: #2e3440; --rooms-muted: #4c566a;
@@ -62,7 +62,7 @@
   :root[data-palette="nord"]:not([data-theme="night"]) {
     --bg: #eceff4; --card: #f6f8fb; --raised: #e5e9f0; --line: #d8dee9; --line2: #c2cad6;
     --text: #2e3440; --secondary: #3b4252; --accent: #4c6d94; --hit: #896218; --kept: #587241; --visited: #337183;
-    --tab-general: #337183; --tab-images: #896218; --tab-videos: #b14852; --tab-news: #885b81;
+    --tab-general: #337183; --tab-images: #587241; --tab-videos: #b14852; --tab-news: #885b81;
     --notes: #a85237; --konbini: #885b81; --niwa: #587241; --web: #896218; --obsidian: #447271; --smallweb: #447271; --danger: #b14852;
     --chip0: #4c6d94; --chip1: #337183; --chip2: #885b81; --chip3: #587241; --chip4: #a85237; --chip5: #b14852; --chip6: #896218; --chip7: #447271;
     --rooms-bg: #e5e9f0; --rooms-on: #f6f8fb; --rooms-text: #2e3440; --rooms-muted: #4c566a;
@@ -75,7 +75,7 @@
 :root[data-palette="dracula"] {
   --bg: #282a36; --card: #21222c; --raised: #44475a; --line: #343746; --line2: #4d5066;
   --text: #f8f8f2; --secondary: #e2e2dc; --accent: #bd93f9; --hit: #f1fa8c; --kept: #50fa7b; --visited: #8be9fd;
-  --tab-general: #8be9fd; --tab-images: #f1fa8c; --tab-videos: #ff6f6f; --tab-news: #ff79c6;
+  --tab-general: #8be9fd; --tab-images: #50fa7b; --tab-videos: #ff6f6f; --tab-news: #ff79c6;
   --notes: #ffb86c; --konbini: #ff79c6; --niwa: #50fa7b; --web: #f1fa8c; --obsidian: #8be9fd; --smallweb: #8be9fd; --danger: #ff6f6f;
   --chip0: #bd93f9; --chip1: #8be9fd; --chip2: #ff79c6; --chip3: #50fa7b; --chip4: #ffb86c; --chip5: #ff6f6f; --chip6: #f1fa8c; --chip7: #8be9fd;
   --rooms-bg: #21222c; --rooms-on: #44475a; --rooms-text: #f8f8f2; --rooms-muted: #b6b9cc;
@@ -86,7 +86,7 @@
 :root[data-palette="dracula"][data-theme="day"] {
   --bg: #fffbeb; --card: #ffffff; --raised: #f3efdd; --line: #e8e3cc; --line2: #cfcfde;
   --text: #1f1f1f; --secondary: #3a3a3a; --accent: #644ac9; --hit: #806a14; --kept: #14710a; --visited: #036a96;
-  --tab-general: #036a96; --tab-images: #806a14; --tab-videos: #c73929; --tab-news: #a3144d;
+  --tab-general: #036a96; --tab-images: #14710a; --tab-videos: #c73929; --tab-news: #a3144d;
   --notes: #a34d14; --konbini: #a3144d; --niwa: #14710a; --web: #806a14; --obsidian: #036a96; --smallweb: #036a96; --danger: #c73929;
   --chip0: #644ac9; --chip1: #036a96; --chip2: #a3144d; --chip3: #14710a; --chip4: #a34d14; --chip5: #c73929; --chip6: #806a14; --chip7: #036a96;
   --rooms-bg: #f3efdd; --rooms-on: #ffffff; --rooms-text: #1f1f1f; --rooms-muted: #4f4b38;
@@ -98,7 +98,7 @@
   :root[data-palette="dracula"]:not([data-theme="night"]) {
     --bg: #fffbeb; --card: #ffffff; --raised: #f3efdd; --line: #e8e3cc; --line2: #cfcfde;
     --text: #1f1f1f; --secondary: #3a3a3a; --accent: #644ac9; --hit: #806a14; --kept: #14710a; --visited: #036a96;
-    --tab-general: #036a96; --tab-images: #806a14; --tab-videos: #c73929; --tab-news: #a3144d;
+    --tab-general: #036a96; --tab-images: #14710a; --tab-videos: #c73929; --tab-news: #a3144d;
     --notes: #a34d14; --konbini: #a3144d; --niwa: #14710a; --web: #806a14; --obsidian: #036a96; --smallweb: #036a96; --danger: #c73929;
     --chip0: #644ac9; --chip1: #036a96; --chip2: #a3144d; --chip3: #14710a; --chip4: #a34d14; --chip5: #c73929; --chip6: #806a14; --chip7: #036a96;
     --rooms-bg: #f3efdd; --rooms-on: #ffffff; --rooms-text: #1f1f1f; --rooms-muted: #4f4b38;
@@ -111,7 +111,7 @@
 :root[data-palette="catppuccin"] {
   --bg: #1e1e2e; --card: #181825; --raised: #313244; --line: #2a2a3c; --line2: #45475a;
   --text: #cdd6f4; --secondary: #bac2de; --accent: #89b4fa; --hit: #f9e2af; --kept: #a6e3a1; --visited: #89dceb;
-  --tab-general: #89dceb; --tab-images: #f9e2af; --tab-videos: #f38ba8; --tab-news: #cba6f7;
+  --tab-general: #89dceb; --tab-images: #a6e3a1; --tab-videos: #f38ba8; --tab-news: #cba6f7;
   --notes: #fab387; --konbini: #cba6f7; --niwa: #a6e3a1; --web: #f9e2af; --obsidian: #94e2d5; --smallweb: #94e2d5; --danger: #f38ba8;
   --chip0: #89b4fa; --chip1: #89dceb; --chip2: #cba6f7; --chip3: #a6e3a1; --chip4: #fab387; --chip5: #f38ba8; --chip6: #f9e2af; --chip7: #94e2d5;
   --rooms-bg: #181825; --rooms-on: #313244; --rooms-text: #cdd6f4; --rooms-muted: #a6adc8;
@@ -122,7 +122,7 @@
 :root[data-palette="catppuccin"][data-theme="day"] {
   --bg: #eff1f5; --card: #f8f9fb; --raised: #e6e9ef; --line: #dce0e8; --line2: #bcc0cc;
   --text: #4c4f69; --secondary: #5c5f77; --accent: #0d5af5; --hit: #925d13; --kept: #307820; --visited: #03709c;
-  --tab-general: #03709c; --tab-images: #925d13; --tab-videos: #d00f38; --tab-news: #8737ef;
+  --tab-general: #03709c; --tab-images: #307820; --tab-videos: #d00f38; --tab-news: #8737ef;
   --notes: #b64301; --konbini: #8737ef; --niwa: #307820; --web: #925d13; --obsidian: #12757a; --smallweb: #12757a; --danger: #d00f38;
   --chip0: #0d5af5; --chip1: #03709c; --chip2: #8737ef; --chip3: #307820; --chip4: #b64301; --chip5: #d00f38; --chip6: #925d13; --chip7: #12757a;
   --rooms-bg: #e6e9ef; --rooms-on: #f8f9fb; --rooms-text: #4c4f69; --rooms-muted: #65687c;
@@ -134,7 +134,7 @@
   :root[data-palette="catppuccin"]:not([data-theme="night"]) {
     --bg: #eff1f5; --card: #f8f9fb; --raised: #e6e9ef; --line: #dce0e8; --line2: #bcc0cc;
     --text: #4c4f69; --secondary: #5c5f77; --accent: #0d5af5; --hit: #925d13; --kept: #307820; --visited: #03709c;
-    --tab-general: #03709c; --tab-images: #925d13; --tab-videos: #d00f38; --tab-news: #8737ef;
+    --tab-general: #03709c; --tab-images: #307820; --tab-videos: #d00f38; --tab-news: #8737ef;
     --notes: #b64301; --konbini: #8737ef; --niwa: #307820; --web: #925d13; --obsidian: #12757a; --smallweb: #12757a; --danger: #d00f38;
     --chip0: #0d5af5; --chip1: #03709c; --chip2: #8737ef; --chip3: #307820; --chip4: #b64301; --chip5: #d00f38; --chip6: #925d13; --chip7: #12757a;
     --rooms-bg: #e6e9ef; --rooms-on: #f8f9fb; --rooms-text: #4c4f69; --rooms-muted: #65687c;
@@ -147,7 +147,7 @@
 :root[data-palette="gruvbox"] {
   --bg: #282828; --card: #1d2021; --raised: #3c3836; --line: #32302f; --line2: #504945;
   --text: #ebdbb2; --secondary: #d5c4a1; --accent: #83a598; --hit: #fabd2f; --kept: #b8bb26; --visited: #83a598;
-  --tab-general: #83a598; --tab-images: #fabd2f; --tab-videos: #fb6452; --tab-news: #d3869b;
+  --tab-general: #83a598; --tab-images: #b8bb26; --tab-videos: #fb6452; --tab-news: #d3869b;
   --notes: #fe8019; --konbini: #d3869b; --niwa: #b8bb26; --web: #fabd2f; --obsidian: #8ec07c; --smallweb: #8ec07c; --danger: #fb6452;
   --chip0: #83a598; --chip1: #83a598; --chip2: #d3869b; --chip3: #b8bb26; --chip4: #fe8019; --chip5: #fb6452; --chip6: #fabd2f; --chip7: #8ec07c;
   --rooms-bg: #1d2021; --rooms-on: #3c3836; --rooms-text: #ebdbb2; --rooms-muted: #bdae93;
@@ -158,7 +158,7 @@
 :root[data-palette="gruvbox"][data-theme="day"] {
   --bg: #fbf1c7; --card: #f9f5d7; --raised: #ebdbb2; --line: #e5d5a8; --line2: #d5c4a1;
   --text: #3c3836; --secondary: #504945; --accent: #076678; --hit: #8c5b10; --kept: #6b670c; --visited: #076678;
-  --tab-general: #076678; --tab-images: #8c5b10; --tab-videos: #9d0006; --tab-news: #8f3f71;
+  --tab-general: #076678; --tab-images: #6b670c; --tab-videos: #9d0006; --tab-news: #8f3f71;
   --notes: #af3a03; --konbini: #8f3f71; --niwa: #6b670c; --web: #8c5b10; --obsidian: #3c6f50; --smallweb: #3c6f50; --danger: #9d0006;
   --chip0: #076678; --chip1: #076678; --chip2: #8f3f71; --chip3: #6b670c; --chip4: #af3a03; --chip5: #9d0006; --chip6: #8c5b10; --chip7: #3c6f50;
   --rooms-bg: #ebdbb2; --rooms-on: #f9f5d7; --rooms-text: #3c3836; --rooms-muted: #665c54;
@@ -170,7 +170,7 @@
   :root[data-palette="gruvbox"]:not([data-theme="night"]) {
     --bg: #fbf1c7; --card: #f9f5d7; --raised: #ebdbb2; --line: #e5d5a8; --line2: #d5c4a1;
     --text: #3c3836; --secondary: #504945; --accent: #076678; --hit: #8c5b10; --kept: #6b670c; --visited: #076678;
-    --tab-general: #076678; --tab-images: #8c5b10; --tab-videos: #9d0006; --tab-news: #8f3f71;
+    --tab-general: #076678; --tab-images: #6b670c; --tab-videos: #9d0006; --tab-news: #8f3f71;
     --notes: #af3a03; --konbini: #8f3f71; --niwa: #6b670c; --web: #8c5b10; --obsidian: #3c6f50; --smallweb: #3c6f50; --danger: #9d0006;
     --chip0: #076678; --chip1: #076678; --chip2: #8f3f71; --chip3: #6b670c; --chip4: #af3a03; --chip5: #9d0006; --chip6: #8c5b10; --chip7: #3c6f50;
     --rooms-bg: #ebdbb2; --rooms-on: #f9f5d7; --rooms-text: #3c3836; --rooms-muted: #665c54;
@@ -183,7 +183,7 @@
 :root[data-palette="rose-pine"] {
   --bg: #191724; --card: #14121d; --raised: #26233a; --line: #21202e; --line2: #403d52;
   --text: #e0def4; --secondary: #c8c5e0; --accent: #9ccfd8; --hit: #f6c177; --kept: #4094b6; --visited: #9ccfd8;
-  --tab-general: #9ccfd8; --tab-images: #f6c177; --tab-videos: #eb6f92; --tab-news: #c4a7e7;
+  --tab-general: #9ccfd8; --tab-images: #4094b6; --tab-videos: #eb6f92; --tab-news: #c4a7e7;
   --notes: #ebbcba; --konbini: #c4a7e7; --niwa: #4094b6; --web: #f6c177; --obsidian: #9ccfd8; --smallweb: #9ccfd8; --danger: #eb6f92;
   --chip0: #9ccfd8; --chip1: #9ccfd8; --chip2: #c4a7e7; --chip3: #4094b6; --chip4: #ebbcba; --chip5: #eb6f92; --chip6: #f6c177; --chip7: #9ccfd8;
   --rooms-bg: #14121d; --rooms-on: #26233a; --rooms-text: #e0def4; --rooms-muted: #908caa;
@@ -194,7 +194,7 @@
 :root[data-palette="rose-pine"][data-theme="day"] {
   --bg: #faf4ed; --card: #fffaf3; --raised: #f2e9e1; --line: #dfdad9; --line2: #cecacd;
   --text: #575279; --secondary: #6c688c; --accent: #286983; --hit: #995f10; --kept: #43737c; --visited: #43737c;
-  --tab-general: #43737c; --tab-images: #995f10; --tab-videos: #a75068; --tab-news: #7a6196;
+  --tab-general: #43737c; --tab-images: #43737c; --tab-videos: #a75068; --tab-news: #7a6196;
   --notes: #be413b; --konbini: #7a6196; --niwa: #43737c; --web: #995f10; --obsidian: #43737c; --smallweb: #43737c; --danger: #a75068;
   --chip0: #286983; --chip1: #43737c; --chip2: #7a6196; --chip3: #43737c; --chip4: #be413b; --chip5: #a75068; --chip6: #995f10; --chip7: #43737c;
   --rooms-bg: #f2e9e1; --rooms-on: #fffaf3; --rooms-text: #575279; --rooms-muted: #6a6683;
@@ -206,7 +206,7 @@
   :root[data-palette="rose-pine"]:not([data-theme="night"]) {
     --bg: #faf4ed; --card: #fffaf3; --raised: #f2e9e1; --line: #dfdad9; --line2: #cecacd;
     --text: #575279; --secondary: #6c688c; --accent: #286983; --hit: #995f10; --kept: #43737c; --visited: #43737c;
-    --tab-general: #43737c; --tab-images: #995f10; --tab-videos: #a75068; --tab-news: #7a6196;
+    --tab-general: #43737c; --tab-images: #43737c; --tab-videos: #a75068; --tab-news: #7a6196;
     --notes: #be413b; --konbini: #7a6196; --niwa: #43737c; --web: #995f10; --obsidian: #43737c; --smallweb: #43737c; --danger: #a75068;
     --chip0: #286983; --chip1: #43737c; --chip2: #7a6196; --chip3: #43737c; --chip4: #be413b; --chip5: #a75068; --chip6: #995f10; --chip7: #43737c;
     --rooms-bg: #f2e9e1; --rooms-on: #fffaf3; --rooms-text: #575279; --rooms-muted: #6a6683;
@@ -219,7 +219,7 @@
 :root[data-palette="kanagawa"] {
   --bg: #1f1f28; --card: #16161d; --raised: #2a2a37; --line: #252530; --line2: #363646;
   --text: #dcd7ba; --secondary: #c8c093; --accent: #7e9cd8; --hit: #e6c384; --kept: #98bb6c; --visited: #7fb4ca;
-  --tab-general: #7fb4ca; --tab-images: #e6c384; --tab-videos: #e46876; --tab-news: #9984bb;
+  --tab-general: #7fb4ca; --tab-images: #98bb6c; --tab-videos: #e46876; --tab-news: #9984bb;
   --notes: #ffa066; --konbini: #9984bb; --niwa: #98bb6c; --web: #e6c384; --obsidian: #7aa89f; --smallweb: #7aa89f; --danger: #e46876;
   --chip0: #7e9cd8; --chip1: #7fb4ca; --chip2: #9984bb; --chip3: #98bb6c; --chip4: #ffa066; --chip5: #e46876; --chip6: #e6c384; --chip7: #7aa89f;
   --rooms-bg: #16161d; --rooms-on: #2a2a37; --rooms-text: #dcd7ba; --rooms-muted: #a6a69c;
@@ -230,7 +230,7 @@
 :root[data-palette="kanagawa"][data-theme="day"] {
   --bg: #f2ecbc; --card: #f7f3d6; --raised: #e5ddb0; --line: #dcd5ac; --line2: #d5cea3;
   --text: #545464; --secondary: #43436c; --accent: #4b6798; --hit: #6d6839; --kept: #586e3e; --visited: #3c6d7e;
-  --tab-general: #3c6d7e; --tab-images: #6d6839; --tab-videos: #b93548; --tab-news: #624c83;
+  --tab-general: #3c6d7e; --tab-images: #586e3e; --tab-videos: #b93548; --tab-news: #624c83;
   --notes: #9c5300; --konbini: #624c83; --niwa: #586e3e; --web: #6d6839; --obsidian: #4e6c67; --smallweb: #4e6c67; --danger: #b93548;
   --chip0: #4b6798; --chip1: #3c6d7e; --chip2: #624c83; --chip3: #586e3e; --chip4: #9c5300; --chip5: #b93548; --chip6: #6d6839; --chip7: #4e6c67;
   --rooms-bg: #e5ddb0; --rooms-on: #f7f3d6; --rooms-text: #545464; --rooms-muted: #636155;
@@ -242,7 +242,7 @@
   :root[data-palette="kanagawa"]:not([data-theme="night"]) {
     --bg: #f2ecbc; --card: #f7f3d6; --raised: #e5ddb0; --line: #dcd5ac; --line2: #d5cea3;
     --text: #545464; --secondary: #43436c; --accent: #4b6798; --hit: #6d6839; --kept: #586e3e; --visited: #3c6d7e;
-    --tab-general: #3c6d7e; --tab-images: #6d6839; --tab-videos: #b93548; --tab-news: #624c83;
+    --tab-general: #3c6d7e; --tab-images: #586e3e; --tab-videos: #b93548; --tab-news: #624c83;
     --notes: #9c5300; --konbini: #624c83; --niwa: #586e3e; --web: #6d6839; --obsidian: #4e6c67; --smallweb: #4e6c67; --danger: #b93548;
     --chip0: #4b6798; --chip1: #3c6d7e; --chip2: #624c83; --chip3: #586e3e; --chip4: #9c5300; --chip5: #b93548; --chip6: #6d6839; --chip7: #4e6c67;
     --rooms-bg: #e5ddb0; --rooms-on: #f7f3d6; --rooms-text: #545464; --rooms-muted: #636155;
@@ -255,7 +255,7 @@
 :root[data-palette="everforest"] {
   --bg: #2d353b; --card: #232a2e; --raised: #343f44; --line: #323c41; --line2: #475258;
   --text: #d3c6aa; --secondary: #c0b597; --accent: #7fbbb3; --hit: #dbbc7f; --kept: #a7c080; --visited: #7fbbb3;
-  --tab-general: #7fbbb3; --tab-images: #dbbc7f; --tab-videos: #e78284; --tab-news: #d699b6;
+  --tab-general: #7fbbb3; --tab-images: #a7c080; --tab-videos: #e78284; --tab-news: #d699b6;
   --notes: #e69875; --konbini: #d699b6; --niwa: #a7c080; --web: #dbbc7f; --obsidian: #83c092; --smallweb: #83c092; --danger: #e78284;
   --chip0: #7fbbb3; --chip1: #7fbbb3; --chip2: #d699b6; --chip3: #a7c080; --chip4: #e69875; --chip5: #e78284; --chip6: #dbbc7f; --chip7: #83c092;
   --rooms-bg: #232a2e; --rooms-on: #343f44; --rooms-text: #d3c6aa; --rooms-muted: #a0aba3;
@@ -266,7 +266,7 @@
 :root[data-palette="everforest"][data-theme="day"] {
   --bg: #fdf6e3; --card: #fffbef; --raised: #efebd4; --line: #e6e2cc; --line2: #e0dcc7;
   --text: #5c6a72; --secondary: #5c6a72; --accent: #2c7196; --hit: #8a6300; --kept: #627001; --visited: #2c7196;
-  --tab-general: #2c7196; --tab-images: #8a6300; --tab-videos: #d60c09; --tab-news: #be298f;
+  --tab-general: #2c7196; --tab-images: #627001; --tab-videos: #d60c09; --tab-news: #be298f;
   --notes: #ad4e09; --konbini: #be298f; --niwa: #627001; --web: #8a6300; --obsidian: #26785a; --smallweb: #26785a; --danger: #d60c09;
   --chip0: #2c7196; --chip1: #2c7196; --chip2: #be298f; --chip3: #627001; --chip4: #ad4e09; --chip5: #d60c09; --chip6: #8a6300; --chip7: #26785a;
   --rooms-bg: #efebd4; --rooms-on: #fffbef; --rooms-text: #5c6a72; --rooms-muted: #606d60;
@@ -278,7 +278,7 @@
   :root[data-palette="everforest"]:not([data-theme="night"]) {
     --bg: #fdf6e3; --card: #fffbef; --raised: #efebd4; --line: #e6e2cc; --line2: #e0dcc7;
     --text: #5c6a72; --secondary: #5c6a72; --accent: #2c7196; --hit: #8a6300; --kept: #627001; --visited: #2c7196;
-    --tab-general: #2c7196; --tab-images: #8a6300; --tab-videos: #d60c09; --tab-news: #be298f;
+    --tab-general: #2c7196; --tab-images: #627001; --tab-videos: #d60c09; --tab-news: #be298f;
     --notes: #ad4e09; --konbini: #be298f; --niwa: #627001; --web: #8a6300; --obsidian: #26785a; --smallweb: #26785a; --danger: #d60c09;
     --chip0: #2c7196; --chip1: #2c7196; --chip2: #be298f; --chip3: #627001; --chip4: #ad4e09; --chip5: #d60c09; --chip6: #8a6300; --chip7: #26785a;
     --rooms-bg: #efebd4; --rooms-on: #fffbef; --rooms-text: #5c6a72; --rooms-muted: #606d60;
@@ -291,7 +291,7 @@
 :root[data-palette="ayu"] {
   --bg: #0b0e14; --card: #07090d; --raised: #131721; --line: #11151c; --line2: #1e232b;
   --text: #bfbdb6; --secondary: #acaaa2; --accent: #59c2ff; --hit: #ffb454; --kept: #aad94c; --visited: #39bae6;
-  --tab-general: #39bae6; --tab-images: #ffb454; --tab-videos: #f07178; --tab-news: #d2a6ff;
+  --tab-general: #39bae6; --tab-images: #aad94c; --tab-videos: #f07178; --tab-news: #d2a6ff;
   --notes: #ff8f40; --konbini: #d2a6ff; --niwa: #aad94c; --web: #ffb454; --obsidian: #95e6cb; --smallweb: #95e6cb; --danger: #f07178;
   --chip0: #59c2ff; --chip1: #39bae6; --chip2: #d2a6ff; --chip3: #aad94c; --chip4: #ff8f40; --chip5: #f07178; --chip6: #ffb454; --chip7: #95e6cb;
   --rooms-bg: #07090d; --rooms-on: #131721; --rooms-text: #bfbdb6; --rooms-muted: #8a8986;
@@ -302,7 +302,7 @@
 :root[data-palette="ayu"][data-theme="day"] {
   --bg: #fcfcfc; --card: #ffffff; --raised: #f0f0f0; --line: #e7e8e9; --line2: #d4d6d8;
   --text: #5c6166; --secondary: #5c6166; --accent: #1771b2; --hit: #99600b; --kept: #587500; --visited: #247490;
-  --tab-general: #247490; --tab-images: #99600b; --tab-videos: #d71717; --tab-news: #8954bd;
+  --tab-general: #247490; --tab-images: #587500; --tab-videos: #d71717; --tab-news: #8954bd;
   --notes: #b44f05; --konbini: #8954bd; --niwa: #587500; --web: #99600b; --obsidian: #2b7960; --smallweb: #2b7960; --danger: #d71717;
   --chip0: #1771b2; --chip1: #247490; --chip2: #8954bd; --chip3: #587500; --chip4: #b44f05; --chip5: #d71717; --chip6: #99600b; --chip7: #2b7960;
   --rooms-bg: #f0f0f0; --rooms-on: #ffffff; --rooms-text: #5c6166; --rooms-muted: #6b6d71;
@@ -314,7 +314,7 @@
   :root[data-palette="ayu"]:not([data-theme="night"]) {
     --bg: #fcfcfc; --card: #ffffff; --raised: #f0f0f0; --line: #e7e8e9; --line2: #d4d6d8;
     --text: #5c6166; --secondary: #5c6166; --accent: #1771b2; --hit: #99600b; --kept: #587500; --visited: #247490;
-    --tab-general: #247490; --tab-images: #99600b; --tab-videos: #d71717; --tab-news: #8954bd;
+    --tab-general: #247490; --tab-images: #587500; --tab-videos: #d71717; --tab-news: #8954bd;
     --notes: #b44f05; --konbini: #8954bd; --niwa: #587500; --web: #99600b; --obsidian: #2b7960; --smallweb: #2b7960; --danger: #d71717;
     --chip0: #1771b2; --chip1: #247490; --chip2: #8954bd; --chip3: #587500; --chip4: #b44f05; --chip5: #d71717; --chip6: #99600b; --chip7: #2b7960;
     --rooms-bg: #f0f0f0; --rooms-on: #ffffff; --rooms-text: #5c6166; --rooms-muted: #6b6d71;

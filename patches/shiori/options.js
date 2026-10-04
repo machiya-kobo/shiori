@@ -65,8 +65,9 @@
   try {
     // Hister's token from the app (the background keeps it): this request's header only.
     const { histerToken } = await chrome.storage.local.get(['histerToken']);
+    // With the token, no redirect is followed (S.histerFetchOptions).
     const headers = histerToken ? { Accept: 'application/json', 'X-Access-Token': histerToken } : { Accept: 'application/json' };
-    const reply = await fetch(`${server}api/stats`, { headers, signal: controller.signal });
+    const reply = await fetch(`${server}api/stats`, { headers, signal: controller.signal, ...(histerToken ? { redirect: 'error' } : {}) });
     if (!reply.ok) throw new Error(String(reply.status));
     const stats = await reply.json().catch(() => ({}));
     const count = Number(stats.doc_count);

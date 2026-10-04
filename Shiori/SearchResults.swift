@@ -429,7 +429,7 @@ struct ResultsListContainer<Content: View>: View {
         actions.opened(document)
         if let note = app.noteLinks(for: document), note.obsidian != nil {
             openURL.openNote(note)
-        } else if let url = URL(string: document.url) {
+        } else if let url = SafeHref.url(document.url) {
             openURL(url)
         }
     }

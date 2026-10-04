@@ -69,7 +69,7 @@ export function variant(room, mode) {
   const v = {
     bg: room.bg, card: light ? room.hl : room.dark, raised: light ? room.dark : room.hl, line: room.line, line2: room.line2,
     text: room.fg, secondary: room.fg2, accent: room.blue, hit: room.yellow, kept: room.green, visited: room.cyan,
-    'tab-general': room.cyan, 'tab-images': room.yellow, 'tab-videos': room.red, 'tab-news': room.magenta,
+    'tab-general': room.cyan, 'tab-images': room.green, 'tab-videos': room.red, 'tab-news': room.magenta,
     notes: room.orange, konbini: room.magenta, niwa: room.green, web: room.yellow, obsidian: room.teal, smallweb: room.teal,
     danger: room.red, 'tint-mix': light ? 8 : 9,
   };

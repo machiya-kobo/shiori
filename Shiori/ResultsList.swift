@@ -202,7 +202,7 @@ struct DocumentLinks: View {
                 Link(destination: served) { Label("Open", systemImage: "doc") }
                 Button("Copy Link", systemImage: "link") { Pasteboard.copy(served) }
             }
-        } else if let url = URL(string: document.url) {
+        } else if let url = SafeHref.url(document.url) {
             Link(destination: url) {
                 Label("Open in Browser", systemImage: "safari")
             }

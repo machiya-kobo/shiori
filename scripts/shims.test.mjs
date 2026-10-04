@@ -567,11 +567,12 @@ function loadCombinedSearch({
   vm.createContext(ctx);
   vm.runInContext(backgroundShim.replace('__SHIORI_SEARCH_PAGE_URL__', searchPage), ctx);
   const tabLoading = (url, tabId = 7) => tabListeners.forEach((l) => l(tabId, { status: 'loading', url }, { id: tabId, url }));
-  const send = (request, tabId = 7) =>
+  // A content script's message by default; a set-settings comes from the results page.
+  const send = (request, tabId = 7, sender = request.shiori === 'set-settings' ? { url: 'safari-web-extension://x/search.html', tab: { id: tabId } } : { tab: { id: tabId } }) =>
     new Promise((resolve) => {
       let answered = false;
       for (const l of listeners) {
-        const keepOpen = l(request, { tab: { id: tabId } }, (r) => {
+        const keepOpen = l(request, sender, (r) => {
           answered = true;
           resolve(r);
         });
@@ -611,6 +612,25 @@ test('without the app, a settings change still holds on this device', async () =
   assert.equal(reply.ok, true);
   assert.equal(storage.data.shioriSettings.theme, 'day');
   assert.equal(storage.data.shioriSettings.showInfobox, false);
+});
+
+test('a content script never changes the settings, and without the app only the whitelist is kept', async () => {
+  const { send, storage } = loadCombinedSearch({ nativeThrows: true });
+  await settle();
+  const before = JSON.stringify(storage.data.shioriSettings || {});
+  const page = { url: 'https://evil.example/', tab: { id: 3 } };
+  const refused = await send({ shiori: 'set-settings', values: { niwaURL: 'https://evil.example/', theme: 'day' } }, 3, page);
+  assert.equal(refused.ok, false);
+  assert.equal(JSON.stringify(storage.data.shioriSettings || {}), before);
+  // From the results page: the theme is kept; an address, an AI key and junk are not.
+  const reply = await send({ shiori: 'set-settings', values: { theme: 'day', niwaURL: 'https://evil.example/', konbiniURL: 'https://evil.example/', aiEnabled: true, histerCount: 7, palette: 'nope' } });
+  assert.equal(reply.ok, true);
+  assert.equal(storage.data.shioriSettings.theme, 'day');
+  assert.equal('aiEnabled' in storage.data.shioriSettings, false);
+  assert.notEqual(storage.data.shioriSettings.palette, 'nope');
+  assert.notEqual(storage.data.shioriSettings.niwaURL, 'https://evil.example/');
+  assert.notEqual(storage.data.shioriSettings.konbiniURL, 'https://evil.example/');
+  assert.notEqual(storage.data.shioriSettings.histerCount, 7);
 });
 
 test("the extension's Hister server follows the app's", async () => {
@@ -919,4 +939,32 @@ test("Safari's whole background on the Mac: the badge counts the queue and the r
   assert.deepEqual(badge, ['1']);
   assert.deepEqual(created, ['shiori-search', 'shiori-save-link', 'shiori-save-page', 'shiori-never-page', 'shiori-never-site']);
   assert.equal(typeof ctx.ShioriSearch.histerText, 'function');
+});
+
+test("Hister's token never follows a redirect: a live request carrying it, or a queued replay", async () => {
+  let online = false;
+  const storage = fakeStorage({ histerURL: BASE, ...RULES, histerToken: 'ABCDEFGHJKLMNPQRSTUVWXYZ23' });
+  const { ctx, calls } = loadBackground({
+    network: (url) => {
+      if (!online) offline();
+      return new Response('{}', { status: url.endsWith('api/add') ? 201 : 200 });
+    },
+    storage,
+  });
+  // Upstream's own request with the token: no redirect.
+  online = true;
+  await ctx.fetch(BASE + 'api/rules', { headers: { 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' } });
+  assert.equal(calls.at(-1).init.redirect, 'error');
+  // Without the token, as before.
+  await ctx.fetch(BASE + 'api/rules');
+  assert.equal(calls.at(-1).init && calls.at(-1).init.redirect, undefined);
+  // A queued capture's replay carries the token: no redirect either.
+  online = false;
+  await ctx.fetch(BASE + 'api/add', addInit({ url: 'https://a.example/' }));
+  online = true;
+  await ctx.fetch(BASE + 'api/rules');
+  await settle();
+  const replay = calls.filter((c) => c.url.endsWith('api/add')).at(-1);
+  assert.equal(replay.init.headers['X-Access-Token'], 'ABCDEFGHJKLMNPQRSTUVWXYZ23');
+  assert.equal(replay.init.redirect, 'error');
 });

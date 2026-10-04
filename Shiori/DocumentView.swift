@@ -181,7 +181,7 @@ struct DocumentView: View {
                         .help("Open Hister's copy")
                 }
             }
-        } else if note == nil, let url = URL(string: document.url) {
+        } else if note == nil, let url = SafeHref.url(document.url) {
             ToolbarItem(placement: Self.pagePlacement) {
                 Button("Open in Browser", systemImage: "safari") { openURL(url) }
                     .help("Open in browser")

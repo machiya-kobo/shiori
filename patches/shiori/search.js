@@ -611,7 +611,11 @@
         sections.push(
           option(
             [icon, el('span', { class: 'suggest-text' }, el('span', { class: 'suggest-title' }, d.title || d.url), el('span', { class: 'suggest-where' }, d.domain || host(d.url)))],
-            () => (hideSuggest(), (location.href = d.url)),
+            () => {
+              hideSuggest();
+              const go = S.safeHref(d.url);
+              if (go) location.href = go;
+            },
             'page',
           ),
         );
@@ -627,7 +631,11 @@
         sections.push(
           option(
             [el('span', { class: 'suggest-icon note', 'aria-hidden': 'true' }), el('span', { class: 'suggest-text' }, el('span', { class: 'suggest-title' }, d.title || path || d.url), el('span', { class: 'suggest-where' }, place))],
-            () => (hideSuggest(), (location.href = obsidian || niwa || d.url)),
+            () => {
+              hideSuggest();
+              const go = S.linkHref(obsidian || niwa || d.url, location.href);
+              if (go) location.href = go;
+            },
             'note',
           ),
         );
@@ -708,8 +716,10 @@
       if (card) recordOpened(url, card.querySelector('.title')?.textContent || '');
       document.querySelectorAll('.card.previewing').forEach((c) => c.classList.remove('previewing'));
       if (card) card.classList.add('previewing');
-      $('preview-open').href = url;
-      $('preview-open').hidden = false;
+      const opens = S.safeHref(url);
+      if (opens) $('preview-open').href = opens;
+      else $('preview-open').removeAttribute('href');
+      $('preview-open').hidden = !opens;
       $('preview-empty').hidden = true;
       const frame = $('preview-frame');
       frame.hidden = false;
@@ -1365,7 +1375,12 @@
     for (const [k, v] of Object.entries(attrs)) {
       if (v == null || v === false) continue;
       if (k === 'class') node.className = v;
-      else node.setAttribute(k, v === true ? '' : v);
+      else if (k === 'href') {
+        // Every link this page makes: the web, Shiori's own schemes or this
+        // page's own pages, never javascript: or data: from a stored address.
+        const href = S.linkHref(String(v), location.href);
+        if (href) node.setAttribute('href', href);
+      } else node.setAttribute(k, v === true ? '' : v);
     }
     for (const child of children) if (child != null && child !== '') node.append(child);
     return node;
@@ -1401,6 +1416,8 @@
       // The hosted page's own host carries its sign-in (the cookie its
       // nginx asks the helper about); anywhere else, no cookies.
       const init = { headers, signal: controller.signal, credentials: sameOrigin(url) ? 'same-origin' : 'omit' };
+      // Hister's token never follows a redirect (fetch would keep the header).
+      if (headers['X-Access-Token']) init.redirect = 'error';
       const r = await fetch(url, room ? await roomInit(url, init) : init);
       if (!r.ok) {
         refused(r.status, url);
@@ -1531,6 +1548,7 @@
       fetch(`${histerBase}api/history`, {
         method: 'POST',
         headers: histerAuth({ 'Content-Type': 'application/json' }),
+        ...(stored.histerToken ? { redirect: 'error' } : {}),
         // As the search was sent: Hister matches the exact text.
         body: JSON.stringify({ url, title, query }),
         credentials: sameOrigin(histerBase) ? 'same-origin' : 'omit',
@@ -2171,6 +2189,11 @@
     const code = category === 'code';
     $('web').hidden = false;
     $('web-title').textContent = vault ? 'Your Notes' : files ? 'Your Files' : code ? 'Your Code' : 'Your Pages';
+    // The list's own choices (the vault, Best match or Newest) in a row above
+    // it: in the header beside the brand they crowded a phone's bar.
+    const controls = el('div', { class: 'list-controls', role: 'group', 'aria-label': 'Sort and vault' });
+    $('web-results').before(controls);
+    controls.append($('sort-label'));
     if (code) $('web-results').before(codeFilterBar());
     if (vault && !kuraBase) return showStatus('No Kura address is set up (Settings → Notes).');
     if (!vault && !histerBase) return showStatus('No Hister server is set up.');
@@ -2187,7 +2210,7 @@
         );
         select.value = kuraVaults.some((v) => v.name === vaultParam) ? vaultParam : 'all';
         select.addEventListener('change', () => (location.href = link({ v: select.value, p: 1 })));
-        $('settings-open').parentElement.insertBefore(select, $('settings-open').parentElement.firstChild);
+        controls.prepend(select);
       }
     }
     if (!result && vault) {
