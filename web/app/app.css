@@ -519,6 +519,17 @@ dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
 .settings .group { background: var(--card); border-radius: 12px; overflow: hidden; }
 .settings .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 .settings .item:last-child { border-bottom: 0; }
+/* Settings → Pills (S.pillEditor). */
+.settings .pill-editor { list-style: none; margin: 0; padding: 0; }
+.settings .pill-row { justify-content: flex-start; gap: 8px; }
+.settings .pill-row:last-child { border-bottom: 0; }
+.settings .pill-name { flex: 1; }
+.settings .pill-move {
+  border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 8px;
+  min-width: 32px; min-height: 32px; font: inherit; cursor: pointer;
+}
+.settings .pill-move:disabled { opacity: 0.35; cursor: default; }
+.settings .pill-row .switch:disabled { opacity: 0.45; cursor: default; }
 .settings input[type="text"], .settings input[type="url"], .settings select {
   font-family: inherit; font-size: 1.0625rem; color: var(--text); background: var(--bg); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 8px; max-width: 60%;
 }

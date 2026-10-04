@@ -1831,7 +1831,7 @@
    * `onChange(next, control)` gets the new setting and the used control's
    * label (to focus it again after a redraw).
    */
-  function pillEditor(items, raw, onChange, doc = globalThis.document) {
+  function pillEditor(items, raw, onChange, { doc = globalThis.document, rowClass = 'setting' } = {}) {
     const among = items.map(([key]) => key);
     const label = Object.fromEntries(items);
     const list = doc.createElement('ul');
@@ -1839,7 +1839,7 @@
     const shownList = pillList(raw).filter((p) => among.includes(p.key));
     shownList.forEach((p, i) => {
       const row = doc.createElement('li');
-      row.className = 'setting pill-row';
+      row.className = `${rowClass} pill-row`;
       const name = doc.createElement('span');
       name.className = 'pill-name';
       name.dataset.pill = p.key;

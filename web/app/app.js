@@ -992,7 +992,14 @@ function viewList(params) {
 // Files: the folders Hister watches, green (a hue no room wears).
 const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['opened', 'Opened', 'purple']];
 /** The pills: Opened only while Show Opened is on (off by default); Files only while Hister has some. */
-const scopes = () => ALL_SCOPES.filter(([v]) => (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || settings.smallWebTab !== false) && (v !== 'files' || hasLocalFiles));
+const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || settings.smallWebTab !== false) && (v !== 'files' || hasLocalFiles));
+/** The pill's key in the shared vocabulary (S.PILLS). */
+const pillKey = (scope) => (scope === 'hister' ? 'pages' : scope);
+/** The pills in the order set in Settings → Pills, less the ones switched off (S.orderPills). */
+const scopes = () => {
+  const available = availableScopes();
+  return S.orderPills(available.map(([v]) => pillKey(v)), settings.pills).map((key) => available.find(([v]) => pillKey(v) === key));
+};
 /** Hister holds files from folders it watches (`type:local`): asked once at launch, before the first draw. */
 let hasLocalFiles = false;
 async function loadLocalFiles() {
@@ -1759,6 +1766,7 @@ function viewSettings() {
         toggle('foldRepeats', 'Fold Repeated Sites'), toggle('labelSuggestions', 'Labels in Search Page Suggestions'), toggle('webResults', 'Web Results'), toggle('aiAnswer', 'AI Answer'),
       ],
         'Kept in this browser only. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”.'),
+      pillsGroup(group),
       group('Feeds', [text('newsBlurURL', 'NewsBlur', 'https://newsblur.example/')], 'For Subscribe in NewsBlur, which opens NewsBlur with a list’s feed.'),
       group('Search History', [
         toggle('searchHistory', 'Recent Searches'),
@@ -1777,6 +1785,24 @@ function viewSettings() {
         'Install this as an app: Share → Add to Home Screen (iPhone, iPad), File → Add to Dock (Safari on the Mac), or Install in the browser’s menu (Chrome, Edge).'),
     ),
   );
+}
+
+/** Settings → Pills: their order, and which show (S.pillEditor), redrawn in place. */
+function pillsGroup(group) {
+  const items = S.PILLS.filter(([key]) => !['images', 'videos', 'news'].includes(key) && (key !== 'files' || hasLocalFiles));
+  const box = h('div', {});
+  const draw = (focus) => {
+    box.replaceChildren(S.pillEditor(items, settings.pills, (next, control) => {
+      changeSetting('pills', next);
+      draw(control);
+    }, { rowClass: 'item' }));
+    if (focus) {
+      const again = [...box.querySelectorAll('[aria-label]')].find((n) => n.getAttribute('aria-label') === focus);
+      (again && !again.disabled ? again : box.querySelector('.switch'))?.focus();
+    }
+  };
+  draw();
+  return group('Pills', [box], 'The pills over every list and search, in this order. All always shows; Opened only with Show Opened, Small Web only with its tab.');
 }
 
 /**
