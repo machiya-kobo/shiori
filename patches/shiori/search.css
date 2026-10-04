@@ -191,6 +191,8 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
 #categories a[data-cat="videos"] { --tab: var(--tab-videos); }
 #categories a[data-cat="news"] { --tab: var(--tab-news); }
 #categories a[data-cat="smallweb"] { --tab: var(--smallweb); }
+/* The folders Hister watches: green, a hue no room wears. */
+#categories a[data-cat="files"] { --tab: var(--kept); }
 .card.smallweb-card .url .origin { color: var(--smallweb); font-weight: 600; }
 .smallweb-card .places { align-items: center; }
 .smallweb-card .places .engines { font: -apple-system-caption1; color: var(--secondary); }
@@ -274,6 +276,8 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
 }
 /* Pages you opened before: the Opened pill's purple. */
 .opened-card { --tint: var(--tab-news); }
+/* A file from the folders Hister watches: the Files tab's green. */
+.file-card { --tint: var(--kept); }
 /* Settings → Result Style: a plain card with a hairline (Solid), a bar down
    the leading edge, or plain. */
 body[data-result-style="solid"] :is(.hister-card, .vault-card) { background: var(--card); border-color: var(--line); }

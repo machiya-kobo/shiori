@@ -97,6 +97,17 @@ test("the default vault's notes and pages never wait on Kura", async () => {
   assert.equal(sentToHister().length, 2);
 });
 
+test('a file from the folders Hister watches is never recorded, labelled or deleted', async () => {
+  reset(vaults(false));
+  const FILE = 'file:///home/u/notes/pi.md';
+  await api.recordOpened(FILE, 'Pi', 'pi');
+  await assert.rejects(api.setLabel(FILE, 'x'));
+  await assert.rejects(api.deletePage(FILE));
+  assert.deepEqual(sentToHister(), []);
+  // The search page's own open: refused by address too.
+  assert.match(read('../patches/shiori/search.js'), /S\.isPrivateNote\(url\) \|\| S\.isLocalFile\(url\)\) return;/);
+});
+
 test('the search page and the web app read the vaults through S.loadVaults, and ask afresh before Hister', () => {
   const page = read('../patches/shiori/search.js');
   assert.match(page, /const vaultsReady = \(\) => S\.loadVaults\(readVaultsNow\)/);

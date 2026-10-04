@@ -204,6 +204,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 .segments button[data-tint="purple"] { --tab: var(--tab-news); }
 .segments button[data-tint="yellow"] { --tab: var(--web); }
 .segments button[data-tint="teal"] { --tab: var(--smallweb); }
+.segments button[data-tint="green"] { --tab: var(--kept); }
 
 .searchfield { margin: 0 12px 8px; position: relative; }
 /* Type-ahead: the typed text again, invisible, then the rest in grey, laid
@@ -279,6 +280,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 }
 .doc-row.note-row { --tint: var(--notes); }
 .doc-row.opened-row { --tint: var(--tab-news); }
+.doc-row.file-row { --tint: var(--kept); }
 /* Settings → Result Style: a plain card with a hairline (Solid), a bar down
    the leading edge, or plain rows. */
 body[data-result-style="solid"] .doc-row { background: var(--card); border-color: var(--line); }

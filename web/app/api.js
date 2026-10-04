@@ -113,8 +113,12 @@ export function isPrivateNow(url) {
 }
 
 const PRIVATE = "A private vault's note isn't in Hister.";
+// The folders Hister watches are its own to keep: their files are never
+// labelled or deleted from here.
+const FILE = 'Files stay as Hister watches them.';
 
 export async function setLabel(url, label) {
+  if (globalThis.ShioriSearch.isLocalFile(url)) throw new HisterError(FILE);
   if (await isPrivateNow(url)) throw new HisterError(PRIVATE);
   return request('api/label', { method: 'POST', body: { url, label } });
 }
@@ -125,6 +129,7 @@ export async function setLabel(url, label) {
  */
 export async function deletePage(url, { keepalive = false } = {}) {
   // Hister never has a private vault's note, and must never be sent one's address.
+  if (globalThis.ShioriSearch.isLocalFile(url)) throw new HisterError(FILE);
   if (await isPrivateNow(url)) throw new HisterError(PRIVATE);
   const exact = `url:"${url.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   const dry = await request('api/delete', { method: 'POST', body: { query: exact, dry_run: true }, keepalive });
@@ -137,7 +142,8 @@ export async function deletePage(url, { keepalive = false } = {}) {
 export async function recordOpened(url, title, q) {
   const text = (q || '').trim();
   // Never a private vault's note's address or title to Hister.
-  if (!text || text === '*' || globalThis.ShioriSearch.isPrivateNote(url) || (await isPrivateNow(url))) return;
+  // Nor a file's: what you open there stays here.
+  if (!text || text === '*' || globalThis.ShioriSearch.isLocalFile(url) || globalThis.ShioriSearch.isPrivateNote(url) || (await isPrivateNow(url))) return;
   // As the search was sent: Hister matches the exact text.
   return request('api/history', { method: 'POST', body: { url, title, query: globalThis.ShioriSearch.histerText(text) } }).catch(() => {});
 }

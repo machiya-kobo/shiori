@@ -28,7 +28,8 @@
   // searchable in Notes wherever Shiori runs): 'all', or one's name.
   const vaultParam = params.get('vault') || 'all';
   const terms = S.highlightTerms(q);
-  const isNoteTab = (cat) => cat === 'hister' || cat === 'vault';
+  // Your pages, notes or files: the full search of one, sorted rather than filtered by time.
+  const isNoteTab = (cat) => cat === 'hister' || cat === 'vault' || cat === 'files';
   // The app's Text Size, one setting for the app and this page. Scales
   // as Dynamic Type steps body text (17 points at Large).
   const TEXT_SCALES = { xSmall: 14, small: 15, medium: 16, large: 17, xLarge: 19, xxLarge: 21, xxxLarge: 23 };
@@ -42,6 +43,13 @@
   // a new page, and it should arrive with its header already in place
   // rather than blank for the half second the settings can take.
   const HEADER_KEY = 'shioriHeader';
+  // Whether Hister had files (the folders it watches) last time: the Files
+  // tab is drawn from it at once, and asked again once the page is up.
+  const FILES_KEY = 'shioriHasFiles';
+  let hasFiles = false;
+  try {
+    hasFiles = localStorage.getItem(FILES_KEY) === '1';
+  } catch (_) {}
   let header = null;
   try {
     header = JSON.parse(localStorage.getItem(HEADER_KEY) || 'null');
@@ -75,7 +83,7 @@
   // Every tab keeps All's width (Small Web, News and the rest shrank):
   // results in the first column, the second empty but for All's Info;
   // Images' tiles take both (search.css).
-  const wideCat = (cat) => ['general', 'hister', 'vault', 'images', 'videos', 'news', 'smallweb'].includes(cat || 'general');
+  const wideCat = (cat) => ['general', 'hister', 'vault', 'images', 'videos', 'news', 'smallweb', 'files'].includes(cat || 'general');
   document.body.classList.toggle('two-col', wideCat(params.get('cat')) && twoColumns(header || {}));
   document.body.dataset.cat = params.get('cat') || 'general';
 
@@ -230,6 +238,8 @@
         ]
       : []),
     ...(settings.smallWebTab !== false && smallwebBase ? [['smallweb', 'Small Web']] : []),
+    // The folders Hister watches (type:local), once it has some files.
+    ...(hasFiles && histerBase ? [['files', 'Files']] : []),
   ];
   const category = CATEGORIES.some(([c]) => c === params.get('cat')) ? params.get('cat') : 'general';
   const nextHeader = {
@@ -246,6 +256,24 @@
     try {
       localStorage.setItem(HEADER_KEY, JSON.stringify(nextHeader));
     } catch (_) {}
+  }
+  // Whether Hister has files, asked afresh: the Files tab comes or goes
+  // with the answer, which the next page starts from.
+  if (histerBase) {
+    histerSearch(S.filesQuery(''), 1)
+      .then((r) => {
+        const found = !!(r && r.total);
+        if (found === hasFiles) return;
+        try {
+          localStorage.setItem(FILES_KEY, found ? '1' : '0');
+        } catch (_) {}
+        nextHeader.categories = found ? [...CATEGORIES, ['files', 'Files']] : CATEGORIES.filter(([c]) => c !== 'files');
+        drawHeader(nextHeader);
+        try {
+          localStorage.setItem(HEADER_KEY, JSON.stringify(nextHeader));
+        } catch (_) {}
+      })
+      .catch(() => {});
   }
 
   function link({ q: nq = q, cat = category, t = time, p = 1, hk = '', hs = histerSort, v = vaultParam } = {}) {
@@ -1352,8 +1380,8 @@
 
   function recordOpened(url, title) {
     // Gemini and Gopher too: Hister keeps a small-web page's canonical address.
-    // Never a private vault's note to Hister.
-    if (settings.rememberOpened === false || !histerBase || !q || !/^(https?|gemini|gopher):\/\//i.test(url) || S.isPrivateNote(url)) return;
+    // Never a private vault's note to Hister, nor a file (it stays here).
+    if (settings.rememberOpened === false || !histerBase || !q || !/^(https?|gemini|gopher):\/\//i.test(url) || S.isPrivateNote(url) || S.isLocalFile(url)) return;
     const query = S.histerText(q);
     const send = () =>
       fetch(`${histerBase}api/history`, {
@@ -1614,6 +1642,25 @@
       saved ? relativeDate(saved) : null,
       markedSnippet(d.text),
       meta,
+      places(chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister')),
+    );
+  }
+
+  /**
+   * A file from the folders Hister watches: it opens from Hister's copy
+   * (/api/file), shows where it lives, and has no summarize (no model ever
+   * reads a file) and no label to edit.
+   */
+  function fileCard(d) {
+    const saved = d.updated || d.added;
+    return el(
+      'li',
+      { class: 'card hister-card file-card', 'data-preview': d.url },
+      el('a', { class: 'title', href: S.localFileURL(histerBase, d.url) }, d.title || S.localFilePath(d.url)),
+      el('div', { class: 'url' }, el('span', { class: 'crumbs' }, S.localFilePath(d.url))),
+      saved ? relativeDate(saved) : null,
+      markedSnippet(d.text),
+      el('div', { class: 'meta' }, el('a', { href: histerPage(d.url), class: 'preview-link' }, 'preview')),
       places(chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister')),
     );
   }
@@ -1899,8 +1946,10 @@
   if (isNoteTab(category)) {
     didYouMeanLine([]);
     const vault = category === 'vault';
+    // Files: Hister's watched folders, the same search asking for them alone.
+    const files = category === 'files';
     $('web').hidden = false;
-    $('web-title').textContent = vault ? 'Your Notes' : 'Your Pages';
+    $('web-title').textContent = vault ? 'Your Notes' : files ? 'Your Files' : 'Your Pages';
     if (vault && !kuraBase) return showStatus('No Kura address is set up (Settings → Notes).');
     if (!vault && !histerBase) return showStatus('No Hister server is set up.');
     let result = pageState[category];
@@ -1937,7 +1986,9 @@
         const extra = { highlight: 'HTML' };
         if (histerKey) extra.page_key = histerKey;
         if (histerSort === 'new') extra.sort = 'date';
-        result = await histerOrClose(q, 20, extra, undefined, () => webSuggestions(q));
+        result = files
+          ? await histerSearch(S.filesQuery(q), 20, extra)
+          : await histerOrClose(q, 20, extra, undefined, () => webSuggestions(q));
         pageState[category] = result;
         saveState();
       } catch (_) {
@@ -1949,23 +2000,23 @@
     const pageOf = (d) => d.label !== 'vault' && !S.isNoteURL(d.url, niwaBase, konbiniBase);
     let docs = (result.documents || []).filter((d) => vault || pageOf(d));
     if (!docs.length && !(!vault && (result.history || []).some((h) => pageOf(h)))) {
-      return showStatus(vault ? 'No notes in the vault match.' : 'None of your pages match.');
+      return showStatus(vault ? 'No notes in the vault match.' : files ? 'None of your files match.' : 'None of your pages match.');
     }
     if (result.closeMatches) $('web-title').textContent += ` · for “${result.closeMatches}”`;
     const cards = vault ? await konbiniCards() : [];
     let lifted = 0;
-    if (!vault && page === 1) {
+    if (!vault && !files && page === 1) {
       const first = withOpened(result, docs, { skipNotes: true });
       for (const card of first.cards) $('web-results').append(card);
       lifted = first.cards.length;
       docs = first.docs;
     }
-    appendFolded($('web-results'), docs, (d) => (vault ? vaultCard(d, cards) : histerCard(d)));
+    appendFolded($('web-results'), docs, (d) => (vault ? vaultCard(d, cards) : files ? fileCard(d) : histerCard(d)));
     const from = (page - 1) * 20 + 1;
-    const noun = vault ? 'notes' : 'pages';
+    const noun = vault ? 'notes' : files ? 'files' : 'pages';
     // Hister's total is your pages alone (notes are Kura's), so both can say "of".
     $('timing').textContent = `${from}–${from + lifted + docs.length - 1} of ${(result.total || docs.length).toLocaleString()} ${noun}`;
-    $('hister-more-tab').href = `${histerBase}?q=${encodeURIComponent(q)}`;
+    $('hister-more-tab').href = `${histerBase}?q=${encodeURIComponent(files ? S.filesQuery(q) : q)}`;
     // "Open in Hister" is for Hister's own results, not Kura's.
     $('hister-more-tab').hidden = vault;
     $('pages').hidden = false;

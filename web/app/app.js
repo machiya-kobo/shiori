@@ -407,18 +407,20 @@ let lastPage = null;
 function docRow(doc) {
   const n = note(doc);
   const favicon = doc.favicon_key ? h('img', { class: 'icon', src: api.faviconURL(doc.favicon_key), alt: '', loading: 'lazy' }) : null;
-  const iconEl = favicon || h('span', { class: 'icon' }, icon(n ? 'note' : 'globe'));
+  const file = S.isLocalFile(doc.url);
+  const iconEl = favicon || h('span', { class: 'icon' }, icon(n || file ? 'note' : 'globe'));
   if (favicon) favicon.addEventListener('error', () => favicon.replaceWith(h('span', { class: 'icon' }, icon('globe'))));
   const when = ago(doc.updated || doc.added);
   const row = h(
     'li',
-    { class: `row doc-row${n ? ' note-row' : doc.opened ? ' opened-row' : ''}`, role: 'button', tabindex: '0', 'aria-selected': selected && selected.url === doc.url ? 'true' : 'false' },
+    { class: `row doc-row${file ? ' file-row' : n ? ' note-row' : doc.opened ? ' opened-row' : ''}`, role: 'button', tabindex: '0', 'aria-selected': selected && selected.url === doc.url ? 'true' : 'false' },
     iconEl,
     h(
       'div',
       {},
       h('div', { class: 'title' }, doc.title || doc.url),
-      h('div', { class: 'meta' }, n && n.place ? n.place : h('span', { class: 'domain' }, doc.domain || hostOf(doc.url)), when ? ` · ${when}` : ''),
+      // A file: where it lives on the server, not Hister's "local".
+      h('div', { class: 'meta' }, n && n.place ? n.place : h('span', { class: 'domain' }, file ? S.localFilePath(doc.url) : doc.domain || hostOf(doc.url)), when ? ` · ${when}` : ''),
       doc.text ? snippet(doc.text) : null,
       doc.label === 'vault' ? vaultTag(doc.url) : doc.label ? labelTag(doc.label) : null,
     ),
@@ -500,7 +502,7 @@ function folder(list) {
   let site = null;
   let pending = null; // a run's second row, held until the third decides
   let fold = null; // {button, rows, open}
-  const key = (d) => (settings.foldRepeats === false || d.label === 'vault' ? null : S.siteOf(d) || null);
+  const key = (d) => (settings.foldRepeats === false || d.label === 'vault' || S.isLocalFile(d.url) ? null : S.siteOf(d) || null);
   const label = () => (fold.open ? `Hide ${fold.rows.length} more from ${site}` : `${fold.rows.length} more from ${site}`);
   const close = () => {
     if (pending) list.append(docRow(pending));
@@ -843,6 +845,11 @@ function viewLibrary(params) {
   if (filter === 'smallweb') {
     return list.replaceChildren(status('Search the Small Web', 'Type in the search field and press Return to search Gemini and Gopher.'));
   }
+  if (filter === 'files') {
+    // The folders Hister watches, newest first; never mixed into the rest.
+    shownList = { title: 'Files' };
+    return resultsList(list, { query: S.filesQuery(''), sort: 'date', group: '', source: 'pages', empty: 'Files show up here once your Hister server watches a folder.', opened: false });
+  }
   const c = listChoices(params);
   const query = withWord('*', c.word);
   const title = { all: 'Library', hister: 'Pages', notes: 'Notes' }[filter] || 'Library';
@@ -966,13 +973,21 @@ function viewList(params) {
 // orange ("Pages" is your pages; 'hister' stays the value).
 // Notes wear Kura's orange and the web Shiori's lens yellow (the Machiya
 // rooms' colours).
-const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['opened', 'Opened', 'purple']];
-/** The pills: Opened only while Show Opened is on (off by default). */
-const scopes = () => ALL_SCOPES.filter(([v]) => (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || settings.smallWebTab !== false));
+// Files: the folders Hister watches, green (a hue no room wears).
+const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['opened', 'Opened', 'purple']];
+/** The pills: Opened only while Show Opened is on (off by default); Files only while Hister has some. */
+const scopes = () => ALL_SCOPES.filter(([v]) => (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || settings.smallWebTab !== false) && (v !== 'files' || hasLocalFiles));
+/** Hister holds files from folders it watches (`type:local`): asked once at launch, before the first draw. */
+let hasLocalFiles = false;
+async function loadLocalFiles() {
+  try {
+    hasLocalFiles = (await api.search(S.filesQuery(''), { limit: 1 })).total > 0;
+  } catch (_) {}
+}
 // One row over every list, browsing or searching, as in the apps (it had
 // been two: the Library's and a search's). `s` in the address is the
 // choice for both, so typing searches whichever is picked.
-const PROMPTS = { all: 'Search All', hister: 'Search Your Pages', notes: 'Search Notes', web: 'Search the Web', smallweb: 'Search Gemini and Gopher', opened: 'Search What You Opened' };
+const PROMPTS = { all: 'Search All', hister: 'Search Your Pages', notes: 'Search Notes', web: 'Search the Web', smallweb: 'Search Gemini and Gopher', files: 'Search Your Files', opened: 'Search What You Opened' };
 function scopeOf(params) {
   const s = params.get('s') || { pages: 'hister' }[params.get('f')] || params.get('f') || 'all';
   return scopes().some(([v]) => v === s) ? s : 'all';
@@ -1014,7 +1029,10 @@ function viewSearch(params) {
     });
   } else if (scope === 'web') webList($('list'), q);
   else if (scope === 'smallweb') smallwebList($('list'), q);
-  else if (scope === 'opened') {
+  else if (scope === 'files') {
+    shownList = { title: q };
+    resultsList($('list'), { query: S.filesQuery(q), sort: '', group: '', source: 'pages', empty: `No files match “${q}”.` });
+  } else if (scope === 'opened') {
     shownList = { title: 'Opened', feed: S.feedURL(location.origin, { opened: true }) };
     viewOpened($('list'), q);
   } else searchAll($('list'), q);
@@ -1415,14 +1433,20 @@ async function showPreview(doc, { extractor = '' } = {}) {
         // Not a work note: Hister never has one.
         n.vault ? null : iconButton('search', 'Open in Hister', () => open(api.histerPageURL(doc.url))),
       ]
-    : [
+    : S.isLocalFile(doc.url)
+      ? [
+          // Hister's copy: the file:// address is the server's.
+          iconButton('open', 'Open', () => open(S.localFileURL(location.origin, doc.url))),
+          iconButton('search', 'Open in Hister', () => open(api.histerPageURL(doc.url))),
+        ]
+      : [
         iconButton('open', 'Open in Browser', () => open(doc.url)),
         iconButton('share', 'Share', () => (navigator.share ? navigator.share({ url: doc.url, title: doc.title }).catch(() => {}) : copy(doc.url))),
         iconButton('search', 'Open in Hister', () => open(api.histerPageURL(doc.url))),
       ];
   fill(bar, 
     !wide() ? iconButton('back', 'Back', () => history.back()) : null,
-    h('span', { class: 'where' }, n ? doc.title || n.place : doc.domain || hostOf(doc.url)),
+    h('span', { class: 'where' }, n || S.isLocalFile(doc.url) ? doc.title || n?.place || doc.url : doc.domain || hostOf(doc.url)),
     h('div', { class: 'icon-group', role: 'group', 'aria-label': 'Open' }, places),
     canSummarize(doc, n) ? iconButton('sparkles', 'Summarize this page', () => summarize(doc, false)) : null,
     pageMenu(doc, n),
@@ -1495,13 +1519,15 @@ function pageMenu(doc, n) {
   const populate = async () => {
     // As the apps: the places are in the bar; here the rest.
     const items = [];
-    if (!n) items.push(item('Edit Label…', () => labelPicker(doc)));
+    // A file is Hister's to keep as it watches it: no label, no delete.
+    const file = S.isLocalFile(doc.url);
+    if (!n && !file) items.push(item('Edit Label…', () => labelPicker(doc)));
     if (canSummarize(doc, n)) items.push(item('Summarize', () => summarize(doc, false)));
-    items.push(item('Copy Link', () => copy(doc.url)));
+    items.push(item('Copy Link', () => copy(file ? S.localFileURL(location.origin, doc.url) : doc.url)));
     // Show As goes here, before Delete, once Hister names the extractors.
     const showAs = h('div', { class: 'show-as', role: 'none' });
-    // No Delete for a work note: Hister never has one.
-    fill(listEl, ...items, showAs, ...(n && n.vault ? [] : [h('hr'), item('Delete', () => deleteWithUndo(doc), 'danger')]));
+    // No Delete for a work note (Hister never has one) or a file.
+    fill(listEl, ...items, showAs, ...((n && n.vault) || file ? [] : [h('hr'), item('Delete', () => deleteWithUndo(doc), 'danger')]));
     // Show As is for web pages only: a note's address is never sent to
     // Hister's extractors (a private vault's must never reach Hister at all).
     if (isNoteDoc(doc, n)) return;
@@ -2065,7 +2091,11 @@ const keyboard = (() => {
   const inField = (t) => !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
   const rows = () => [...document.querySelectorAll('#list .row')].filter((r) => r.offsetParent !== null);
   const docOf = (row) => row && row._doc;
-  const hrefOf = (row) => (docOf(row) ? docOf(row).url : row.querySelector('a[href]')?.href || '');
+  const hrefOf = (row) => {
+    const doc = docOf(row);
+    if (!doc) return row.querySelector('a[href]')?.href || '';
+    return S.isLocalFile(doc.url) ? S.localFileURL(location.origin, doc.url) : doc.url;
+  };
   function mark(row) {
     if (current) current.classList.remove('kbd-current');
     current = row || null;
@@ -2104,7 +2134,7 @@ const keyboard = (() => {
     if (settings.rememberOpened && listSearch) api.recordOpened(doc.url, doc.title || '', listSearch);
     const n = note(doc);
     if (n && n.obsidian) location.href = n.obsidian;
-    else window.open(n && n.niwa ? n.niwa : doc.url, '_blank', 'noopener');
+    else window.open(n && n.niwa ? n.niwa : hrefOf(row), '_blank', 'noopener');
   }
   const KEYS = [
     ['j / k', 'Next / previous result'], ['h / l', 'Previous / next pill'], ['Enter, o', 'Open the result'],
@@ -2151,9 +2181,10 @@ const keyboard = (() => {
       case 'label':
         if (!doc) return;
         if (note(doc) || doc.label === 'vault') toast('Notes keep their label');
+        else if (S.isLocalFile(doc.url)) toast('Files keep their label');
         else labelPicker(doc);
         break;
-      case 'delete': if (!doc) return; mark(null); deleteWithUndo(doc); break;
+      case 'delete': if (!doc || S.isLocalFile(doc.url)) return; mark(null); deleteWithUndo(doc); break;
       case 'focusSearch':
         if ($('search-top').hidden) return;
         searchInput.focus();
@@ -2226,7 +2257,7 @@ document.addEventListener('visibilitychange', () => {
   // Back from signing in on Kura's page: Settings says so.
   if (!document.hidden && route().view === 'settings') render();
 });
-Promise.all([loadRules(), api.cards().then((c) => (konbiniCards = c)), loadVaults(), loadKuraAccount()]).then(render);
+Promise.all([loadRules(), api.cards().then((c) => (konbiniCards = c)), loadVaults(), loadKuraAccount(), loadLocalFiles()]).then(render);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(watchForUpdates).catch(() => {});
