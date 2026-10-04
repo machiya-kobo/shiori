@@ -57,6 +57,23 @@ test("the settings' whitelists know the same ten: SharedSettings.palettes and ho
   assert.deepEqual(list(read('../patches/ext/host-local.js'), /const PALETTES = \[([^\]]*)\]/), keys);
 });
 
+test('tinted heading rows and panels (Pages, Notes, Web, AI Answer, Info) read at 4.5:1 at --tint-mix', () => {
+  for (const [key, p] of Object.entries(table)) {
+    for (const mode of ['dark', 'light']) {
+      const v = variant(p[mode], mode);
+      for (const tint of ['accent', 'notes', 'web', 'tab-general']) {
+        const surface = mix(v[tint], v.card, v['tint-mix'] / 100);
+        for (const fg of [tint, 'text', 'secondary', 'accent']) {
+          const r = ratio(v[fg], surface);
+          assert.ok(r >= 4.5, `${key} ${mode}: --${fg} on --${tint} at --tint-mix is ${r.toFixed(2)}:1`);
+        }
+      }
+    }
+  }
+  // Never stronger than that: at 12% they fell under it.
+  for (const rel of ['../patches/shiori/search.css', '../web/app/app.css']) assert.doesNotMatch(read(rel), /var\(--tint\) 12%/, rel);
+});
+
 test("the Rooms menu's text reads at 4.5:1 on the rooms' panel and current row, every variant", () => {
   for (const [key, p] of Object.entries(table)) {
     for (const mode of ['dark', 'light']) {

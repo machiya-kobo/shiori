@@ -17,7 +17,9 @@ import { fileURLToPath } from 'node:url';
 
 export const TEXT = ['text', 'secondary', 'accent', 'kept', 'visited', 'tab-general', 'tab-images', 'tab-videos', 'tab-news',
   'notes', 'konbini', 'niwa', 'web', 'obsidian', 'smallweb', 'danger'];
-export const TINTS = ['accent', 'notes', 'tab-news'];
+// The tinted surfaces text sits on: cards (Pages, Notes, Opened), and the
+// heading rows and panels (Web; AI Answer and Info wear All's tab-general).
+export const TINTS = ['accent', 'notes', 'tab-news', 'tab-general', 'web'];
 
 function rgb(hex) { return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255); }
 function hex(c) { return '#' + c.map((v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join(''); }

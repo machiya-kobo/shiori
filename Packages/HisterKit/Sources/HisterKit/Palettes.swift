@@ -9,9 +9,9 @@ extension AppPalette {
             dark: Palette(
                 hex: Palette.Hex(
                     background: 0x002B36, surface: 0x00212B, raised: 0x073642,
-                    text: 0x93A1A1, secondaryText: 0x839496, accent: 0x3094DA,
-                    highlight: 0xB58900, danger: 0xE56663,
-                    chips: [0x3094DA, 0x2AA198, 0xDD649E, 0x859900, 0xE86730, 0xE56663, 0xB58900, 0x2AA198]),
+                    text: 0x93A1A1, secondaryText: 0x839496, accent: 0x3295DA,
+                    highlight: 0xB58900, danger: 0xE56865,
+                    chips: [0x3295DA, 0x2AA198, 0xDE66A0, 0x859900, 0xE96833, 0xE56865, 0xB58900, 0x2AA198]),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
@@ -25,9 +25,9 @@ extension AppPalette {
             dark: Palette(
                 hex: Palette.Hex(
                     background: 0x2E3440, surface: 0x272C36, raised: 0x3B4252,
-                    text: 0xECEFF4, secondaryText: 0xD8DEE9, accent: 0x83A2C2,
-                    highlight: 0xEBCB8B, danger: 0xD08D93,
-                    chips: [0x83A2C2, 0x88C0D0, 0xB894B1, 0xA3BE8C, 0xD38F7A, 0xD08D93, 0xEBCB8B, 0x8FBCBB]),
+                    text: 0xECEFF4, secondaryText: 0xD8DEE9, accent: 0x8AA7C5,
+                    highlight: 0xEBCB8B, danger: 0xD39299,
+                    chips: [0x8AA7C5, 0x88C0D0, 0xBB99B5, 0xA3BE8C, 0xD5947F, 0xD39299, 0xEBCB8B, 0x8FBCBB]),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
@@ -42,8 +42,8 @@ extension AppPalette {
                 hex: Palette.Hex(
                     background: 0x282A36, surface: 0x21222C, raised: 0x44475A,
                     text: 0xF8F8F2, secondaryText: 0xE2E2DC, accent: 0xBD93F9,
-                    highlight: 0xF1FA8C, danger: 0xFF6767,
-                    chips: [0xBD93F9, 0x8BE9FD, 0xFF79C6, 0x50FA7B, 0xFFB86C, 0xFF6767, 0xF1FA8C, 0x8BE9FD]),
+                    highlight: 0xF1FA8C, danger: 0xFF6F6F,
+                    chips: [0xBD93F9, 0x8BE9FD, 0xFF79C6, 0x50FA7B, 0xFFB86C, 0xFF6F6F, 0xF1FA8C, 0x8BE9FD]),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
@@ -74,8 +74,8 @@ extension AppPalette {
                 hex: Palette.Hex(
                     background: 0x282828, surface: 0x1D2021, raised: 0x3C3836,
                     text: 0xEBDBB2, secondaryText: 0xD5C4A1, accent: 0x83A598,
-                    highlight: 0xFABD2F, danger: 0xFB5B48,
-                    chips: [0x83A598, 0x83A598, 0xD3869B, 0xB8BB26, 0xFE8019, 0xFB5B48, 0xFABD2F, 0x8EC07C]),
+                    highlight: 0xFABD2F, danger: 0xFB6452,
+                    chips: [0x83A598, 0x83A598, 0xD3869B, 0xB8BB26, 0xFE8019, 0xFB6452, 0xFABD2F, 0x8EC07C]),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
@@ -107,7 +107,7 @@ extension AppPalette {
                     background: 0x1F1F28, surface: 0x16161D, raised: 0x2A2A37,
                     text: 0xDCD7BA, secondaryText: 0xC8C093, accent: 0x7E9CD8,
                     highlight: 0xE6C384, danger: 0xE46876,
-                    chips: [0x7E9CD8, 0x7FB4CA, 0x9681B9, 0x98BB6C, 0xFFA066, 0xE46876, 0xE6C384, 0x7AA89F]),
+                    chips: [0x7E9CD8, 0x7FB4CA, 0x9984BB, 0x98BB6C, 0xFFA066, 0xE46876, 0xE6C384, 0x7AA89F]),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
@@ -122,8 +122,8 @@ extension AppPalette {
                 hex: Palette.Hex(
                     background: 0x2D353B, surface: 0x232A2E, raised: 0x343F44,
                     text: 0xD3C6AA, secondaryText: 0xC0B597, accent: 0x7FBBB3,
-                    highlight: 0xDBBC7F, danger: 0xE68082,
-                    chips: [0x7FBBB3, 0x7FBBB3, 0xD699B6, 0xA7C080, 0xE69875, 0xE68082, 0xDBBC7F, 0x83C092]),
+                    highlight: 0xDBBC7F, danger: 0xE78284,
+                    chips: [0x7FBBB3, 0x7FBBB3, 0xD699B6, 0xA7C080, 0xE69875, 0xE78284, 0xDBBC7F, 0x83C092]),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
