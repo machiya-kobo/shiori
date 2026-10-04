@@ -243,7 +243,7 @@ test('the token goes to the configured Kura only, read with the shim as GJS read
 test("Hister's requests never carry the token, and a signed-in request follows no redirect", () => {
   const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
   assert.match(http, /const auth = signIn && !hister \? roomHeaders\(config, url, globalThis\.ShioriSearch\)\.Authorization : undefined;/);
-  assert.match(http, /if \(auth \|\| token \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
+  assert.match(http, /if \(auth \|\| token \|\| cookie \|\| Object\.keys\(extra\)\.length \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
 });
 
 test("Hister's token goes to the configured server only, as X-Access-Token", () => {
@@ -264,8 +264,8 @@ test("Hister's token goes to the configured server only, as X-Access-Token", () 
   assert.equal(histerTokenStatus(config, 0o100600, S), 'Hister: a token in config.json.');
   assert.match(histerTokenStatus(config, 0o100644, S), /mode 644\): chmod 600/);
   const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
-  assert.match(http, /const token = hister \? histerHeaders\(config, url, globalThis\.ShioriSearch\)\['X-Access-Token'\] : undefined;/);
-  assert.match(http, /if \(auth \|\| token \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
+  assert.match(http, /const token = hister && credentials \? histerHeaders\(config, url, globalThis\.ShioriSearch\)\['X-Access-Token'\] : undefined;/);
+  assert.match(http, /if \(auth \|\| token \|\| cookie \|\| Object\.keys\(extra\)\.length \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
 });
 
 test("status says who can read the token, and pair prints the line to add", () => {
@@ -283,4 +283,43 @@ test('the command line pairs with a code, in one piece or two', () => {
   assert.deepEqual(plain(parseArgs(['pair', 'ABCD-EFGH'])), { command: 'pair', code: 'ABCD-EFGH', device: 'Linux' });
   assert.deepEqual(plain(parseArgs(['pair', 'abcd', 'efgh', 'Desk', 'Mint'])), { command: 'pair', code: 'abcdefgh', device: 'Desk Mint' });
   assert.equal(parseArgs(['pair']).command, 'error');
+});
+
+test("Hister's sign-in on Linux: the file, the cookie, the rooms' id, the requests", async () => {
+  const S = shimmedCore();
+  const h = await import('../linux/src/hister.js');
+  const session = 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde';
+  const sid = 'mhs_' + 'Z'.repeat(43);
+  // The file: checked, and only for the server it was made for.
+  assert.deepEqual(plain(h.signInRecord({ server: 'https://hister.example', session, sid, username: 'alex' }, 'https://hister.example/')), { session, sid, username: 'alex' });
+  assert.equal(h.signInRecord({ server: 'https://other.example', session, sid }, 'https://hister.example/'), null);
+  assert.equal(h.signInRecord({ server: 'https://hister.example', session: 'short', sid }, 'https://hister.example/'), null);
+  assert.equal(h.signInRecord({ server: 'https://hister.example', session, sid: 'mch_x' }, 'https://hister.example/'), null);
+  assert.deepEqual(JSON.parse(h.signInFileContent('https://hister.example/', { session, sid, username: 'alex' })), { server: 'https://hister.example', session, sid, username: 'alex' });
+  // The session goes to Hister only; the id to the rooms only.
+  const config = { ...CONFIG, histerSignIn: { session, sid, username: 'alex' } };
+  assert.equal(h.histerCookie(config, 'https://hister.example/search'), `hister=${session}`);
+  for (const url of ['https://kura.example/api/search', 'https://smallweb.example/api/save', 'https://shiori.example/', 'http://hister.example/']) assert.equal(h.histerCookie(config, url), '', url);
+  assert.deepEqual(plain(roomHeaders(config, 'https://kura.example/api/search', S)), { Authorization: `Bearer ${sid}` });
+  assert.deepEqual(plain(roomHeaders(config, 'https://hister.example/search', S)), {});
+  // Hister's Set-Cookie, the requests, the helper's answer.
+  assert.equal(h.sessionFromSetCookie([`other=1; Path=/`, `hister=${session}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`]), session);
+  assert.equal(h.sessionFromSetCookie([`hister=${session}; Max-Age=0`]), '');
+  assert.equal(h.loginRequest('https://hister.example', 'a', 'b').url, 'https://hister.example/api/login');
+  assert.equal(h.appSessionRequest('https://hister.example/', session, 'x'.repeat(100)).url, 'https://hister.example/machiya/api/app-session');
+  assert.equal(JSON.parse(h.appSessionRequest('https://hister.example/', session, 'x'.repeat(100)).body).label.length, 80);
+  assert.deepEqual(plain(h.signOutRequest('https://hister.example/', sid).headers), { Authorization: `Bearer ${sid}` });
+  assert.equal(h.signInAvailable(200, { ok: true, hister: 'ok' }), true);
+  assert.equal(h.signInAvailable(200, { ok: true, hister: 'user-handling-off' }), false);
+  assert.equal(h.signInAvailable(503, null), false);
+  assert.match(h.loginProblem(401), /didn't recognise/);
+  assert.equal(h.histerSignInStatus(null), 'Hister: not signed in.');
+  assert.equal(h.histerSignInStatus({ username: 'alex' }), 'Hister: signed in as alex (sign-in.json).');
+  // The command line, and http.js sending the cookie under the no-redirect rule.
+  assert.deepEqual(plain(parseArgs(['sign-in'])), { command: 'sign-in' });
+  assert.deepEqual(plain(parseArgs(['sign-out'])), { command: 'sign-out' });
+  assert.equal(parseArgs(['sign-in', 'x']).command, 'error');
+  const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
+  assert.match(http, /const cookie = hister && credentials \? histerCookie\(config, url\) : '';/);
+  assert.match(http, /if \(auth \|\| token \|\| cookie \|\| Object\.keys\(extra\)\.length \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
 });

@@ -23,7 +23,8 @@ import { parseArgs, saveLinksTarget } from '../src/cli.js';
 import { QuickSearch } from './quick.js';
 import { save, sendWaiting, waitingStatus } from './save.js';
 import { pairedMessage, signInStatus } from '../src/machiya.js';
-import { histerTokenStatus } from '../src/hister.js';
+import { histerTokenStatus, histerSignInStatus } from '../src/hister.js';
+import { readSignIn, signOutCommand, SignInWindow } from './signin.js';
 
 installURL(globalThis);
 // search-core.js sets globalThis.ShioriSearch, once URL exists.
@@ -69,10 +70,16 @@ const APP_ID = GLib.getenv('FLATPAK_ID') || 'io.github.machiya_kobo.Shiori';
       r = { code: 1, message: `shiori: ${e.message}` };
     }
     if (early.command === 'status') {
+      r.message += '\n' + histerSignInStatus(config.histerSignIn);
       r.message += '\n' + histerTokenStatus(config, configMode(), globalThis.ShioriSearch);
       r.message += '\n' + signInStatus(config, configMode(), globalThis.ShioriSearch);
     }
     (r.code !== 0 ? printerr : print)(r.message);
+    System.exit(r.code);
+  }
+  if (early.command === 'sign-out') {
+    const r = await signOutCommand(loadConfig());
+    print(r.message);
     System.exit(r.code);
   }
   // Pairing with a code from `identity pair`, against the config's Kura. The
@@ -106,12 +113,14 @@ function configPaths() {
     GLib.build_filenamev([dir, 'shiori', 'config.json']));
 }
 
-/** The configuration, or {} when there's none (the window then says so). */
+/** The configuration, or {} when there's none (the window then says so), with this device's Hister sign-in. */
 function loadConfig() {
   for (const path of configPaths()) {
     try {
       const [, bytes] = GLib.file_get_contents(path);
-      return JSON.parse(new TextDecoder().decode(bytes)) || {};
+      const config = JSON.parse(new TextDecoder().decode(bytes)) || {};
+      const signIn = readSignIn(config);
+      return signIn ? { ...config, histerSignIn: signIn } : config;
     } catch (_) {}
   }
   return {};
@@ -203,6 +212,10 @@ app.connect('command-line', (_app, commandLine) => {
   }
   if (command.command === 'quick') {
     new QuickSearch(app, loadConfig()).present();
+    return 0;
+  }
+  if (command.command === 'sign-in') {
+    new SignInWindow(app, loadConfig()).present();
     return 0;
   }
   // Kura's "Save links in Shiori": its own window, not the web app.

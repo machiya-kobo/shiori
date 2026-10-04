@@ -8,14 +8,16 @@
 //                               a note's (or a folder's notes') links, those
 //                               Hister doesn't hold yet (docs/linux.md)
 //   shiori send                 send what's waiting
-//   shiori status               how many wait, and the Machiya sign-in
+//   shiori status               how many wait, and the sign-ins
+//   shiori sign-in              sign in to Hister (a small window; when it has users)
+//   shiori sign-out             sign out of Hister, everywhere
 //   shiori pair <code> [device] pair with a code from `identity pair` (against
 //                               the config's Kura); prints the token for config.json
 //   shiori provider-search <words…>  the desktop search's rows, as JSON (for Cinnamon's menu)
 //   shiori shiori://… | kura://… an app link
 
 const USAGE =
-  'usage: shiori [--quick | search <words…> | save <url> [label] | save-links [--folder] <note path or folder> [label] [--dry-run] | send | status | pair <code> [device] | <shiori:// link>]';
+  'usage: shiori [--quick | search <words…> | save <url> [label] | save-links [--folder] <note path or folder> [label] [--dry-run] | send | status | sign-in | sign-out | pair <code> [device] | <shiori:// link>]';
 
 export function parseArgs(argv) {
   const [first, ...rest] = argv;
@@ -50,6 +52,7 @@ export function parseArgs(argv) {
     return { command: 'pair', code: joined[0], device: device.join(' ').trim() || 'Linux' };
   }
   if (first === 'provider-search') return { command: 'provider-search', query: rest.join(' ').trim() };
+  if (first === 'sign-in' || first === 'sign-out') return rest.length ? { command: 'error', message: `${first} takes nothing`, usage: USAGE } : { command: first };
   if (first === 'send' || first === 'status') return rest.length ? { command: 'error', message: `${first} takes nothing`, usage: USAGE } : { command: first };
   if (/^(shiori|kura):\/\//i.test(first)) return { command: 'link', url: first };
   return { command: 'error', message: `unknown: ${first}`, usage: USAGE };

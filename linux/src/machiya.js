@@ -18,6 +18,12 @@ export function configToken(config, S) {
 
 /** The headers a request to `url` gets: Authorization where the rule allows, else none. */
 export function roomHeaders(config, url, S) {
+  // Signed in through Hister (sign-in.json): the helper's id, which rooms in
+  // Hister sign-in mode take (they refuse the identity file's tokens).
+  const sid = config && config.histerSignIn && config.histerSignIn.sid;
+  if (sid && /^mhs_[A-Za-z0-9_-]{43}$/.test(sid)) {
+    return S.mayCarryMachiyaToken(url, roomOrigins(config, S)) ? { Authorization: S.machiyaAuthHeader(sid) } : {};
+  }
   const token = configToken(config, S);
   if (!token || !S.mayCarryMachiyaToken(url, roomOrigins(config, S))) return {};
   return { Authorization: S.machiyaAuthHeader(token) };

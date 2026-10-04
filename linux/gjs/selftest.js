@@ -10,7 +10,7 @@ import { newPage, addRequest, titleIn } from '../src/page.js';
 import * as outbox from '../src/outbox.js';
 import { parseArgs } from '../src/cli.js';
 import { providerResults } from '../src/provider.js';
-import { histerHeaders } from '../src/hister.js';
+import { histerHeaders, histerCookie, sessionFromSetCookie, signInRecord } from '../src/hister.js';
 
 installURL(globalThis);
 // search-core.js is a script that sets globalThis.ShioriSearch; imported
@@ -32,6 +32,12 @@ const tokenConfig = { server: 'https://h.example/', smallweb: 'https://sw.exampl
 check('histerHeaders (server)', histerHeaders(tokenConfig, 'https://h.example/search', S), { 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' });
 check('histerHeaders (gateway)', histerHeaders(tokenConfig, 'https://sw.example/api/save', S), {});
 check('histerHeaders (none)', histerHeaders({ server: 'https://h.example/' }, 'https://h.example/search', S), {});
+const session = 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde';
+const sid = 'mhs_' + 'Z'.repeat(43);
+check('signInRecord', signInRecord({ server: 'https://h.example', session, sid, username: 'a' }, 'https://h.example/'), { session, sid, username: 'a' });
+check('histerCookie (server)', histerCookie({ server: 'https://h.example/', histerSignIn: { session } }, 'https://h.example/search'), `hister=${session}`);
+check('histerCookie (gateway)', histerCookie({ server: 'https://h.example/', histerSignIn: { session } }, 'https://sw.example/api/save'), '');
+check('sessionFromSetCookie', sessionFromSetCookie([`hister=${session}; Path=/; HttpOnly`]), session);
 check('kuraURL', S.kuraURL('https://kura.example/', 'hister', { limit: 5 }), 'https://kura.example/api/search?limit=5&offset=0&q=hister*&sort=relevance');
 check('feedURL', S.feedURL('https://s.example/', { query: 'rust', title: 'Rust' }), 'https://s.example/shiori/feed?q=rust&exclude_label=vault&title=Rust');
 check('smallwebSearchURL', S.smallwebSearchURL('https://sw.example/', 'gemini capsule'), 'https://sw.example/api/search?q=gemini+capsule&page=1');

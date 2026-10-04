@@ -4,13 +4,14 @@
 // The Machiya sign-in (config.json's machiyaToken) goes only where
 // search-core's host rule allows (../src/machiya.js), and a request that
 // carries it follows no redirect. Hister's token (config.json's
-// histerToken) goes only to the configured server (../src/hister.js),
-// under the same no-redirect rule.
+// histerToken) and the Hister sign-in's session (sign-in.json) go only
+// to the configured server (../src/hister.js), under the same no-redirect
+// rule.
 
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup?version=3.0';
 import { roomHeaders } from '../src/machiya.js';
-import { histerHeaders } from '../src/hister.js';
+import { histerHeaders, histerCookie } from '../src/hister.js';
 
 const session = new Soup.Session({ timeout: 15, user_agent: 'Shiori-Linux' });
 
@@ -26,12 +27,17 @@ export function allowedHosts(config) {
 }
 
 /**
- * GET or POST JSON: resolves to { status, json }, rejects when the host
- * isn't configured or can't be reached. `hister` adds its Origin;
- * `signIn: false` leaves the Machiya token off even for a room (pairing);
- * `redirects: false` follows none.
+ * GET or POST JSON: resolves to { status, json, cookies }, rejects when the
+ * host isn't configured or can't be reached. `hister` adds its Origin and
+ * this device's credentials (`credentials: false` leaves them off: the
+ * login itself); `signIn: false` leaves the Machiya token off even for a
+ * room (pairing); `headers` adds these; `redirects: false` follows none.
+ * `cookies` is the reply's Set-Cookie values.
  */
-export function requestJSON(config, url, { method = 'GET', body = null, hister = false, signIn = true, redirects = true } = {}) {
+export function requestJSON(
+  config, url,
+  { method = 'GET', body = null, hister = false, signIn = true, redirects = true, credentials = true, headers: extra = {} } = {},
+) {
   return new Promise((resolve, reject) => {
     let host;
     try {
@@ -47,10 +53,13 @@ export function requestJSON(config, url, { method = 'GET', body = null, hister =
     if (hister) headers.append('Origin', 'hister://');
     const auth = signIn && !hister ? roomHeaders(config, url, globalThis.ShioriSearch).Authorization : undefined;
     if (auth) headers.append('Authorization', auth);
-    const token = hister ? histerHeaders(config, url, globalThis.ShioriSearch)['X-Access-Token'] : undefined;
+    const token = hister && credentials ? histerHeaders(config, url, globalThis.ShioriSearch)['X-Access-Token'] : undefined;
     if (token) headers.append('X-Access-Token', token);
-    // libsoup would carry the header along a redirect: a request with a token follows none.
-    if (auth || token || !redirects) message.set_flags(Soup.MessageFlags.NO_REDIRECT);
+    const cookie = hister && credentials ? histerCookie(config, url) : '';
+    if (cookie) headers.append('Cookie', cookie);
+    for (const [name, value] of Object.entries(extra)) headers.append(name, value);
+    // libsoup would carry the header along a redirect: a request with a credential follows none.
+    if (auth || token || cookie || Object.keys(extra).length || !redirects) message.set_flags(Soup.MessageFlags.NO_REDIRECT);
     if (body !== null) {
       const bytes = new TextEncoder().encode(typeof body === 'string' ? body : JSON.stringify(body));
       message.set_request_body_from_bytes('application/json', new GLib.Bytes(bytes));
@@ -66,7 +75,11 @@ export function requestJSON(config, url, { method = 'GET', body = null, hister =
         // The number itself: get_status() maps it to Soup.Status, which
         // lacks 429 here and threw ("not a valid value for enumeration"),
         // so a full gateway or a rate-limited Hister read as unreachable.
-        resolve({ status: message.status_code, json });
+        const cookies = [];
+        message.get_response_headers().foreach((name, value) => {
+          if (name.toLowerCase() === 'set-cookie') cookies.push(value);
+        });
+        resolve({ status: message.status_code, json, cookies });
       } catch (error) {
         reject(error);
       }

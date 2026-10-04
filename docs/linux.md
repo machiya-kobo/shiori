@@ -99,6 +99,17 @@ a private vault is never cached, exported or sent to Hister.
   request carrying it follows no redirect. Unset, nothing is sent.
   `shiori status` says whether it's set and warns when others can read the
   file.
+- **Signing in to Hister** (when it has users, docs/signing-in.md):
+  `shiori sign-in` opens a small window (name and password; offered only
+  while the sign-in helper on Hister's host says Hister has users). It signs
+  in with Hister's own login, trades the session for the helper's id, and
+  keeps both in `$XDG_DATA_HOME/shiori/sign-in.json` (0600, tied to the
+  server's origin; config.json stays read-only). The session goes only to
+  the config's `server` as `Cookie: hister=…`; the id only to the rooms as
+  `Authorization: Bearer mhs_…` (in place of `machiyaToken`); neither
+  follows a redirect. `shiori sign-out` ends it everywhere through the
+  helper and deletes the file; `shiori status` says who is signed in. The
+  window on the web app signs in through the hosted pages' own flow.
 - The HTTP client (`linux/gjs/http.js`, libsoup 3) refuses hosts the config
   doesn't name, except the page `shiori save` was asked to download. The
   network itself (your tailnet's or LAN's access rules) is the real
