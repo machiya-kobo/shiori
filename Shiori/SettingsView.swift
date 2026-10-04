@@ -52,7 +52,7 @@ struct SettingsView: View {
         }
         var summary: String {
             switch self {
-            case .general: "Theme, text size, app icon, about"
+            case .general: "Theme, appearance, text size, app icon, about"
             case .server: "Hister and waiting pages"
             case .search: "SearXNG, Search from Safari, and what searches show"
             case .preview: "The preview pane and its images"
@@ -120,7 +120,12 @@ struct SettingsView: View {
             switch page {
             case .general:
             Section("Appearance") {
-                Picker("Theme", selection: $app.theme) {
+                Picker("Theme", selection: $app.palette) {
+                    ForEach(AppPalette.all) { palette in
+                        Text(palette.name).tag(palette)
+                    }
+                }
+                Picker("Appearance", selection: $app.theme) {
                     ForEach(AppTheme.allCases) { theme in
                         Text(theme.label).tag(theme)
                     }

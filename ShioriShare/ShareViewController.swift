@@ -36,10 +36,11 @@ final class ShareViewController: NSViewController {
 private func makeRoot(context: NSExtensionContext?) -> some View {
     let model = ShareModel(context: context)
     let theme = AppTheme.resolve(SharedSettings.defaults?.string(forKey: SharedSettings.Key.theme))
+    let palette = AppPalette.resolve(SharedSettings.defaults?.string(forKey: SharedSettings.Key.palette))
     // The app's Text Size too (on the Mac the only way text grows).
     let size = TextSize.resolve(SharedSettings.defaults?.string(forKey: SharedSettings.Key.textSize))
     return ShareView(model: model)
-        .modifier(ThemedRoot(theme: theme))
+        .modifier(ThemedRoot(theme: theme, palette: palette))
         .modifier(TextSizeRoot(size: size))
         .task { await model.load() }
 }

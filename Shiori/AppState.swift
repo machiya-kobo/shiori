@@ -40,6 +40,15 @@ final class AppState {
         }
     }
 
+    /// Settings → Appearance → Theme: one of the Machiya rooms' ten, per
+    /// device. In the App Group so the share extension draws in it too.
+    var palette: AppPalette {
+        didSet {
+            UserDefaults.standard.set(palette.key, forKey: AppPalette.storageKey)
+            SharedSettings.defaults?.set(palette.key, forKey: SharedSettings.Key.palette)
+        }
+    }
+
     /// Safari searches (via DuckDuckGo) open Shiori's combined results.
     var combinedSearch: Bool {
         didSet {
@@ -433,6 +442,9 @@ final class AppState {
         textSize = TextSize.resolve(
             SharedSettings.defaults?.string(forKey: SharedSettings.Key.textSize)
                 ?? defaults.string(forKey: TextSize.storageKey))
+        palette = AppPalette.resolve(
+            SharedSettings.defaults?.string(forKey: SharedSettings.Key.palette)
+                ?? defaults.string(forKey: AppPalette.storageKey))
         client = HisterClient(serverURL: stored ?? fallback)
 
         let shared = SharedSettings.defaults

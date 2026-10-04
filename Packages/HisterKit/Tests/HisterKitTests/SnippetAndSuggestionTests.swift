@@ -109,8 +109,24 @@ struct ThemeTests {
         #expect(AppTheme.day.colorScheme == .light)
     }
 
-    @Test(arguments: [Palette.day, Palette.night])
-    func textColoursMeetWCAGAAOnTheBackground(palette: Palette) {
+    @Test func theTenThemesInTheRoomsOrder() {
+        #expect(AppPalette.all.map(\.key) == [
+            "tokyo-night", "solarized", "nord", "dracula", "catppuccin", "gruvbox", "rose-pine",
+            "kanagawa", "everforest", "ayu",
+        ])
+        #expect(AppPalette.resolve(nil) == .tokyoNight)
+        #expect(AppPalette.resolve("purple") == .tokyoNight)
+        #expect(AppPalette.resolve("nord").name == "Nord")
+        #expect(AppPalette.all.allSatisfy { $0.dark.isDark && !$0.light.isDark })
+    }
+
+    /// Every variant of every theme.
+    static let variants: [(String, Palette)] = AppPalette.all.flatMap {
+        [("\($0.key) dark", $0.dark), ("\($0.key) light", $0.light)]
+    }
+
+    @Test(arguments: variants)
+    func textColoursMeetWCAGAAOnTheBackgroundAndCards(name: String, palette: Palette) {
         func luminance(_ hex: UInt32) -> Double {
             let channels = [16, 8, 0].map { Double((hex >> UInt32($0)) & 0xFF) / 255 }
                 .map { $0 <= 0.03928 ? $0 / 12.92 : pow(($0 + 0.055) / 1.055, 2.4) }
@@ -120,13 +136,24 @@ struct ThemeTests {
             let (hi, lo) = (max(luminance(a), luminance(b)), min(luminance(a), luminance(b)))
             return (hi + 0.05) / (lo + 0.05)
         }
+        /// `tint` laid over `base` at `amount`, as a card's fill.
+        func mix(_ tint: UInt32, _ base: UInt32, _ amount: Double) -> UInt32 {
+            [16, 8, 0].reduce(UInt32(0)) { out, shift in
+                let t = Double((tint >> UInt32(shift)) & 0xFF), b = Double((base >> UInt32(shift)) & 0xFF)
+                return out | (UInt32((t * amount + b * (1 - amount)).rounded()) << UInt32(shift))
+            }
+        }
         let h = palette.hex
         // Lists sit on the background; Settings rows, sheets and cards on
-        // the surface. (Raised is for borders, placeholders and a moment's
-        // press, never text.)
-        for backdrop in [h.background, h.surface] {
+        // the surface; result cards (Result Style → Tint) on the page's or
+        // surface's colour tinted in their pill's: Pages blue, Notes orange,
+        // Opened purple. (Raised is for borders, placeholders and a
+        // moment's press, never text.)
+        let base = palette.tintsOverSurface ? h.surface : h.background
+        let tinted = [Palette.Tint.blue, .orange, .purple].map { mix(h.chips[$0.rawValue], base, palette.tintOpacity) }
+        for backdrop in [h.background, h.surface] + tinted {
             for colour in [h.text, h.secondaryText, h.accent, h.danger] + h.chips {
-                #expect(ratio(colour, backdrop) >= 4.5, "\(Palette.css(colour)) on \(Palette.css(backdrop))")
+                #expect(ratio(colour, backdrop) >= 4.5, "\(name): \(Palette.css(colour)) on \(Palette.css(backdrop))")
             }
         }
     }

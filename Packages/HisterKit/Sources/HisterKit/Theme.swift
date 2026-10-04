@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// The app's theme setting (Settings → Theme). `.system` follows the
-/// device: Tokyo Night Day in light mode, Tokyo Night in dark. Absent or
-/// unknown values read as `.system`.
+/// The app's appearance setting (Settings → Appearance; stored as `theme`,
+/// the rooms' word for it). `.system` follows the device: the theme's light
+/// variant in light mode, its dark one in dark. Absent or unknown values
+/// read as `.system`.
 public enum AppTheme: String, CaseIterable, Sendable, Identifiable {
     case system
     case day
@@ -22,8 +23,8 @@ public enum AppTheme: String, CaseIterable, Sendable, Identifiable {
     public var label: String {
         switch self {
         case .system: "System"
-        case .day: "Tokyo Night Day"
-        case .night: "Tokyo Night"
+        case .day: "Light"
+        case .night: "Dark"
         }
     }
 
@@ -34,9 +35,44 @@ public enum AppTheme: String, CaseIterable, Sendable, Identifiable {
     public static let storageKey = "theme"
 }
 
-/// Colours from folke's Tokyo Night: its "night" style for dark, and "day"
-/// for light. The palette follows the colour scheme in effect, so
-/// `AppTheme` only has to force (or not) the scheme.
+/// The app's theme (Settings → Theme, stored as `palette`): one of the
+/// Machiya rooms' ten, each with a dark and a light variant. Tokyo Night is
+/// the default; the rest are generated from the rooms' table
+/// (Palettes.swift, by scripts/palettes.mjs). Absent or unknown keys read as
+/// Tokyo Night.
+public struct AppPalette: Sendable, Identifiable, Hashable {
+    /// The rooms' key ("tokyo-night", "nord", …).
+    public let key: String
+    public let name: String
+    public let dark: Palette
+    public let light: Palette
+
+    public var id: String { key }
+
+    public static let tokyoNight = AppPalette(key: "tokyo-night", name: "Tokyo Night", dark: .night, light: .day)
+
+    /// The ten, in the rooms' order.
+    public static let all: [AppPalette] = [tokyoNight] + generated
+
+    public static func resolve(_ raw: String?) -> AppPalette {
+        all.first { $0.key == raw } ?? tokyoNight
+    }
+
+    /// The variant for the colour scheme in effect.
+    public func palette(for scheme: ColorScheme) -> Palette {
+        scheme == .dark ? dark : light
+    }
+
+    public static let storageKey = "palette"
+
+    public static func == (a: AppPalette, b: AppPalette) -> Bool { a.key == b.key }
+    public func hash(into hasher: inout Hasher) { hasher.combine(key) }
+}
+
+/// Colours for the content layer, one variant of an `AppPalette`. Tokyo
+/// Night's are folke's: its "night" style for dark, and "day" for light. The
+/// palette follows the colour scheme in effect, so `AppTheme` only has to
+/// force (or not) the scheme.
 public struct Palette: Sendable {
     /// The raw sRGB values, shared by SwiftUI and the preview's CSS.
     public struct Hex: Sendable {
@@ -54,6 +90,24 @@ public struct Palette: Sendable {
     public let hex: Hex
     /// How opaque the highlight behind search hits is.
     let highlightOpacity: Double
+    /// A dark variant: a tint may cover less of it (text must stay at 4.5:1
+    /// or better on it).
+    public let isDark: Bool
+    /// How much of its colour a tinted result card takes (Result Style →
+    /// Tint), and whether it lies over the surface rather than the page.
+    /// Tokyo Night's dark cards are 14% over the page; the rooms' other
+    /// themes are tinted as the web pages tint them (`--tint-mix` over the
+    /// card), the strength their colours are held to 4.5:1 at.
+    public let tintOpacity: Double
+    public let tintsOverSurface: Bool
+
+    init(hex: Hex, highlightOpacity: Double, isDark: Bool, tintOpacity: Double, tintsOverSurface: Bool) {
+        self.hex = hex
+        self.highlightOpacity = highlightOpacity
+        self.isDark = isDark
+        self.tintOpacity = tintOpacity
+        self.tintsOverSurface = tintsOverSurface
+    }
 
     public var background: Color { Color(hex: hex.background) }
     public var surface: Color { Color(hex: hex.surface) }
@@ -74,7 +128,7 @@ public struct Palette: Sendable {
             text: 0xC0CAF5, secondaryText: 0xA9B1D6, accent: 0x7AA2F7,
             highlight: 0xE0AF68, danger: 0xF7768E,
             chips: [0x7AA2F7, 0x7DCFFF, 0xBB9AF7, 0x9ECE6A, 0xFF9E64, 0xF7768E, 0xE0AF68, 0x1ABC9C]),
-        highlightOpacity: 0.35)
+        highlightOpacity: 0.35, isDark: true, tintOpacity: 0.14, tintsOverSurface: false)
 
     public static let day = Palette(
         hex: Hex(
@@ -87,15 +141,10 @@ public struct Palette: Sendable {
             text: 0x3760BF, secondaryText: 0x4C5A8F, accent: 0x155FC5,
             highlight: 0x8C6C3E, danger: 0xBD204C,
             chips: [0x155FC5, 0x006B8F, 0x802CEE, 0x506B34, 0x9A5000, 0xBD204C, 0x7A5E36, 0x0D6E5C]),
-        highlightOpacity: 0.25)
+        highlightOpacity: 0.25, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)
 
-    /// Tokyo Night, not Day: the most a tint may cover differs (text must
-    /// stay at 4.5:1 or better on it).
-    public var isDark: Bool { hex.background == Palette.night.hex.background }
-
-    public static func `for`(_ scheme: ColorScheme) -> Palette {
-        scheme == .dark ? .night : .day
-    }
+    /// What a tinted card lies on: the page or the surface.
+    public var tintBase: Color { tintsOverSurface ? surface : background }
 
     /// The chip colours by name, in `hex.chips` order (Tokyo Night's blue,
     /// cyan, purple, green, orange, red, yellow, teal): the tabs use them as

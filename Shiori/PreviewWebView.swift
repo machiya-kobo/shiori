@@ -4,7 +4,7 @@ import WebKit
 import os
 
 /// Builds the page the preview shows: Hister's readable HTML under a header,
-/// styled in the Tokyo Night palette.
+/// styled in the theme's palette.
 enum PreviewPage {
     /// `place`: a vault note's place in the vault, shown instead of the
     /// Niwa or Konbini host it's stored under.

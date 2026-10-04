@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { TABLE_PATH, CSS_PATH, TEXT, TINTS, css, bars, variant, ratio, mix, luminance } from './palettes.mjs';
+import { TABLE_PATH, CSS_PATH, SWIFT_PATH, TEXT, TINTS, css, swift, bars, variant, ratio, mix, luminance } from './palettes.mjs';
 
 const table = JSON.parse(readFileSync(TABLE_PATH, 'utf8'));
 const read = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -29,6 +29,10 @@ test('the ten themes, each with a dark and a light variant', () => {
 
 test('palettes.css is made from the table (node scripts/palettes.mjs)', () => {
   assert.equal(readFileSync(CSS_PATH, 'utf8'), css(table));
+});
+
+test("the apps' Palettes.swift is made from the table too (node scripts/palettes.mjs)", () => {
+  assert.equal(readFileSync(SWIFT_PATH, 'utf8'), swift(table));
 });
 
 for (const [key, p] of Object.entries(table)) {

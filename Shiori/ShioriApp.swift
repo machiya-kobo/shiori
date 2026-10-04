@@ -14,7 +14,7 @@ struct ShioriApp: App {
                 .frame(minWidth: 700, minHeight: 480)
                 #endif
                 .environment(app)
-                .modifier(ThemedRoot(theme: app.theme))
+                .modifier(ThemedRoot(theme: app.theme, palette: app.palette))
                 .modifier(TextSizeRoot(size: app.textSize))
                 #if os(macOS)
                 .onAppear { MacAppIcon.apply() }
@@ -68,7 +68,7 @@ struct ShioriApp: App {
             SettingsView()
                 .frame(minWidth: 480, minHeight: 520)
                 .environment(app)
-                .modifier(ThemedRoot(theme: app.theme))
+                .modifier(ThemedRoot(theme: app.theme, palette: app.palette))
                 .modifier(TextSizeRoot(size: app.textSize))
         }
         #endif

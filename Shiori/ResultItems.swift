@@ -93,7 +93,9 @@ private struct ResultActionsHost: ViewModifier {
 /// in it: blue for your pages, orange for notes (Kura's), purple for pages you opened,
 /// as the search page's cards. The fill is
 /// the most each theme allows with every text colour at 4.5:1 or better:
-/// 14% on Tokyo Night's background, 8% on Tokyo Night Day's surface.
+/// 14% on Tokyo Night's background, 8% on Tokyo Night Day's surface, and for
+/// the rooms' other themes the web pages' `--tint-mix` over the surface
+/// (`Palette.tintOpacity`, `tintBase`).
 struct ResultBar: View {
     enum Kind {
         case page, note, opened
@@ -152,8 +154,8 @@ struct ResultBar: View {
         ZStack {
             palette.background
             shape
-                .fill(palette.isDark ? palette.background : palette.surface)
-                .overlay(shape.fill(color.opacity(palette.isDark ? 0.14 : 0.08)))
+                .fill(palette.tintBase)
+                .overlay(shape.fill(color.opacity(palette.tintOpacity)))
                 .overlay(shape.fill(selected ? palette.accent.opacity(0.22) : .clear))
                 .overlay(shape.strokeBorder(color.opacity(0.55)))
                 .padding(.horizontal, 6)

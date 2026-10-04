@@ -2,12 +2,13 @@ import HisterKit
 import SwiftUI
 
 extension EnvironmentValues {
-    /// The Tokyo Night palette for the colour scheme in effect.
+    /// The theme's palette for the colour scheme in effect.
     @Entry var palette: Palette = .night
 }
 
-/// Applies the theme setting at the root: forces (or follows) the colour
-/// scheme, then hands the matching palette and accent down. Colour stays
+/// Applies the appearance and theme settings at the root: forces (or
+/// follows) the colour scheme, then hands the theme's matching palette and
+/// accent down. Colour stays
 /// on the content layer; bars, tabs and sheets keep the system material
 /// (Liquid Glass on 26+).
 ///
@@ -16,10 +17,11 @@ extension EnvironmentValues {
 /// last forced scheme instead of following the system again.
 struct ThemedRoot: ViewModifier {
     let theme: AppTheme
+    let palette: AppPalette
 
     func body(content: Content) -> some View {
         content
-            .modifier(PaletteFromScheme())
+            .modifier(PaletteFromScheme(theme: palette))
             .onChange(of: theme, initial: true) { _, theme in Self.apply(theme) }
     }
 
@@ -48,10 +50,11 @@ struct ThemedRoot: ViewModifier {
 }
 
 private struct PaletteFromScheme: ViewModifier {
+    let theme: AppPalette
     @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
-        let palette = Palette.for(scheme)
+        let palette = theme.palette(for: scheme)
         content
             .environment(\.palette, palette)
             .tint(palette.accent)

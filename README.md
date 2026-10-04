@@ -270,7 +270,7 @@ revoke it on the server. [docs/signing-in.md](docs/signing-in.md) has the detail
 - **Search scopes**: All (your top pages, your top notes, then the web, like All in Safari's results), Hister, Notes and Web.
 - **Notes**: your Obsidian notes, from Kura (a notes search and reader; optional). Search them on their own (Search → Notes). A note opens in Obsidian, with its Kura page and Konbini card a tap away.
 - **Search history**: tap a search field (in the app, or on Safari's results page) for your last 5 searches, one list for both. Switch it off, or clear it, in Settings → Search History; it stays on the device.
-- **Themes**: Tokyo Night and Tokyo Night Day, or follow the system.
+- **Themes**: the Machiya rooms' ten (Tokyo Night, Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa, Everforest, Ayu), each light and dark (Settings → Appearance: Theme, and Appearance to follow the system or pick one). Per device; Safari's results page stays Tokyo Night for now.
 - **Text size**: follow the system, or pick a size for Shiori alone (Settings → Appearance), on the Mac too. It covers Safari's results page as well.
 - **One set of settings per device**: the app, Safari's results page (its gear) and the extension share them. Each device keeps its own.
 

@@ -18,6 +18,9 @@ nonisolated enum SharedSettings {
         static let combinedSearch = "combinedSearch"
         static let searxngURL = "searxngURL"
         static let theme = "theme"
+        /// The app's theme (one of the rooms' ten, `AppPalette`): the app and
+        /// the share extension only, until Safari's page has the ten.
+        static let palette = "palette"
         /// Combined search page options (Settings → Search from Safari).
         static let showInfobox = "showInfobox"
         static let showRelated = "showRelated"
