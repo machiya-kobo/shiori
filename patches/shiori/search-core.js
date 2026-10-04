@@ -1935,6 +1935,54 @@
     return out;
   }
 
+  // --- Signing in on the hosted pages (docs/signing-in.md) ----------------------------
+  // Behind the hosted pages' nginx, Hister answers through the sign-in
+  // helper (hister-login, on Hister's host under /machiya/): a 401 (nginx's
+  // auth_request) or 403 (Hister) means "sign in", which sends the page to
+  // the helper's sign-in and back; a 500 there means sign-in is
+  // unavailable, said in a line, never an error page. Inert where nothing
+  // asks: a Hister without users never answers 401 or 403. The extension's
+  // page never goes there (it has the token).
+
+  /** The helper's sign-in for this page, back to `back`: from the rooms' Hister address (SHIORI_ROOMS), else ''. */
+  function histerSignInURL(stamped, here, back) {
+    const hister = rooms(stamped, here).find((r) => r.key === 'hister');
+    if (!hister || !/^https:\/\//i.test(hister.url)) return '';
+    const base = hister.url.replace(/\/?$/, '/');
+    return `${base}machiya/signin?${new URLSearchParams({ return: String(back || '') })}`;
+  }
+
+  /** The helper's sessions page (where a browser signs out), or ''. */
+  function histerSessionsURL(stamped, here) {
+    const url = histerSignInURL(stamped, here, '');
+    return url ? url.replace(/signin\?.*$/, 'sessions') : '';
+  }
+
+  /** What a Hister answer asks of a hosted page: 'signin' (401, 403), 'unavailable' (500), or ''. */
+  function signInAsked(status) {
+    if (status === 401 || status === 403) return 'signin';
+    if (status === 500) return 'unavailable';
+    return '';
+  }
+
+  const SIGN_IN_GUARD_MS = 30_000;
+  /**
+   * Whether to go to the sign-in now: at most once in 30 s per tab (a
+   * sign-in that comes back still refused must not loop). `storage` is
+   * sessionStorage (or a stand-in); it records the time when true.
+   */
+  function signInDue(storage, now = Date.now()) {
+    let last = 0;
+    try {
+      last = Number(storage.getItem('shioriSignInAt')) || 0;
+    } catch (_) {}
+    if (now - last < SIGN_IN_GUARD_MS) return false;
+    try {
+      storage.setItem('shioriSignInAt', String(now));
+    } catch (_) {}
+    return true;
+  }
+
   // --- Hister's token (the Hister login's phase 1: docs/signing-in.md) ------------
   // The owner's one Hister token, sent as `X-Access-Token` by every Hister
   // caller that holds one: Safari's extension (from the app's Keychain),
@@ -2156,6 +2204,10 @@
     fieldButtons,
     histerToken,
     histerHeaders,
+    histerSignInURL,
+    histerSessionsURL,
+    signInAsked,
+    signInDue,
     urlLookupQueries,
     LOOKUP_MAX,
     mixCounts,

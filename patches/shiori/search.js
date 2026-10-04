@@ -1337,13 +1337,56 @@
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-      const init = { headers, signal: controller.signal, credentials: 'omit' };
+      // The hosted page's own host carries its sign-in (the cookie its
+      // nginx asks the helper about); anywhere else, no cookies.
+      const init = { headers, signal: controller.signal, credentials: sameOrigin(url) ? 'same-origin' : 'omit' };
       const r = await fetch(url, room ? await roomInit(url, init) : init);
-      if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status });
+      if (!r.ok) {
+        refused(r.status, url);
+        throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status });
+      }
       // Hister can leave raw control characters in text; blank them.
       return JSON.parse((await r.text()).replace(/[\u0000-\u001f]/g, ' '));
     } finally {
       clearTimeout(timer);
+    }
+  }
+
+  // Signing in (docs/signing-in.md), on the hosted page only: its nginx
+  // asks the sign-in helper about every Hister call, so a 401 or 403 from
+  // Hister's routes (not the rooms', which say so themselves) goes to the
+  // helper's sign-in and back here, at most once in 30 s; a 500 says
+  // sign-in is unavailable, in the status line. Inert while Hister has no
+  // users. The extension's page has the token instead.
+  // (A declaration, hoisted, with no outer state: fetchJSON may call it
+  // before this line runs.)
+  function refused(status, url) {
+    if (!sameOrigin(url) || !histerBase || !sameOrigin(histerBase)) return;
+    let path = '';
+    try {
+      path = new URL(url, location.href).pathname;
+    } catch (_) {}
+    if (/^\/(kura|konbini|searx|smallweb)\//.test(path)) return;
+    const asked = S.signInAsked(status);
+    if (asked === 'signin') {
+      const where = S.histerSignInURL('__SHIORI_ROOMS__', location.origin, location.href);
+      if (!where) return;
+      try {
+        localStorage.setItem('shioriSignInSeen', '1');
+      } catch (_) {}
+      let storage = { getItem: () => null, setItem() {} };
+      try {
+        storage = sessionStorage;
+      } catch (_) {}
+      if (S.signInDue(storage)) location.assign(where);
+    } else if (asked === 'unavailable' && !refused.said) {
+      let seen = false;
+      try {
+        seen = localStorage.getItem('shioriSignInSeen') === '1';
+      } catch (_) {}
+      if (!seen) return;
+      refused.said = true;
+      showStatus("Sign-in is unavailable right now: Hister or its sign-in helper isn't answering.");
     }
   }
 
@@ -1427,7 +1470,7 @@
         headers: histerAuth({ 'Content-Type': 'application/json' }),
         // As the search was sent: Hister matches the exact text.
         body: JSON.stringify({ url, title, query }),
-        credentials: 'omit',
+        credentials: sameOrigin(histerBase) ? 'same-origin' : 'omit',
         // The page is being left: let the request finish anyway.
         keepalive: true,
       }).catch(() => {});

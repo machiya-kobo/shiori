@@ -387,5 +387,6 @@ test("the results page asks the rooms with the sign-in, and nothing else", () =>
   for (const line of calls.filter((l) => !rooms.includes(l))) assert.doesNotMatch(line, /room: true/, line);
   // The hosted page's own host gets its cookie; elsewhere credentials stay 'omit'.
   assert.match(page, /if \(sameOrigin\(url\)\) return \{ \.\.\.init, credentials: 'same-origin' \};/);
-  assert.match(page, /const init = \{ headers, signal: controller\.signal, credentials: 'omit' \};/);
+  // Every fetchJSON: the page's own host with its cookie (its nginx signs Hister calls in), else 'omit'.
+  assert.match(page, /const init = \{ headers, signal: controller\.signal, credentials: sameOrigin\(url\) \? 'same-origin' : 'omit' \};/);
 });

@@ -1045,3 +1045,24 @@ test('the saved-page lookup goes in batches short enough to send (no 414; Hister
   assert.deepEqual(Array.from(S.urlLookupQueries([])), []);
   assert.deepEqual(Array.from(S.urlLookupQueries(['https://a.example/x', 'https://b.example/'], 2000)), ['url:(https://a.example/x|https://a.example/x/|https://b.example/|https://b.example)']);
 });
+
+test('the hosted pages: where to sign in, what an answer asks, and no loop', () => {
+  const stamped = 'hister=https://hister.example.ts.net/,kura=https://kura.example.ts.net/';
+  const back = 'https://shiori.example.ts.net/#/search?q=a b';
+  assert.equal(S.histerSignInURL(stamped, 'https://shiori.example.ts.net/', back),
+    'https://hister.example.ts.net/machiya/signin?return=https%3A%2F%2Fshiori.example.ts.net%2F%23%2Fsearch%3Fq%3Da+b');
+  assert.equal(S.histerSignInURL('kura=https://kura.example.ts.net/', 'https://shiori.example.ts.net/', back), '');
+  assert.equal(S.histerSignInURL('hister=http://hister.lan/', '', back), '');
+  assert.equal(S.histerSignInURL('__SHIORI_ROOMS__', '', back), '');
+  assert.equal(S.histerSessionsURL(stamped, ''), 'https://hister.example.ts.net/machiya/sessions');
+  assert.equal(S.signInAsked(401), 'signin');
+  assert.equal(S.signInAsked(403), 'signin');
+  assert.equal(S.signInAsked(500), 'unavailable');
+  assert.equal(S.signInAsked(404), '');
+  const store = new Map();
+  const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
+  assert.equal(S.signInDue(storage, 100_000), true);
+  assert.equal(S.signInDue(storage, 110_000), false);
+  assert.equal(S.signInDue(storage, 131_000), true);
+  assert.equal(S.signInDue({ getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } }, 1_000_000), true);
+});

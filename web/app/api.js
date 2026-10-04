@@ -5,6 +5,15 @@
 
 const ROOT = '/';
 
+/**
+ * Told of every refused answer (status, path) before it throws: the app
+ * sends a Hister refusal to the sign-in (docs/signing-in.md).
+ */
+let onRefused = () => {};
+export function setRefusedHandler(handler) {
+  onRefused = typeof handler === 'function' ? handler : () => {};
+}
+
 export class HisterError extends Error {
   constructor(message, status = 0, code = '') {
     super(message);
@@ -37,6 +46,9 @@ async function request(path, { method = 'GET', body, timeout = 12000, keepalive 
   }
   const text = await response.text();
   if (!response.ok) {
+    try {
+      onRefused(response.status, path);
+    } catch (_) {}
     let message = '';
     let code = '';
     try {

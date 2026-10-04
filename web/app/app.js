@@ -766,7 +766,34 @@ function controls(view, params, { search = false, notes = false } = {}) {
 }
 
 /** The Machiya rooms, as the build stamped them (scripts/rooms-stamp.py); Shiori is here. */
-const ROOMS = S.rooms('__SHIORI_ROOMS__', location.origin).filter((r) => r.key === 'shiori' || !HOUSE.hidden.includes(r.key));
+const ROOMS_STAMP = '__SHIORI_ROOMS__';
+const ROOMS = S.rooms(ROOMS_STAMP, location.origin).filter((r) => r.key === 'shiori' || !HOUSE.hidden.includes(r.key));
+
+// Signing in (docs/signing-in.md): this host's nginx asks the sign-in
+// helper about every Hister call. A 401 or 403 from Hister's routes (not
+// the rooms', which say so themselves) goes to the helper's sign-in and
+// back here, at most once in 30 s; a 500 there says sign-in is unavailable.
+// Inert while Hister has no users: nothing answers 401 or 403.
+const ROOM_PATHS = /^(kura|konbini|searx|smallweb)\//;
+let unavailableSaid = false;
+api.setRefusedHandler((status, path) => {
+  if (ROOM_PATHS.test(path)) return;
+  const asked = S.signInAsked(status);
+  if (asked === 'signin') {
+    const url = S.histerSignInURL(ROOMS_STAMP, location.origin, location.href);
+    if (!url) return;
+    // From now on Settings offers the helper's sessions page (sign-out).
+    writeLocal('shioriSignInSeen', true);
+    let storage = null;
+    try {
+      storage = sessionStorage;
+    } catch (_) {}
+    if (S.signInDue(storage || { getItem: () => null, setItem() {} })) location.assign(url);
+  } else if (asked === 'unavailable' && !unavailableSaid && readLocal('shioriSignInSeen')) {
+    unavailableSaid = true;
+    toast("Sign-in is unavailable right now: Hister or its sign-in helper isn't answering.");
+  }
+});
 /** The Rooms menu's last row, as the rooms end theirs: Shiori's Settings. */
 const ROOMS_SETTINGS = { href: '#/settings', open: () => go('settings') };
 
@@ -1774,6 +1801,12 @@ function viewSettings() {
       ], 'Kept in this browser only.'),
       group('Notes', [text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/'), machiyaRow()],
         settings.niwaURL ? 'Signed in, your theme and text size follow you to the Machiya rooms. Signing in and out happen on Kura’s own pages.' : ''),
+      // Only once this browser has been asked to sign in (Hister has users).
+      readLocal('shioriSignInSeen') && S.histerSessionsURL(ROOMS_STAMP, location.origin)
+        ? group('Signing In', [
+          h('div', { class: 'item' }, h('span', {}, 'Hister'), h('a', { class: 'link-button', href: S.histerSessionsURL(ROOMS_STAMP, location.origin) }, 'Sessions and Sign Out…')),
+        ], 'Signed in once, every Machiya room knows you. Sign out on Hister’s sessions page: it ends this browser’s session everywhere, or every device’s.')
+        : null,
       group('About', [
         h('div', { class: 'item' }, h('span', {}, 'Saving pages'), h('span', { style: 'color:var(--secondary);text-align:right' },
           SMALLWEB ? 'Add Page, or share a link to Shiori where your browser lists it (installed from Chrome or Edge). Safari’s extension is in the Shiori app.' : 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
