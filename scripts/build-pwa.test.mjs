@@ -197,3 +197,17 @@ test('both web builds publish _shiori/status.json: version, build, built, hister
     }
   }
 });
+
+test('one version everywhere: project.yml, Linux, and a CHANGELOG section for it, served by both builds', () => {
+  const version = read('../project.yml').match(/MARKETING_VERSION:\s*"?([0-9][0-9A-Za-z.\-]*)/)[1];
+  assert.equal(read('../linux/gjs/save.js').match(/export const VERSION = '([^']+)';/)[1], version);
+  const changelog = read('../CHANGELOG.md');
+  assert.match(changelog, new RegExp(`^## ${version.replace(/\./g, '\\.')} \\(\\d{4}-\\d\\d-\\d\\d\\)$`, 'm'), `a "## ${version} (date)" section`);
+  for (const out of [build(), buildWeb()]) {
+    try {
+      assert.equal(read(join(out, '_shiori', 'CHANGELOG.md')), changelog);
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+    }
+  }
+});

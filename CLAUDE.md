@@ -167,6 +167,13 @@ holds the rules and the traps the code can't tell you.
   the server (`set-server`: from its own address, where
   `shioriHost.ownsServer`); everything else goes through `set-settings`, the
   gear's whitelist.
+- **Every deploy is a release**: bump `MARKETING_VERSION` (project.yml)
+  and `VERSION` (linux/gjs/save.js) together, add a `## X.Y.Z (date)`
+  section to CHANGELOG.md (minor for features, patch for fixes; a test
+  holds all three), commit, then tag `vX.Y.Z` on main and push the tag to
+  both forges. The hosted builds are made from the tag, and serve
+  `/_shiori/status.json` and `/_shiori/CHANGELOG.md`. The tag also
+  releases Firefox (below). 1.0.0 marks the public release.
 - **Firefox releases** (`.github/workflows/firefox-release.yml`, on a `v*`
   tag matching `MARKETING_VERSION`): Mozilla signs them unlisted; the
   add-on ID `shiori@machiya-kobo.github.io` and the AMO account are fixed

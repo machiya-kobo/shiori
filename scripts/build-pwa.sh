@@ -102,5 +102,7 @@ sed -i.bak "s#from './api.js'#from './api.js?v=$version'#" "$out/_shiori/app.js"
 # For the house's status page: Shiori's version, the commit, when. After
 # the hash above, so the time doesn't make every build a new version.
 python3 scripts/status-json.py "$out"
+# What changed, for the house's status page (Recent Deploys).
+cp -- CHANGELOG.md "$out/_shiori/CHANGELOG.md"
 
 echo "==> Web app in $out ($version)"

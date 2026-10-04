@@ -90,5 +90,7 @@ XML
 
 # For the house's status page: Shiori's version, the commit, when.
 python3 scripts/status-json.py "$out"
+# What changed, for the house's status page (Recent Deploys).
+cp -- CHANGELOG.md "$out/_shiori/CHANGELOG.md"
 
 echo "==> Web page in $out (for $base)"

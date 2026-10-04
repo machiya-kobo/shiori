@@ -1,5 +1,5 @@
-# Shiori for Firefox: on a version tag (v0.1.0 for MARKETING_VERSION
-# 0.1.0), test, build, have Mozilla sign it as an unlisted add-on, and put
+# Shiori for Firefox: on a version tag (v0.2.0 for MARKETING_VERSION
+# 0.2.0), test, build, have Mozilla sign it as an unlisted add-on, and put
 # the signed .xpi and updates.json on the tag's GitHub Release. Firefox
 # finds updates at releases/latest/download/updates.json (the add-on's
 # update_url), so every release from here on must carry an updates.json.
