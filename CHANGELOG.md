@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.5.6 (2026-10-05)
+
+### Fixed
+
+- On the search page, a tap on a note opens its preview, as a page's does:
+  in the preview pane on a wide screen, and on a phone Kura's reader page
+  (it opened Obsidian). The small "preview" link, which went to Hister's
+  copy, is gone; Obsidian is a chip below.
+
 ## 0.5.5 (2026-10-05)
 
 ### Fixed

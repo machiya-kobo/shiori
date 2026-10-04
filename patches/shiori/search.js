@@ -757,7 +757,8 @@
         const card = event.target.closest('.card[data-preview]');
         if (!card || event.target.closest('.summarize-link')) return;
         const a = event.target.closest('a[href]');
-        if (a && !a.classList.contains('preview-link')) return; // titles and other links go where they go
+        // A note's title is its preview; other titles and links go where they go.
+        if (a && !a.classList.contains('preview-link') && !a.classList.contains('note-title')) return;
         event.preventDefault();
         event.stopPropagation();
         show(card.dataset.preview, card);
@@ -1911,7 +1912,11 @@
     return cardsPromise;
   }
 
-  /** A vault note: opens in Obsidian, with its Niwa page and Konbini card. */
+  /**
+   * A vault note: a tap on it opens its preview (the pane beside the
+   * results, else Kura's reader page), as a page's does; Obsidian, Kura,
+   * Konbini and Hister are chips below.
+   */
   function vaultCard(d, cards) {
     const path = S.notePath(d.url, cards);
     // A work vault's note: its own vault's name and Obsidian vault, read in
@@ -1933,19 +1938,14 @@
       el('span', { class: 'origin' }, other ? (vault && vault.title) || other : settings.obsidianVault || 'vault'),
       crumbs.length ? el('span', { class: 'crumbs' }, ' › ' + crumbs.join(' › ')) : null,
     );
-    const meta = el(
-      'div',
-      { class: 'meta' },
-      el('a', { href: other ? niwa || d.url : histerPage(d.url), class: 'preview-link' }, 'preview'),
-    );
     return el(
       'li',
       { class: 'card vault-card', 'data-preview': d.url },
-      el('a', { class: 'title', href: obsidian || niwa || d.url }, d.title || path || d.url),
+      // No small "preview" link: the title is the preview.
+      el('a', { class: 'title note-title', href: niwa || d.url }, d.title || path || d.url),
       where,
       saved ? relativeDate(saved) : null,
       markedSnippet(d.text),
-      meta,
       places(
         obsidian ? chipLink('obsidian', 'obsidian', obsidian, 'Edit in Obsidian') : null,
         niwa ? chipLink('kura', 'niwa', niwa, 'View in Kura') : null,
