@@ -71,6 +71,16 @@ final class FakeEngine: AIEngine, @unchecked Sendable {
         #expect(apple.calls == 0 && local.calls == 0)
     }
 
+    @Test func aLocalFileReachesNoEngineNotEvenOnTheDevice() async {
+        let apple = FakeEngine(.appleIntelligence, .success("on device"))
+        let local = FakeEngine(.local, .success("home"))
+        let cloud = FakeEngine(.anthropic, .success("cloud"))
+        let file = AIRequest(system: "s", user: "u", content: .localFile)
+        await #expect(throws: AIError.noEngine) { try await EngineChain([apple, local, cloud]).respond(to: file) }
+        #expect(apple.calls == 0 && local.calls == 0 && cloud.calls == 0)
+        #expect(EngineChain([apple, local, cloud]).eligible(for: .localFile).isEmpty)
+    }
+
     @Test func aNoteMayUseALocalServer() async throws {
         let local = FakeEngine(.local, .success("home"))
         #expect(try await EngineChain([local]).respond(to: note).provider == .local)

@@ -43,6 +43,9 @@ public enum AIContent: Sendable, Equatable {
     /// on-device ones included.
     /// No engine is eligible, so it fails as `noEngine` if a caller forgets.
     case workNote
+    /// A file from the folders Hister watches (the Files pill): never to
+    /// any model either, on-device ones included.
+    case localFile
     /// Nothing of the user's: a connection test.
     case none
 }
@@ -113,9 +116,10 @@ public struct EngineChain: Sendable {
     }
 
     /// The engines this content may use: a note never goes to a cloud
-    /// engine, whoever asks. The one place that rule lives.
+    /// engine, whoever asks; a work note or a local file to none. The one
+    /// place that rule lives.
     public func eligible(for content: AIContent) -> [any AIEngine] {
-        guard content != .workNote else { return [] }
+        guard content != .workNote, content != .localFile else { return [] }
         return engines.filter { content != .note || !$0.provider.isCloud }
     }
 
