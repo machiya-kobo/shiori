@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.7.3 (2026-10-05)
+
+### Changed
+
+- **30 results a page** for your pages, notes, code and files on Shiori
+  Search (it was 20), as the apps and the web app load them; and All
+  now mixes up to 30 of your pages and 30 notes among the web results
+  everywhere (it was 20). Web, News, Videos, Images and Small Web are
+  unchanged.
+
 ## 0.7.2 (2026-10-05)
 
 ### Fixed
