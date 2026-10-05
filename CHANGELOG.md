@@ -5,6 +5,26 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.7.0 (2026-10-05)
+
+### Added
+
+- **Shiori for Haiku**: a native app on the Be API, as a `.hpkg` on this
+  release (`pkgman install ./shiori-0.7.0-1-x86_64.hpkg`), or built with
+  `cd haiku && make && ./package.sh` (docs/haiku.md).
+  - Search on Return or a pill: All (Kura's top notes, then your pages),
+    Pages, Notes (every vault, or one) and Code, with Show More for the
+    next page.
+  - A note's preview from Kura, with its links opening in the browser.
+  - Save URL to Hister, with an offline outbox by the iOS app's rules.
+  - Sign in to Hister (while it has users); Hister's token goes only to
+    Hister, and Kura gets the sign-in's id or a room token.
+  - The Deskbar item and a quick search (`Shiori --quick`, ⌘K), keys
+    (⌘L, ⌘1–⌘4, ↓ and Escape), and Shiori's mark as its icon.
+  - Errors that say what to do: a failed secure connection names the
+    likely cause, and a server that stops answering is given up on after
+    20 seconds without holding up the rest.
+
 ## 0.6.4 (2026-10-05)
 
 ### Changed
