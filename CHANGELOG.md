@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.7.7 (2026-10-05)
+
+### Changed
+
+- Settings → Server's **Access Token is now Safari Extension Token**,
+  since that's what it's for: the app signs in with your login, and
+  Safari's extension, which can't use the login, saves pages with the
+  token. Paste it on each device with the extension (and again after a
+  new token is made in Hister).
+
 ## 0.7.6 (2026-10-05)
 
 ### Fixed
