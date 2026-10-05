@@ -150,7 +150,7 @@ test('the outbox sends oldest first and follows the iOS rules', async () => {
   // Signed out (or a rotated token): kept, no try counted, the drain stops.
   const before = [...store.files.values()].map((t) => JSON.parse(t).attempts);
   const held = await outbox.drain(store, async () => 403, { now: 2_000_010 });
-  assert.deepEqual(plain(held), { sent: 0, dropped: 0, stopped: true });
+  assert.deepEqual(plain(held), { sent: 0, dropped: 0, stopped: true, signedOut: true });
   assert.deepEqual([...store.files.values()].map((t) => JSON.parse(t).attempts), before);
   store.files.set('000000000000-broken.json', '{not json');
   const fixed = await outbox.drain(store, async () => 201, { now: 2_000_010 });

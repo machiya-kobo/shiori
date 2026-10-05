@@ -128,7 +128,10 @@ export async function sendWaiting(config) {
   const store = fileStore();
   const r = await outbox.drain(store, (p) => send(config, p));
   const left = (await outbox.status(store)).count;
-  return { code: r.stopped ? 1 : 0, message: `Sent ${r.sent}, dropped ${r.dropped}; ${left} waiting${r.stopped ? ' (Hister is out of reach or unwell)' : ''}.` };
+  const why = r.signedOut
+    ? ' (Hister wants you signed in: run shiori sign-in, or set "histerToken" in config.json, then shiori send)'
+    : r.stopped ? ' (Hister is out of reach or unwell)' : '';
+  return { code: r.stopped ? 1 : 0, message: `Sent ${r.sent}, dropped ${r.dropped}; ${left} waiting${why}.` };
 }
 
 /** `shiori status`: how many wait, and since when. */

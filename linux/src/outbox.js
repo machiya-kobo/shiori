@@ -66,7 +66,8 @@ export function outcome(httpStatus) {
  * Sends oldest first with `send(page)`, which resolves to the HTTP status
  * or rejects when Hister can't be reached. Stops at the first unreachable
  * or unwell reply; the rest waits for the next drain.
- * Resolves to { sent, dropped, stopped }.
+ * Resolves to { sent, dropped, stopped }, and `signedOut` when it stopped
+ * at a 401/403 (sign in, or a new token, sends the rest).
  */
 export async function drain(store, send, { now = nowSeconds() } = {}) {
   let sent = 0;
@@ -95,7 +96,7 @@ export async function drain(store, send, { now = nowSeconds() } = {}) {
       dropped++;
       await store.remove(name);
     } else if (result === 'hold') {
-      return { sent, dropped, stopped: true };
+      return { sent, dropped, stopped: true, signedOut: true };
     } else {
       entry.attempts = (entry.attempts || 0) + 1;
       if (entry.attempts >= MAX_ATTEMPTS) {
