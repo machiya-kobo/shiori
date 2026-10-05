@@ -5,6 +5,18 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.8.0 (2026-10-05)
+
+### Added
+
+- **New items show up while you look**: an open list (the Library, a
+  label or collection, a search's Pages or Notes) checks every minute,
+  while the app is in front, for anything added since it loaded, and
+  says so with a "↑ N New Items" banner instead of redrawing under you.
+  Tap it to load them and go to the top. In the iPhone, iPad and Mac
+  apps and the web app; only your Hister and Kura are asked, never the
+  web.
+
 ## 0.7.8 (2026-10-05)
 
 ### Changed
