@@ -49,7 +49,7 @@ DEFINES = 'SHIORI_VERSION="$(SHIORI_VERSION)"'
 WARNINGS = ALL
 SYMBOLS :=
 DEBUGGER :=
-COMPILER_FLAGS = -std=c++17
+COMPILER_FLAGS =
 # Deskbar loads the app's binary as its item and looks up
 # instantiate_deskbar_item and DeskbarView::Instantiate: export them.
 LINKER_FLAGS = -Wl,--export-dynamic
@@ -60,3 +60,7 @@ TARGET_DIR =
 DEVEL_DIRECTORY := \
 	$(shell findpaths -r "makefile_engine" B_FIND_PATH_DEVELOP_DIRECTORY)
 include $(DEVEL_DIRECTORY)/etc/makefile-engine
+
+# C++17 for the sources only: COMPILER_FLAGS also reach the C preprocessor
+# that compiles the .rdef files, where -std=c++17 is a warning.
+CXXFLAGS += -std=c++17
