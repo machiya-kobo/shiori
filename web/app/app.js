@@ -234,19 +234,15 @@ function writeLocal(key, value) {
   } catch (_) {}
 }
 
-function changeSetting(key, value, { fromKura = false } = {}) {
+function changeSetting(key, value, { fromAccount = false } = {}) {
   settings = { ...settings, [key]: value };
   writeLocal('shioriAppSettings', settings);
   // Theme and text size are the house's too (the other rooms read them).
   const shared = S.houseCookie(key, value, location.hostname, { steps: 'rooms' });
   if (shared) document.cookie = shared;
   applyLook();
-  // Signed in to Machiya: the rooms' copy follows (a choice made here wins
-  // over Kura's answer still on its way).
-  if (key === 'theme' || key === 'palette' || key === 'textSize') {
-    if (!fromKura) lookChangedHere = true;
-    if (!fromKura && kuraAccount.status === 200) pushPrefs();
-  }
+  // A setting that follows the person goes to the account soon after.
+  if (!fromAccount && (['theme', 'palette', 'textSize', 'pills'].includes(key) || Object.hasOwn(S.prefsShioriKeys(), key))) soonContact();
   if (key === 'searchHistory' && value === false) {
     recents = [];
     writeLocal('shioriAppRecents', recents);
@@ -290,36 +286,109 @@ function applyLook() {
   }
   // How your pages, notes and opened pages stand apart: app.css keys off it.
   document.body.dataset.resultStyle = ['tint', 'solid', 'bar', 'none'].includes(settings.resultStyle) ? settings.resultStyle : 'tint';
-  document.documentElement.style.fontSize = `${Math.round(100 * (TEXT_SCALE[settings.textSize] || systemTextScale()))}%`;
+  // This device's own size (Use This Device's Size), else the shared one.
+  const size = deviceTextSize() || settings.textSize;
+  document.documentElement.style.fontSize = `${Math.round(100 * (TEXT_SCALE[size] || systemTextScale()))}%`;
 }
 
-// --- Theme and text size with the rooms (Kura's /api/prefs) ------------------------
-// Signed in to Machiya, the rooms keep your theme and text size on the
-// server (machiya.js): read on launch, replacing this device's when they
-// differ and are values the house knows, and written on a change here.
-// Any failure is silent; the cookies and this browser's copy stay.
+// --- Settings that follow the person (machiya docs/contracts/prefs.md) ------------
+// Signed in, the account keeps the Shared settings (theme, appearance, text
+// size, pills) and Shiori's own options (`shiori.*`), and every app and
+// device follows them. One contact: what changed here since the last one
+// goes first (with anything a failed send left pending), then the account's
+// answer is merged by the contract's rules (S.prefsSync) and what it lacks is
+// sent. On load, on return after 30 s or more away, and soon after a change
+// here. Failures are silent: this browser's copy and the cookies stay.
 
-/** Where you stand with Kura's sign-in: {status} from api.kuraPrefs (-1: not asked yet). */
+const PREFS_PENDING = 'machiyaPrefsPending';
+const PREFS_SEEN = 'machiyaPrefsSeen';
+const PREFS_LOCAL = 'shioriPrefsLocal';
+/** 'checking', 'synced', 'signedOut' or 'unavailable': Settings' state line. */
+let prefsState = 'checking';
+let prefsAt = 0;
+let prefsTimer = 0;
+const prefsStateOf = (status) => (status === 200 || status === 304 ? 'synced' : status === 401 ? 'signedOut' : 'unavailable');
+
+/** One contact at a time: a second ask while one runs shares it. */
+let prefsRunning = null;
+function contactAccount() {
+  prefsRunning ||= contactOnce().finally(() => (prefsRunning = null));
+  return prefsRunning;
+}
+async function contactOnce() {
+  prefsAt = Date.now();
+  const now = S.accountValues(settings, { steps: 'rooms' });
+  const pending = readLocal(PREFS_PENDING) || {};
+  const last = readLocal(PREFS_LOCAL);
+  if (last) {
+    for (const key of new Set([...Object.keys(now), ...Object.keys(last)])) if (now[key] !== last[key]) pending[key] = now[key] ?? null;
+  }
+  const seen = readLocal(PREFS_SEEN);
+  let answer;
+  if (Object.keys(pending).length) {
+    const put = await api.putAccountPrefs(pending);
+    if (put.status === 200) {
+      answer = put.snapshot;
+      writeLocal(PREFS_PENDING, null);
+    } else if (put.status === 400) {
+      // The store will never take it.
+      writeLocal(PREFS_PENDING, null);
+      const got = await api.accountPrefs();
+      if (got.status !== 200) return (prefsState = prefsStateOf(got.status));
+      answer = got.snapshot;
+    } else {
+      writeLocal(PREFS_PENDING, pending);
+      writeLocal(PREFS_LOCAL, now);
+      return (prefsState = prefsStateOf(put.status));
+    }
+  } else {
+    const got = await api.accountPrefs(seen ? seen.rev : undefined);
+    if (got.status === 304) {
+      writeLocal(PREFS_LOCAL, now);
+      return (prefsState = 'synced');
+    }
+    if (got.status !== 200) return (prefsState = prefsStateOf(got.status));
+    answer = got.snapshot;
+  }
+  const { apply, send } = S.prefsSync({ mine: now, seen, answer });
+  for (const [key, value] of Object.entries(S.localValues(apply, { steps: 'rooms', mine: settings.textSize, defaults: DEFAULTS }))) {
+    if (value !== undefined && JSON.stringify(value) !== JSON.stringify(settings[key])) changeSetting(key, value, { fromAccount: true });
+  }
+  if (Object.keys(send).length) {
+    const put = await api.putAccountPrefs(send);
+    if (put.status === 200) answer = put.snapshot;
+    else writeLocal(PREFS_PENDING, send);
+  }
+  writeLocal(PREFS_SEEN, answer);
+  writeLocal(PREFS_LOCAL, S.accountValues(settings, { steps: 'rooms' }));
+  return (prefsState = 'synced');
+}
+function soonContact() {
+  clearTimeout(prefsTimer);
+  prefsTimer = setTimeout(() => void contactAccount(), 800);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Date.now() - prefsAt >= 30_000) void contactAccount();
+});
+
+// "Use This Device's Size": this browser's own text size over the shared
+// one (the contract: the cookie machiya_textSizeDevice, which the rooms in
+// this browser share; never sent). The house's words, read in the app's.
+function deviceTextSize() {
+  return S.deviceTextSize(document.cookie, 'rooms');
+}
+function setDeviceTextSize(house) {
+  const domain = S.houseDomain(location.hostname);
+  const tail = `; path=/; samesite=lax${domain ? `; domain=${domain}` : ''}`;
+  document.cookie = house ? `machiya_textSizeDevice=${encodeURIComponent(house)}; max-age=31536000${tail}` : `machiya_textSizeDevice=; max-age=0${tail}`;
+  applyLook();
+}
+
+/** Where you stand with Kura's own sign-in (the Machiya row): {status} from api.kuraPrefs (-1: not asked yet). */
 let kuraAccount = { status: -1 };
-let lookChangedHere = false;
-
-function pushPrefs() {
-  void api.putKuraPrefs({ theme: S.houseValue('theme', settings.theme) || 'system',
-    palette: S.houseValue('palette', settings.palette) || 'tokyo-night',
-    text_size: S.houseValue('textSize', settings.textSize, 'rooms') || 'standard' });
-}
-
-async function loadKuraAccount() {
-  const { status, prefs } = await api.kuraPrefs();
+async function loadKuraStatus() {
+  const { status } = await api.kuraPrefs();
   kuraAccount = { status };
-  if (status !== 200 || lookChangedHere) return;
-  const theme = prefs.theme === 'auto' ? 'system' : prefs.theme;
-  if (['system', 'night', 'day'].includes(theme) && theme !== settings.theme) changeSetting('theme', theme, { fromKura: true });
-  if (Object.hasOwn(S.PALETTES, prefs.palette) && prefs.palette !== settings.palette) changeSetting('palette', prefs.palette, { fromKura: true });
-  const size = typeof prefs.text_size === 'string' && /^[a-z]+$/.test(prefs.text_size)
-    ? S.houseSettings(`machiya_textSize=${prefs.text_size}`, { mine: settings.textSize, steps: 'rooms' }).textSize
-    : undefined;
-  if (size && size !== settings.textSize) changeSetting('textSize', size, { fromKura: true });
 }
 
 function recordSearch(q) {
@@ -2014,6 +2083,11 @@ function viewSettings() {
   setTitle('Settings');
   listSearch = '';
   fill($('list-top'), );
+  // Opening Settings asks the account afresh; the state line follows.
+  void contactAccount().then(() => {
+    const line = document.querySelector('.prefs-state');
+    if (line) line.textContent = prefsStateLine();
+  });
   const toggle = (key, title) => {
     const input = h('input', { type: 'checkbox', class: 'switch', 'aria-label': title });
     input.checked = !!settings[key];
@@ -2036,30 +2110,34 @@ function viewSettings() {
       'div',
       { class: 'settings' },
       accountGroup(group),
-      group('Appearance', [
+      // Shared first, as every Machiya app has it: these follow the person.
+      group('Shared', [
         choice('palette', 'Theme', Object.entries(S.PALETTES).map(([key, p]) => [key, p.name])),
         choice('theme', 'Appearance', [['system', 'System'], ['day', 'Light'], ['night', 'Dark']]),
-        // The rooms' five sizes by their names (Standard is the system's),
-        // with Medium and the two largest of the app's.
-        choice('textSize', 'Text Size', [['xSmall', 'Extra Small'], ['small', 'Small'], ['medium', 'Medium'], ['system', 'Standard'], ['large', 'Large'], ['xLarge', 'Extra Large'], ['xxLarge', 'Extra Extra Large'], ['xxxLarge', 'Largest']]),
-        toggle('previewImages', 'Images in Previews'),
+        // The house's five sizes (the account's text_size, the rooms' steps).
+        choice('textSize', 'Text Size', [['xSmall', 'Extra Small'], ['small', 'Small'], ['system', 'Standard'], ['large', 'Large'], ['xLarge', 'Extra Large']]),
+      ], [
+        h('span', {}, 'Follows you on every Machiya app when signed in. '),
+        h('span', { class: 'prefs-state' }, prefsStateLine()),
       ]),
+      pillsGroup(group),
+      deviceGroup(group),
       exportGroup(group),
       group('Searching', [toggle('rememberOpened', 'Remember What You Open'), toggle('showOpened', 'Show Opened'),
         choice('resultStyle', 'Result Style', [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']]),
         toggle('smallWebTab', 'Small Web Tab'),
         choice('smallWebOpen', 'Open Small Web Results', [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']]), toggle('searchFilters', 'Search Filters'),
         toggle('foldRepeats', 'Fold Repeated Sites'), toggle('labelSuggestions', 'Labels in Search Page Suggestions'), toggle('webResults', 'Web Results'), toggle('aiAnswer', 'AI Answer'),
+        toggle('previewImages', 'Images in Previews'),
       ],
-        'Kept in this browser only. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”.'),
-      pillsGroup(group),
+        'These follow you when signed in, but AI Answer, which stays in this browser. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”.'),
       group('Feeds', [text('newsBlurURL', 'NewsBlur', 'https://newsblur.example/')], 'For Subscribe in NewsBlur, which opens NewsBlur with a list’s feed.'),
       group('Search History', [
         toggle('searchHistory', 'Recent Searches'),
         h('div', { class: 'item' }, h('button', { type: 'button', class: 'button', style: 'margin:0;color:var(--danger)', onclick: () => ((recents = []), writeLocal('shioriAppRecents', []), toast('Cleared')) }, 'Clear Recent Searches')),
       ], 'Kept in this browser only.'),
       group('Notes', [text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/'), machiyaRow()],
-        settings.niwaURL ? 'Signed in, your theme and text size follow you to the Machiya rooms. Signing in and out happen on Kura’s own pages.' : ''),
+        settings.niwaURL ? 'Signing in to Kura and out happens on Kura’s own pages.' : ''),
       group('About', [
         h('div', { class: 'item' }, h('span', {}, 'Saving pages'), h('span', { style: 'color:var(--secondary);text-align:right' },
           SMALLWEB ? 'Add Page, or share a link to Shiori where your browser lists it (installed from Chrome or Edge). Safari’s extension is in the Shiori app.' : 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
@@ -2098,6 +2176,34 @@ function accountGroup(group) {
 }
 
 /** Settings → Pills: their order, and which show (S.pillEditor), redrawn in place. */
+/** Settings' state line for the Shared settings (the contract's). */
+function prefsStateLine() {
+  return {
+    synced: 'Signed in: these follow you.',
+    signedOut: 'Sign in (Settings → Signing In) and these follow you; until then they stay in this browser.',
+    unavailable: 'Sign-in is unavailable right now: these stay in this browser, and go once it answers.',
+  }[prefsState] || 'Checking…';
+}
+
+/** Settings → This Device: this browser's own text size over the shared one. */
+function deviceGroup(group) {
+  const own = deviceTextSize();
+  const sizes = [['xsmall', 'Extra Small'], ['small', 'Small'], ['standard', 'Standard'], ['large', 'Large'], ['xlarge', 'Extra Large']];
+  const toggle = h('input', { type: 'checkbox', class: 'switch', 'aria-label': 'Use This Device’s Size' });
+  toggle.checked = !!own;
+  const house = own ? S.houseValue('textSize', own, 'rooms') : '';
+  const select = h('select', { 'aria-label': 'This Device’s Size', hidden: !own }, sizes.map(([v, t]) => h('option', { value: v, selected: v === house }, t)));
+  toggle.addEventListener('change', () => {
+    setDeviceTextSize(toggle.checked ? S.houseValue('textSize', settings.textSize, 'rooms') || 'standard' : '');
+    viewSettings();
+  });
+  select.addEventListener('change', () => setDeviceTextSize(select.value));
+  return group('This Device', [
+    h('label', { class: 'item' }, h('span', {}, 'Use This Device’s Size'), toggle),
+    own ? h('label', { class: 'item' }, h('span', {}, 'This Device’s Size'), select) : null,
+  ], 'This browser’s own text size, over the shared one, which your other devices keep. The other Machiya rooms in this browser use it too.');
+}
+
 function pillsGroup(group) {
   const items = S.PILLS.filter(([key]) => !['images', 'videos', 'news'].includes(key) && (key !== 'files' || hasLocalFiles));
   const box = h('div', {});
@@ -2140,7 +2246,7 @@ function machiyaRow() {
     fill(action, a);
   };
   draw();
-  loadKuraAccount().then(() => row.isConnected && draw());
+  loadKuraStatus().then(() => row.isConnected && draw());
   return row;
 }
 
@@ -2618,7 +2724,9 @@ document.addEventListener('visibilitychange', () => {
   // Back from signing in on Kura's page: Settings says so.
   if (!document.hidden && route().view === 'settings') render();
 });
-Promise.all([loadRules(), api.cards().then((c) => (konbiniCards = c)), loadVaults(), loadKuraAccount(), loadLocalFiles()]).then(render);
+Promise.all([loadRules(), api.cards().then((c) => (konbiniCards = c)), loadVaults(), loadLocalFiles()]).then(render);
+// The account's settings: after the first draw (the cookies and this browser's copy paint it).
+void contactAccount();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(watchForUpdates).catch(() => {});

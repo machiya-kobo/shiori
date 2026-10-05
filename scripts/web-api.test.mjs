@@ -134,46 +134,64 @@ test("the web app's type is rem-sized, so Text Size scales it in Safari too", ()
   const css = read('../web/app/app.css').replace(/\/\*[\s\S]*?\*\//g, '');
   assert.doesNotMatch(css, /font:\s*-apple-system-/, 'a system font keyword sets an absolute size in WebKit');
   const app = read('../web/app/app.js');
-  assert.match(app, /style\.fontSize = `\$\{Math\.round\(100 \* \(TEXT_SCALE\[settings\.textSize\] \|\| systemTextScale\(\)\)\)\}%`/);
+  // This device's own size (Use This Device's Size) over the shared one.
+  assert.match(app, /const size = deviceTextSize\(\) \|\| settings\.textSize;/);
+  assert.match(app, /style\.fontSize = `\$\{Math\.round\(100 \* \(TEXT_SCALE\[size\] \|\| systemTextScale\(\)\)\)\}%`/);
 });
 
-test("Kura's preferences: read with where you stand, written as the rooms write them, never throwing", async () => {
+test("Kura's own sign-in: read with where you stand, never throwing (the Machiya row)", async () => {
   const real = globalThis.fetch;
-  const sent = [];
-  let answer = () => new Response(JSON.stringify({ prefs: { theme: 'day', text_size: 'large' } }));
-  globalThis.fetch = async (url, init = {}) => {
-    sent.push({ url, init });
-    return answer();
-  };
+  let answer = () => new Response(JSON.stringify({ prefs: { theme: 'day' } }));
+  globalThis.fetch = async () => answer();
   try {
-    assert.deepEqual(await api.kuraPrefs(), { status: 200, prefs: { theme: 'day', text_size: 'large' } });
+    assert.equal((await api.kuraPrefs()).status, 200);
     answer = () => new Response('{"error":"sign in first"}', { status: 401 });
-    assert.deepEqual(await api.kuraPrefs(), { status: 401, prefs: {} });
-    answer = () => new Response('', { status: 404 });
-    assert.equal((await api.kuraPrefs()).status, 404);
+    assert.equal((await api.kuraPrefs()).status, 401);
     answer = () => { throw new TypeError('Load failed'); };
     assert.equal((await api.kuraPrefs()).status, 0);
-    assert.equal(await api.putKuraPrefs({ theme: 'night', text_size: 'standard' }), false, 'silent');
-    answer = () => new Response(JSON.stringify({ prefs: {} }));
-    sent.length = 0;
-    assert.equal(await api.putKuraPrefs({ theme: 'night', text_size: 'standard' }), true);
-    const [put] = sent;
-    assert.equal(put.url, '/kura/api/prefs');
-    assert.equal(put.init.method, 'PUT');
-    assert.equal(put.init.credentials, 'same-origin');
-    assert.equal(put.init.headers['Content-Type'], 'application/json');
-    assert.deepEqual(JSON.parse(put.init.body), { prefs: { theme: 'night', text_size: 'standard' } });
   } finally {
     globalThis.fetch = real;
   }
 });
 
-test('the web app reads Kura’s preferences on launch and writes them only when signed in', () => {
+test("the account's preferences: /machiya/api/prefs on this host, its revision as the ETag, never throwing", async () => {
+  const real = globalThis.fetch;
+  const sent = [];
+  let answer = () => new Response(JSON.stringify({ v: 1, rev: 7, prefs: { theme: 'day' }, updated: { theme: 100 } }));
+  globalThis.fetch = async (url, init = {}) => {
+    sent.push({ url, init });
+    return answer();
+  };
+  try {
+    assert.deepEqual(JSON.parse(JSON.stringify(await api.accountPrefs())), { status: 200, snapshot: { rev: 7, prefs: { theme: 'day' }, updated: { theme: 100 } } });
+    assert.equal(sent[0].url, '/machiya/api/prefs');
+    assert.equal(sent[0].init.credentials, 'same-origin');
+    assert.equal(sent[0].init.headers['If-None-Match'], undefined);
+    sent.length = 0;
+    answer = () => new Response(null, { status: 304 });
+    assert.equal((await api.accountPrefs(7)).status, 304);
+    assert.equal(sent[0].init.headers['If-None-Match'], '"7"');
+    answer = () => new Response('{"error":"sign in"}', { status: 401 });
+    assert.equal((await api.accountPrefs()).status, 401);
+    answer = () => { throw new TypeError('Load failed'); };
+    assert.equal((await api.accountPrefs()).status, 0);
+    sent.length = 0;
+    answer = () => new Response(JSON.stringify({ v: 1, rev: 8, prefs: { theme: 'night' }, updated: { theme: 200 } }));
+    assert.equal((await api.putAccountPrefs({ theme: 'night', palette: null })).status, 200);
+    assert.equal(sent[0].init.method, 'PUT');
+    assert.deepEqual(JSON.parse(sent[0].init.body), { prefs: { theme: 'night', palette: null } });
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('the web app follows the account: one contact on load, on return and after a change here', () => {
   const app = read('../web/app/app.js');
-  assert.match(app, /Promise\.all\(\[[^\]]*loadKuraAccount\(\)/);
-  assert.match(app, /if \(!fromKura && kuraAccount\.status === 200\) pushPrefs\(\);/);
-  assert.match(app, /if \(status !== 200 \|\| lookChangedHere\) return;/);
-  assert.match(app, /\['system', 'night', 'day'\]\.includes\(theme\)/, 'only known values');
+  assert.match(app, /void contactAccount\(\);/, 'on load, after the first draw');
+  assert.match(app, /Date\.now\(\) - prefsAt >= 30_000\) void contactAccount\(\)/, 'on return after 30 s');
+  assert.match(app, /if \(!fromAccount && \(\['theme', 'palette', 'textSize', 'pills'\]\.includes\(key\) \|\| Object\.hasOwn\(S\.prefsShioriKeys\(\), key\)\)\) soonContact\(\);/);
+  assert.match(app, /S\.prefsSync\(\{ mine: now, seen, answer \}\)/);
+  assert.doesNotMatch(app, /putKuraPrefs|kura\/api\/prefs'.*PUT/, 'Kura is no longer written');
 });
 
 test("the web app's Settings say whether Kura knows you, and All says when it asks", () => {
@@ -181,7 +199,7 @@ test("the web app's Settings say whether Kura knows you, and All says when it as
   const row = app.slice(app.indexOf('function machiyaRow()'), app.indexOf('/** Settings → Export & Feed'));
   assert.match(row, /200: \['Signed in'/);
   assert.match(row, /401: \['Not signed in', link\(signIn, 'Sign In'\)\]/);
-  assert.match(row, /loadKuraAccount\(\)\.then/, 'asked afresh');
+  assert.match(row, /loadKuraStatus\(\)\.then/, 'asked afresh');
   assert.match(app, /group\('Notes', \[[^\n]*machiyaRow\(\)\]/);
   // All: a 401 from Kura is the Notes pill's notice, not silence.
   assert.match(app, /error\.status === 401 \? \{ signIn: true/);
@@ -435,7 +453,7 @@ test('the web is searched only on purpose: Return, a recent search, Did you mean
 test("Settings opens on who's signed in, read without a trip to the sign-in", () => {
   const app = read('../web/app/app.js');
   const api = read('../web/app/api.js');
-  assert.match(app, /accountGroup\(group\),\n\s+group\('Appearance'/);
+  assert.match(app, /accountGroup\(group\),\n\s+\/\/ Shared first[^\n]*\n\s+group\('Shared'/);
   assert.match(app, /const account = S\.histerAccount\(status, json\);/);
   const fn = api.slice(api.indexOf('export async function profile('), api.indexOf('export async function profile(') + 900);
   assert.doesNotMatch(fn, /request\(/);

@@ -18,6 +18,7 @@
     'combinedSearch', 'showInfobox', 'showRelated', 'showThumbnails', 'histerInGeneral', 'histerTab',
     'vaultInGeneral', 'vaultTab', 'webResults', 'searchHistory', 'previewPane', 'previewImages',
     'rememberOpened', 'showOpened', 'resultStyle', 'pills', 'smallWebTab', 'smallWebOpen', 'searchFilters', 'semanticSearch', 'aiAnswer', 'histerCount', 'vaultCount', 'niwaURL',
+    'labelSuggestions', 'foldRepeats',
     'konbiniURL', 'newsBlurURL', 'theme', 'palette', 'textSize', 'obsidianVault',
   ];
   // The notes' homes, from the build (the server passes them in); a

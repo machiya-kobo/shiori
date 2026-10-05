@@ -39,6 +39,8 @@
   // A Mac (not an iPad, which also says "Mac"): its system text is 13
   // points, so the page starts larger there, as the app does (TextSize.macBase).
   const IS_MAC = /Mac/.test(navigator.platform) && navigator.maxTouchPoints < 2;
+  // The hosted page (served over http(s)), not Safari's own extension page.
+  const HOSTED = /^https?:$/.test(location.protocol);
   const MAC_BASE = 1.2;
 
   // The header as it was last drawn (theme and tabs), kept in localStorage
@@ -1045,15 +1047,24 @@
     ['xxLarge', 'Extra Extra Large'],
     ['xxxLarge', 'Largest'],
   ];
+  // The house's five sizes, as the account keeps them (HOUSE_STEPS.apple).
+  const HOUSE_SIZE_CHOICES = [['xSmall', 'Extra Small'], ['small', 'Small'], ['system', 'Standard'], ['xLarge', 'Large'], ['xxLarge', 'Extra Large']];
   const SETTINGS_ROWS = [
-    ['Appearance', [
+    // Shared first, as every Machiya app has it: these follow the person
+    // (the hosted page's own contact; Safari's page through the app).
+    ['Shared', [
       { key: 'palette', label: 'Theme', options: Object.entries(S.PALETTES).map(([key, p]) => [key, p.name]) },
       { key: 'theme', label: 'Appearance', options: [['system', 'System'], ['day', 'Light'], ['night', 'Dark']] },
-      { key: 'textSize', label: 'Text Size', options: TEXT_SIZE_CHOICES },
+      { key: 'textSize', label: 'Text Size', options: HOUSE_SIZE_CHOICES },
+      // Their order, and which show (S.pillEditor).
+      { action: 'pills' },
+    ], () => `Follows you on every Machiya app when signed in. ${prefsStateLine()}`],
+    ['This Device', [
       { key: 'previewPane', label: 'Preview Pane' },
-      { key: 'previewImages', label: 'Images in Previews' },
+      ...(HOSTED ? [{ action: 'device-size' }] : []),
     ]],
     ['Results', [
+      { key: 'previewImages', label: 'Images in Previews' },
       { key: 'rememberOpened', label: 'Remember What You Open' },
       { key: 'showOpened', label: 'Show Opened' },
       { key: 'resultStyle', label: 'Result Style', options: [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']] },
@@ -1063,8 +1074,6 @@
       { key: 'aiAnswer', label: 'AI Answer', needs: 'webResults' },
       { key: 'showThumbnails', label: 'Thumbnails', needs: 'webResults' },
     ]],
-    // Their order, and which show (S.pillEditor).
-    ['Pills', [{ action: 'pills' }]],
     ['Small Web', [
       { key: 'smallWebTab', label: 'Small Web Tab' },
       { key: 'smallWebOpen', label: 'Open Results', options: [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']], needs: 'smallWebTab' },
@@ -1125,10 +1134,32 @@
   function drawSettings() {
     askAccount();
     const body = [...accountGroup()];
-    for (const [title, rows] of SETTINGS_ROWS) {
+    for (const [title, rows, foot] of SETTINGS_ROWS) {
       body.push(el('h3', { class: 'group-title' }, title));
       const group = el('div', { class: 'group' });
       for (const row of rows) {
+        if (row.action === 'device-size') {
+          // "Use This Device's Size": the rooms' cookie, this browser's own.
+          const own = S.deviceTextSize(document.cookie);
+          const use = el('input', { id: 'setting-device-size', type: 'checkbox', role: 'switch', class: 'switch' });
+          use.checked = !!own;
+          use.addEventListener('change', () => {
+            setDeviceTextSize(use.checked ? S.houseValue('textSize', settings.textSize) || 'standard' : '');
+            drawSettings();
+          });
+          group.append(el('div', { class: 'setting' }, el('label', { for: 'setting-device-size' }, 'Use This Device’s Size'), use));
+          if (own) {
+            const pick = el('select', { id: 'setting-device-pick' });
+            for (const [value, text] of HOUSE_SIZE_CHOICES) {
+              const option = el('option', { value: S.houseValue('textSize', value) }, text);
+              if (value === own) option.selected = true;
+              pick.append(option);
+            }
+            pick.addEventListener('change', () => setDeviceTextSize(pick.value));
+            group.append(el('div', { class: 'setting' }, el('label', { for: 'setting-device-pick' }, 'This Device’s Size'), pick));
+          }
+          continue;
+        }
         const off = row.needs && !settings[row.needs];
         const id = `setting-${row.key || row.action}`;
         let control;
@@ -1172,6 +1203,7 @@
         group.append(el('div', { class: 'setting' + (off ? ' disabled' : '') }, el('label', { for: id }, row.label), control));
       }
       body.push(group);
+      if (foot) body.push(el('p', { class: 'group-foot' }, foot()));
     }
     // The source, as AGPL-3.0 section 13 asks of a page served over the
     // network: only when the build names it (SHIORI_SOURCE_URL).
@@ -1187,7 +1219,121 @@
     $('settings-body').replaceChildren(...body);
   }
 
-  function change(values) {
+  // --- Settings that follow the person (machiya docs/contracts/prefs.md) ----------
+  // The hosted page keeps them in step with the account itself, as the web
+  // app does (the same rules, S.prefsSync); Safari's own page has them from
+  // the app, which does it there.
+  const PREFS_PENDING = 'machiyaPrefsPending';
+  const PREFS_SEEN = 'machiyaPrefsSeen';
+  const PREFS_LOCAL = 'shioriPrefsLocal';
+  let prefsState = HOSTED ? 'checking' : 'app';
+  let prefsRunning = null;
+  let prefsTimer = 0;
+  const readStore = (key) => {
+    try {
+      return JSON.parse(localStorage.getItem(key) || 'null');
+    } catch (_) {
+      return null;
+    }
+  };
+  const writeStore = (key, value) => {
+    try {
+      if (value == null) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(value));
+    } catch (_) {}
+  };
+  function prefsStateLine() {
+    return {
+      app: 'Shiori’s app keeps these in step with your account.',
+      synced: 'Signed in: these follow you.',
+      signedOut: 'Sign in (Account, above) and these follow you; until then they stay in this browser.',
+      unavailable: 'Sign-in is unavailable right now: these stay in this browser, and go once it answers.',
+    }[prefsState] || 'Checking…';
+  }
+  /** The account's preferences on this host (the helper's /machiya/api/prefs): {status, snapshot}; never throws. */
+  async function prefsCall(method, { rev, values } = {}) {
+    try {
+      const headers = { Accept: 'application/json' };
+      if (rev != null) headers['If-None-Match'] = `"${rev}"`;
+      if (values) headers['Content-Type'] = 'application/json';
+      const r = await fetch(`${location.origin}/machiya/api/prefs`, {
+        method, headers, credentials: 'same-origin', cache: 'no-store', body: values ? JSON.stringify({ prefs: values }) : undefined,
+      });
+      if (r.status !== 200) return { status: r.status };
+      const reply = await r.json();
+      return { status: 200, snapshot: { rev: reply.rev, prefs: reply.prefs || {}, updated: reply.updated || {} } };
+    } catch (_) {
+      return { status: 0 };
+    }
+  }
+  const stateOf = (status) => (status === 200 || status === 304 ? 'synced' : status === 401 ? 'signedOut' : 'unavailable');
+  function contactAccount() {
+    if (!HOSTED) return Promise.resolve(prefsState);
+    prefsRunning ||= contactOnce().finally(() => (prefsRunning = null));
+    return prefsRunning;
+  }
+  async function contactOnce() {
+    const now = S.accountValues(settings);
+    const pending = readStore(PREFS_PENDING) || {};
+    const last = readStore(PREFS_LOCAL);
+    if (last) {
+      for (const key of new Set([...Object.keys(now), ...Object.keys(last)])) if (now[key] !== last[key]) pending[key] = now[key] ?? null;
+    }
+    const seen = readStore(PREFS_SEEN);
+    let answer;
+    if (Object.keys(pending).length) {
+      const put = await prefsCall('PUT', { values: pending });
+      if (put.status === 200) {
+        answer = put.snapshot;
+        writeStore(PREFS_PENDING, null);
+      } else if (put.status === 400) {
+        writeStore(PREFS_PENDING, null);
+        const got = await prefsCall('GET');
+        if (got.status !== 200) return (prefsState = stateOf(got.status));
+        answer = got.snapshot;
+      } else {
+        writeStore(PREFS_PENDING, pending);
+        writeStore(PREFS_LOCAL, now);
+        return (prefsState = stateOf(put.status));
+      }
+    } else {
+      const got = await prefsCall('GET', { rev: seen ? seen.rev : undefined });
+      if (got.status === 304) {
+        writeStore(PREFS_LOCAL, now);
+        return (prefsState = 'synced');
+      }
+      if (got.status !== 200) return (prefsState = stateOf(got.status));
+      answer = got.snapshot;
+    }
+    const { apply, send } = S.prefsSync({ mine: now, seen, answer });
+    const values = {};
+    for (const [key, value] of Object.entries(S.localValues(apply, { mine: settings.textSize, defaults: { textSize: 'system' } }))) {
+      if (value !== undefined && JSON.stringify(value) !== JSON.stringify(settings[key])) values[key] = value;
+    }
+    if (Object.keys(values).length) change(values, { fromAccount: true });
+    if (Object.keys(send).length) {
+      const put = await prefsCall('PUT', { values: send });
+      if (put.status === 200) answer = put.snapshot;
+      else writeStore(PREFS_PENDING, send);
+    }
+    writeStore(PREFS_SEEN, answer);
+    writeStore(PREFS_LOCAL, S.accountValues(settings));
+    return (prefsState = 'synced');
+  }
+  /** "Use This Device's Size": the rooms' cookie in this browser (the house's words); '' clears it. */
+  function setDeviceTextSize(house) {
+    const domain = S.houseDomain(location.hostname);
+    const tail = `; path=/; samesite=lax${domain ? `; domain=${domain}` : ''}`;
+    document.cookie = house ? `machiya_textSizeDevice=${encodeURIComponent(house)}; max-age=31536000${tail}` : `machiya_textSizeDevice=; max-age=0${tail}`;
+    applyLook(settings.theme, settings.textSize, settings.palette);
+  }
+
+  function change(values, { fromAccount = false } = {}) {
+    // A setting that follows the person goes to the account soon after (hosted page).
+    if (HOSTED && !fromAccount && Object.keys(values).some((k) => ['theme', 'palette', 'textSize', 'pills'].includes(k) || Object.hasOwn(S.prefsShioriKeys(), k))) {
+      clearTimeout(prefsTimer);
+      prefsTimer = setTimeout(() => void contactAccount().then(() => $('settings').open && drawSettings()), 800);
+    }
     Object.assign(settings, values);
     if (values.searchHistory === false) recent = [];
     if (Object.keys(values).some((k) => !LOOK_KEYS.includes(k) && k !== 'clearRecentSearches')) redraw = true;
@@ -1223,10 +1369,23 @@
   if (switcher) $('settings-open').before(switcher);
 
   $('settings-open').addEventListener('click', () => {
+    // Opening Settings asks the account afresh (the hosted page); the state line follows.
+    void contactAccount().then(() => $('settings').open && drawSettings());
     drawSettings();
     $('recent').hidden = true;
     $('settings').showModal();
   });
+  // The account's settings on load (after the first draw: the cookies and
+  // this browser's copy paint it) and on return after 30 s or more away.
+  if (HOSTED) {
+    let prefsAt = Date.now();
+    setTimeout(() => void contactAccount(), 0);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible' || Date.now() - prefsAt < 30_000) return;
+      prefsAt = Date.now();
+      void contactAccount();
+    });
+  }
   $('settings').addEventListener('close', async () => {
     await Promise.all(saving);
     if (redraw) location.replace(location.href);
@@ -1340,6 +1499,8 @@
 
   /** Appearance, theme and text size: the page's look, applied at once. */
   function applyLook(theme, textSize, palette) {
+    // This device's own size (Use This Device's Size), over the shared one.
+    textSize = S.deviceTextSize(document.cookie) || textSize;
     if (theme === 'day' || theme === 'night') document.documentElement.dataset.theme = theme;
     else delete document.documentElement.dataset.theme;
     // The rooms' themes (palettes.css); Tokyo Night is search.css's own.

@@ -548,6 +548,7 @@ body.pending footer { visibility: hidden; }
 .sheet-head .done {
   border: 0; background: transparent; color: var(--accent); font: -apple-system-body; font-weight: 600; cursor: pointer;
 }
+.group-foot { margin: 6px 4px 0; font: -apple-system-footnote; color: var(--secondary); }
 .group-title { margin: 16px 4px 6px; font: -apple-system-footnote; font-weight: 600; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.03em; }
 .group { background: var(--card); border-radius: 12px; overflow: hidden; }
 .setting {

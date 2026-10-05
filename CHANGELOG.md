@@ -5,6 +5,27 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.6.0 (2026-10-05)
+
+### Added
+
+- **Settings that follow you.** Signed in to Hister, the Shared settings
+  (Theme, Appearance, Text Size, Pills) and the results' options follow
+  you to every device and every Machiya app: in the apps, the web app and
+  the hosted search page, through your account (the Hister sign-in
+  helper's `/machiya/api/prefs`). A change goes at once; another device's
+  arrives when you come back to the app or page. Addresses, sign-ins, AI
+  and a device's own text size stay on the device. Settings → General
+  (the web app's Settings, the search page's gear) starts with **Shared**,
+  saying where you stand.
+- **Use This Device's Size** (This Device): this device's own text size
+  over the shared one, which your other devices keep.
+
+### Changed
+
+- The web app no longer keeps its theme and text size in Kura; the
+  account holds them for every room.
+
 ## 0.5.8 (2026-10-05)
 
 ### Added

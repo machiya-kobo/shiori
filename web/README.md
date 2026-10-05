@@ -149,14 +149,19 @@ is dropped at once, so a reload never shares again. Without
 - Themes: Settings → Theme offers the Machiya rooms' ten (Tokyo Night,
   Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa,
   Everforest, Ayu) and Appearance (System, Light, Dark), shared with the
-  rooms like the text size (cookie `machiya_palette`, Kura's `palette`).
-  `web/app/palettes.css` is made by `node scripts/palettes.mjs` from
-  `web/app/palettes.json`, the rooms' table from machiya's
+  rooms like the text size (cookie `machiya_palette`, the account's
+  `palette`). `web/app/palettes.css` is made by `node scripts/palettes.mjs`
+  from `web/app/palettes.json`, the rooms' table from machiya's
   `vaultkit/palettes.py` (the script's header says how to refresh it); the
-  search page keeps Tokyo Night.
+  search page loads the same file.
 
-- Settings: this browser's localStorage, changed in the page's gear.
-  Nothing is shared between devices. Some start from the build, from the
+- Settings: this browser's localStorage, changed in the page's gear (the
+  web app's Settings). Signed in, the Shared ones (theme, appearance, text
+  size, pills) and Shiori's own options follow the person through the
+  account (`/machiya/api/prefs`, the Hister sign-in helper on this host:
+  route `/machiya/` to it; machiya docs/contracts/prefs.md). Addresses,
+  AI and this browser's own text size (the `machiya_textSizeDevice`
+  cookie) stay here. Some start from the build, from the
   environment of `build-web.sh` and `build-pwa.sh` (all optional):
   - `SHIORI_NIWA_URL` (Kura's address; the name is older than Kura), `SHIORI_KONBINI_URL`: the notes' homes;
   - `SHIORI_OBSIDIAN_VAULT`: the vault notes open in, in Obsidian;

@@ -1472,6 +1472,182 @@
     return house || '';
   }
 
+  // --- Preferences that follow the person (machiya docs/contracts/prefs.md) --------
+  // HisterKit's PrefsSync is the twin; scripts/prefs-sync-cases.json holds the
+  // cases both run.
+
+  /** The account's shared keys, as prefs.schema.json lists them. */
+  const PREFS_SHARED = {
+    theme: ['system', 'day', 'night'],
+    palette: Object.keys(PALETTES),
+    text_size: ['xsmall', 'small', 'standard', 'large', 'xlarge'],
+  };
+  const PREFS_DEFAULTS = { theme: 'system', palette: 'tokyo-night', text_size: 'standard', pills: '' };
+  // Shiori's own settings that follow the person, as `shiori.<snake_case>`:
+  // the results' options (never an address, an AI setting or a device's own).
+  // Read when called: the page settings' lists are declared further down.
+  // Not the AI Answer switch (AI stays on the device), nor this device's pane or search mode.
+  const shioriFlags = () => PAGE_FLAG_KEYS.filter((k) => !['semanticSearch', 'previewPane', 'aiAnswer'].includes(k));
+  const shioriChoices = () => ({ resultStyle: PAGE_CHOICES.resultStyle, smallWebOpen: PAGE_CHOICES.smallWebOpen });
+  const PREFS_SHIORI_COUNTS = ['histerCount', 'vaultCount'];
+  const snake = (key) => key.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase());
+  const shioriKey = (local) => 'shiori.' + snake(local);
+
+  /**
+   * "Use This Device's Size" on the web: the cookie machiya_textSizeDevice
+   * (the house's words, shared by the rooms in this browser, never sent), as
+   * Shiori's size in `steps`; '' when it isn't set.
+   */
+  function deviceTextSize(cookieText, steps = 'apple') {
+    const size = readCookies(cookieText).machiya_textSizeDevice;
+    return (size && houseSteps(steps).toSize[size]) || '';
+  }
+
+  /** Shiori's pills setting (['all', '-web', …]) as the account's {"order":[…],"hidden":[…]}, compact; '' for none. */
+  function pillsToAccount(pills) {
+    const clean = pillSetting(pills);
+    if (!clean.length) return '';
+    return JSON.stringify({ order: clean.map((p) => p.replace(/^-/, '')), hidden: clean.filter((p) => p.startsWith('-')).map((p) => p.slice(1)) });
+  }
+  /** The account's pills back as Shiori's, or null when it isn't a shape and ids Shiori knows. */
+  function pillsFromAccount(value) {
+    if (value === '') return [];
+    let v;
+    try {
+      v = JSON.parse(value);
+    } catch (_) {
+      return null;
+    }
+    if (!v || !Array.isArray(v.order) || !Array.isArray(v.hidden)) return null;
+    const hidden = new Set(v.hidden);
+    const out = pillSetting(v.order.map((id) => (hidden.has(id) ? '-' + id : id)));
+    return out.length || !v.order.length ? out : null;
+  }
+
+  /**
+   * Whether a value is one the account may hold for that key and this
+   * client may apply: the schema's lists for the shared keys, Shiori's own
+   * for its keys. Anything else is never applied (the contract's rule 5).
+   */
+  function prefsValid(key, value) {
+    if (typeof value !== 'string') return false;
+    if (PREFS_SHARED[key]) return PREFS_SHARED[key].includes(value);
+    if (key === 'pills') return pillsFromAccount(value) !== null;
+    const local = Object.entries(prefsShioriKeys()).find(([, k]) => k === key);
+    if (!local) return false;
+    const [name] = local;
+    if (shioriFlags().includes(name)) return value === 'on' || value === 'off';
+    if (PREFS_SHIORI_COUNTS.includes(name)) return PAGE_COUNTS.includes(Number(value)) && String(Number(value)) === value;
+    return (shioriChoices()[name] || []).includes(value);
+  }
+
+  /** Shiori's local setting → its account key, for every one that follows the person. */
+  function prefsShioriKeys() {
+    const out = {};
+    for (const k of [...shioriFlags(), ...PREFS_SHIORI_COUNTS, ...Object.keys(shioriChoices())]) out[k] = shioriKey(k);
+    return out;
+  }
+
+  /**
+   * This client's settings in the account's words, for every key it keeps
+   * there: { theme, palette, text_size, pills, 'shiori.show_infobox': 'on', … }.
+   * `steps` as for houseSettings. A setting this client has no value for
+   * is left out.
+   */
+  function accountValues(settings, { steps = 'apple' } = {}) {
+    const s = settings || {};
+    const out = {};
+    if (PREFS_SHARED.theme.includes(s.theme)) out.theme = s.theme;
+    if (Object.hasOwn(PALETTES, s.palette)) out.palette = s.palette;
+    const size = houseValue('textSize', s.textSize, steps);
+    if (size) out.text_size = size;
+    if (Array.isArray(s.pills)) out.pills = pillsToAccount(s.pills);
+    for (const [local, key] of Object.entries(prefsShioriKeys())) {
+      const v = s[local];
+      if (shioriFlags().includes(local) && typeof v === 'boolean') out[key] = v ? 'on' : 'off';
+      else if (PREFS_SHIORI_COUNTS.includes(local) && PAGE_COUNTS.includes(v)) out[key] = String(v);
+      else if (shioriChoices()[local] && shioriChoices()[local].includes(v)) out[key] = v;
+    }
+    return out;
+  }
+
+  /**
+   * The account's values as Shiori's settings: { theme: 'night', textSize:
+   * 'xLarge', showInfobox: false, … }, valid ones only. null removes (back
+   * to Shiori's default: `defaults`, local names). `mine` is this device's
+   * text size: an account size that is just its house rounding keeps it.
+   */
+  function localValues(prefs, { steps = 'apple', mine = '', defaults = {} } = {}) {
+    const out = {};
+    const keys = prefsShioriKeys();
+    for (const [key, value] of Object.entries(prefs || {})) {
+      if (value === null) {
+        if (key === 'text_size') out.textSize = defaults.textSize ?? 'system';
+        else if (key === 'theme' || key === 'palette') out[key] = defaults[key] ?? PREFS_DEFAULTS[key];
+        else if (key === 'pills') out.pills = [];
+        else {
+          const local = Object.keys(keys).find((k) => keys[k] === key);
+          if (local) out[local] = defaults[local];
+        }
+        continue;
+      }
+      if (!prefsValid(key, value)) continue;
+      if (key === 'theme' || key === 'palette') out[key] = value;
+      else if (key === 'text_size') {
+        if (houseSteps(steps).toHouse[mine] !== value) out.textSize = houseSteps(steps).toSize[value];
+      } else if (key === 'pills') out.pills = pillsFromAccount(value);
+      else {
+        const local = Object.keys(keys).find((k) => keys[k] === key);
+        if (shioriFlags().includes(local)) out[local] = value === 'on';
+        else if (PREFS_SHIORI_COUNTS.includes(local)) out[local] = Number(value);
+        else out[local] = value;
+      }
+    }
+    return out;
+  }
+
+  /**
+   * One contact with the account (the contract's client rules), after any
+   * pending change has been sent: `mine` is this client's values now (the
+   * account's words, accountValues), `seen` the answer at its last contact
+   * ({prefs, updated}, or null), `answer` the account's now. Returns
+   * { apply, send }: values to take here (null: back to the default) and
+   * values to write there.
+   * - The account's value wins, unless it still says exactly what it said
+   *   last time while this client now holds something else: then this
+   *   client changed it since, and it's sent (rule 3).
+   * - A value the account doesn't have yet is sent, once (rule 4), unless
+   *   it's the default; one the account had and no longer has was
+   *   removed: back to the default.
+   * - Unknown values are never applied (rule 5).
+   */
+  function prefsSync({ mine = {}, seen = null, answer = {} } = {}) {
+    const apply = {};
+    const send = {};
+    const now = (answer && answer.prefs) || {};
+    const nowUpdated = (answer && answer.updated) || {};
+    const before = (seen && seen.prefs) || {};
+    const beforeUpdated = (seen && seen.updated) || {};
+    const keys = new Set([...Object.keys(mine), ...Object.keys(now), ...Object.keys(before)]);
+    const known = (k) => Object.hasOwn(PREFS_DEFAULTS, k) || Object.values(prefsShioriKeys()).includes(k);
+    for (const key of keys) {
+      if (!known(key)) continue;
+      const theirs = now[key];
+      const ours = mine[key];
+      if (theirs !== undefined) {
+        if (!prefsValid(key, theirs) || theirs === ours) continue;
+        const unchanged = seen && before[key] === theirs && beforeUpdated[key] === nowUpdated[key];
+        if (unchanged && ours !== undefined) send[key] = ours;
+        else apply[key] = theirs;
+      } else if (seen && Object.hasOwn(before, key)) {
+        apply[key] = null;
+      } else if (ours !== undefined && ours !== (PREFS_DEFAULTS[key] ?? '')) {
+        send[key] = ours;
+      }
+    }
+    return { apply, send };
+  }
+
   // --- Notes from Kura -------------------------------------------------------------
   // Notes come from Kura's own search (/api/search, /api/recent), never
   // Hister's label:vault. Its replies are turned into Hister's
@@ -2560,6 +2736,16 @@
     smallwebOpen,
     rooms,
     houseSettings,
+    PREFS_SHARED,
+    PREFS_DEFAULTS,
+    prefsValid,
+    prefsShioriKeys,
+    accountValues,
+    localValues,
+    prefsSync,
+    pillsToAccount,
+    pillsFromAccount,
+    deviceTextSize,
     houseCookie,
     houseValue,
     themeColorMetas,

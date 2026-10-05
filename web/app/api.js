@@ -239,10 +239,36 @@ export async function kuraPrefs() {
   }
 }
 
-/** Stores theme and text size (the house's words) in Kura, as the rooms do; silent on any failure. */
-export function putKuraPrefs(prefs) {
-  return request('kura/api/prefs', { method: 'PUT', body: { prefs }, timeout: 6000 }).then(() => true, () => false);
+/**
+ * The person's settings in their account (/machiya/api/prefs: the Hister
+ * sign-in helper on this host, machiya docs/contracts/prefs.md), with this
+ * browser's own sign-in. `{status, snapshot}`: 200 with {rev, prefs,
+ * updated}, 304 (unchanged since `rev`), 401 signed out, 0 out of reach.
+ * Never throws, and never sets off the sign-in redirect: failures are silent.
+ */
+async function prefsCall(method, { rev, values } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const headers = { Accept: 'application/json' };
+    if (rev != null) headers['If-None-Match'] = `"${rev}"`;
+    if (values) headers['Content-Type'] = 'application/json';
+    const r = await fetch(ROOT + 'machiya/api/prefs', {
+      method, headers, credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+      body: values ? JSON.stringify({ prefs: values }) : undefined,
+    });
+    if (r.status !== 200) return { status: r.status };
+    const reply = await r.json();
+    const snapshot = { rev: reply.rev, prefs: reply.prefs || {}, updated: reply.updated || {} };
+    return { status: 200, snapshot };
+  } catch (_) {
+    return { status: 0 };
+  } finally {
+    clearTimeout(timer);
+  }
 }
+export const accountPrefs = (rev) => prefsCall('GET', { rev });
+export const putAccountPrefs = (values) => prefsCall('PUT', { values });
 
 /** A note's sanitized HTML from Kura (a work note's preview: Hister never has one). Not cached. */
 export async function kuraNote(path, vault) {

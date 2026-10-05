@@ -1,0 +1,101 @@
+{
+  "$comment": "Cases for the preferences twins: S.prefsSync (search-core.js) and HisterKit's PrefsSync, both run every one. The contract: machiya docs/contracts/prefs.md (client rules).",
+  "sync": [
+    {
+      "name": "the account's value wins on a first contact",
+      "mine": { "theme": "system", "palette": "tokyo-night" },
+      "seen": null,
+      "answer": { "prefs": { "theme": "night", "palette": "nord" }, "updated": { "theme": 100, "palette": 100 } },
+      "apply": { "theme": "night", "palette": "nord" },
+      "send": {}
+    },
+    {
+      "name": "changed here since the last contact, the account unchanged: this client's value is sent (rule 3)",
+      "mine": { "theme": "day" },
+      "seen": { "prefs": { "theme": "night" }, "updated": { "theme": 100 } },
+      "answer": { "prefs": { "theme": "night" }, "updated": { "theme": 100 } },
+      "apply": {},
+      "send": { "theme": "day" }
+    },
+    {
+      "name": "changed elsewhere since (a newer updated): the account wins over a stale copy here",
+      "mine": { "theme": "day" },
+      "seen": { "prefs": { "theme": "night" }, "updated": { "theme": 100 } },
+      "answer": { "prefs": { "theme": "night" }, "updated": { "theme": 200 } },
+      "apply": { "theme": "night" },
+      "send": {}
+    },
+    {
+      "name": "a value the account doesn't have yet is sent, once; the default isn't (rule 4)",
+      "mine": { "text_size": "large", "palette": "tokyo-night", "shiori.show_infobox": "off" },
+      "seen": null,
+      "answer": { "prefs": {}, "updated": {} },
+      "apply": {},
+      "send": { "text_size": "large", "shiori.show_infobox": "off" }
+    },
+    {
+      "name": "the account no longer has a key it had: back to the default",
+      "mine": { "palette": "nord" },
+      "seen": { "prefs": { "palette": "nord" }, "updated": { "palette": 100 } },
+      "answer": { "prefs": {}, "updated": {} },
+      "apply": { "palette": null },
+      "send": {}
+    },
+    {
+      "name": "unknown values and keys are never applied (rule 5)",
+      "mine": { "theme": "system" },
+      "seen": null,
+      "answer": { "prefs": { "theme": "sepia", "language": "en", "kura.preview_pane": "on", "shiori.result_style": "glow" }, "updated": {} },
+      "apply": {},
+      "send": {}
+    },
+    {
+      "name": "the same value: nothing to do",
+      "mine": { "theme": "night", "shiori.history_count": "10" },
+      "seen": null,
+      "answer": { "prefs": { "theme": "night", "shiori.history_count": "10" }, "updated": { "theme": 1 } },
+      "apply": {},
+      "send": {}
+    },
+    {
+      "name": "Shiori's own keys follow the same rules",
+      "mine": { "shiori.result_style": "tint", "shiori.show_related": "on" },
+      "seen": { "prefs": { "shiori.result_style": "tint" }, "updated": { "shiori.result_style": 5 } },
+      "answer": { "prefs": { "shiori.result_style": "bar", "shiori.show_related": "off" }, "updated": { "shiori.result_style": 9, "shiori.show_related": 9 } },
+      "apply": { "shiori.result_style": "bar", "shiori.show_related": "off" },
+      "send": {}
+    }
+  ],
+  "textSize": [
+    { "steps": "apple", "local": "system", "house": "standard" },
+    { "steps": "apple", "local": "large", "house": "standard" },
+    { "steps": "apple", "local": "xLarge", "house": "large" },
+    { "steps": "apple", "local": "xxxLarge", "house": "xlarge" },
+    { "steps": "apple", "local": "medium", "house": "small" },
+    { "steps": "rooms", "local": "large", "house": "large" },
+    { "steps": "rooms", "local": "xLarge", "house": "xlarge" }
+  ],
+  "textSizeBack": [
+    { "steps": "apple", "house": "large", "local": "xLarge" },
+    { "steps": "apple", "house": "standard", "local": "system" },
+    { "steps": "rooms", "house": "large", "local": "large" }
+  ],
+  "pills": [
+    { "local": ["all", "pages", "-web", "notes"], "account": "{\"order\":[\"all\",\"pages\",\"web\",\"notes\"],\"hidden\":[\"web\"]}" },
+    { "local": [], "account": "" }
+  ],
+  "valid": [
+    { "key": "theme", "value": "night", "ok": true },
+    { "key": "theme", "value": "auto", "ok": false },
+    { "key": "palette", "value": "ayu", "ok": true },
+    { "key": "text_size", "value": "huge", "ok": false },
+    { "key": "pills", "value": "{\"order\":[\"all\",\"bogus\"],\"hidden\":[]}", "ok": false },
+    { "key": "shiori.show_infobox", "value": "on", "ok": true },
+    { "key": "shiori.show_infobox", "value": "true", "ok": false },
+    { "key": "shiori.hister_count", "value": "10", "ok": true },
+    { "key": "shiori.hister_count", "value": "7", "ok": false },
+    { "key": "shiori.small_web_open", "value": "direct", "ok": true },
+    { "key": "shiori.preview_pane", "value": "on", "ok": false },
+    { "key": "shiori.niwa_url", "value": "https://evil.example/", "ok": false }
+  ]
+}

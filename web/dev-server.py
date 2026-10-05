@@ -53,6 +53,10 @@ UPSTREAMS = {
 KURA_PATHS = {"api/search", "api/recent", "api/note", "api/vaults", "api/prefs", "feed.xml"}
 NOT_ROUTED = ""  # route()'s answer for a path no one serves here
 HISTER = os.environ.get("HISTER_URL", "")
+# The Hister sign-in helper's /machiya/ paths (sign-in, the account's
+# preferences): on Hister's host, as in production, unless MACHIYA_URL
+# names another (a stand-in for testing). The path is kept whole.
+MACHIYA = os.environ.get("MACHIYA_URL", "")
 AI_STUB = os.environ.get("AI_STUB") == "1"
 AI_ERRORS = {"cap": 429, "note": 403, "not_indexed": 404, "empty": 422, "engine": 502, "declined": 502, "unavailable": 503, "no_results": 422, "searx": 504}
 # The paths whose upstream is a Machiya room, which may read the sign-in cookie.
@@ -78,6 +82,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html", "/sw.js", "/manifest.webmanifest") or path.startswith("/_shiori/"):
             return None
+        if MACHIYA and self.path.startswith("/machiya/"):
+            return MACHIYA.rstrip("/") + self.path
         for prefix, base in UPSTREAMS.items():
             if self.path.startswith(prefix):
                 if prefix == "/kura/" and path[len(prefix):] not in KURA_PATHS:

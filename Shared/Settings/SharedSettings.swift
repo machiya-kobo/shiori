@@ -83,6 +83,9 @@ nonisolated enum SharedSettings {
         static let smallWebOpen = "smallWebOpen"
         /// The pills' order and which show (`PillOrder`).
         static let pills = "pills"
+        /// This device's own text size (Use This Device's Size), over the
+        /// shared `textSize`; never sent to the account.
+        static let textSizeDevice = "textSizeDevice"
         /// The Hister server, for the share extension and shortcuts.
         static let serverURL = "serverURL"
         /// The server's topic labels, cached for the share sheet's picker.
@@ -222,6 +225,8 @@ nonisolated enum SharedSettings {
             if let value = defaults.string(forKey: key) { payload[key] = value }
         }
         if let pills = defaults.array(forKey: Key.pills) { payload[Key.pills] = PillOrder.clean(pills) }
+        // This device's own size, when it has one, is the one the page draws in.
+        if let device = defaults.string(forKey: Key.textSizeDevice), textSizes.contains(device) { payload[Key.textSize] = device }
         payload[Key.recentSearches] = recentSearches(in: defaults)
         return payload
     }

@@ -33,6 +33,45 @@ final class AppState {
         }
     }
 
+    /// Settings → This Device → Use This Device's Size: this device's own
+    /// text size, over the shared one (which every other device follows).
+    /// nil follows the shared size. Never sent; Safari's results page reads
+    /// it from the App Group (`textSizeDevice`).
+    var deviceTextSize: TextSize? {
+        didSet {
+            UserDefaults.standard.set(deviceTextSize?.rawValue, forKey: Self.deviceTextSizeKey)
+            SharedSettings.defaults?.set(deviceTextSize?.rawValue, forKey: SharedSettings.Key.textSizeDevice)
+        }
+    }
+    static let deviceTextSizeKey = "textSizeDevice"
+
+    /// The size this device draws in: its own when it has one, else the shared one.
+    var effectiveTextSize: TextSize { deviceTextSize ?? textSize }
+
+    /// The settings that follow the person: where this device stands with
+    /// the account (Settings' state line).
+    var prefsState: AccountPrefs.State = .notSignedIn
+    private var prefsContactAt: Date?
+    private var prefsBusy = false
+
+    /// One contact with the account's settings (AccountPrefs): on coming to
+    /// the foreground (at most every 30 s), after signing in and on opening
+    /// Settings (`force`). Then the App Group's values are taken up.
+    func syncAccountPrefs(force: Bool = false) async {
+        guard let base = client?.baseURL else { prefsState = .notSignedIn; return }
+        let credential: AccountPrefs.Credential? =
+            if let account = histerAccount { .session(account.sessionID) } else if !histerToken.isEmpty { .token(histerToken) } else { nil }
+        guard let credential, let defaults = SharedSettings.defaults else { prefsState = .notSignedIn; return }
+        if !force, let at = prefsContactAt, Date.now.timeIntervalSince(at) < 30 { return }
+        // One contact at a time (the foreground and Settings can ask together).
+        guard !prefsBusy else { return }
+        prefsBusy = true
+        defer { prefsBusy = false }
+        prefsContactAt = .now
+        prefsState = await AccountPrefs.contact(base: base, credential: credential, defaults: defaults)
+        reloadSharedSettings()
+    }
+
     var theme: AppTheme {
         didSet {
             UserDefaults.standard.set(theme.rawValue, forKey: AppTheme.storageKey)
@@ -246,6 +285,7 @@ final class AppState {
         }
         histerAccount = Self.storedAccount()
         credentialsChanged()
+        Task { await syncAccountPrefs(force: true) }
         return nil
     }
 
@@ -604,6 +644,7 @@ final class AppState {
         palette = AppPalette.resolve(
             SharedSettings.defaults?.string(forKey: SharedSettings.Key.palette)
                 ?? defaults.string(forKey: AppPalette.storageKey))
+        deviceTextSize = defaults.string(forKey: Self.deviceTextSizeKey).map(TextSize.resolve)
         client = HisterClient(serverURL: stored ?? fallback, token: HisterKeychain.token, histerSession: HisterKeychain.session)
 
         let shared = SharedSettings.defaults

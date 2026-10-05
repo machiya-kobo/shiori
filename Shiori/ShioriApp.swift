@@ -15,7 +15,7 @@ struct ShioriApp: App {
                 #endif
                 .environment(app)
                 .modifier(ThemedRoot(theme: app.theme, palette: app.palette))
-                .modifier(TextSizeRoot(size: app.textSize))
+                .modifier(TextSizeRoot(size: app.effectiveTextSize))
                 #if os(macOS)
                 .onAppear { MacAppIcon.apply() }
                 #endif
@@ -36,6 +36,8 @@ struct ShioriApp: App {
                         #endif
                     }
                     if phase == .active {
+                        // The settings that follow the person, at most every 30 s.
+                        Task { await app.syncAccountPrefs() }
                         // Which vaults Kura shares, read again after a while away.
                         Task { await app.loadVaultsIfNeeded() }
                         app.labeller.start(app: app)
@@ -70,7 +72,7 @@ struct ShioriApp: App {
                 .frame(minWidth: 480, minHeight: 520)
                 .environment(app)
                 .modifier(ThemedRoot(theme: app.theme, palette: app.palette))
-                .modifier(TextSizeRoot(size: app.textSize))
+                .modifier(TextSizeRoot(size: app.effectiveTextSize))
         }
         #endif
     }

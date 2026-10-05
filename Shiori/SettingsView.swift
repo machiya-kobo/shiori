@@ -75,6 +75,8 @@ struct SettingsView: View {
         }
         .onAppear(perform: loadDrafts)
         .onDisappear(perform: saveDrafts)
+        // Opening Settings asks the account for the shared settings.
+        .task { await app.syncAccountPrefs(force: true) }
         #else
         List {
             Section {
@@ -101,12 +103,26 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .onAppear(perform: loadDrafts)
         .onDisappear(perform: saveDrafts)
+        .task { await app.syncAccountPrefs(force: true) }
         #endif
     }
 
     private func loadDrafts() {
         draft = app.serverURL
         searxngDraft = app.searxngURL
+    }
+
+    /// The house's text sizes, as the Shared Text Size offers them.
+    static let houseSizes = [("xsmall", "Extra Small"), ("small", "Small"), ("standard", "Standard"), ("large", "Large"), ("xlarge", "Extra Large")]
+
+    /// Where the shared settings stand (the contract's state line).
+    private var prefsStateLine: String {
+        switch app.prefsState {
+        case .notSignedIn: "Sign in to Hister (Settings → Server) and these follow you; until then they stay on this device."
+        case .synced: "Signed in: these follow you."
+        case .signInNeeded: "Sign in to Hister again (Settings → Server) and these follow you again."
+        case .unavailable: "Sign-in is unavailable right now: these stay on this device, and go once it answers."
+        }
     }
 
     private func saveDrafts() {
@@ -119,7 +135,9 @@ struct SettingsView: View {
         Form {
             switch page {
             case .general:
-            Section("Appearance") {
+            // Shared first, as every Machiya app has it: these follow the
+            // person to every app and device (AccountPrefs).
+            Section {
                 Picker("Theme", selection: $app.palette) {
                     ForEach(AppPalette.all) { palette in
                         Text(palette.name).tag(palette)
@@ -130,12 +148,45 @@ struct SettingsView: View {
                         Text(theme.label).tag(theme)
                     }
                 }
-                Picker("Text Size", selection: $app.textSize) {
-                    ForEach(TextSize.choices) { size in
-                        Text(size.label).tag(size)
+                // The house's five steps (the account's text_size).
+                Picker("Text Size", selection: Binding(
+                    get: { PrefsSync.toHouse[app.textSize.rawValue] ?? "standard" },
+                    set: { app.textSize = TextSize.resolve(PrefsSync.toSize[$0] ?? "system") })) {
+                    ForEach(Self.houseSizes, id: \.0) { key, name in
+                        Text(name).tag(key)
+                    }
+                }
+            } header: {
+                Text("Shared")
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Follows you on every Machiya app when signed in.")
+                    Text(prefsStateLine)
+                }
+            }
+            .listRowBackground(palette.surface)
+
+            PillsSection()
+                .listRowBackground(palette.surface)
+
+            Section {
+                Toggle("Use This Device's Size", isOn: Binding(
+                    get: { app.deviceTextSize != nil },
+                    set: { app.deviceTextSize = $0 ? app.textSize : nil }))
+                if app.deviceTextSize != nil {
+                    Picker("This Device's Size", selection: Binding(
+                        get: { app.deviceTextSize ?? app.textSize },
+                        set: { app.deviceTextSize = $0 })) {
+                        ForEach(TextSize.choices) { size in
+                            Text(size.label).tag(size)
+                        }
                     }
                 }
                 AppIconPicker()
+            } header: {
+                Text("This Device")
+            } footer: {
+                Text("This device's own text size (\(TextSize.system.label) follows the system's), over the shared one, which your other devices keep.")
             }
             .listRowBackground(palette.surface)
 
@@ -205,9 +256,6 @@ struct SettingsView: View {
                 Text("Your SearXNG: the web results in Shiori and in Safari's results. Thumbnails come only through its image proxy.")
             }
             .listRowBackground(palette.surface)
-
-            PillsSection()
-                .listRowBackground(palette.surface)
 
             Section {
                 Toggle("Search with Shiori", isOn: $app.combinedSearch)

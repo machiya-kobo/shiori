@@ -67,8 +67,14 @@ holds the rules and the traps the code can't tell you.
   `patches/shiori/search-core.js`) with the same test cases. Change both.
 - **No rule editor in the app**: the server's rules are the truth. Shiori
   edits aliases only through Keep Collections Current (docs/ai.md).
-- **Settings are per device, never synced.** Anything on the network could
-  write a shared document.
+- **The settings that follow the person** (machiya docs/contracts/prefs.md,
+  the owner's call): signed in, the Shared ones (theme, appearance, text
+  size, pills) and Shiori's own options (`shiori.*`) go to the account at
+  the Hister sign-in helper (`/machiya/api/prefs`). Never an address, a
+  sign-in or token, an AI setting or this device's own (the preview pane,
+  Use This Device's Size). The client rules are twins: `S.prefsSync` /
+  `PrefsSync` on `scripts/prefs-sync-cases.json`; `scripts/prefs.schema.json`
+  is a copy of the contract's schema, which the tests hold Shiori's keys to.
 - **A note from a private vault** (address `/v/<vault>/n/…`, and any other
   page under `/v/<vault>/`, its folder and tag pages included; a vault Kura's
   `/api/vaults` doesn't mark `private: false`; `Notes.isPrivateNote` /
