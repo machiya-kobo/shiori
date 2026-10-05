@@ -516,4 +516,9 @@ holds the rules and the traps the code can't tell you.
   can't find it): no networking there, every action a message to the app,
   and never a synchronous `BDeskbar` call from Deskbar's own thread.
 - Searches run on Return or a pill, never while typing, as everywhere.
+- **One stalled TLS handshake jams a netservices2 session** (one control
+  thread connects for all; `BSecureSocket::Connect` ignores the timeout), and
+  its destructor then hangs quit and can crash: `Http.cpp` keeps the session
+  on the heap, never deletes it, and retires it when a request passes its
+  20 s deadline. TLS failures are `ErrorCode() == B_NOT_ALLOWED`, no detail.
 

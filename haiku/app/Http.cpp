@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <memory>
+#include <mutex>
 
 #include <DataIO.h>
 #include <ErrorsExt.h>
@@ -35,11 +36,31 @@ std::string OneLine(const BError& error)
 	return text;
 }
 
-BHttpSession& Session()
+// netservices2 connects on one control thread per session, and
+// BSecureSocket::Connect's TLS handshake ignores the timeout: a server that
+// accepts and never answers the handshake holds that thread, so every later
+// request (Kura's too) waits behind it, and the session's destructor waits
+// for it at quit (then crashes once OpenSSL is gone). So the session lives
+// on the heap and is never deleted (quit doesn't wait), and a request past
+// its deadline retires it: the next request gets a fresh session, the stuck
+// one is left to its thread.
+std::mutex sSessionLock;
+BHttpSession* sSession = nullptr;
+
+BHttpSession* Session()
 {
-	// One session for the app; its worker threads start with it.
-	static BHttpSession session;
-	return session;
+	std::lock_guard<std::mutex> lock(sSessionLock);
+	if (sSession == nullptr)
+		sSession = new BHttpSession();
+	return sSession;
+}
+
+void RetireSession(BHttpSession* stuck)
+{
+	std::lock_guard<std::mutex> lock(sSessionLock);
+	// Leaked on purpose: deleting it would wait for the stuck thread.
+	if (sSession == stuck)
+		sSession = nullptr;
 }
 
 }  // namespace
@@ -82,11 +103,13 @@ HttpReply HttpRequestJSON(const shiori::Config& config, const char* method,
 			data->Seek(0, SEEK_SET);
 			request.SetRequestBody(std::move(data), "application/json", body.size());
 		}
-		BHttpResult result = Session().Execute(std::move(request));
+		BHttpSession* session = Session();
+		BHttpResult result = session->Execute(std::move(request));
 		bigtime_t deadline = system_time() + kDeadline;
 		while (!result.IsCompleted()) {
 			if (system_time() > deadline) {
-				Session().Cancel(result);
+				session->Cancel(result);
+				RetireSession(session);
 				reply.error = "no answer in 20 seconds";
 				return reply;
 			}
@@ -105,10 +128,11 @@ HttpReply HttpRequestJSON(const shiori::Config& config, const char* method,
 		reply.error = OneLine(error);
 		// netservices2 says only "Operation not allowed" (B_NOT_ALLOWED) when
 		// TLS fails, whether the certificate isn't trusted or the server
-		// doesn't speak https: say which kind of failure it was.
-		if (error.Type() == BNetworkRequestError::NetworkError && error.SystemError() == B_NOT_ALLOWED
+		// doesn't speak https; its own words add nothing, and a long line is
+		// cut before the advice: name the failure instead.
+		if (error.Type() == BNetworkRequestError::NetworkError && error.ErrorCode() == B_NOT_ALLOWED
 			&& url.compare(0, 8, "https://") == 0)
-			reply.error = "secure connection failed: " + reply.error;
+			reply.error = "TLS handshake failed";
 	} catch (const BError& error) {
 		reply.status = 0;
 		reply.error = OneLine(error);

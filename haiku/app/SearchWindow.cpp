@@ -362,6 +362,8 @@ void SearchWindow::ShowResults(BMessage* message)
 	if (status.Length() == 0)
 		status = "Nothing to search: check Settings.";
 	fStatus->SetText(status.String());
+	// The whole text a hover away, when the line is cut.
+	fStatus->SetToolTip(status.String());
 }
 
 const Result* SearchWindow::SelectedResult() const
