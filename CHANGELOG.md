@@ -5,6 +5,17 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.7.1 (2026-10-05)
+
+### Changed
+
+- **Shiori Search's page cards are tidier**: a saved page's label is now
+  the first chip in the card's bottom row, beside where it opens, and the
+  date line holds only the date. The small "preview" link is gone (the
+  card itself opens the preview pane, and the hister chip opens Hister's
+  page), and so is "summarize" on the cards; the AI Answer stays, as do
+  Summarize in the apps and the web app.
+
 ## 0.7.0 (2026-10-05)
 
 ### Added
