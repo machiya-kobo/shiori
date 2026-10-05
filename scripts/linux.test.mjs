@@ -122,6 +122,8 @@ test('the outbox keeps one entry per page, and its first time', async () => {
 test('the outbox sends oldest first and follows the iOS rules', async () => {
   assert.equal(outbox.outcome(201), 'sent');
   for (const s of [406, 413, 422, 400, 404]) assert.equal(outbox.outcome(s), 'drop');
+  // Not signed in, or a rotated token: kept until a sign-in, as the apps keep them.
+  for (const s of [401, 403]) assert.equal(outbox.outcome(s), 'hold');
   for (const s of [429, 500, 502, 503]) assert.equal(outbox.outcome(s), 'retry');
 
   const store = memoryStore();
@@ -145,6 +147,11 @@ test('the outbox sends oldest first and follows the iOS rules', async () => {
 
   const unreachable = await outbox.drain(store, async () => { throw new Error('offline'); }, { now: 2_000_010 });
   assert.equal(unreachable.stopped, true);
+  // Signed out (or a rotated token): kept, no try counted, the drain stops.
+  const before = [...store.files.values()].map((t) => JSON.parse(t).attempts);
+  const held = await outbox.drain(store, async () => 403, { now: 2_000_010 });
+  assert.deepEqual(plain(held), { sent: 0, dropped: 0, stopped: true });
+  assert.deepEqual([...store.files.values()].map((t) => JSON.parse(t).attempts), before);
   store.files.set('000000000000-broken.json', '{not json');
   const fixed = await outbox.drain(store, async () => 201, { now: 2_000_010 });
   assert.deepEqual(plain(fixed), { sent: 1, dropped: 1, stopped: false });

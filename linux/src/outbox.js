@@ -50,10 +50,14 @@ export async function status(store) {
 /**
  * What one reply means for a queued page: 'sent'; 'drop' (Hister refused it
  * for good: 406 skip rule, 413, 422 sensitive, or any other 4xx but 429);
- * 'retry' (429 or 5xx: counted, and the drain stops).
+ * 'retry' (429 or 5xx: counted, and the drain stops); 'hold' (401 or 403:
+ * not signed in, or a token Hister no longer takes, say after a rotation:
+ * kept, no try counted, the drain stops), as the apps' outbox and the
+ * Safari queue keep them.
  */
 export function outcome(httpStatus) {
   if (httpStatus >= 200 && httpStatus < 300) return 'sent';
+  if (httpStatus === 401 || httpStatus === 403) return 'hold';
   if (httpStatus === 429 || httpStatus >= 500) return 'retry';
   return 'drop';
 }
@@ -90,6 +94,8 @@ export async function drain(store, send, { now = nowSeconds() } = {}) {
     } else if (result === 'drop') {
       dropped++;
       await store.remove(name);
+    } else if (result === 'hold') {
+      return { sent, dropped, stopped: true };
     } else {
       entry.attempts = (entry.attempts || 0) + 1;
       if (entry.attempts >= MAX_ATTEMPTS) {

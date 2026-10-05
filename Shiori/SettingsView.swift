@@ -509,7 +509,11 @@ struct SettingsView: View {
     private func checkConnection() async {
         save()
         let checked = draft
-        guard let client = HisterClient(serverURL: checked, token: app.histerToken) else { return }
+        // As the app's own client: the token, and the sign-in's session for
+        // the server it belongs to (Hister reads the session first, so a
+        // signed-in device checks fine whatever its token).
+        let session = checked.trimmingCharacters(in: .whitespacesAndNewlines) == app.serverURL ? app.histerAccount?.session : nil
+        guard let client = HisterClient(serverURL: checked, token: app.histerToken, histerSession: session) else { return }
         check = .checking
         let result: ConnectionCheck
         do {

@@ -67,8 +67,9 @@ web view, same-origin.
   `client_version`, `via: "linux"`.
 - **The outbox** (`linux/src/outbox.js`) follows the iOS rules: one entry
   per URL keeping its first time; oldest first; 406/413/422 and other 4xx
-  but 429 drop the page; 429/5xx count an attempt and stop the drain, 5
-  attempts at most; entries older than 14 days are dropped unsent. It lives
+  but 401/403/429 drop the page; 401/403 (not signed in, or a token Hister
+  no longer takes) keep it, no attempt counted, until a sign-in; 429/5xx
+  count an attempt and stop the drain, 5 attempts at most; entries older than 14 days are dropped unsent. It lives
   in `$XDG_DATA_HOME/shiori/outbox/` and drains after a save and on
   `shiori send`.
 

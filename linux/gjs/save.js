@@ -116,6 +116,10 @@ export async function save(config, { url, label = null }) {
     await outbox.enqueue(store, page);
     return { code: 0, message: `Hister answered ${status}: queued, and sent later (shiori send).` };
   }
+  if (result === 'hold') {
+    await outbox.enqueue(store, page);
+    return { code: 1, message: `Hister wants you signed in (${status}): queued until then. Run shiori sign-in, or set "histerToken" in config.json, then shiori send.` };
+  }
   return { code: 1, message: rejectionReason(status, `Hister refused it (${status}).`) };
 }
 
