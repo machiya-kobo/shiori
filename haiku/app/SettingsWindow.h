@@ -5,6 +5,7 @@
 #include <Window.h>
 
 class BButton;
+class BCheckBox;
 class BStringView;
 class BTextControl;
 
@@ -20,6 +21,7 @@ private:
 	bool fSignInOffered = false;
 	BStringView* fAccount;
 	BButton* fAccountButton;
+	BCheckBox* fDeskbar;
 	BTextControl* fServer;
 	BTextControl* fHisterToken;
 	BTextControl* fKura;

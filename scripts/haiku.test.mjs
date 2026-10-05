@@ -17,6 +17,11 @@ test("the Haiku core's vectors are search-core.js's current answers (regenerate 
   assert.equal(fresh, readFileSync(new URL('../haiku/tests/vectors.inc', import.meta.url), 'utf8'));
 });
 
+test("the Haiku icon (Icon.rdef) is haiku/tools/icon.py's output", { skip: spawnSync('python3', ['--version']).error ? 'no python3' : false }, () => {
+  const r = spawnSync('python3', ['haiku/tools/icon.py', '--check'], { cwd: root, encoding: 'utf8' });
+  assert.equal(r.status, 0, 'Icon.rdef differs: run python3 haiku/tools/icon.py');
+});
+
 const compiler = ['c++', 'clang++', 'g++'].find((cc) => !spawnSync(cc, ['--version']).error);
 test('the Haiku core builds and passes its tests', { skip: compiler ? false : 'no C++ compiler here' }, () => {
   const r = spawnSync('make', ['-f', 'Makefile.test', 'test', `CXX=${compiler}`], { cwd: `${root}haiku`, encoding: 'utf8' });

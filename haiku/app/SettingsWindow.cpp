@@ -1,10 +1,12 @@
 #include "SettingsWindow.h"
 
+#include <cstring>
 #include <string>
 #include <thread>
 
 #include <Application.h>
 #include <Button.h>
+#include <CheckBox.h>
 #include <LayoutBuilder.h>
 #include <StringView.h>
 #include <TextControl.h>
@@ -12,6 +14,7 @@
 #include "../core/Config.h"
 #include "../core/Query.h"
 #include "../core/SignIn.h"
+#include "DeskbarView.h"
 #include "Http.h"
 #include "Shiori.h"
 #include "SignInWindow.h"
@@ -97,6 +100,8 @@ SettingsWindow::SettingsWindow()
 	fAccount = new BStringView("account", "");
 	fAccount->SetExplicitMaxSize(BSize(B_SIZE_UNLIMITED, B_SIZE_UNSET));
 	fAccountButton = new BButton("accountButton", "Sign In" B_UTF8_ELLIPSIS, new BMessage(kMsgOpenSignIn));
+	fDeskbar = new BCheckBox("deskbar", "Show in Deskbar", new BMessage(kMsgDeskbarToggle));
+	fDeskbar->SetValue(InDeskbar() ? B_CONTROL_ON : B_CONTROL_OFF);
 	BButton* save = new BButton("save", "Save", new BMessage(kMsgDoStoreSettings));
 	BButton* cancel = new BButton("cancel", "Cancel", new BMessage(B_QUIT_REQUESTED));
 
@@ -114,6 +119,7 @@ SettingsWindow::SettingsWindow()
 			.AddGlue()
 			.Add(fAccountButton)
 		.End()
+		.Add(fDeskbar)
 		.Add(fStatus)
 		.AddGroup(B_HORIZONTAL)
 			.AddGlue()
@@ -189,6 +195,15 @@ void SettingsWindow::MessageReceived(BMessage* message)
 		case kMsgDoStoreSettings:
 			Store();
 			break;
+		case kMsgDeskbarToggle: {
+			// At once, not on Save: it's the Deskbar's, not config.json's.
+			status_t status = fDeskbar->Value() == B_CONTROL_ON ? AddToDeskbar() : RemoveFromDeskbar();
+			if (status != B_OK && status != B_NAME_NOT_FOUND) {
+				fStatus->SetText((std::string("The Deskbar said: ") + strerror(status)).c_str());
+				fDeskbar->SetValue(InDeskbar() ? B_CONTROL_ON : B_CONTROL_OFF);
+			}
+			break;
+		}
 		case kMsgAvailability:
 			fSignInOffered = message->GetBool("offered", false);
 			ShowAccount();

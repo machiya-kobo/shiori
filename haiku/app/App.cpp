@@ -5,7 +5,11 @@
 //   Shiori                      the search window
 //   Shiori --query <words>      the search window, searching
 //   Shiori --save <url> [label] the Save window, filled in
+//   Shiori --quick              the quick search (bind it in Shortcuts)
+//   Shiori --deskbar            puts Shiori in the Deskbar (--no-deskbar takes it out)
 #include <atomic>
+#include <cstdio>
+#include <cstring>
 #include <ctime>
 #include <mutex>
 #include <string>
@@ -22,6 +26,10 @@
 #include "../core/Outbox.h"
 #include "../core/Query.h"
 #include "Http.h"
+#include "../core/Results.h"
+#include "DeskbarView.h"
+#include "NoteWindow.h"
+#include "QuickWindow.h"
 #include "SaveWindow.h"
 #include "SearchWindow.h"
 #include "SettingsWindow.h"
@@ -130,6 +138,17 @@ bool OpenInBrowser(const std::string& url)
 	return target.IsValid() && target.OpenWithPreferredApplication(false) == B_OK;
 }
 
+bool OpenResult(const shiori::Result& result)
+{
+	if (result.kind == shiori::Result::Note && !result.path.empty()
+		&& !shiori::Trim(CurrentConfig().kura).empty()) {
+		NoteWindow* window = new NoteWindow(result);
+		window->Show();
+		return true;
+	}
+	return OpenInBrowser(result.url);
+}
+
 class ShioriApp : public BApplication {
 public:
 	ShioriApp()
@@ -178,6 +197,12 @@ public:
 				if (i + 1 < argc && argv[i + 1][0] != '-')
 					save.AddString("label", argv[++i]);
 				PostMessage(&save);
+			} else if (arg == "--quick") {
+				PostMessage(kMsgQuickSearch);
+			} else if (arg == "--deskbar" || arg == "--no-deskbar") {
+				status_t status = arg == "--deskbar" ? AddToDeskbar() : RemoveFromDeskbar();
+				if (status != B_OK && status != B_NAME_NOT_FOUND)
+					fprintf(stderr, "Shiori: the Deskbar said %s\n", strerror(status));
 			} else if (arg == "--query" && i + 1 < argc) {
 				// Before ReadyToRun the window doesn't exist yet: it searches once shown.
 				if (fSearch != nullptr && fSearch->Lock()) {
@@ -211,6 +236,35 @@ public:
 				// New settings or a sign-in: what waits may go now.
 				PostMessage(kMsgDrain);
 				break;
+			case kMsgQuickSearch: {
+				// One quick search at a time: bring it forward if it's open.
+				if (fQuick.IsValid() && fQuick.LockTarget()) {
+					BLooper* looper = nullptr;
+					BWindow* window = dynamic_cast<BWindow*>(fQuick.Target(&looper));
+					if (window != nullptr) {
+						window->Activate();
+						window->Unlock();
+						break;
+					}
+					if (looper != nullptr)
+						looper->Unlock();
+				}
+				QuickWindow* quick = new QuickWindow();
+				fQuick = BMessenger(quick);
+				quick->Show();
+				break;
+			}
+			case kMsgShowMain:
+				if (fSearch != nullptr)
+					fSearch->Activate();
+				break;
+			case kMsgShowQuery:
+				if (fSearch != nullptr && fSearch->Lock()) {
+					fSearch->SetQuery(message->GetString("query", ""));
+					fSearch->Activate();
+					fSearch->Unlock();
+				}
+				break;
 			case kMsgDrain:
 				if (!fDraining) {
 					fDraining = true;
@@ -240,6 +294,7 @@ private:
 	}
 
 	SearchWindow* fSearch = nullptr;
+	BMessenger fQuick;
 	BString fPendingQuery;
 	BMessageRunner* fDrainTimer = nullptr;
 	bool fDraining = false;

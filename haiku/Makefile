@@ -14,15 +14,18 @@ SRCS = \
 	core/Outbox.cpp \
 	core/NoteText.cpp \
 	app/App.cpp \
+	app/DeskbarView.cpp \
 	app/Http.cpp \
 	app/NoteWindow.cpp \
+	app/QuickWindow.cpp \
 	app/ResultItem.cpp \
+	app/Search.cpp \
 	app/SaveWindow.cpp \
 	app/SearchWindow.cpp \
 	app/SettingsWindow.cpp \
 	app/SignInWindow.cpp
 
-RDEFS = Shiori.rdef
+RDEFS = Shiori.rdef Icon.rdef
 RSRCS =
 
 # netservices2 is private API, linked statically (libnetservices2.a); it
@@ -42,7 +45,9 @@ WARNINGS = ALL
 SYMBOLS :=
 DEBUGGER :=
 COMPILER_FLAGS = -std=c++17
-LINKER_FLAGS =
+# Deskbar loads the app's binary as its item and looks up
+# instantiate_deskbar_item and DeskbarView::Instantiate: export them.
+LINKER_FLAGS = -Wl,--export-dynamic
 APP_VERSION :=
 INSTALL_DIR =
 TARGET_DIR =

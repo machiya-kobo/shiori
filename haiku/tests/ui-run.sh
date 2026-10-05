@@ -269,6 +269,26 @@ grep 'hister GET' "$LOG" | grep -q 'BeBox\|bebox' && bad "a note went to Hister"
 send quit of Window BeBox
 hey Shiori quit >/dev/null 2>&1
 
+# 13. The Deskbar item and the quick search.
+"$APP" >/boot/home/mh/app.log 2>&1 &
+sleep 2
+"$APP" --deskbar >/dev/null 2>&1
+shot 25-deskbar-item 2
+"$APP" --quick >/dev/null 2>&1
+sleep 1
+settext "Quick Search" query "haiku"
+msg Sqqg of Window "Quick Search"
+shot 26-quick-search 2
+n=$(hey Shiori count Item of View results of Window "Quick Search" | sed -n 's/.*(B_INT32_TYPE) : \([0-9]*\).*/\1/p')
+[ "${n:-0}" -gt 0 ] && ok "quick search found $n" || bad "quick search found nothing"
+msg Sqqs of Window "Quick Search"
+sleep 2
+hey Shiori get Text of View _input_ of View query of Window Shiori | grep -q haiku && ok "Command-Return hands the search to Shiori's window" || bad "the search didn't reach the window"
+shot 27-quick-to-window 0.5
+"$APP" --no-deskbar >/dev/null 2>&1
+shot 28-deskbar-removed 1
+hey Shiori quit >/dev/null 2>&1
+
 echo "--- fake services log"
 cat "$LOG"
 exit $fail

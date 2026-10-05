@@ -41,6 +41,12 @@ enum {
 	kMsgSignedOut = 'Ssod',
 	kMsgAccountChanged = 'Sacc',
 
+	// Quick search and the Deskbar
+	kMsgQuickSearch = 'Squi',
+	kMsgShowMain = 'Smai',
+	kMsgShowQuery = 'Ssqy',     // "query": the search window searches it
+	kMsgDeskbarToggle = 'Sdbt',
+
 	// The outbox
 	kMsgDrain = 'Sdrn',
 	kMsgDrained = 'Sdrd',
@@ -65,3 +71,7 @@ void SetCurrentConfig(const shiori::Config& config);
 
 // Opens a web address in the preferred browser (WebPositive); only http(s).
 bool OpenInBrowser(const std::string& url);
+
+namespace shiori { struct Result; }
+// A row invoked: a note opens its preview (from Kura), anything else the browser.
+bool OpenResult(const shiori::Result& result);
