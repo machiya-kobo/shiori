@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.7.2 (2026-10-05)
+
+### Fixed
+
+- The counts on the Pages, Notes and Code pills (found by All's search)
+  stay when you move to one of those tabs, on Shiori Search and in the
+  web app; they used to disappear as soon as you left All.
+
 ## 0.7.1 (2026-10-05)
 
 ### Changed
