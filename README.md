@@ -265,6 +265,7 @@ with Machiya's sign-in helper on Hister's host), each Shiori signs in once:
 - **Safari's extension** takes the token from the app.
 - **The hosted pages** send you to Hister's sign-in when it asks, and back.
 - **Linux:** `shiori sign-in` (a small window), `shiori sign-out`, and `"histerToken"` in config.json.
+- **Haiku:** Settings → Sign In…, and `"histerToken"` in config.json.
 
 The session goes only to your Hister. The rooms (Kura, Konbini) get an opaque id when you're signed in, else the token, so
 they know who's asking; nothing goes anywhere else. [docs/signing-in.md](docs/signing-in.md)
@@ -402,6 +403,10 @@ Then tell it where your servers are, in `~/.config/shiori/config.json`:
 ```
 
 `linux/install-desktop.sh --remove` undoes the desktop pieces. A bundle someone built for you installs with `flatpak install --user shiori.flatpak`.
+
+## Haiku
+
+Shiori for Haiku is a native C++ app on the Be API: search your pages and notes (All, Pages, Notes, Code), preview a note from Kura, save a web page to Hister (with an offline outbox), and quick-search from the Deskbar. Install the `.hpkg` from a release (`pkgman install ./shiori-*.hpkg`), or build it on Haiku with `cd haiku && make && ./package.sh`; [docs/haiku.md](docs/haiku.md) has the details.
 
 ## Hosting the web pages
 
