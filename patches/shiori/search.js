@@ -2267,10 +2267,10 @@
     const code = category === 'code';
     $('web').hidden = false;
     $('web-title').textContent = vault ? 'Your Notes' : files ? 'Your Files' : code ? 'Your Code' : 'Your Pages';
-    // The list's own choices (the vault, Best match or Newest) in a row above
-    // it: in the header beside the brand they crowded a phone's bar.
+    // The list's own choices (Best match or Newest, the vault) in the quiet
+    // row under the pills, where the web's tabs have their time range.
     const controls = el('div', { class: 'list-controls', role: 'group', 'aria-label': 'Sort and vault' });
-    $('web-results').before(controls);
+    $('tools-row').append(controls);
     controls.append($('sort-label'));
     if (code) $('web-results').before(codeFilterBar());
     if (vault && !kuraBase) return showStatus('No Kura address is set up (Settings → Notes).');

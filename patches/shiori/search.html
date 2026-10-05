@@ -19,23 +19,6 @@
           <span>Shiori</span>
         </a>
         <div class="filters">
-          <label id="sort-label" hidden>
-            <span class="visually-hidden">Sort</span>
-            <select id="sort">
-              <option value="">Best match</option>
-              <option value="new">Newest</option>
-            </select>
-          </label>
-          <label id="time-label">
-            <span class="visually-hidden">Time range</span>
-            <select id="time">
-              <option value="">Anytime</option>
-              <option value="day">Past day</option>
-              <option value="week">Past week</option>
-              <option value="month">Past month</option>
-              <option value="year">Past year</option>
-            </select>
-          </label>
           <button id="settings-open" class="icon-button" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog"></button>
         </div>
       </div>
@@ -66,6 +49,29 @@
       <nav id="home-recent" class="home-recent" aria-label="Recent searches" hidden></nav>
       <div class="tabs-row">
       <nav id="categories" aria-label="Categories"></nav>
+      </div>
+      <!-- What narrows this tab, quiet under the pills: the time range on
+           All and the web's tabs; the sort (and Notes' vault) on your
+           pages', notes', code's and files' tabs (the script moves the
+           list's own choices here). -->
+      <div id="tools-row" class="tools-row">
+        <label id="time-label">
+          <span class="visually-hidden">Time range</span>
+          <select id="time">
+            <option value="">Anytime</option>
+            <option value="day">Past day</option>
+            <option value="week">Past week</option>
+            <option value="month">Past month</option>
+            <option value="year">Past year</option>
+          </select>
+        </label>
+        <label id="sort-label" hidden>
+          <span class="visually-hidden">Sort</span>
+          <select id="sort">
+            <option value="">Best match</option>
+            <option value="new">Newest</option>
+          </select>
+        </label>
       </div>
     </header>
     <main>
