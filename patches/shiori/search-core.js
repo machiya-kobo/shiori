@@ -228,15 +228,24 @@
   //   idle --start(ok)--> armed --move past the slop, mostly downward--> pulling
   //   --end with d >= threshold--> reload; armed --sideways or upward--> off
   //   (until the finger lifts); a move that's no longer ok --> off; end or
-  //   cancel otherwise --> idle. d is the mark's travel: the finger's past
-  //   the slop, times resist, at most max.
-  const PULL = Object.freeze({ slop: 10, resist: 0.6, threshold: 70, max: 100 });
+  //   cancel otherwise --> idle. d is how far the content has come down:
+  //   the finger's travel past the slop, times resist up to the threshold,
+  //   then harder and harder to pull, never past max (vaultkit 0.22.1). A
+  //   release past ready rests the content `hold` down while it reloads.
+  const PULL = Object.freeze({ slop: 10, resist: 0.6, threshold: 70, max: 130, hold: 56, settle: 200 });
   const PULL_IDLE = Object.freeze({ phase: 'idle', d: 0 });
+  function pullDamp(travel) {
+    const d = Math.max(0, travel) * PULL.resist;
+    if (d <= PULL.threshold) return d;
+    const over = d - PULL.threshold;
+    const room = PULL.max - PULL.threshold;
+    return PULL.threshold + (room * over) / (over + room);
+  }
   function pullStep(s, e) {
     if (s.phase === 'reload') return s;
     if (e.type === 'start') return e.ok ? { phase: 'armed', x: e.x, y: e.y, d: 0 } : PULL_IDLE;
     if (e.type === 'cancel') return PULL_IDLE;
-    if (e.type === 'end') return s.phase === 'pulling' && s.d >= PULL.threshold ? { phase: 'reload', d: s.d } : PULL_IDLE;
+    if (e.type === 'end') return s.phase === 'pulling' && s.d >= PULL.threshold ? { phase: 'reload', d: PULL.hold } : PULL_IDLE;
     if (s.phase !== 'armed' && s.phase !== 'pulling') return s;
     if (!e.ok) return { phase: 'off', d: 0 };
     const dx = e.x - s.x, dy = e.y - s.y;
@@ -244,7 +253,7 @@
       if (Math.abs(dx) < PULL.slop && Math.abs(dy) < PULL.slop) return s;
       if (dy < PULL.slop || dy < 1.5 * Math.abs(dx)) return { phase: 'off', d: 0 };
     }
-    return { phase: 'pulling', x: s.x, y: s.y, d: Math.min(PULL.max, Math.max(0, (dy - PULL.slop) * PULL.resist)) };
+    return { phase: 'pulling', x: s.x, y: s.y, d: Math.min(PULL.max, pullDamp(dy - PULL.slop)) };
   }
 
   // --- safe links (HisterKit's SafeHref is the twin) --------------------------

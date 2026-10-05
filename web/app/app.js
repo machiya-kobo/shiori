@@ -929,11 +929,23 @@ window.addEventListener('pagehide', () => closeSheets(true));
 (() => {
   const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
   if (!standalone) return;
-  document.documentElement.classList.add('pull-refresh');
+  const html = document.documentElement;
+  html.classList.add('pull-refresh');
+  const still = () => {
+    try {
+      return matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (_) {
+      return false;
+    }
+  };
   let s = S.PULL_IDLE;
   let mark = null;
   let top = 0;
+  let moved = [];
+  let frame = 0;
+  let settling = 0;
   const page = () => $('list');
+  // The list is this app's page: the pull starts only at its top.
   const scrolled = () => (window.scrollY || 0) > 0 || (page() ? page().scrollTop > 0 : false);
   const selecting = () => {
     try {
@@ -951,37 +963,62 @@ window.addEventListener('pagehide', () => closeSheets(true));
     return false;
   };
   const skip = (el) => !el || !el.closest || !!el.closest('input, textarea, select, [contenteditable], #tabs, .status, .update-toast, [data-no-pull]') || pane(el);
+  // What moves: the list's own rows, not its frosted bars (laid over it, outside it).
+  const movers = () => (page() ? [...page().children] : []);
   const draw = () => {
+    frame = 0;
+    const loading = s.phase === 'reload';
+    const d = loading ? S.PULL.hold : s.d;
+    if (d > 0 && !moved.length) {
+      moved = movers();
+      for (const el of moved) el.classList.add('pull-move');
+    }
+    if (!mark && d === 0) return;
     if (!mark) {
-      if (s.d === 0 && s.phase !== 'reload') return;
       mark = h('div', { class: 'pull', 'aria-hidden': 'true' }, icon('refresh'));
       document.body.append(mark);
     }
-    const loading = s.phase === 'reload';
-    const d = loading ? S.PULL.threshold : s.d;
+    const settle = loading || s.phase !== 'pulling';
+    html.classList.toggle('pull-settle', settle && !still());
+    html.style.setProperty('--pull-y', Math.round(d) + 'px');
+    const k = loading ? 1 : Math.min(1, d / S.PULL.threshold);
     mark.style.top = top + 'px';
-    mark.style.setProperty('--pull', d + 'px');
-    mark.style.setProperty('--turn', Math.round((d / S.PULL.threshold) * 270) + 'deg');
-    mark.style.opacity = String(Math.min(1, d / (S.PULL.threshold * 0.6)));
-    mark.classList.toggle('ready', loading || s.d >= S.PULL.threshold);
+    mark.style.setProperty('--grow', (0.5 + 0.5 * k).toFixed(2));
+    mark.style.setProperty('--turn', Math.round(k * 270) + 'deg');
+    mark.style.opacity = String(loading ? 1 : Math.round(Math.min(1, d / (S.PULL.threshold * 0.6)) * 100) / 100);
+    mark.classList.toggle('ready', loading || d >= S.PULL.threshold);
     mark.classList.toggle('loading', loading);
-    mark.classList.toggle('held', s.phase === 'pulling');
+    clearTimeout(settling);
+    if (settle && !loading && d === 0) settling = setTimeout(rest, still() ? 0 : S.PULL.settle + 20);
+  };
+  // Back at the top: nothing left transformed.
+  const rest = () => {
+    settling = 0;
+    for (const el of moved) el.classList.remove('pull-move');
+    moved = [];
+    html.classList.remove('pull-settle');
+  };
+  const schedule = () => {
+    if (!frame) frame = (window.requestAnimationFrame ? requestAnimationFrame(draw) : setTimeout(draw, 16)) || 1;
   };
   const step = (e) => {
     const was = s;
     s = S.pullStep(s, e);
     if (s.phase === 'reload' && was.phase !== 'reload') {
       draw();
-      location.reload();
+      setTimeout(() => location.reload(), still() ? 50 : S.PULL.settle);
       return;
     }
-    if (s !== was && (s.d !== was.d || s.phase !== was.phase)) draw();
+    if (s.d !== was.d) {
+      if (s.phase === 'pulling') schedule();
+      else draw();
+    }
   };
   window.addEventListener('touchstart', (ev) => {
     const t = ev.touches[0];
     const ok = ev.touches.length === 1 && !scrolled() && !busy() && !skip(ev.target);
     if (ok) {
-      // Under the list's bars (the frosted top), where the rooms' slides out under their header.
+      // The gap opens under the list's bars (its top padding).
       const list = page();
       top = list ? Math.max(0, list.getBoundingClientRect().top + (parseFloat(getComputedStyle(list).paddingTop) || 0)) : 0;
     }

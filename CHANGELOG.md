@@ -5,6 +5,17 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.6.4 (2026-10-05)
+
+### Changed
+
+- **Pull to refresh moves the list**, as in the rooms' apps (vaultkit
+  0.22.1): in the installed web app, pulling down at the top of the list
+  brings the list down after your finger (harder to pull past the point
+  where it reloads), with the reload mark growing in the gap under the
+  bars. Let go early and it springs back; let go past it and it rests a
+  little down, spinning, while the app reloads.
+
 ## 0.6.3 (2026-10-05)
 
 ### Fixed

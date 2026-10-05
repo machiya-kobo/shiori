@@ -1242,7 +1242,13 @@ test("pull to refresh: the rooms' gesture, step by step (S.pullStep)", () => {
   // Within the dead zone it waits; the travel is 0.6x the finger past it, capped.
   assert.equal(run([start, move(3, 8)]).phase, 'armed');
   assert.equal(run([start, move(0, 60)]).d, 30);
-  assert.equal(run([start, move(0, 400)]).d, S.PULL.max);
+  // Past ready it gets harder to pull, and never goes past max.
+  const far = run([start, move(0, 400)]).d;
+  assert.ok(far > S.PULL.threshold && far < S.PULL.max, String(far));
+  assert.ok(run([start, move(0, 5000)]).d <= S.PULL.max);
+  assert.ok(run([start, move(0, 300)]).d - run([start, move(0, 250)]).d < 0.6 * 50, 'stiffer past ready');
+  // A release past ready rests at hold while it reloads.
+  assert.deepEqual(JSON.parse(JSON.stringify(run([start, move(0, 30), move(0, 200), { type: 'end' }]))), { phase: 'reload', d: S.PULL.hold });
   // Sideways or upward first: off until the finger lifts.
   assert.equal(run([start, move(40, 20)]).phase, 'off');
   assert.equal(run([start, move(0, -30), move(0, 200), { type: 'end' }]).phase, 'idle');
