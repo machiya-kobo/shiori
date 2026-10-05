@@ -68,25 +68,29 @@ def shape(style, path, stroke=None):
 
 def icon():
     # The mark's proportions (generate-shiori-icons.py's RIBBON and LENS), on 64 units.
-    ribbon = [(14, 4), (34, 4), (34, 47), (24, 38.5), (14, 47)]
-    cx, cy, r = 35, 37, 11.5
+    # Wide and bold enough to read at 16 px in the Deskbar and Tracker's
+    # lists: a broad ribbon with a dark edge, and a big lens whose gold ring
+    # and handle sit on a dark edge too, so they hold on any panel.
+    ribbon = [(9, 3), (37, 3), (37, 49), (23, 38), (9, 49)]
+    cx, cy, r = 38, 36, 15
     a = math.radians(45)
     h0 = (cx + r * math.cos(a), cy + r * math.sin(a))
-    h1 = (h0[0] + 8.5, h0[1] + 8.5)
+    h1 = (h0[0] + 9, h0[1] + 9)
     styles = [
         (122, 162, 247, 255),  # 0 the ribbon (Tokyo Night blue)
-        (26, 27, 38, 200),     # 1 its outline (the tile's navy), for light panels
-        (255, 255, 255, 70),   # 2 the glass's sheen
-        (224, 175, 104, 255),  # 3 the lens's gold ring
-        (180, 132, 70, 255),   # 4 the handle, a shade darker
+        (26, 27, 38, 255),     # 1 the dark edge (the tile's navy)
+        (255, 255, 255, 110),  # 2 the glass's sheen
+        (232, 182, 104, 255),  # 3 the lens's gold
     ]
     paths = [polygon(ribbon), circle(cx, cy, r), line(h0, h1)]
     shapes = [
         shape(0, 0),
-        shape(1, 0, stroke=1),
+        shape(1, 0, stroke=2),
         shape(2, 1),
-        shape(4, 2, stroke=5),
-        shape(3, 1, stroke=3),
+        shape(1, 2, stroke=10),   # the handle's dark edge
+        shape(3, 2, stroke=6),    # the handle
+        shape(1, 1, stroke=7),    # the ring's dark edge
+        shape(3, 1, stroke=4),    # the ring
     ]
     out = b"ncif" + bytes([len(styles)])
     for rgba in styles:

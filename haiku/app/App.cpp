@@ -176,6 +176,10 @@ public:
 			OpenSettings();
 		// What waits goes now, then every five minutes while something does.
 		PostMessage(kMsgDrain);
+		// Launched by the Deskbar item for a quick search: the main window
+		// just took activation, so the quick search takes it back.
+		if (fQuick.IsValid())
+			PostMessage(kMsgQuickSearch);
 		BMessage tick(kMsgDrain);
 		fDrainTimer = new BMessageRunner(BMessenger(this), &tick, 5 * 60 * 1000000LL);
 	}

@@ -22,6 +22,9 @@ cp "$APP" "$STAGE/apps/Shiori"
 # The binary's resources (the icon, the version) travel with it.
 ln -s ../../../../apps/Shiori "$STAGE/data/deskbar/menu/Applications/Shiori"
 cp ../LICENSE "$STAGE/documentation/packages/shiori/LICENSE"
+# A package's licence must be in it when Haiku doesn't carry the text (no AGPL there).
+mkdir -p "$STAGE/data/licenses"
+cp ../LICENSE "$STAGE/data/licenses/GNU AGPL v3"
 [ -f ../THIRD_PARTY_NOTICES ] && cp ../THIRD_PARTY_NOTICES "$STAGE/documentation/packages/shiori/"
 
 cat > "$STAGE/.PackageInfo" <<EOI
@@ -51,6 +54,7 @@ requires		{
 EOI
 
 rm -f "$OUT"
-package create -C "$STAGE" "$OUT"
+# A failed create leaves a truncated file: never keep it.
+package create -C "$STAGE" "$OUT" || { rm -f "$OUT"; exit 1; }
 package list "$OUT" >/dev/null
 echo "$OUT"

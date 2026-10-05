@@ -219,6 +219,8 @@ class Kura(Base):
         limit = int(params.get("limit", ["20"])[0])
         offset = int(params.get("offset", ["0"])[0])
         log("kura vault=" + params.get("vault", ["-"])[0], "offset=" + str(offset))
+        log("kura " + url.path, "vault=" + params.get("vault", ["-"])[0], "offset=" + str(offset),
+            "q=" + params.get("q", [""])[0])
         if url.path == "/api/note":
             path = params.get("path", [""])[0]
             for npath, folder, title, summary in NOTES:

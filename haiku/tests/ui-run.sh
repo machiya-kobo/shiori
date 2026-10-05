@@ -227,7 +227,7 @@ hey Shiori quit >/dev/null 2>&1
 # page_key, Kura's offset) and the Notes pill's vault choice.
 "$APP" >/boot/home/mh/app.log 2>&1 &
 sleep 2
-items() { hey Shiori count Item of View results of Window Shiori | sed -n 's/.*(B_INT32_TYPE) : \([0-9]*\).*/\1/p'; }
+items() { hey Shiori count Item of View results of Window Shiori | grep '"result"' | sed -n 's/.*(B_INT32_TYPE) : \([0-9]*\).*/\1/p'; }
 msg Spil of Window Shiori with 'pill=int32(1)'
 before=$(grep -c 'hister GET /search' "$LOG")
 settext Shiori query "many"
@@ -250,7 +250,7 @@ grep -q 'kura vault=all offset=30' "$LOG" && ok "Kura's next offset" || bad "Kur
 msg Svlt of Window Shiori with 'vault=work'
 shot 23-notes-vault-work 2
 grep -q 'kura vault=work' "$LOG" && ok "a chosen vault is sent" || bad "vault choice"
-grep -q 'kura vault=- offset=0' "$LOG" && ok "All asks the default vault only" || bad "All sent a vault"
+grep -q 'kura /api/search vault=- offset=0 q=haiku' "$LOG" && ok "All asks the default vault only" || bad "All sent a vault"
 hey Shiori quit >/dev/null 2>&1
 
 # 12. A note's preview: invoking a note row opens it from Kura's /api/note.
@@ -264,7 +264,7 @@ sleep 2
 send do Item 0 of View results of Window Shiori
 shot 24-note-preview 2
 grep -q 'kura GET /api/note' "$LOG" && ok "the preview asked Kura's /api/note" || bad "no /api/note request"
-hey Shiori get Text of View note of Window BeBox 2>/dev/null | grep -q "dual-PowerPC" && ok "the note's text is shown" || bad "note text missing"
+hey Shiori get Text [0 to 100000] of View note of Window BeBox 2>/dev/null | grep -q "dual-PowerPC" && ok "the note's text is shown" || bad "note text missing"
 grep 'hister GET' "$LOG" | grep -q 'BeBox\|bebox' && bad "a note went to Hister" || ok "the note never went to Hister"
 send quit of Window BeBox
 hey Shiori quit >/dev/null 2>&1
@@ -279,11 +279,11 @@ sleep 1
 settext "Quick Search" query "haiku"
 msg Sqqg of Window "Quick Search"
 shot 26-quick-search 2
-n=$(hey Shiori count Item of View results of Window "Quick Search" | sed -n 's/.*(B_INT32_TYPE) : \([0-9]*\).*/\1/p')
+n=$(hey Shiori count Item of View results of Window "Quick Search" | grep '"result"' | sed -n 's/.*(B_INT32_TYPE) : \([0-9]*\).*/\1/p')
 [ "${n:-0}" -gt 0 ] && ok "quick search found $n" || bad "quick search found nothing"
 msg Sqqs of Window "Quick Search"
 sleep 2
-hey Shiori get Text of View _input_ of View query of Window Shiori | grep -q haiku && ok "Command-Return hands the search to Shiori's window" || bad "the search didn't reach the window"
+hey Shiori get Text [0 to 100000] of View _input_ of View query of Window Shiori | grep -q haiku && ok "Command-Return hands the search to Shiori's window" || bad "the search didn't reach the window"
 shot 27-quick-to-window 0.5
 "$APP" --no-deskbar >/dev/null 2>&1
 shot 28-deskbar-removed 1

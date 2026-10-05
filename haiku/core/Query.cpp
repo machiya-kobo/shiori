@@ -425,7 +425,7 @@ bool IsCertificateError(const std::string& error)
 	std::string lower;
 	for (char c : error)
 		lower += (char)tolower((unsigned char)c);
-	for (const char* word : {"certificate", "ssl", "tls", "handshake", "x509", "verify failed"}) {
+	for (const char* word : {"certificate", "ssl", "tls", "handshake", "x509", "verify failed", "secure connection"}) {
 		if (lower.find(word) != std::string::npos)
 			return true;
 	}
@@ -436,8 +436,8 @@ std::string TransportProblem(const std::string& who, const std::string& error)
 {
 	std::string detail = error.empty() ? "" : " (" + error + ")";
 	if (IsCertificateError(error))
-		return who + "'s certificate isn't trusted" + detail
-			+ ": check the address, or trust its certificate on this computer.";
+		return "Couldn't make a secure connection to " + who + detail
+			+ ": its certificate may not be trusted here (trust it on this computer), or it doesn't answer https.";
 	return who + " can't be reached" + detail + ": check your network or VPN, then try again.";
 }
 

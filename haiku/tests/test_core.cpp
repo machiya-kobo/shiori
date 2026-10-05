@@ -281,7 +281,11 @@ static void TestTransport()
 	CheckTrue("a TLS handshake", IsCertificateError("TLS handshake failure"));
 	CheckTrue("not one", !IsCertificateError("Connection refused") && !IsCertificateError(""));
 	Check("untrusted in words", TransportProblem("Hister", "certificate verify failed"),
-		"Hister's certificate isn't trusted (certificate verify failed): check the address, or trust its certificate on this computer.");
+		"Couldn't make a secure connection to Hister (certificate verify failed): its certificate may not be trusted here (trust it on this computer), or it doesn't answer https.");
+	CheckTrue("netservices2's TLS failure, as Http.cpp marks it",
+		IsCertificateError("secure connection failed: Network error during operation ([BSocket::Connect()] Network error during operation Underlying System Error: -2147483633 (Operation not allowed))"));
+	CheckTrue("the same error on http isn't one",
+		!IsCertificateError("Network error during operation ([BSocket::Connect()] Network error during operation Underlying System Error: -2147483633 (Operation not allowed))"));
 	Check("unreachable in words", TransportProblem("Kura", "Connection refused"),
 		"Kura can't be reached (Connection refused): check your network or VPN, then try again.");
 }

@@ -138,6 +138,9 @@ SearchWindow::SearchWindow()
 	BScrollView* scroll = new BScrollView("scroll", fList, 0, false, true);
 	fStatus = new BStringView("status", "Type, then Return, to search Hister and Kura.");
 	fStatus->SetExplicitMaxSize(BSize(B_SIZE_UNLIMITED, B_SIZE_UNSET));
+	// A long error never widens the window: it's cut at the end.
+	fStatus->SetExplicitMinSize(BSize(0, B_SIZE_UNSET));
+	fStatus->SetTruncation(B_TRUNCATE_END);
 
 	BLayoutBuilder::Group<>(this, B_VERTICAL, 0)
 		.Add(menuBar)
@@ -399,6 +402,11 @@ void SearchWindow::MessageReceived(BMessage* message)
 			break;
 		case kMsgVault:
 			fVault = message->GetString("vault", "all");
+			for (int32 i = 0; BMenuItem* item = fVaultMenu->ItemAt(i); i++) {
+				const char* v = nullptr;
+				item->Message()->FindString("vault", &v);
+				item->SetMarked(v != nullptr && fVault == v);
+			}
 			if (fPill == Pill::Notes)
 				StartSearch();
 			break;
