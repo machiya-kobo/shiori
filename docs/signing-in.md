@@ -21,19 +21,20 @@ page and app flow) and turns a Hister session into an opaque id,
 | Shiori | How it signs in | What it sends |
 |---|---|---|
 | iPhone, iPad, Mac | Settings → Server → **Sign in to Hister**: first **Sign In with Saved Password** (the helper's `/machiya/signin?app=1&return=shiori://signed-in` in a private web session, back with `#sid=…&hister=…`; Safari's AutoFill offers the saved login there, which the app's own fields can't without Associated Domains, a paid team's), or a name and password (Hister's `POST /api/login`, then the helper's `POST /machiya/api/app-session` trades the session for an id). Shown only while the helper's `/machiya/healthz` says Hister has users, or while signed in. | `Cookie: hister=<session>` to Hister (HisterKit keeps cookies off and sets it itself), `Authorization: Bearer mhs_…` to the rooms. Kept in the Keychain, service `Hister` (`HisterKeychain`): this device only, shared with the share extension. |
-| Safari extension | Settings → Server → **Access Token** in the app (paste your Hister user's token, once per device) | `X-Access-Token`, handed over by native messaging (`hister`); a browser extension can't set `Cookie`. |
-| Hosted search page and web app | The helper's sign-in page: a 401 or 403 from Hister's routes sends the page to `<hister>/machiya/signin?return=<the page>` (at most once in 30 s), and back | Nothing of their own: the browser's `machiya_sso` cookie goes to this host, whose nginx asks the helper and adds Hister's session on its own hop (web/README.md). Signing out: Settings → Signing In → Hister's sessions page. |
-| Linux | `shiori sign-in` (a small window, name and password) | The session and id in `$XDG_DATA_HOME/shiori/sign-in.json` (0600, tied to the server's origin); `histerToken` in config.json for the token. `shiori sign-out`, `shiori status`. |
+| Safari extension | The app's sign-in, and Settings → Server → **Access Token** in the app (paste your Hister user's token, once per device) | To Hister, `X-Access-Token`, handed over by native messaging (`hister`; a browser extension can't set `Cookie`). To the rooms, the app's own id `Authorization: Bearer mhs_…` (native messaging, `machiya`), never Hister's token. |
+| Hosted search page and web app | The helper's sign-in page: a 401 or 403 from Hister's routes sends the page to `<hister>/machiya/signin?return=<the page>` (at most once in 30 s), and back through the page's own host (`/machiya/start`, `/machiya/callback`) | Nothing of their own: the host's room cookie (`__Host-machiya_sso_shiori`, a room session `mhr_…` the helper sets for that host) goes to this host, whose nginx asks the helper and adds Hister's session on its own hop, and passes it on to `/kura/` and `/konbini/` (machiya docs/services/hister-login.md). **Sign Out** (Settings → Account) posts to `/machiya/signout` on the page's own origin; **Sessions…** is the helper's page for other devices. |
+| Linux | `shiori sign-in` (a small window, name and password) | The session and id in `$XDG_DATA_HOME/shiori/sign-in.json` (0600, tied to the server's origin); `histerToken` in config.json for Hister. Not signed in, the rooms get a room token, `"roomToken": "mht_…"` (made on the helper's sessions page), else the identity file's token. `shiori sign-out`, `shiori status`. |
 
 The apps also take the token (Settings → Server → Access Token), and send
 it beside a sign-in; either is enough for Hister.
 
 **Where they go.** The session only to the configured Hister server, by
-origin. The token to Hister, and to the configured Kura and Konbini under
-the same host rule as Machiya's token (below): rooms in Hister sign-in
-mode read it to know who's asking (they refuse the identity file's
-tokens). A signed-in app sends the rooms its `mhs_` id in its place; the
-id never goes to Hister. Nothing
+origin. The rooms (Kura, Konbini) get the app's `mhs_` id, or on Linux a
+room token (`mht_`), under the same host rule as Machiya's token (below);
+neither ever goes to Hister. Hister's token goes to Hister. The apps alone
+still send it to the rooms when they aren't signed in (rooms in Hister
+sign-in mode accept it until the switch to per-room credentials); the
+Safari extension and Linux never do. Nothing
 follows a redirect to another origin with any of them, none is ever in a
 URL or a log, and the offline capture queue stores none (its replays read
 the token afresh).

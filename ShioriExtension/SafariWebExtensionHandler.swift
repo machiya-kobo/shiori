@@ -36,9 +36,14 @@ nonisolated final class SafariWebExtensionHandler: NSObject, NSExtensionRequestH
         case "machiya":
             // The Machiya sign-in (Settings → Notes), for Kura and Konbini:
             // the background applies the host rule and never stores it.
-            // Signing in and out happens only in the app.
+            // Signing in and out happens only in the app. Signed in to
+            // Hister, the app's own id (mhs_…, the helper's) goes to the
+            // rooms, as the apps send it: never Hister's token.
+            let sessionID = HisterKeychain.sessionID
             let token = MachiyaKeychain.token
-            if !token.isEmpty {
+            if sessionID.hasPrefix("mhs_") {
+                reply = ["token": sessionID, "principal": HisterKeychain.username]
+            } else if !token.isEmpty {
                 reply = ["token": token, "principal": MachiyaKeychain.principal]
             }
         case "hister":

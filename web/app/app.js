@@ -2164,12 +2164,17 @@ function accountGroup(group) {
   void api.profile().then(({ status, json }) => {
     const account = S.histerAccount(status, json);
     if (account.state === 'none') return;
-    const row = account.state === 'in'
-      ? h('div', { class: 'item' }, h('span', {}, 'Signed in as ', h('strong', {}, account.name)), sessions ? h('a', { class: 'link-button', href: sessions }, 'Sign Out…') : null)
-      : h('div', { class: 'item' }, h('span', {}, 'Not signed in'), signIn ? h('a', { class: 'link-button', href: signIn }, 'Sign In') : null);
+    // Sign Out posts to the helper on this host (it ends the session here
+    // and in every room); Sessions… is its page for every device's.
+    const signOut = h('form', { method: 'post', action: '/machiya/signout', class: 'sign-out' },
+      h('button', { type: 'submit', class: 'link-button' }, 'Sign Out'));
+    const rows = account.state === 'in'
+      ? [h('div', { class: 'item' }, h('span', {}, 'Signed in as ', h('strong', {}, account.name)), signOut),
+        sessions ? h('div', { class: 'item' }, h('span', {}, 'Other Devices'), h('a', { class: 'link-button', href: sessions }, 'Sessions…')) : null]
+      : [h('div', { class: 'item' }, h('span', {}, 'Not signed in'), signIn ? h('a', { class: 'link-button', href: signIn }, 'Sign In') : null)];
     // Not null as a child: replaceChildren writes it out as the text "null".
-    box.replaceChildren(...group('Account', [row],
-      account.state === 'in' ? 'Signed in once, every Machiya room knows you. Sign Out opens Hister’s sessions page: end this browser’s session, or every device’s.' : '').filter(Boolean));
+    box.replaceChildren(...group('Account', rows.filter(Boolean),
+      account.state === 'in' ? 'Signed in once, every Machiya room knows you. Sign Out ends it in this browser and every room; Sessions… ends another device’s.' : '').filter(Boolean));
     box.hidden = false;
   });
   return box;

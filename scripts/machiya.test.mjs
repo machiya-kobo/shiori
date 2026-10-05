@@ -354,3 +354,27 @@ test("the results page asks the rooms with the sign-in, and nothing else", () =>
   // Every fetchJSON: the page's own host with its cookie (its nginx signs Hister calls in), else 'omit'.
   assert.match(page, /const init = \{ headers, signal: controller\.signal, credentials: sameOrigin\(url\) \? 'same-origin' : 'omit' \};/);
 });
+
+test("Safari's extension presents the app's own id (mhs_) to the rooms, never Hister's token (SHIO-4)", async () => {
+  const ID = 'mhs_' + 'A'.repeat(43);
+  assert.equal(S.machiyaToken(ID), ID);
+  assert.equal(S.machiyaToken('mht_' + 'b'.repeat(43)), 'mht_' + 'b'.repeat(43));
+  assert.equal(S.machiyaToken('mhs_short'), '');
+  const storage = fakeStorage({ histerURL: HISTER, ...RULES, shioriSettings: SETTINGS, histerToken: 'ABCDEFGHJKLMNPQRSTUVWXYZ23' });
+  const { sandbox } = loadBackground({
+    storage,
+    native: async (message) => (message.type === 'machiya' ? { token: ID, principal: 'alex' } : message.type === 'settings' ? SETTINGS : {}),
+  });
+  await settle();
+  const kura = plain(await vm.runInContext(`shioriMachiya.fetchOptions('${KURA}api/vaults', { credentials: 'omit' })`, sandbox));
+  assert.equal(kura.headers.Authorization, 'Bearer ' + ID);
+  assert.equal(kura.headers['X-Access-Token'], undefined);
+  // With no sign-in from the app, Hister's token still never goes to a room.
+  const none = loadBackground({ storage, native: async (m) => (m.type === 'settings' ? SETTINGS : {}) });
+  await settle();
+  const bare = plain(await vm.runInContext(`shioriMachiya.fetchOptions('${KURA}api/vaults', { credentials: 'omit' })`, none.sandbox));
+  assert.deepEqual(bare, { credentials: 'omit' });
+  // The app's handler answers with the Hister sign-in's id first.
+  const handler = read('../ShioriExtension/SafariWebExtensionHandler.swift');
+  assert.match(handler, /if sessionID\.hasPrefix\("mhs_"\) \{\n\s+reply = \["token": sessionID/);
+});

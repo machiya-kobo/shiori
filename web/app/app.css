@@ -614,3 +614,4 @@ html.pull-refresh, html.pull-refresh body, html.pull-refresh #list { overscroll-
 .pull.loading svg { animation: pull-spin 0.8s linear infinite; }
 @keyframes pull-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .pull.loading svg { animation: none; } .pull { transition: opacity 0.2s ease; } }
+.sign-out { margin: 0; display: inline; }

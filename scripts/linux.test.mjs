@@ -270,14 +270,17 @@ test("Hister's token goes to the configured server only, as X-Access-Token", () 
   assert.match(http, /if \(auth \|\| token \|\| cookie \|\| Object\.keys\(extra\)\.length \|\| !redirects\) message\.set_flags\(Soup\.MessageFlags\.NO_REDIRECT\);/);
 });
 
-test("rooms get Hister's token as X-Access-Token beside the identity token, never the id's place", () => {
+test("rooms get the sign-in's id, else a room token (mht_), else the identity token: never Hister's token", () => {
   const S = shimmedCore();
   const HISTER = 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
-  assert.deepEqual(plain(roomHeaders({ ...CONFIG, histerToken: HISTER }, 'https://kura.example/api/search', S)), { Authorization: 'Bearer ' + TOKEN, 'X-Access-Token': HISTER });
-  assert.deepEqual(plain(roomHeaders({ ...CONFIG, machiyaToken: '', histerToken: HISTER }, 'https://kura.example/api/search', S)), { 'X-Access-Token': HISTER });
-  assert.deepEqual(plain(roomHeaders({ ...CONFIG, histerToken: HISTER }, 'https://hister.example/search', S)), {});
+  const ROOM = 'mht_' + 'r'.repeat(43);
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, histerToken: HISTER }, 'https://kura.example/api/search', S)), { Authorization: 'Bearer ' + TOKEN });
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, machiyaToken: '', histerToken: HISTER }, 'https://kura.example/api/search', S)), {});
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, roomToken: ROOM, histerToken: HISTER }, 'https://kura.example/api/search', S)), { Authorization: 'Bearer ' + ROOM });
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, roomToken: 'mch_not_a_room_token' }, 'https://kura.example/api/search', S)), { Authorization: 'Bearer ' + TOKEN });
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, roomToken: ROOM }, 'https://hister.example/search', S)), {});
   const sid = 'mhs_' + 'Z'.repeat(43);
-  assert.deepEqual(plain(roomHeaders({ ...CONFIG, histerToken: HISTER, histerSignIn: { sid } }, 'https://kura.example/api/search', S)), { Authorization: 'Bearer ' + sid });
+  assert.deepEqual(plain(roomHeaders({ ...CONFIG, roomToken: ROOM, histerToken: HISTER, histerSignIn: { sid } }, 'https://kura.example/api/search', S)), { Authorization: 'Bearer ' + sid });
 });
 
 test("status says who can read the token, and pair prints the line to add", () => {

@@ -216,7 +216,8 @@
   async function roomInit(url, init) {
     if (sameOrigin(url)) return { ...init, credentials: 'same-origin' };
     // Hister's token too (the extension's): rooms in Hister sign-in mode take it.
-    return S.machiyaFetchOptions(url, await machiyaTokenReady, machiyaRooms, init, { histerToken: stored.histerToken });
+    // The app's id (mhs_) or the identity file's token: never Hister's token to a room.
+    return S.machiyaFetchOptions(url, await machiyaTokenReady, machiyaRooms, init);
   }
   /** What to say when a room answers 401: sign in (the room's own page here, Settings in the extension). */
   function signInNote(room) {
@@ -1125,10 +1126,15 @@
     if (!account || account.state === 'none') return [];
     const sessions = S.histerSessionsURL('__SHIORI_ROOMS__', location.origin);
     const signIn = S.histerSignInURL('__SHIORI_ROOMS__', location.origin, location.href);
-    const row = account.state === 'in'
-      ? el('div', { class: 'setting' }, el('span', {}, 'Signed in as ', el('strong', {}, account.name)), sessions ? el('a', { href: sessions }, 'Sign Out…') : null)
-      : el('div', { class: 'setting' }, el('span', {}, 'Not signed in'), signIn ? el('a', { href: signIn }, 'Sign In') : null);
-    return [el('h3', { class: 'group-title' }, 'Account'), el('div', { class: 'group' }, row)];
+    // Sign Out posts to the helper on this host (it ends the session here
+    // and in every room); Sessions… is its page for every device's.
+    const signOut = el('form', { method: 'post', action: '/machiya/signout', class: 'sign-out' },
+      el('button', { type: 'submit', class: 'link' }, 'Sign Out'));
+    const rows = account.state === 'in'
+      ? [el('div', { class: 'setting' }, el('span', {}, 'Signed in as ', el('strong', {}, account.name)), signOut),
+        sessions ? el('div', { class: 'setting' }, el('span', {}, 'Other Devices'), el('a', { href: sessions }, 'Sessions…')) : null]
+      : [el('div', { class: 'setting' }, el('span', {}, 'Not signed in'), signIn ? el('a', { href: signIn }, 'Sign In') : null)];
+    return [el('h3', { class: 'group-title' }, 'Account'), el('div', { class: 'group' }, ...rows.filter(Boolean))];
   }
 
   function drawSettings() {

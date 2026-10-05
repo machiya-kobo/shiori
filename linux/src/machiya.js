@@ -24,15 +24,13 @@ export function roomHeaders(config, url, S) {
   if (sid && /^mhs_[A-Za-z0-9_-]{43}$/.test(sid)) {
     return S.mayCarryMachiyaToken(url, roomOrigins(config, S)) ? { Authorization: S.machiyaAuthHeader(sid) } : {};
   }
-  // Not signed in: the identity token, and Hister's token (histerToken),
-  // which rooms in Hister sign-in mode read first (X-Access-Token).
-  const token = configToken(config, S);
-  const hister = S.histerToken((config && config.histerToken) || '');
-  if ((!token && !hister) || !S.mayCarryMachiyaToken(url, roomOrigins(config, S))) return {};
-  const out = {};
-  if (token) out.Authorization = S.machiyaAuthHeader(token);
-  if (hister) out['X-Access-Token'] = hister;
-  return out;
+  // Not signed in: a room token (`"roomToken": "mht_…"`, made on the
+  // helper's sessions page for the rooms it names), else the identity
+  // file's token. Never Hister's token: that one stays for Hister.
+  const room = S.machiyaToken((config && config.roomToken) || '');
+  const token = /^mht_/.test(room) ? room : configToken(config, S);
+  if (!token || !S.mayCarryMachiyaToken(url, roomOrigins(config, S))) return {};
+  return { Authorization: S.machiyaAuthHeader(token) };
 }
 
 /**

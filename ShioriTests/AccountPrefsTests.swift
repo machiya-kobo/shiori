@@ -138,6 +138,37 @@ struct AccountPrefsTests {
         #expect(token.value(forHTTPHeaderField: "Authorization") == nil)
     }
 
+    /// Against a real helper (read and write), only when PREFS_LIVE_URL (Hister's
+    /// host) and PREFS_LIVE_TOKEN_FILE (a dev Hister token) are set: never the
+    /// owner's own. Cleans up the keys it wrote.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["PREFS_LIVE_URL"] != nil))
+    func theLiveHelperTakesAndGives() async throws {
+        let env = ProcessInfo.processInfo.environment
+        let base = try #require(URL(string: env["PREFS_LIVE_URL"]!))
+        let token = try String(contentsOfFile: try #require(env["PREFS_LIVE_TOKEN_FILE"]), encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let live = UserDefaults(suiteName: "prefs-live-\(UUID().uuidString)")!
+        live.set("night", forKey: "theme")
+        live.set(false, forKey: "showRelated")
+        // First contact: the account's blanks filled with this device's values.
+        #expect(await AccountPrefs.contact(base: base, credential: .token(token), defaults: live) == .synced)
+        // A change here goes; an unchanged second contact is a 304.
+        live.set("day", forKey: "theme")
+        #expect(await AccountPrefs.contact(base: base, credential: .token(token), defaults: live) == .synced)
+        #expect(await AccountPrefs.contact(base: base, credential: .token(token), defaults: live) == .synced)
+        let seen = try #require(live.data(forKey: AccountPrefs.seenKey))
+        let snapshot = try JSONDecoder().decode(PrefsSync.Snapshot.self, from: seen)
+        #expect(snapshot.prefs["theme"] == "day")
+        #expect(snapshot.prefs["shiori.show_related"] == "off")
+        // Clean up: every key this test may have written goes.
+        var request = AccountPrefs.request(base: base, credential: .token(token), method: "PUT")
+        let keys = Array(snapshot.prefs.keys)
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["prefs": Dictionary(uniqueKeysWithValues: keys.map { ($0, NSNull()) })])
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let (_, response) = try await URLSession.shared.data(for: request)
+        #expect((response as? HTTPURLResponse)?.statusCode == 200)
+    }
+
     @Test func anUnknownValueIsNeverTaken() async {
         account.prefs = ["theme": "sepia", "shiori.result_style": "glow"]
         account.updated = ["theme": 10, "shiori.result_style": 10]

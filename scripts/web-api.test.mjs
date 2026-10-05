@@ -460,3 +460,11 @@ test("Settings opens on who's signed in, read without a trip to the sign-in", ()
   assert.match(fn, /credentials: 'same-origin'/);
   assert.match(read('../patches/shiori/search.js'), /const body = \[\.\.\.accountGroup\(\)\];/);
 });
+
+test("the hosted pages' Sign Out posts to the helper on their own origin", () => {
+  for (const file of ['../web/app/app.js', '../patches/shiori/search.js']) {
+    const src = read(file);
+    assert.match(src, /\{ method: 'post', action: '\/machiya\/signout', class: 'sign-out' \}/, file);
+    assert.match(src, /'Sessions…'/, file);
+  }
+});

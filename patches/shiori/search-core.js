@@ -2275,7 +2275,9 @@
   /** A pasted token, trimmed; '' unless it looks like one (`mch_…` or `mcd_…`, no spaces or line breaks). */
   function machiyaToken(raw) {
     const token = String(raw == null ? '' : raw).trim();
-    return /^mc[hd]_[A-Za-z0-9_.-]{8,4096}$/.test(token) ? token : '';
+    // The identity file's (mch_, mcd_), the Hister sign-in helper's app
+    // session (mhs_, the app's own) and room tokens (mht_, Linux and scripts).
+    return /^mc[hd]_[A-Za-z0-9_.-]{8,4096}$/.test(token) || /^mh[st]_[A-Za-z0-9_-]{43}$/.test(token) ? token : '';
   }
 
   // --- The pills: their order, and which show (a per-device setting) ----------------

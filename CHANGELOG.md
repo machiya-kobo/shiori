@@ -5,6 +5,22 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.6.1 (2026-10-05)
+
+### Security
+
+- **Hister's token stays with Hister.** Safari's extension now presents
+  the app's own sign-in to Kura and Konbini (passed over from the app),
+  and Shiori for Linux a room token (`"roomToken": "mht_…"`, made on the
+  sign-in helper's sessions page); neither sends Hister's token to a room
+  any more.
+
+### Changed
+
+- The hosted pages' **Sign Out** (Settings → Account) signs out here and
+  in every room at once (it posts to the sign-in helper on the page's own
+  host); **Sessions…** ends another device's.
+
 ## 0.6.0 (2026-10-05)
 
 ### Added

@@ -556,10 +556,10 @@ const shioriMachiya = (() => {
   /** A fetch's options for url: the token's header where the host rule allows, else init unchanged. */
   async function fetchOptions(url, init = {}) {
     const { token } = await signIn();
-    // Hister's token too: rooms in Hister sign-in mode take it (X-Access-Token).
-    const { histerToken } = await chrome.storage.local.get(['histerToken']);
-    if ((!token && !histerToken) || !S()) return init;
-    return S().machiyaFetchOptions(url, token, await rooms(), init, { histerToken });
+    // The rooms get the app's id (mhs_, from the handler) or the identity
+    // file's token: never Hister's token, which stays for Hister alone.
+    if (!token || !S()) return init;
+    return S().machiyaFetchOptions(url, token, await rooms(), init);
   }
 
   const isExtensionPage = (sender) =>
