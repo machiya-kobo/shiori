@@ -261,8 +261,9 @@ with Machiya's sign-in helper on Hister's host), each Shiori signs in once:
 
 - **The apps:** Settings → Server → Sign in to Hister (shown only while Hister has users): first **Sign In with
   Tailscale** when Hister offers its OIDC sign-in, else **Sign In with Saved Password** (Hister's page, where your saved
-  password is offered), or a name and password; and Access Token for your Hister user's token. Both stay in the Keychain.
-- **Safari's extension** takes the token from the app.
+  password is offered), or a name and password. Both stay in the Keychain.
+- **Safari's extension** can't use the sign-in: paste your Hister user's token in the app (Settings → Server → Safari
+  Extension Token) on each device with the extension, and it takes the token from there.
 - **The hosted pages** send you to Hister's sign-in when it asks, and back.
 - **Linux:** `shiori sign-in` (a small window), `shiori sign-out`, and `"histerToken"` in config.json.
 - **Haiku:** Settings → Sign In…, and `"histerToken"` in config.json.
