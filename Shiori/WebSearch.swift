@@ -100,9 +100,8 @@ struct WebResultsList: View {
             .task(id: model.query) {
                 await model.load(searx: app.searx, hister: app.client)
             }
-            .refreshable {
-                await model.load(searx: app.searx, hister: app.client)
-            }
+            // No pull to refresh: the same words find the same web, and each
+            // web search counts.
             .resultActions()
     }
 

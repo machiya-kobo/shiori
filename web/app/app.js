@@ -1437,6 +1437,9 @@ function scopeOf(params) {
 function viewSearch(params) {
   const q = params.get('q') || '';
   const scope = scopeOf(params);
+  // No pull to refresh on the web's or the small web's results: the same
+  // words find the same results, and each web search counts.
+  if (scope === 'web' || scope === 'smallweb') $('list').setAttribute('data-no-pull', '');
   setTitle('Search');
   searchInput.placeholder = PROMPTS[scope];
   // No words (the installed app's Search shortcut, #/search): the
@@ -2631,6 +2634,8 @@ function render() {
     return;
   }
   document.body.classList.remove('phone-preview');
+  // Only a Web or Small Web search turns pull to refresh off (viewSearch).
+  $('list').removeAttribute('data-no-pull');
   $('search-top').hidden = !(view === 'library' || view === 'search');
   const q = view === 'search' ? params.get('q') || '' : '';
   if (document.activeElement !== searchInput) searchInput.value = q;

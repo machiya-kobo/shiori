@@ -65,7 +65,8 @@ struct SmallWebResultsList: View {
     var body: some View {
         content
             .task(id: model.query) { await model.load(using: app.smallweb) }
-            .refreshable { await model.load(using: app.smallweb) }
+            // No pull to refresh: the same words find the same small web,
+            // and its engines are volunteers'.
     }
 
     @ViewBuilder private var content: some View {
