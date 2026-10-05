@@ -105,13 +105,14 @@ test('the search page asks for /shiori/ai/ only when built with SHIORI_AI=1', as
     for (const out of [off, on, other]) rmSync(out, { recursive: true, force: true });
   }
   // The page reaches the service only through aiBase (settings.aiURL), and
-  // never without one: no status request, no Summarize, no AI Answer.
+  // never without one: no status request, no AI Answer. Its cards have no
+  // Summarize (the web app's ✦ is the web's one).
   const page = read('../patches/shiori/search.js');
   assert.doesNotMatch(page, /['"`]\/?shiori\/ai/, 'no address of its own (comments aside)');
   assert.match(page, /const aiBase = withSlash\(settings\.aiURL \|\| ''\);/);
   assert.match(page, /const aiStatus = aiBase \? fetchJSON\(`\$\{aiBase\}status`/);
   assert.equal(page.match(/\$\{aiBase\}/g).length, 2, 'status, and aiPost');
-  assert.match(page, /aiBase && S\.summarizable\(/);
+  assert.doesNotMatch(page, /summarize-link|aiPost\('summarize'/, 'no Summarize on the cards');
   assert.match(page, /if \(!aiBase \|\| !webLike \|\| page !== 1/);
 });
 

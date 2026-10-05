@@ -400,8 +400,6 @@
     (event) => {
       const a = event.target.closest('a[href]');
       if (!a) return;
-      // A preview into the pane isn't leaving the page.
-      if (a.classList.contains('preview-link') && document.body.classList.contains('with-preview')) return;
       persist();
       const href = a.getAttribute('href') || '';
       if (/^https?:/i.test(href) && !href.includes('shiori=off')) {
@@ -713,7 +711,6 @@
     async function show(url, card) {
       if (current === url) return;
       current = url;
-      summaries.leavePane(url);
       update();
       // Previewing a page is opening it.
       if (card) recordOpened(url, card.querySelector('.title')?.textContent || '');
@@ -758,7 +755,6 @@
     }
     function clear() {
       current = null;
-      summaries.leavePane(null);
       document.querySelectorAll('.card.previewing').forEach((c) => c.classList.remove('previewing'));
       $('preview-frame').hidden = true;
       $('preview-open').hidden = true;
@@ -771,10 +767,10 @@
       (event) => {
         if (!on() || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
         const card = event.target.closest('.card[data-preview]');
-        if (!card || event.target.closest('.summarize-link')) return;
+        if (!card) return;
         const a = event.target.closest('a[href]');
         // A note's title is its preview; other titles and links go where they go.
-        if (a && !a.classList.contains('preview-link') && !a.classList.contains('note-title')) return;
+        if (a && !a.classList.contains('note-title')) return;
         event.preventDefault();
         event.stopPropagation();
         show(card.dataset.preview, card);
@@ -786,12 +782,11 @@
     return { update, clear, show, on, isOpen: () => current !== null };
   })();
 
-  // --- Summarize (docs/ai.md) ------------------------------------
-  // The AI endpoint, on this page's own host: only the hosted
-  // page has one (web/shim.js sets aiURL, when built with SHIORI_AI=1), so
-  // the extension page never offers it, nor a build without it. Web pages only, never notes (the server refuses them too).
-  // The summary goes above the preview in the pane, or under its card
-  // without one, as the apps' card sits above theirs: Copy, Regenerate, ×.
+  // --- The AI endpoint (docs/ai.md), for the AI Answer ----------------------
+  // On this page's own host: only the hosted page has one (web/shim.js sets
+  // aiURL, when built with SHIORI_AI=1), so the extension page never offers
+  // it, nor a build without it. The cards have no Summarize (the owner's
+  // call): the web app's ✦ and the apps' Summarize stay.
   /** The AI endpoint's status, once per page: null when there's none (or it's down). */
   const aiStatus = aiBase ? fetchJSON(`${aiBase}status`, { timeout: 4000 }).catch(() => null) : Promise.resolve(null);
 
@@ -820,94 +815,6 @@
     if (!r.ok || !reply || !isReply(reply)) throw { message: S.summaryError(r.status, reply && reply.error, reply && reply.message) };
     return reply;
   }
-
-  const summaries = (() => {
-    const done = new Map();
-    aiStatus.then((s) => document.body.classList.toggle('ai-on', !!(s && s.enabled)));
-    const request = (url, refresh) => aiPost('summarize', { url, refresh: !!refresh }, (b) => typeof b.summary === 'string');
-    function render(box, url, state) {
-      const button = (text, label, onclick) => {
-        const b = el('button', { type: 'button', class: 'summary-button', 'aria-label': label, title: label }, text);
-        b.addEventListener('click', onclick);
-        return b;
-      };
-      const head = el(
-        'div',
-        { class: 'summary-head' },
-        el('span', { class: 'summary-title' }, '✦ Summary'),
-        state.reply ? button('Copy', 'Copy the summary', () => navigator.clipboard.writeText(state.reply.summary).catch(() => {})) : null,
-        state.reply ? button('Regenerate', 'Summarize again', () => run(box, url, true)) : null,
-        button('×', 'Hide the summary', () => close(box)),
-      );
-      let body;
-      if (state.working) {
-        body = el('p', { class: 'summary-working' }, el('span', { class: 'summary-spinner', 'aria-hidden': 'true' }), 'Summarizing…');
-      } else if (state.reply) {
-        const parts = S.summaryParts(state.reply.summary);
-        body = el(
-          'div',
-          {},
-          parts.opening ? el('p', {}, parts.opening) : null,
-          parts.points.length ? el('ul', {}, ...parts.points.map((p) => el('li', {}, p))) : null,
-          el('p', { class: 'summary-byline' }, S.summaryByline(state.reply)),
-        );
-      } else {
-        body = el('div', {}, el('p', {}, state.error), button('Try Again', 'Summarize again', () => run(box, url, false)));
-      }
-      box.replaceChildren(head, body);
-    }
-    async function run(box, url, refresh) {
-      if (!refresh && done.has(url)) return render(box, url, { reply: done.get(url) });
-      render(box, url, { working: true });
-      try {
-        const reply = await request(url, refresh);
-        done.set(url, reply);
-        if (box.dataset.url === url) render(box, url, { reply });
-      } catch (error) {
-        if (box.dataset.url === url) render(box, url, { error: error.message });
-      }
-    }
-    function close(box) {
-      if (box.id === 'preview-summary') {
-        box.hidden = true;
-        box.replaceChildren();
-        delete box.dataset.url;
-      } else {
-        box.closest('.summary-item')?.remove();
-      }
-    }
-    function summarize(card) {
-      const url = card.dataset.preview;
-      let box;
-      if (previewPane.on()) {
-        previewPane.show(url, card);
-        box = $('preview-summary');
-        box.hidden = false;
-      } else {
-        // Under its card; a second tap closes it.
-        const next = card.nextElementSibling;
-        if (next && next.classList.contains('summary-item')) return next.remove();
-        box = el('section', { class: 'summary', 'aria-live': 'polite' });
-        card.after(el('li', { class: 'summary-item' }, box));
-      }
-      box.dataset.url = url;
-      run(box, url, false);
-    }
-    document.addEventListener('click', (event) => {
-      const link = event.target.closest('.summarize-link');
-      if (!link) return;
-      event.preventDefault();
-      const card = link.closest('.card[data-preview]');
-      if (card) summarize(card);
-    });
-    return {
-      /** The pane moved to another page (or closed): its summary goes. */
-      leavePane(url) {
-        const box = $('preview-summary');
-        if (box && box.dataset.url !== url) close(box);
-      },
-    };
-  })();
 
   // --- vi keys (the apps and the web app have the same set) ----------------------
   // j/k move through the results, h/l through the tabs, Enter/o opens, p
@@ -1732,7 +1639,7 @@
   }
 
   document.addEventListener('click', (event) => {
-    const link = event.target.closest('.hister-card a.title, .vault-card a.title, .vault-card .meta a:not(.preview-link)');
+    const link = event.target.closest('.hister-card a.title, .vault-card a.title');
     if (!link) return;
     const card = link.closest('.card');
     recordOpened(card?.dataset.preview || link.href, card?.querySelector('.title')?.textContent || '');
@@ -1958,14 +1865,8 @@
   function histerCard(d) {
     const favicon = d.favicon_key ? `${histerBase}api/favicon?key=${encodeURIComponent(d.favicon_key)}` : null;
     const saved = d.updated || d.added;
-    const meta = el(
-      'div',
-      { class: 'meta' },
-      d.label ? labelChip(d.label) : null,
-      el('a', { href: histerPage(d.url), class: 'preview-link' }, 'preview'),
-      // Shown only once the AI endpoint answers (body.ai-on).
-      aiBase && S.summarizable(d.url, d.label) ? el('button', { type: 'button', class: 'summarize-link' }, 'summarize') : null,
-    );
+    // The card itself is the preview (in the pane); its label and where it
+    // opens are the bottom row.
     return el(
       'li',
       { class: 'card hister-card', 'data-preview': d.url },
@@ -1973,15 +1874,13 @@
       urlLine(d.url, favicon),
       saved ? relativeDate(saved) : null,
       markedSnippet(d.text),
-      meta,
-      places(chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister'), ...elsewhere(d.url)),
+      places(d.label ? labelChip(d.label) : null, chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister'), ...elsewhere(d.url)),
     );
   }
 
   /**
    * A file from the folders Hister watches: it opens from Hister's copy
-   * (/api/file), shows where it lives, and has no summarize (no model ever
-   * reads a file) and no label to edit.
+   * (/api/file), shows where it lives, and has no label to edit.
    */
   function fileCard(d) {
     const saved = d.updated || d.added;
@@ -1992,7 +1891,6 @@
       el('div', { class: 'url' }, el('span', { class: 'crumbs' }, S.localFilePath(d.url))),
       saved ? relativeDate(saved) : null,
       markedSnippet(d.text),
-      el('div', { class: 'meta' }, el('a', { href: histerPage(d.url), class: 'preview-link' }, 'preview')),
       places(chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister')),
     );
   }
@@ -2000,9 +1898,8 @@
   /**
    * A code document (your repos, code-import's): its kind's glyph,
    * the repo, its state and a lock when private on the address line; opens
-   * at its forge. No summarize (code stays on the device: the hosted AI
-   * isn't) and no label. The repo's note in Kura joins its places when Kura
-   * has one.
+   * at its forge. No label. The repo's note in Kura joins its places when
+   * Kura has one.
    */
   const CODE_GLYPHS = { repo: ['▣', 'Repository'], readme: ['¶', 'README'], doc: ['¶', 'Document'], issue: ['◉', 'Issue'], pr: ['⇄', 'Pull request'], release: ['◆', 'Release'] };
   function codeCard(d) {
@@ -2032,7 +1929,6 @@
           code.state ? el('span', { class: `code-state${code.state === 'open' ? ' open' : ''}` }, ` · ${code.state}`) : null)),
       saved ? relativeDate(saved) : null,
       markedSnippet(d.text),
-      el('div', { class: 'meta' }, el('a', { href: histerPage(d.url), class: 'preview-link' }, 'preview')),
       where,
     );
   }
@@ -2069,9 +1965,9 @@
   }
 
   /**
-   * Where a result opens (Obsidian, Kura, Konbini, Hister): a row of its
-   * own under the snippet, left-aligned; the
-   * label, preview and summarize stay on the date line.
+   * The bottom row, left-aligned under the snippet: a page's label, then
+   * where it opens (Obsidian, Kura, Konbini, Hister) and its copies
+   * elsewhere. Nothing sits on the date line: the card is the preview.
    */
   function places(...chips) {
     return el('div', { class: 'places' }, ...chips);

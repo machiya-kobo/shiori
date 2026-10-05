@@ -3,8 +3,9 @@
 Optional AI, **off by default**, bring your own: you pick which engines may
 run, on-device first and the cloud last. Four jobs:
 
-1. **Summaries**: Summarize in the apps (iPhone, iPad, Mac), and on the
-   hosted search page and web app through a server endpoint.
+1. **Summaries**: Summarize in the apps (iPhone, iPad, Mac), and in the
+   hosted web app through a server endpoint (the search page's cards have
+   none; its AI Answer uses the same endpoint).
 2. **Label suggestions**: Edit Label opens with the AI's first and second
    choices, applied only on a tap.
 3. **Label New Pages**: classify unlabelled pages, automatically when the
