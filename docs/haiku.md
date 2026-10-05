@@ -94,3 +94,8 @@ make -f Makefile.test test  # the portable core's tests
 Kura that log every credential they get and shout when one goes where it
 mustn't), and takes screenshots. It replaces the settings: never run it
 where Shiori is in use, and never test a save against a real Hister.
+
+Launching by signature (the Deskbar item does, with `be_roster->Launch`)
+picks the build tree's binary over the installed package's when both
+exist: test the installed copy with no build tree beside it, or with
+`objects.*` removed.
