@@ -386,8 +386,9 @@ holds the rules and the traps the code can't tell you.
 ## Notes (Kura)
 
 - **Notes come only from Kura** (`/api/search`, `/api/recent`, `/api/note`,
-  `/api/vaults`, `feed.xml`); Hister still holds the default vault's notes for
-  its own UI, but Shiori never lists them from Hister.
+  `/api/vaults`, `feed.xml`), their previews too (`/api/note`, every vault);
+  Hister may hold the default vault's notes for its own UI, but Shiori never
+  lists, previews or links a note there (no "Open in Hister" on a note).
 - Other vaults: searchable only in Notes, through the vault filter (Kura's
   `vault`); previewed from Kura's `/api/note` HTML, never cached. A private
   one's are never recorded as opened or deleted in Hister and get no AI

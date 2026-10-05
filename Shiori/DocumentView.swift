@@ -148,8 +148,8 @@ struct DocumentView: View {
         if let repoNote {
             places.append(.init(name: "Repo Note", help: "The Repo's Note in Kura", symbol: "book") { openURL(repoNote) })
         }
-        // Not a work note: Hister never has one.
-        if !workNote, let url = app.client?.webPreviewURL(for: document.url) {
+        // Not a note: notes are Kura's (Hister may not hold one).
+        if note == nil, !workNote, let url = app.client?.webPreviewURL(for: document.url) {
             places.append(.init(name: "Hister", help: "Open in Hister", symbol: "magnifyingglass") { openURL(url) })
         }
         return places
@@ -302,9 +302,10 @@ struct DocumentView: View {
     }
 
     private func load() async {
-        if let vault = Notes.otherVault(of: document.url) {
-            // Kura's sanitized HTML, for any vault but the default: Hister
-            // never has a private one's. Shown, never cached.
+        if app.noteLinks(for: document) != nil || Notes.otherVault(of: document.url) != nil {
+            // Every note from Kura, its sanitized HTML (notes come only from
+            // Kura; Hister may not hold one). Shown, never cached.
+            let vault = Notes.otherVault(of: document.url) ?? ""
             guard let kura = app.notesKura, let path = Notes.path(of: document.url, cards: []) else {
                 error = .unreachable
                 return

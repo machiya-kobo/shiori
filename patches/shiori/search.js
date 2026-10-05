@@ -728,10 +728,13 @@
       frame.hidden = false;
       frame.srcdoc = `<!doctype html><meta charset="utf-8"><body style="background:transparent"></body>`;
       try {
-        // A work vault's note: Kura's sanitized HTML (Hister never has it).
+        // Every note from Kura, its sanitized HTML (notes come only from
+        // Kura; Hister may not hold one): a vault's note by its vault.
         const other = S.noteVault(url);
-        const p = other
-          ? { title: card?.querySelector('.title')?.textContent || url, content: ((await fetchJSON(`${kuraBase}api/note?${new URLSearchParams({ path: S.notePath(url, []) || '', vault: other })}`, { timeout: 10000, room: true })) || {}).html }
+        const note = other || (card && card.classList.contains('vault-card'));
+        const path = note ? S.notePath(url, other ? [] : await konbiniCards()) : '';
+        const p = note && kuraBase && path
+          ? { title: card?.querySelector('.title')?.textContent || url, content: ((await fetchJSON(`${kuraBase}api/note?${new URLSearchParams({ path, ...(other ? { vault: other } : {}) })}`, { timeout: 10000, room: true })) || {}).html }
           : await fetchJSON(`${histerBase}api/preview?url=${encodeURIComponent(url)}`, { timeout: 10000, headers: histerAuth() });
         if (current !== url) return;
         let host = url;
@@ -2135,7 +2138,6 @@
         obsidian ? chipLink('obsidian', 'obsidian', obsidian, 'Edit in Obsidian') : null,
         niwa ? chipLink('kura', 'niwa', niwa, 'View in Kura') : null,
         konbini ? chipLink('konbini', 'konbini', konbini, 'View Card in Konbini') : null,
-        other ? null : chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister'),
       ),
     );
   }

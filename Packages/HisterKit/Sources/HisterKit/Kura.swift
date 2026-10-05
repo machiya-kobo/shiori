@@ -75,7 +75,8 @@ public struct KuraClient: Sendable {
     public func noteHTML(path: String, vault: String) async throws(HisterError) -> String {
         struct Reply: Decodable { let html: String? }
         var components = URLComponents(url: baseURL.appending(path: "api/note"), resolvingAgainstBaseURL: false)!
-        components.setQueryItems([URLQueryItem(name: "path", value: path), URLQueryItem(name: "vault", value: vault)])
+        // No vault: Kura's default one.
+        components.setQueryItems([URLQueryItem(name: "path", value: path)] + (vault.isEmpty ? [] : [URLQueryItem(name: "vault", value: vault)]))
         let data: Data
         let response: URLResponse
         do {

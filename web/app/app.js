@@ -1791,8 +1791,6 @@ async function showPreview(doc, { extractor = '' } = {}) {
         n.obsidian ? iconButton('note', 'Edit in Obsidian', () => (location.href = n.obsidian)) : null,
         n.niwa ? iconButton('openbook', 'View in Kura', () => open(n.niwa)) : null,
         n.konbini ? iconButton('columns', 'View Card in Konbini', () => open(n.konbini)) : null,
-        // Not a work note: Hister never has one.
-        n.vault ? null : iconButton('search', 'Open in Hister', () => open(api.histerPageURL(doc.url))),
       ]
     : S.isLocalFile(doc.url)
       ? [
@@ -1824,7 +1822,8 @@ async function showPreview(doc, { extractor = '' } = {}) {
   pane.replaceChildren(h('div', { class: 'spinner' }));
   try {
     // A work note's preview is Kura's sanitized HTML (Hister never has it); shown, never cached.
-    const p = n && n.vault ? { title: doc.title, content: await api.kuraNote(n.path, n.vault) } : await api.preview(doc.url, extractor);
+    // Every note from Kura (notes come only from Kura; Hister may not hold one).
+    const p = n && n.path ? { title: doc.title, content: await api.kuraNote(n.path, n.vault || '') } : await api.preview(doc.url, extractor);
     if (token !== previewToken) return;
     const frame = h('iframe', { title: 'Preview', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerpolicy: 'no-referrer' });
     frame.srcdoc = previewHTML(doc, p, n);

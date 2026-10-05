@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.6.3 (2026-10-05)
+
+### Fixed
+
+- A note's "hister" link went to Hister's copy, which Hister may not have
+  (a 404). Notes no longer offer Hister at all (the apps, the web app and
+  the search page): they open in Kura and Obsidian, and every note's
+  preview comes from Kura, the default vault's too.
+
 ## 0.6.2 (2026-10-05)
 
 ### Security

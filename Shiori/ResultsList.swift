@@ -218,8 +218,8 @@ struct DocumentLinks: View {
                 ElsewhereLinks(url: document.url)
             }
         }
-        // Not a work note: Hister never has one.
-        if let client = app.client, !Notes.isPrivateNote(document.url) {
+        // Not a note: notes are Kura's (Hister may not hold one).
+        if let client = app.client, app.noteLinks(for: document) == nil, !Notes.isPrivateNote(document.url) {
             Link(destination: client.webPreviewURL(for: document.url)) {
                 Label("Open in Hister", systemImage: "magnifyingglass")
             }
