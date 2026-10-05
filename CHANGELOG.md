@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.8.2 (2026-10-05)
+
+### Fixed
+
+- **Pull to refresh on iPhone and iPad shows and feels like one**: a mark
+  under the bars grows as you pull, a tap of haptics at the point where
+  letting go reloads, and a spinner while it does. Before, the reload
+  happened but nothing showed it, and the haptic came late.
+
 ## 0.8.1 (2026-10-05)
 
 ### Changed
