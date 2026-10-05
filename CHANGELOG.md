@@ -5,6 +5,18 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.7.8 (2026-10-05)
+
+### Changed
+
+- **Shiori for Haiku shows the newest when the field is empty**: at
+  launch and when you clear the search, All lists your recent notes and
+  newest pages, and each pill its own newest, as the other Shiori apps
+  do.
+- **Haiku's Show More** says it's loading, and a page that fails to load
+  puts the row back to try again. A first search asks Kura and Hister at
+  once, so results show sooner.
+
 ## 0.7.7 (2026-10-05)
 
 ### Changed
