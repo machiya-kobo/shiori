@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.7.4 (2026-10-05)
+
+### Changed
+
+- **Shiori Search's time range moved** out of the header (beside the
+  house and the gear) into a quiet row under the pills, where your
+  lists' sort (Best match / Newest) and Notes' vault now sit too. A
+  phone shows the full "Anytime" there instead of a clock icon.
+
 ## 0.7.3 (2026-10-05)
 
 ### Changed
