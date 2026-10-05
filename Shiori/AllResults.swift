@@ -64,7 +64,7 @@ struct AllResults: View {
                 try? await Task.sleep(for: .milliseconds(600))
                 holding = false
             }
-            .refreshable { await load() }
+            .pullToRefresh { await load() }
             .topBar {
                 ListControls(model: pages, title: query, ordering: false) {}
             }

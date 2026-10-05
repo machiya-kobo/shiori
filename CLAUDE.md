@@ -323,6 +323,11 @@ holds the rules and the traps the code can't tell you.
   "not found"). Every query names service and account.
 - Every delete is Undo, not a confirmation: the delete goes to Hister only
   after the toast.
+- **Pull to refresh is Shiori's own (`.pullToRefresh`), not `.refreshable`**:
+  with the `topBar` bars under the navigation bar, iOS drew the system's
+  spinner where it couldn't be seen and its haptic came late. Ours (iOS)
+  arms at 70 pt with a haptic, reloads on letting go, and shows its mark
+  under the bars. Web and Small Web have none (the same words find the same).
 - **Lists watch for new items, never redraw under you**: every 60 s while
   the app is in front (the web app: the tab visible), an open list asks
   Hister and Kura (never the web) what arrived (`ResultsModel.checkForNew`,

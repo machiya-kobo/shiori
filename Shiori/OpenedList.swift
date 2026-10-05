@@ -124,7 +124,7 @@ struct OpenedListView: View {
         // Hister's own feed of what you opened: File on the Mac, Settings on iOS.
         .listActions(ListExport(title: "Opened", feed: app.client?.openedFeedURL))
         .task(id: app.serverURL) { await model.load(using: app.client) }
-        .refreshable { await model.load(using: app.client) }
+        .pullToRefresh { await model.load(using: app.client) }
         .resultActions()
     }
 

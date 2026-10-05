@@ -25,7 +25,7 @@ struct ResultsList<Empty: View>: View {
         content
             // Again when the Kura address changes, for a notes list.
             .task(id: "\(app.serverURL)|\(app.searchPage.niwaURL)|\(model.source == .notes ? app.notesVault : "")") { await load() }
-            .refreshable { await load() }
+            .pullToRefresh { await load() }
             // Every minute while the app is in front and the list is up:
             // anything new shows as a banner, never by redrawing the list
             // under you.

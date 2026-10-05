@@ -378,7 +378,7 @@ struct LibraryView: View {
         }
         #endif
         .onGeometryChange(for: Double.self) { $0.size.width } action: { liveSidebar = $0 }
-        .refreshable { await app.reloadRules() }
+        .pullToRefresh { await app.reloadRules() }
     }
 
     // MARK: Results

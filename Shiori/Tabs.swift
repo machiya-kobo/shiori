@@ -420,7 +420,7 @@ struct LabelsScreen: View {
                 }
             }
         }
-        .refreshable { await app.reloadRules() }
+        .pullToRefresh { await app.reloadRules() }
         .navigationTitle("Labels")
     }
 }
