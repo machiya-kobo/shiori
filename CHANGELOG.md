@@ -5,6 +5,17 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.7.5 (2026-10-05)
+
+### Fixed
+
+- Settings → Server's connection check failed on a signed-in device
+  without a token (or with one Hister no longer takes, after a token
+  rotation): it now checks with the sign-in, as the rest of the app does.
+- Shiori for Linux kept no page Hister refused with 401/403 (not signed
+  in, or a rotated token): it now keeps it until you sign in, as the
+  other apps do.
+
 ## 0.7.4 (2026-10-05)
 
 ### Changed
