@@ -1123,10 +1123,21 @@ const KURA_BASE = location.origin + '/kura/';
 let shownList = null;
 const withWord = (query, word) => (word ? `${query} ${word}` : query);
 
-/** A total on a pill (All's search finds Pages' and Notes'): "Pages 31". */
-function setSegmentCount(value, n) {
+/**
+ * All's totals for one search, kept so its Pages, Notes and Code scopes,
+ * which don't run All's searches, show them on their pills too.
+ */
+let segmentTotals = { query: null, counts: {} };
+
+/** A total on a pill (All's search finds Pages' and Notes'): "Pages 31". `query`: keep it for that search. */
+function setSegmentCount(value, n, query) {
+  if (!n) return;
+  if (query !== undefined) {
+    if (segmentTotals.query !== query) segmentTotals = { query, counts: {} };
+    segmentTotals.counts[value] = n;
+  }
   const pill = document.querySelector(`#list-top .segments button[data-value="${value}"]`);
-  if (!pill || !n) return;
+  if (!pill) return;
   pill.querySelector('.pill-count')?.remove();
   pill.append(h('span', { class: 'pill-count' }, n.toLocaleString()));
 }
@@ -1395,6 +1406,7 @@ function viewSearch(params) {
     segments(scopes(), scope, (s) => go('search', keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), { replace: true })),
     listed ? controls('search', params, { search: true, notes: scope === 'notes' }) : null,
   );
+  if (segmentTotals.query === q) for (const [value, n] of Object.entries(segmentTotals.counts)) setSegmentCount(value, n);
   if (scope !== 'opened') didYouMean(q, scope);
   const c = listChoices(params, { search: true });
   const text = q;
@@ -1484,10 +1496,10 @@ async function searchAll(container, q, { web = true } = {}) {
   // turns, spread evenly (S.alternate, S.mixCounts), each row saying whose
   // it is, and their totals go on the Pages and Notes pills.
   const hiddenOpened = settings.showOpened === true ? 0 : ((pages && pages.opened) || []).filter((o) => !S.isNoteURL(o.url, settings.niwaURL, settings.konbiniURL)).length;
-  if (pages) setSegmentCount('hister', Math.max((pages.total || 0) - hiddenOpened, pages.documents.length));
+  if (pages) setSegmentCount('hister', Math.max((pages.total || 0) - hiddenOpened, pages.documents.length), q);
   // The Code pill's count (Hister's own index, nothing spent); code is never listed here.
-  if (hasCodeDocs) api.search(S.codeQuery(q), { limit: 1 }).then((r) => setSegmentCount('code', r.total)).catch(() => {});
-  if (notes && !notes.signIn) setSegmentCount('notes', Math.max(notes.total || 0, (notes.documents || []).length));
+  if (hasCodeDocs) api.search(S.codeQuery(q), { limit: 1 }).then((r) => setSegmentCount('code', r.total, q)).catch(() => {});
+  if (notes && !notes.signIn) setSegmentCount('notes', Math.max(notes.total || 0, (notes.documents || []).length), q);
   const mine = (reply, label) => ((reply && reply.documents) || []).slice(0, ALL_COUNT).map((d) => {
     const row = docRow(d);
     row.classList.add('mixed');

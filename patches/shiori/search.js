@@ -62,9 +62,19 @@
     hasCode = localStorage.getItem(CODE_KEY) === '1';
   } catch (_) {}
   let header = null;
-  // Counts on the Pages and Notes pills (All's searches find them), kept so
-  // the header's redraws (a settings change) keep them.
+  // Counts on the Pages, Notes and Code pills (All's searches find them),
+  // kept so the header's redraws (a settings change) keep them, and for
+  // this browser tab's session, so the Pages, Notes and Code tabs of the
+  // same search show them too (they don't run All's searches).
+  const PILL_COUNTS_KEY = 'shioriPillCounts';
+  const pillCountsFor = `${(params.get('q') || '').trim()}\n${params.get('time') || ''}`;
   const pillCounts = {};
+  try {
+    const kept = JSON.parse(sessionStorage.getItem(PILL_COUNTS_KEY) || 'null');
+    if (kept && kept.for === pillCountsFor && kept.counts && typeof kept.counts === 'object') {
+      for (const [cat, n] of Object.entries(kept.counts)) if (typeof n === 'string') pillCounts[cat] = n;
+    }
+  } catch (_) {}
   try {
     header = JSON.parse(localStorage.getItem(HEADER_KEY) || 'null');
   } catch (_) {}
@@ -2472,6 +2482,9 @@
   function setPillCount(cat, n) {
     if (!n) return;
     pillCounts[cat] = n.toLocaleString();
+    try {
+      sessionStorage.setItem(PILL_COUNTS_KEY, JSON.stringify({ for: pillCountsFor, counts: pillCounts }));
+    } catch (_) {}
     const pill = document.querySelector(`#categories a[data-cat="${cat}"]`);
     if (!pill) return;
     pill.querySelector('.pill-count')?.remove();
