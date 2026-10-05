@@ -9,6 +9,12 @@ Hister wants X-Access-Token: FAKE-HISTER-TOKEN-0123 (else 403, empty body,
 as Hister does with users on). Kura wants Authorization: Bearer
 mht_<43 x "K"> (else 401 {"error": "sign in"}). A Hister token at Kura is a
 LEAK line. Every request is logged on stdout, tokens masked.
+
+The Hister sign-in (docs/signing-in.md) is faked too: /machiya/healthz says
+Hister has users, POST /api/login takes alex / fake-password and sets
+`hister=<session>`, /machiya/api/app-session trades it for an mhs_ id, and
+/machiya/signout ends both. Hister then takes the session's Cookie, Kura the
+Bearer mhs_; the session at Kura, or the id at Hister, is a LEAK.
 """
 import http.server
 import json
@@ -39,6 +45,11 @@ NOTES = [
 ]
 
 LOCK = threading.Lock()
+
+# The sign-in's state: the live session and id (one user, alex).
+SESSION = "S" * 40 + "abc"
+SID = "mhs_" + "I" * 43
+SIGNED_IN = {"session": False, "sid": False}
 
 
 def log(*parts):
@@ -88,16 +99,19 @@ class Base(http.server.BaseHTTPRequestHandler):
     def creds(self):
         return {
             "x-access-token": mask(self.headers.get("X-Access-Token", "")),
-            "authorization": mask(self.headers.get("Authorization", "")),
+            # The scheme dropped, so the log shows which kind (mht_ or mhs_).
+            "authorization": mask(self.headers.get("Authorization", "").removeprefix("Bearer ")),
             "origin": self.headers.get("Origin", "-"),
         }
 
 
 class Hister(Base):
     def authorized(self):
-        if self.headers.get("Authorization"):
-            log("LEAK hister got an Authorization header (a room token?)")
-        return self.headers.get("X-Access-Token") == HISTER_TOKEN
+        if self.headers.get("Authorization") and not self.path.startswith("/machiya/"):
+            log("LEAK hister got an Authorization header (a room token or the sign-in's id?)")
+        if self.headers.get("X-Access-Token") == HISTER_TOKEN:
+            return True
+        return SIGNED_IN["session"] and self.headers.get("Cookie", "") == "hister=" + SESSION
 
     def do_GET(self):
         url = urllib.parse.urlsplit(self.path)
@@ -105,6 +119,8 @@ class Hister(Base):
         log("hister GET", url.path, self.creds(), "query=" + (params.get("query", [""])[0]))
         if url.path == "/health":
             return self.reply(200, {"ok": True})
+        if url.path == "/machiya/healthz":
+            return self.reply(200, {"ok": True, "hister": "ok"})
         if not self.authorized():
             return self.reply(403)
         if url.path != "/search":
@@ -129,9 +145,44 @@ class Hister(Base):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
-        log("hister POST", self.path, self.creds(), "body=" + json.dumps(body))
+        shown = dict(body)
+        for secret in ("password", "hister"):
+            if secret in shown:
+                shown[secret] = mask(str(shown[secret]))
+        log("hister POST", self.path, self.creds(), "cookie=" + mask(self.headers.get("Cookie", "")),
+            "body=" + json.dumps(shown))
+        # The sign-in helper (on Hister's host, no Origin needed).
+        if self.path == "/machiya/api/app-session":
+            if self.headers.get("Cookie") or self.headers.get("X-Access-Token"):
+                log("LEAK the trade carried a credential of its own")
+            if not SIGNED_IN["session"] or body.get("hister") != SESSION:
+                return self.reply(401, {"error": "sign in"})
+            SIGNED_IN["sid"] = True
+            return self.reply(200, {"sid": SID, "username": "alex"})
+        if self.path == "/machiya/signout":
+            if self.headers.get("Authorization") != "Bearer " + SID:
+                return self.reply(401, {"error": "sign in"})
+            SIGNED_IN["sid"] = SIGNED_IN["session"] = False
+            return self.reply(200, {"ok": True})
         if self.headers.get("Origin") != "hister://":
             return self.reply(403)
+        if self.path == "/api/login":
+            if self.headers.get("X-Access-Token") or self.headers.get("Cookie"):
+                log("LEAK the login carried a credential")
+            if body.get("username") != "alex" or body.get("password") != "fake-password":
+                return self.reply(401, {"error": "invalid credentials"})
+            SIGNED_IN["session"] = True
+            data = b'{"ok":true}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Set-Cookie", "hister=" + SESSION + "; Path=/; HttpOnly; SameSite=Lax")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        if self.path == "/api/logout":
+            SIGNED_IN["session"] = False
+            return self.reply(200, {"ok": True})
         if not self.authorized():
             return self.reply(403)
         if self.path != "/api/add":
@@ -150,7 +201,12 @@ class Kura(Base):
         log("kura GET", url.path, self.creds(), "q=" + params.get("q", [""])[0])
         if self.headers.get("X-Access-Token"):
             log("LEAK kura got X-Access-Token (Hister's token must never go to a room)")
-        if self.headers.get("Authorization") != "Bearer " + ROOM_TOKEN:
+        if "hister=" in self.headers.get("Cookie", ""):
+            log("LEAK kura got Hister's session cookie")
+        bearer = self.headers.get("Authorization")
+        if SIGNED_IN["sid"] and bearer == "Bearer " + ROOM_TOKEN:
+            log("NOTE kura got the room token while signed in (the id should win)")
+        if bearer != "Bearer " + ROOM_TOKEN and not (SIGNED_IN["sid"] and bearer == "Bearer " + SID):
             return self.reply(401, {"error": "sign in", "signin": "http://127.0.0.1/signin"})
         limit = int(params.get("limit", ["20"])[0])
         words = words_of(params.get("q", [""])[0]) if url.path == "/api/search" else []

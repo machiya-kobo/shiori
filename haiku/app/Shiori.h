@@ -31,10 +31,20 @@ enum {
 	kMsgSaved = 'Ssvd',
 	kMsgDoStoreSettings = 'Sdst',
 	kMsgCancel = 'Scnc',
+
+	// Signing in to Hister
+	kMsgOpenSignIn = 'Ssin',
+	kMsgDoSignIn = 'Sdsi',
+	kMsgSignedIn = 'Ssid',
+	kMsgSignOut = 'Ssou',
+	kMsgSignedOut = 'Ssod',
+	kMsgAccountChanged = 'Sacc',
 };
 
 // ~/config/settings/Shiori/config.json
 std::string ConfigPath();
+// ~/config/settings/Shiori/sign-in.json (the Hister sign-in: session and id, 0600)
+std::string SignInPath();
 
 // The app's current settings (a copy; the app owns them).
 shiori::Config CurrentConfig();

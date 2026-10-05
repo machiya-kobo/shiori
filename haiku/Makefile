@@ -10,12 +10,14 @@ SRCS = \
 	core/Query.cpp \
 	core/Results.cpp \
 	core/Config.cpp \
+	core/SignIn.cpp \
 	app/App.cpp \
 	app/Http.cpp \
 	app/ResultItem.cpp \
 	app/SaveWindow.cpp \
 	app/SearchWindow.cpp \
-	app/SettingsWindow.cpp
+	app/SettingsWindow.cpp \
+	app/SignInWindow.cpp
 
 RDEFS = Shiori.rdef
 RSRCS =

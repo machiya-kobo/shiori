@@ -136,6 +136,59 @@ hey Shiori quit >/dev/null 2>&1
 cp /boot/home/mh/config.good "$CONFIG"
 chmod 600 "$CONFIG"
 
+# 9. Signing in to Hister (the fake has users): Settings offers it, the
+# window signs in, Hister then gets the session cookie and Kura the mhs_ id,
+# Sign Out ends both. First without the token, so the session is what works.
+hey Shiori quit >/dev/null 2>&1
+sleep 1
+python3 - "$CONFIG" <<'PY'
+import json, sys
+c = json.load(open(sys.argv[1]))
+c["histerToken"] = ""
+open(sys.argv[1], "w").write(json.dumps(c, indent=2))
+PY
+"$APP" >/boot/home/mh/app.log 2>&1 &
+sleep 2
+msg Sset
+sleep 2
+shot 14-settings-offers-sign-in 0.5
+msg Ssin of Window "Shiori settings"
+sleep 1
+settext "Sign in to Hister" name "alex"
+settext "Sign in to Hister" password "wrong-password"
+msg Sdsi of Window "Sign in to Hister"
+shot 15-sign-in-refused 1.5
+grep -q 'hister POST /api/login' "$LOG" && ok "login sent" || bad "login not sent"
+cleartext "Sign in to Hister" name
+settext "Sign in to Hister" name "alex"
+settext "Sign in to Hister" password "fake-password"
+msg Sdsi of Window "Sign in to Hister"
+sleep 2
+shot 16-signed-in 0.5
+SIGNIN=/boot/home/config/settings/Shiori/sign-in.json
+mode=$(stat -c %a "$SIGNIN" 2>/dev/null)
+[ "$mode" = 600 ] && ok "sign-in.json saved, mode 600" || bad "sign-in.json mode is '$mode'"
+grep -q '"sid": "mhs_' "$SIGNIN" && ok "the helper's id kept" || bad "no id in sign-in.json"
+grep -q 'fake-password' "$SIGNIN" "$CONFIG" /boot/home/mh/app.log && bad "the password was written down" || ok "the password isn't kept"
+send quit of Window "Shiori settings"
+cleartext Shiori query
+settext Shiori query "beos"
+shot 17-search-signed-in 2
+grep 'hister GET /search' "$LOG" | tail -1 | grep -q "'x-access-token': '-'" && ok "Hister searched without the token" || bad "token still sent"
+grep 'kura GET' "$LOG" | tail -1 | grep -q "'authorization': 'mhs_" && ok "Kura got the mhs_ id" || bad "Kura didn't get the id"
+msg Sset
+sleep 1
+msg Ssou of Window "Shiori settings"
+sleep 2
+shot 18-signed-out 0.5
+grep -q 'hister POST /machiya/signout' "$LOG" && ok "signed out through the helper" || bad "sign-out not sent"
+[ ! -f "$SIGNIN" ] && ok "sign-in.json removed" || bad "sign-in.json still there"
+send quit of Window "Shiori settings"
+hey Shiori quit >/dev/null 2>&1
+cp /boot/home/mh/config.good "$CONFIG"
+chmod 600 "$CONFIG"
+grep -q LEAK "$LOG" && bad "a credential went where it mustn't: $(grep LEAK "$LOG" | head -1)" || ok "no credential leaked (signed in)"
+
 echo "--- fake services log"
 cat "$LOG"
 exit $fail

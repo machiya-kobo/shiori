@@ -113,11 +113,17 @@ Headers CredentialHeaders(const Config& config, const std::string& url)
 		std::string token = CheckedHisterToken(config.histerToken);
 		if (!token.empty())
 			headers.emplace_back("X-Access-Token", token);
+		// Signed in: Hister's own session too (sign-in.json, for this server).
+		std::string session = CheckedHisterSession(config.signIn.session);
+		if (!session.empty())
+			headers.emplace_back("Cookie", "hister=" + session);
 		return headers;
 	}
 	// A room sharing Hister's origin gets nothing (search-core's machiyaRooms).
 	if (!kura.empty() && origin == kura && kura != hister) {
-		std::string token = CheckedRoomToken(config.roomToken);
+		// Signed in, the helper's id; else a room token (mht_).
+		std::string sid = CheckedSessionID(config.signIn.sid);
+		std::string token = sid.empty() ? CheckedRoomToken(config.roomToken) : sid;
 		if (!token.empty())
 			headers.emplace_back("Authorization", "Bearer " + token);
 	}

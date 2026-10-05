@@ -3,14 +3,17 @@
 // rules for which request carries which credential (linux/src/hister.js,
 // linux/src/machiya.js):
 // - Hister's token goes only to the configured Hister origin, as X-Access-Token.
-// - Kura gets only a room token (mht_…) as Authorization: Bearer, or nothing.
-//   Never Hister's token.
+// - Signed in, Hister also gets its session as Cookie: hister=…
+// - Kura gets the sign-in's id (mhs_…) or else a room token (mht_…) as
+//   Authorization: Bearer, or nothing. Never Hister's token or session.
 // - Any other host is refused; a request with a credential follows no redirect.
 #pragma once
 
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "SignIn.h"
 
 namespace shiori {
 
@@ -19,6 +22,8 @@ struct Config {
 	std::string histerToken;  // Hister's access token
 	std::string kura;         // Kura, e.g. https://kura.example.ts.net/
 	std::string roomToken;    // mht_… (Kura only)
+	// Not in config.json: sign-in.json's (LoadSignIn), for this server.
+	SignIn signIn;
 };
 
 typedef std::vector<std::pair<std::string, std::string>> Headers;

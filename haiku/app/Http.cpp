@@ -27,7 +27,8 @@ BHttpSession& Session()
 }  // namespace
 
 HttpReply HttpRequestJSON(const shiori::Config& config, const char* method,
-	const std::string& url, const std::string& body, bool hister)
+	const std::string& url, const std::string& body, bool hister, bool credentials,
+	const shiori::Headers& extra)
 {
 	HttpReply reply;
 	if (!shiori::IsConfiguredOrigin(config, url)) {
@@ -47,12 +48,14 @@ HttpReply HttpRequestJSON(const shiori::Config& config, const char* method,
 		fields.AddField("User-Agent", "Shiori-Haiku/" SHIORI_VERSION);
 		if (hister)
 			fields.AddField("Origin", "hister://");
-		shiori::Headers credentials = shiori::CredentialHeaders(config, url);
-		for (const auto& header : credentials)
+		shiori::Headers carried = credentials ? shiori::CredentialHeaders(config, url) : shiori::Headers();
+		for (const auto& header : extra)
+			carried.push_back(header);
+		for (const auto& header : carried)
 			fields.AddField(header.first, header.second);
 		request.SetFields(fields);
 		// A credential never follows a redirect (it could carry it to another host).
-		request.SetMaxRedirections(credentials.empty() ? 3 : 0);
+		request.SetMaxRedirections(carried.empty() ? 3 : 0);
 		request.SetTimeout(15 * 1000000LL);
 		request.SetStopOnError(false);
 		if (!body.empty()) {
@@ -63,6 +66,10 @@ HttpReply HttpRequestJSON(const shiori::Config& config, const char* method,
 		}
 		BHttpResult result = Session().Execute(std::move(request));
 		reply.status = result.Status().code;
+		for (const auto& field : result.Fields()) {
+			if (field.Name() == std::string_view("Set-Cookie"))
+				reply.setCookies.emplace_back(field.Value());
+		}
 		BHttpBody& received = result.Body();
 		if (received.text)
 			reply.body.assign(received.text->String(), received.text->Length());

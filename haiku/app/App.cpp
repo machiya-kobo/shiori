@@ -35,6 +35,15 @@ std::string ConfigPath()
 	return path.Path();
 }
 
+std::string SignInPath()
+{
+	BPath path;
+	if (find_directory(B_USER_SETTINGS_DIRECTORY, &path) != B_OK)
+		path.SetTo("/boot/home/config/settings");
+	path.Append("Shiori/sign-in.json");
+	return path.Path();
+}
+
 shiori::Config CurrentConfig()
 {
 	std::lock_guard<std::mutex> lock(gConfigLock);
@@ -64,6 +73,8 @@ public:
 	{
 		shiori::Config config;
 		shiori::LoadConfig(ConfigPath(), config);
+		// The Hister sign-in, if there's one for this server.
+		shiori::LoadSignIn(SignInPath(), config.server, config.signIn);
 		SetCurrentConfig(config);
 	}
 

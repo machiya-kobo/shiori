@@ -12,6 +12,7 @@
 #include "../core/Json.h"
 #include "../core/Query.h"
 #include "../core/Results.h"
+#include "../core/SignIn.h"
 
 using namespace shiori;
 
@@ -190,6 +191,74 @@ static void TestConfigFile()
 	rmdir(dir);
 }
 
+// Signing in to Hister: as Linux does it (scripts/linux.test.mjs' sign-in cases).
+static void TestSignIn()
+{
+	const std::string session = "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde";
+	const std::string sid = "mhs_" + std::string(43, 'Z');
+	Check("a session", CheckedHisterSession("  " + session + " "), session);
+	Check("not a session", CheckedHisterSession("short"), "");
+	Check("an id", CheckedSessionID(sid), sid);
+	Check("not an id (mht_)", CheckedSessionID("mht_" + std::string(43, 'Z')), "");
+
+	// The record: only for its own server's origin.
+	SignIn in;
+	in.session = session;
+	in.sid = sid;
+	in.username = "alex";
+	std::string text = SignInToJSON("https://hister.example/", in);
+	SignIn back;
+	CheckTrue("record round trip", SignInFromJSON(text, "https://HISTER.example:443/", back) && back.sid == sid && back.username == "alex");
+	CheckTrue("another server's record is refused", !SignInFromJSON(text, "https://other.example/", back));
+	CheckTrue("a broken id is refused", !SignInFromJSON("{\"server\":\"https://hister.example\",\"session\":\"" + session + "\",\"sid\":\"mhs_x\"}", "https://hister.example/", back));
+
+	// Hister's Set-Cookie: the session, not one that clears it.
+	Check("session from Set-Cookie", SessionFromSetCookie({"other=1", "hister=" + session + "; Path=/; HttpOnly"}), session);
+	Check("a cleared cookie isn't a session", SessionFromSetCookie({"hister=" + session + "; Max-Age=0"}), "");
+	Check("no cookie", SessionFromSetCookie({}), "");
+
+	// The bodies, as JSON.stringify writes them.
+	Check("login body", LoginBody("alex", "p\"w"), "{\"username\":\"alex\",\"password\":\"p\\\"w\"}");
+	Check("trade body", AppSessionBody(session, "Shiori on haiku"), "{\"hister\":\"" + session + "\",\"label\":\"Shiori on haiku\"}");
+	SignIn traded;
+	CheckTrue("the helper's answer", SignInFromTrade("{\"sid\":\"" + sid + "\",\"username\":\"alex\"}", session, traded) && traded.IsSet());
+	CheckTrue("a helper answer without an id", !SignInFromTrade("{\"username\":\"alex\"}", session, traded));
+	CheckTrue("offered while Hister has users", SignInAvailable(200, "{\"ok\":true,\"hister\":\"ok\"}"));
+	CheckTrue("not offered otherwise", !SignInAvailable(200, "{\"ok\":false}") && !SignInAvailable(503, ""));
+	Check("401 in words", LoginProblem(401), "Hister didn't recognise that name and password.");
+
+	// Signed in: Hister gets its session (and the token), the rooms the id, never the session.
+	Config c;
+	c.server = "https://hister.example/";
+	c.kura = "https://kura.example/";
+	c.histerToken = "ABCDEFGHJKLMNPQRSTUVWXYZ23";
+	c.roomToken = "mht_" + std::string(43, 'r');
+	c.signIn = in;
+	Headers h = CredentialHeaders(c, "https://hister.example/search");
+	Check("Hister signed in: token and session", std::to_string(h.size()), "2");
+	Check("Hister's cookie", h.size() == 2 ? h[1].first + ": " + h[1].second : "", "Cookie: hister=" + session);
+	h = CredentialHeaders(c, "https://kura.example/api/search");
+	Check("Kura signed in: the id, over the room token", h.size() == 1 ? h[0].second : "", "Bearer " + sid);
+	c.signIn = SignIn();
+	h = CredentialHeaders(c, "https://kura.example/api/search");
+	Check("Kura not signed in: the room token", h.size() == 1 ? h[0].second : "", "Bearer mht_" + std::string(43, 'r'));
+
+	// The file: 0600, and removed on sign-out.
+	char dir[] = "/tmp/shiori-signin-XXXXXX";
+	if (mkdtemp(dir) == nullptr)
+		return;
+	std::string path = std::string(dir) + "/Shiori/sign-in.json";
+	CheckTrue("saved", SaveSignIn(path, "https://hister.example/", in));
+	struct stat st;
+	Check("sign-in.json is 0600", stat(path.c_str(), &st) == 0 ? std::to_string(st.st_mode & 0777) : "missing", std::to_string(0600));
+	SignIn loaded;
+	CheckTrue("loaded back", LoadSignIn(path, "https://hister.example/", loaded) && loaded.session == session);
+	CheckTrue("removed", RemoveSignIn(path) && !LoadSignIn(path, "https://hister.example/", loaded));
+	CheckTrue("removing again is fine", RemoveSignIn(path));
+	rmdir((std::string(dir) + "/Shiori").c_str());
+	rmdir(dir);
+}
+
 int main()
 {
 	TestVectors();
@@ -198,6 +267,7 @@ int main()
 	TestSave();
 	TestCredentials();
 	TestConfigFile();
+	TestSignIn();
 	printf("%d passed, %d failed\n", gPassed, gFailed);
 	return gFailed ? 1 : 0;
 }
