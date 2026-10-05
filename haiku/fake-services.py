@@ -219,6 +219,14 @@ class Kura(Base):
         limit = int(params.get("limit", ["20"])[0])
         offset = int(params.get("offset", ["0"])[0])
         log("kura vault=" + params.get("vault", ["-"])[0], "offset=" + str(offset))
+        if url.path == "/api/note":
+            path = params.get("path", [""])[0]
+            for npath, folder, title, summary in NOTES:
+                if npath == path:
+                    html = (f"<h1>{title}</h1><p>{summary}</p><ul><li>One <strong>point</strong></li></ul>"
+                            '<p>See <a href="https://www.haiku-os.org/">Haiku</a>.</p>')
+                    return self.reply(200, {"path": path, "title": title, "html": html})
+            return self.reply(404, {"error": "not found"})
         if url.path == "/api/vaults":
             return self.reply(200, {"vaults": [{"name": "personal", "title": "Personal", "default": True},
                                                {"name": "work", "title": "Work", "private": True}]})

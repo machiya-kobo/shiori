@@ -17,6 +17,7 @@ struct Result {
 	std::string snippet;  // HTML whose only markup is <mark>
 	std::string label;
 	std::string path;     // a note's path in the vault
+	std::string vault;    // a note's vault ('' for Kura's default)
 	double added = 0;
 	double updated = 0;
 };

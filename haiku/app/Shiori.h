@@ -25,6 +25,7 @@ enum {
 	kMsgOpenResult = 'Sopn',
 	kMsgCopyLink = 'Scpy',
 	kMsgSaveResult = 'Ssvr',
+	kMsgInvokeResult = 'Sinv',   // a row invoked: a note previews, a page opens
 
 	// Save and Settings windows
 	kMsgDoSave = 'Sdsv',

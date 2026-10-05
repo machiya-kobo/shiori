@@ -124,6 +124,7 @@ ResultPage ParseKura(const std::string& body)
 		r.kind = Result::Note;
 		r.url = url;
 		r.path = n["path"].Str();
+		r.vault = n["vault"].Str();
 		r.title = n["title"].Str(r.path.empty() ? url : r.path);
 		if (r.title.empty())
 			r.title = r.path.empty() ? url : r.path;

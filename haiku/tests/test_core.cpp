@@ -10,6 +10,7 @@
 
 #include "../core/Config.h"
 #include "../core/Json.h"
+#include "../core/NoteText.h"
 #include "../core/Outbox.h"
 #include "../core/Query.h"
 #include "../core/Results.h"
@@ -343,6 +344,56 @@ static void TestOutbox()
 	rmdir(dir);
 }
 
+// A note's preview: Kura's sanitized HTML as styled text.
+static std::string Styles(const StyledText& t)
+{
+	// "offset:style[:href]" per run, for comparing.
+	std::string out;
+	for (const StyledRun& r : t.runs)
+		out += std::to_string(r.offset) + ":" + std::to_string(r.style) + (r.href.empty() ? "" : ":" + r.href) + " ";
+	return out;
+}
+
+static void TestNoteText()
+{
+	StyledText t = NoteHTMLToText(
+		"<h1>BeBox</h1>\n<p>Be Inc.&#39;s <strong>dual</strong> machine, see <a href=\"https://example.com/bebox\">the page</a>.</p>"
+		"<ul><li>Two <em>PowerPC</em> CPUs</li><li>GeekPort</li></ul>"
+		"<p>Run <code>ls -l</code></p><pre>line 1\n  line 2</pre>"
+		"<blockquote><p>A quote</p></blockquote><script>alert(1)</script>"
+		"<p><a href=\"javascript:alert(1)\">not a link</a> &amp; <img alt=\"a photo\" src=\"x.png\"></p>"
+		"<ol><li>one</li><li>two</li></ol>");
+	Check("note text", t.text,
+		"BeBox\n\nBe Inc.'s dual machine, see the page.\n\n\xE2\x80\xA2 Two PowerPC CPUs\n\xE2\x80\xA2 GeekPort\n\n"
+		"Run ls -l\n\nline 1\n  line 2\n\nA quote\n\nnot a link & [a photo]\n\n1. one\n2. two");
+	size_t bold = t.text.find("dual");
+	size_t link = t.text.find("the page");
+	CheckTrue("heading styled", !t.runs.empty() && t.runs[0].offset == 0 && t.runs[0].style == kStyleHeading);
+	Check("the link's address", t.LinkAt(link + 2), "https://example.com/bebox");
+	Check("no link beside it", t.LinkAt(bold), "");
+	Check("a javascript: link is text", t.LinkAt(t.text.find("not a link")), "");
+	bool boldRun = false, codeRun = false, quoteRun = false, italicRun = false;
+	for (const StyledRun& r : t.runs) {
+		boldRun = boldRun || (r.offset == bold && r.style == kStyleBold);
+		codeRun = codeRun || (r.offset == t.text.find("ls -l") && r.style == kStyleCode);
+		quoteRun = quoteRun || (r.offset == t.text.find("A quote") && r.style == kStyleQuote);
+		italicRun = italicRun || (r.offset == t.text.find("PowerPC") && r.style == kStyleItalic);
+	}
+	CheckTrue("bold run " + Styles(t), boldRun);
+	CheckTrue("code run", codeRun);
+	CheckTrue("quote run", quoteRun);
+	CheckTrue("italic run", italicRun);
+	Check("empty note", NoteHTMLToText("").text, "");
+	Check("plain text only", Styles(NoteHTMLToText("hello")), "0:0 ");
+	Check("note URL", KuraNoteURL("https://kura.example", "Retro/Be Box.md", ""),
+		"https://kura.example/api/note?path=Retro%2FBe+Box.md");
+	Check("note URL with vault", KuraNoteURL("https://kura.example/", "a.md", "work"),
+		"https://kura.example/api/note?path=a.md&vault=work");
+	std::string html;
+	CheckTrue("note reply", ParseKuraNote("{\"title\":\"x\",\"html\":\"<p>x</p>\"}", html) && html == "<p>x</p>");
+	CheckTrue("not a note reply", !ParseKuraNote("{\"error\":\"not found\"}", html));
+}
+
 int main()
 {
 	TestVectors();
@@ -353,6 +404,7 @@ int main()
 	TestConfigFile();
 	TestSignIn();
 	TestOutbox();
+	TestNoteText();
 	printf("%d passed, %d failed\n", gPassed, gFailed);
 	return gFailed ? 1 : 0;
 }

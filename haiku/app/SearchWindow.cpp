@@ -21,6 +21,7 @@
 #include "../core/Query.h"
 #include "../core/Results.h"
 #include "Http.h"
+#include "NoteWindow.h"
 #include "ResultItem.h"
 #include "Shiori.h"
 
@@ -169,7 +170,7 @@ SearchWindow::SearchWindow()
 	fVaultField = new BMenuField("vault", NULL, fVaultMenu);
 
 	fList = new BListView("results");
-	fList->SetInvocationMessage(new BMessage(kMsgOpenResult));
+	fList->SetInvocationMessage(new BMessage(kMsgInvokeResult));
 	BScrollView* scroll = new BScrollView("scroll", fList, 0, false, true);
 	fStatus = new BStringView("status", "Type, then Return, to search Hister and Kura.");
 	fStatus->SetExplicitMaxSize(BSize(B_SIZE_UNLIMITED, B_SIZE_UNSET));
@@ -441,6 +442,17 @@ void SearchWindow::MessageReceived(BMessage* message)
 		case kMsgOpenResult:
 			OpenSelected();
 			break;
+		case kMsgInvokeResult: {
+			// A note opens its preview (from Kura); anything else, the browser.
+			const Result* r = SelectedResult();
+			if (r != nullptr && r->kind == Result::Note && !r->path.empty() && !Trim(CurrentConfig().kura).empty()) {
+				NoteWindow* window = new NoteWindow(*r);
+				window->Show();
+			} else {
+				OpenSelected();
+			}
+			break;
+		}
 		case kMsgCopyLink: {
 			const Result* r = SelectedResult();
 			if (r != nullptr && be_clipboard->Lock()) {

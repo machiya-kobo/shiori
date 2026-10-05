@@ -253,6 +253,22 @@ grep -q 'kura vault=work' "$LOG" && ok "a chosen vault is sent" || bad "vault ch
 grep -q 'kura vault=- offset=0' "$LOG" && ok "All asks the default vault only" || bad "All sent a vault"
 hey Shiori quit >/dev/null 2>&1
 
+# 12. A note's preview: invoking a note row opens it from Kura's /api/note.
+"$APP" >/boot/home/mh/app.log 2>&1 &
+sleep 2
+msg Spil of Window Shiori with 'pill=int32(2)'
+cleartext Shiori query
+settext Shiori query "bebox"
+msg Sqgo of Window Shiori
+sleep 2
+send do Item 0 of View results of Window Shiori
+shot 24-note-preview 2
+grep -q 'kura GET /api/note' "$LOG" && ok "the preview asked Kura's /api/note" || bad "no /api/note request"
+hey Shiori get Text of View note of Window BeBox 2>/dev/null | grep -q "dual-PowerPC" && ok "the note's text is shown" || bad "note text missing"
+grep 'hister GET' "$LOG" | grep -q 'BeBox\|bebox' && bad "a note went to Hister" || ok "the note never went to Hister"
+send quit of Window BeBox
+hey Shiori quit >/dev/null 2>&1
+
 echo "--- fake services log"
 cat "$LOG"
 exit $fail

@@ -12,8 +12,10 @@ SRCS = \
 	core/Config.cpp \
 	core/SignIn.cpp \
 	core/Outbox.cpp \
+	core/NoteText.cpp \
 	app/App.cpp \
 	app/Http.cpp \
+	app/NoteWindow.cpp \
 	app/ResultItem.cpp \
 	app/SaveWindow.cpp \
 	app/SearchWindow.cpp \

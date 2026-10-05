@@ -2,7 +2,7 @@
 #   make -f Makefile.test test
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -O1 -g -Wall -Wextra
-CORE = core/Json.cpp core/Query.cpp core/Results.cpp core/Config.cpp core/SignIn.cpp core/Outbox.cpp
+CORE = core/Json.cpp core/Query.cpp core/Results.cpp core/Config.cpp core/SignIn.cpp core/Outbox.cpp core/NoteText.cpp
 
 test: test_core
 	./test_core
