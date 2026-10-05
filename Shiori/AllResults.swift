@@ -42,8 +42,9 @@ struct AllResults: View {
     }
 
     /// Your pages and your notes in All: a page of each (as the web pages'
-    /// 20), among the web's results (the rest on the Pages and Notes pills).
-    static let count = 20
+    /// 30, and every list's page), among the web's results (the rest on the
+    /// Pages and Notes pills).
+    static let count = 30
 
     /// Not for a search of Hister syntax alone (label:bsd, @retro), and
     /// only for a search run on purpose (`SearchSession.webAllowed`): while

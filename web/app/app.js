@@ -1455,7 +1455,7 @@ async function didYouMean(q, scope) {
 
 /** Your pages and your notes in All: a page of each (as the Pages list's),
  *  all of them among the web results. */
-const ALL_COUNT = 20;
+const ALL_COUNT = 30;
 
 async function searchAll(container, q, { web = true } = {}) {
   container.replaceChildren(h('div', { class: 'spinner' }));

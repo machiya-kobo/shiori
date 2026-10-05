@@ -129,7 +129,10 @@
   const FOLDS_KEY = 'shioriFolds';
   // Your pages and notes in All: a page of each (as the Pages tab's), all
   // of them among the web results (mixIn).
-  const ALL_COUNT = 20;
+  const ALL_COUNT = 30;
+  // A page of Pages, Notes, Code or Files (as the apps and the web app load
+  // them); the web's tabs keep SearXNG's own pages.
+  const PAGE_SIZE = 30;
   const stored = await chrome.storage.local.get(['histerURL', 'histerToken', PAGE_CACHE_KEY, FOLDS_KEY, 'shioriSettings']);
   // Hister's token where this device has one (the extension; the hosted
   // page has none: its host signs it in), sent as X-Access-Token.
@@ -2291,8 +2294,8 @@
     if (!result && vault) {
       // Kura pages by offset; a marker page key keeps the Next link below.
       try {
-        const offset = (page - 1) * 20;
-        result = await kuraNotes(q, { limit: 20, offset, sort: histerSort === 'new' ? 'date' : 'relevance', vault: vaultParam });
+        const offset = (page - 1) * PAGE_SIZE;
+        result = await kuraNotes(q, { limit: PAGE_SIZE, offset, sort: histerSort === 'new' ? 'date' : 'relevance', vault: vaultParam });
         result.page_key = offset + result.documents.length < result.total ? 'kura' : '';
         pageState[category] = result;
         saveState();
@@ -2307,10 +2310,10 @@
         if (histerKey) extra.page_key = histerKey;
         if (histerSort === 'new') extra.sort = 'date';
         result = files
-          ? await histerSearch(S.filesQuery(q), 20, extra)
+          ? await histerSearch(S.filesQuery(q), PAGE_SIZE, extra)
           : code
-            ? await histerSearch(S.codeQuery(q, codeFiltersFromAddress()), 20, extra)
-            : await histerOrClose(q, 20, extra, undefined, () => webSuggestions(q));
+            ? await histerSearch(S.codeQuery(q, codeFiltersFromAddress()), PAGE_SIZE, extra)
+            : await histerOrClose(q, PAGE_SIZE, extra, undefined, () => webSuggestions(q));
         pageState[category] = result;
         saveState();
       } catch (_) {
@@ -2334,7 +2337,7 @@
       docs = first.docs;
     }
     appendFolded($('web-results'), docs, (d) => (vault ? vaultCard(d, cards) : files ? fileCard(d) : code ? codeCard(d) : histerCard(d)));
-    const from = (page - 1) * 20 + 1;
+    const from = (page - 1) * PAGE_SIZE + 1;
     const noun = vault ? 'notes' : files ? 'files' : code ? 'results' : 'pages';
     // Hister's total is your pages alone (notes are Kura's), so both can say "of".
     $('timing').textContent = `${from}–${from + lifted + docs.length - 1} of ${(result.total || docs.length).toLocaleString()} ${noun}`;
@@ -2343,7 +2346,7 @@
     $('hister-more-tab').hidden = vault;
     $('pages').hidden = false;
     // A close-match page key belongs to the other spelling: no next page.
-    if (result.page_key && docs.length >= 20 && !result.closeMatches) $('next').href = link({ p: page + 1, hk: result.page_key });
+    if (result.page_key && docs.length >= PAGE_SIZE && !result.closeMatches) $('next').href = link({ p: page + 1, hk: result.page_key });
     else $('next').hidden = true;
     if (page > 1) {
       $('prev').hidden = false;
