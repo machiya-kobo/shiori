@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.7.6 (2026-10-05)
+
+### Fixed
+
+- Shiori for Linux: `shiori send` stopped at a 401/403 now says to sign
+  in (or set the token), as `shiori save` does, rather than that Hister
+  is out of reach.
+
 ## 0.7.5 (2026-10-05)
 
 ### Fixed
