@@ -323,6 +323,12 @@ holds the rules and the traps the code can't tell you.
   "not found"). Every query names service and account.
 - Every delete is Undo, not a confirmation: the delete goes to Hister only
   after the toast.
+- **Lists watch for new items, never redraw under you**: every 60 s while
+  the app is in front (the web app: the tab visible), an open list asks
+  Hister and Kura (never the web) what arrived (`ResultsModel.checkForNew`,
+  the web app's `watchForNew`): newest-first lists count unseen first-page
+  results, other orders the total's growth. A "↑ N New Items" banner
+  reloads and goes to the top on a tap.
 
 ## The search page and the web app
 

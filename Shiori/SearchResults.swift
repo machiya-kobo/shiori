@@ -282,6 +282,10 @@ extension EnvironmentValues {
 /// A results list: plain, or selecting into the preview pane, where a
 /// double-click (or Return) opens the page and the menu covers the page.
 struct ResultsListContainer<Content: View>: View {
+    /// Bumped to scroll to `top` (a list refreshed from its "N New Items"
+    /// banner); 0 never scrolls.
+    var topRequests = 0
+    var top: StoredPage.ID?
     @ViewBuilder var content: () -> Content
     @Environment(\.previewSelection) private var selection
     @Environment(\.openURL) private var openURL
@@ -318,6 +322,7 @@ struct ResultsListContainer<Content: View>: View {
                     }
                 }
                 .onChange(of: app.resultsFocusRequests) { _, _ in focused = true }
+                .onChange(of: topRequests) { _, _ in scrollToTop(proxy) }
                 .sheet(isPresented: $showingKeys) { KeyboardHelp() }
             }
             #if os(macOS)
@@ -344,10 +349,18 @@ struct ResultsListContainer<Content: View>: View {
             .focusEffectDisabled()
             #endif
         } else {
-            List {
-                content()
+            ScrollViewReader { proxy in
+                List {
+                    content()
+                }
+                .onChange(of: topRequests) { _, _ in scrollToTop(proxy) }
             }
         }
+    }
+
+    private func scrollToTop(_ proxy: ScrollViewProxy) {
+        guard let top else { return }
+        withAnimation { proxy.scrollTo(top, anchor: .top) }
     }
 
     // MARK: vi keys (the web app and the search page have the same)

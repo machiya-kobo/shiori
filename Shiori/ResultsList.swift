@@ -13,12 +13,42 @@ struct ResultsList<Empty: View>: View {
     @Environment(\.palette) private var palette
     /// Folded runs that were opened (`SiteRuns.Item.id`).
     @State private var unfolded: Set<String> = []
+    @Environment(\.scenePhase) private var scenePhase
+    /// Bumped after the banner's refresh, to scroll the list to its top.
+    @State private var topRequests = 0
+
+    /// How often an open list asks whether anything arrived (Hister and
+    /// Kura only, never the web).
+    static var pollInterval: Duration { .seconds(60) }
 
     var body: some View {
         content
             // Again when the Kura address changes, for a notes list.
             .task(id: "\(app.serverURL)|\(app.searchPage.niwaURL)|\(model.source == .notes ? app.notesVault : "")") { await load() }
             .refreshable { await load() }
+            // Every minute while the app is in front and the list is up:
+            // anything new shows as a banner, never by redrawing the list
+            // under you.
+            .task(id: "\(app.serverURL)|\(model.query)") {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: Self.pollInterval)
+                    guard !Task.isCancelled else { return }
+                    if scenePhase == .active { await model.checkForNew(using: app.client) }
+                }
+            }
+            .overlay(alignment: .top) {
+                if model.newCount > 0, model.phase == .loaded {
+                    NewItemsBanner(count: model.newCount) {
+                        Task {
+                            await load()
+                            topRequests += 1
+                        }
+                    }
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.default, value: model.newCount)
             .topBar {
                 ListControls(model: model, title: title ?? model.baseQuery) { Task { await load() } }
             }
@@ -109,7 +139,7 @@ struct ResultsList<Empty: View>: View {
     }
 
     private var list: some View {
-        ResultsListContainer {
+        ResultsListContainer(topRequests: topRequests, top: visible.first?.id) {
             if let respelled = model.respelledAs {
                 Text("Showing results for “\(respelled)”")
                     .textStyle(.callout)
@@ -561,5 +591,27 @@ struct NoteLinksMenu: View {
             }
             Divider()
         }
+    }
+}
+
+/// "↑ 3 New Items": what arrived since the list loaded, over its top. A tap
+/// reloads it and goes to the top; until then the list stays as it was.
+struct NewItemsBanner: View {
+    let count: Int
+    let action: () -> Void
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        Button(action: action) {
+            Label(count == 1 ? "1 New Item" : "\(count.formatted()) New Items", systemImage: "arrow.up")
+                .textStyle(.subheadline, weight: .semibold)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .foregroundStyle(palette.background)
+                .background(palette.accent, in: Capsule())
+                .shadow(color: .black.opacity(0.2), radius: 6, y: 2)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Shows them at the top of the list")
     }
 }

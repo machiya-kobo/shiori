@@ -111,6 +111,10 @@ final class ResultsModel {
     private(set) var opened: [OpenedResult] = []
     /// Counts per filter value, from the first page.
     private(set) var facets: Facets?
+    /// How many results arrived since the list loaded (`checkForNew`), for
+    /// the "N New Items" banner: the list itself stays as it is, so a
+    /// place in it isn't lost, until the banner is tapped. 0 after a load.
+    private(set) var newCount = 0
     /// Set by the list from Settings before it loads.
     var wantsFacets = false
     var semantic = false
@@ -373,6 +377,7 @@ final class ResultsModel {
             phase = .failed(.unreachable)
             return
         }
+        newCount = 0
         generation += 1
         let mine = generation
         if documents.isEmpty { phase = .loading }
@@ -427,6 +432,32 @@ final class ResultsModel {
         baseQuery = wrapped
         respelledAs = fixed
         return page
+    }
+
+    /// Whether anything arrived since the list loaded, without touching the
+    /// list: a newest-first list counts the first page's results it hasn't
+    /// shown (the Library's All, your pages' and notes' first pages both);
+    /// any other order, how much Hister's total grew. Only Hister and Kura
+    /// are asked (never the web), with no facets. Sets `newCount`.
+    func checkForNew(using client: HisterClient?) async {
+        guard let client, phase == .loaded, !isLoadingMore else { return }
+        let mine = generation
+        let plain = SearchOptions(dateFrom: dateRange?.lowerBound, dateTo: dateRange?.upperBound, semantic: semantic)
+        var count = 0
+        if merge != nil, let kura {
+            async let notesPage = try? kura.search(query, sort: .newest)
+            guard let pages = try? await client.search(query, sort: .newest, options: plain) else { return }
+            let notes = await notesPage
+            count = (pages.documents + (notes?.documents ?? [])).filter { !seen.contains($0.url) }.count
+        } else if order == .newest, !loadsAll {
+            guard let page = try? await search(client, query, sort: sort, options: plain) else { return }
+            count = page.documents.filter { !seen.contains($0.url) }.count
+        } else {
+            guard let page = try? await search(client, query, sort: sort, limit: 1, options: plain) else { return }
+            count = max(0, page.total - total)
+        }
+        guard mine == generation else { return }
+        newCount = count
     }
 
     /// Fetches the next page when `document` is near the end of the list.

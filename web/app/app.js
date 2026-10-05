@@ -772,6 +772,7 @@ function resultsList(container, options) {
   const list = h('ul', { class: 'rows' });
   const sentinel = h('div', {});
   const seen = new Set();
+  let firstTotal = 0;
   const groups = new Map(); // title → folder
   const plain = folder(list);
   let next = '';
@@ -807,6 +808,7 @@ function resultsList(container, options) {
         }
       }
       if (first) {
+        firstTotal = reply.total || 0;
         container.replaceChildren();
         if (notesWantSignIn) container.append(signInStatus(() => resultsList(container, options)));
         if (heading) container.append(h('div', { class: 'section-head' }, heading));
@@ -844,7 +846,53 @@ function resultsList(container, options) {
   }
   new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && page(false), { root: $('list'), rootMargin: '600px' }).observe(sentinel);
   page(true);
+  watchForNew();
+
+  /**
+   * Every minute while this list is on screen and the app in front, asks
+   * Hister (and Kura) whether anything arrived, as the apps do: a
+   * newest-first list counts the first page's results it hasn't shown,
+   * any other order how much the total grew. The list stays as it is (a
+   * place in it isn't lost); a banner says "N New Items", and a click
+   * reloads it and goes to the top. Never the web.
+   */
+  function watchForNew() {
+    const token = String(Math.random());
+    container.dataset.watch = token;
+    const banner = h('button', { type: 'button', class: 'new-items', hidden: true });
+    const wrap = h('div', { class: 'new-items-wrap' }, banner);
+    banner.addEventListener('click', () => {
+      $('list').scrollTo({ top: 0, behavior: 'smooth' });
+      resultsList(container, options);
+    });
+    async function count() {
+      if (merging) {
+        const [pages, notes] = await Promise.all([api.search(query, { sort }).catch(() => null), api.kura('*', { sort: 'date' }).catch(() => null)]);
+        if (!pages) return null;
+        return [...pages.documents, ...((notes && notes.documents) || [])].filter((d) => !seen.has(d.url)).length;
+      }
+      if (sort === 'date' && !group) {
+        const reply = source === 'notes' ? await api.kura(query, { sort, vault: settings.notesVault || 'all' }) : await api.search(query, { sort });
+        return reply.documents.filter((d) => !seen.has(d.url)).length;
+      }
+      const reply = source === 'notes' ? await api.kura(query, { sort, limit: 1, vault: settings.notesVault || 'all' }) : await api.search(query, { sort, limit: 1 });
+      return Math.max(0, (reply.total || 0) - firstTotal);
+    }
+    const timer = setInterval(async () => {
+      // A redrawn or departed list stops its own watch.
+      if (!container.isConnected || container.dataset.watch !== token) return clearInterval(timer);
+      if (document.visibilityState !== 'visible' || loading || !list.isConnected) return;
+      const n = await count().catch(() => null);
+      if (n === null || container.dataset.watch !== token) return;
+      banner.textContent = `↑ ${n === 1 ? '1 New Item' : `${n.toLocaleString()} New Items`}`;
+      banner.hidden = n < 1;
+      if (n > 0 && !wrap.isConnected) container.prepend(wrap);
+    }, NEW_ITEMS_POLL_MS);
+  }
 }
+
+/** How often an open list asks whether anything arrived (Hister and Kura only). */
+const NEW_ITEMS_POLL_MS = 60_000;
 
 // --- Sort · Group · Filter, as the apps' row under the tabs ----------------------
 
