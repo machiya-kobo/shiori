@@ -11,7 +11,7 @@ using namespace shiori;
 static std::string Problem(const char* who, const HttpReply& reply, const ResultPage& page, bool sentCredential)
 {
 	if (reply.status == 0)
-		return std::string(who) + " can't be reached: " + reply.error;
+		return TransportProblem(who, reply.error);
 	if ((reply.status == 401 || reply.status == 403) && !sentCredential)
 		return std::string(who) + " wants you signed in: sign in to Hister in Settings.";
 	if (reply.status == 401 || reply.status == 403) {

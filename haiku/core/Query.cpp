@@ -1,5 +1,7 @@
 #include "Query.h"
 
+#include <cctype>
+
 #include <cstdio>
 #include <cstring>
 
@@ -416,6 +418,27 @@ std::string NewPageJSON(const std::string& url, const std::string& title,
 	meta.Set("ignore_skip_rules", json::Value::MakeBool(true));
 	page.Set("metadata", meta);
 	return json::Write(page);
+}
+
+bool IsCertificateError(const std::string& error)
+{
+	std::string lower;
+	for (char c : error)
+		lower += (char)tolower((unsigned char)c);
+	for (const char* word : {"certificate", "ssl", "tls", "handshake", "x509", "verify failed"}) {
+		if (lower.find(word) != std::string::npos)
+			return true;
+	}
+	return false;
+}
+
+std::string TransportProblem(const std::string& who, const std::string& error)
+{
+	std::string detail = error.empty() ? "" : " (" + error + ")";
+	if (IsCertificateError(error))
+		return who + "'s certificate isn't trusted" + detail
+			+ ": check the address, or trust its certificate on this computer.";
+	return who + " can't be reached" + detail + ": check your network or VPN, then try again.";
 }
 
 std::string RejectionReason(int status)

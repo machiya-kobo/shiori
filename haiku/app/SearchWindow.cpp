@@ -12,6 +12,7 @@
 #include <MenuBar.h>
 #include <MenuField.h>
 #include <MenuItem.h>
+#include <MessageFilter.h>
 #include <Messenger.h>
 #include <PopUpMenu.h>
 #include <ScrollView.h>
@@ -32,6 +33,40 @@ namespace {
 
 const Pill kPills[] = {Pill::All, Pill::Pages, Pill::Notes, Pill::Code};
 const uint32 kMsgVault = 'Svlt';
+const uint32 kMsgFocusQuery = 'Sfcq';
+
+// The keys between the field and the list: ↓ in the field goes to the
+// first result, Escape in the list back to the field.
+filter_result KeyFilter(BMessage* message, BHandler** target, BMessageFilter* filter)
+{
+	const char* bytes = nullptr;
+	if (message->FindString("bytes", &bytes) != B_OK || bytes == nullptr)
+		return B_DISPATCH_MESSAGE;
+	BView* view = dynamic_cast<BView*>(*target);
+	BWindow* window = dynamic_cast<BWindow*>(filter->Looper());
+	if (view == nullptr || window == nullptr)
+		return B_DISPATCH_MESSAGE;
+	BListView* list = dynamic_cast<BListView*>(window->FindView("results"));
+	BTextControl* query = dynamic_cast<BTextControl*>(window->FindView("query"));
+	if (list == nullptr || query == nullptr)
+		return B_DISPATCH_MESSAGE;
+	if (bytes[0] == B_DOWN_ARROW && view == query->TextView()) {
+		for (int32 i = 0; i < list->CountItems(); i++) {
+			if (list->ItemAt(i)->IsEnabled()) {
+				list->MakeFocus(true);
+				list->Select(i);
+				list->ScrollToSelection();
+				return B_SKIP_MESSAGE;
+			}
+		}
+	}
+	if (bytes[0] == B_ESCAPE && view == list) {
+		list->DeselectAll();
+		window->PostMessage(kMsgFocusQuery);
+		return B_SKIP_MESSAGE;
+	}
+	return B_DISPATCH_MESSAGE;
+}
 const uint32 kMsgVaults = 'Svls';
 
 void RunVaults(BMessenger target, Config config)
@@ -70,6 +105,19 @@ SearchWindow::SearchWindow()
 	result->AddItem(new BMenuItem("Copy link", new BMessage(kMsgCopyLink), 'C', B_SHIFT_KEY));
 	result->AddItem(new BMenuItem("Save to Hister" B_UTF8_ELLIPSIS, new BMessage(kMsgSaveResult)));
 	menuBar->AddItem(result);
+	// The pills and the field by keyboard: ⌘1–⌘4, ⌘L.
+	BMenu* search = new BMenu("Search");
+	search->AddItem(new BMenuItem("Find" B_UTF8_ELLIPSIS, new BMessage(kMsgFocusQuery), 'L'));
+	search->AddSeparatorItem();
+	for (int i = 0; i < 4; i++) {
+		BMessage* m = new BMessage(kMsgPill);
+		m->AddInt32("pill", int32(kPills[i]));
+		search->AddItem(new BMenuItem(PillLabel(kPills[i]), m, char('1' + i)));
+	}
+	search->AddSeparatorItem();
+	search->AddItem(new BMenuItem("Quick Search" B_UTF8_ELLIPSIS, new BMessage(kMsgQuickSearch), 'K'));
+	search->ItemAt(search->CountItems() - 1)->SetTarget(be_app);
+	menuBar->AddItem(search, 1);
 
 	// Return searches (the field's invocation); typing alone never does.
 	fQuery = new BTextControl("query", NULL, "", new BMessage(kMsgSearchNow));
@@ -111,6 +159,7 @@ SearchWindow::SearchWindow()
 			.Add(fStatus)
 		.End();
 
+	AddCommonFilter(new BMessageFilter(B_KEY_DOWN, &KeyFilter));
 	SetPill(Pill::All);
 	fQuery->MakeFocus(true);
 	ResizeTo(680, 560);
@@ -339,6 +388,10 @@ void SearchWindow::MessageReceived(BMessage* message)
 			break;
 		case kMsgSearchNow:
 			StartSearch();
+			break;
+		case kMsgFocusQuery:
+			fQuery->MakeFocus(true);
+			fQuery->TextView()->SelectAll();
 			break;
 		case kMsgPill:
 			SetPill(Pill(message->GetInt32("pill", 0)));

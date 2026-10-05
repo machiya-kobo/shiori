@@ -37,7 +37,7 @@ void RunLoad(BMessenger target, Config config, std::string path, std::string vau
 	HttpReply reply = HttpRequestJSON(config, "GET", KuraNoteURL(config.kura, path, vault));
 	std::string html;
 	if (reply.status == 0)
-		loaded->problem = "Kura can't be reached: " + reply.error;
+		loaded->problem = TransportProblem("Kura", reply.error);
 	else if (reply.status == 401 || reply.status == 403)
 		loaded->problem = "Kura wants you signed in: sign in to Hister in Settings.";
 	else if (reply.status == 404)

@@ -8,7 +8,10 @@
 #include "../core/Config.h"
 
 #define SHIORI_SIGNATURE "application/x-vnd.machiya-kobo.shiori"
-#define SHIORI_VERSION "0.1.0-proto"
+// From project.yml, by the Makefile (one version for every Shiori).
+#ifndef SHIORI_VERSION
+#define SHIORI_VERSION "0.0.0-dev"
+#endif
 
 enum {
 	// App

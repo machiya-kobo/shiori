@@ -508,4 +508,12 @@ holds the rules and the traps the code can't tell you.
 - The Be UI can't be run from the Mac: UI checks run on the Haiku test VM
   (`haiku/tests/ui-run.sh`, driven by `hey`, against `haiku/fake-services.py`)
   by machiya's subagent. Never a write against a live Hister there either.
+- The version is project.yml's: the Makefile passes `SHIORI_VERSION` and
+  writes the gitignored `Version.rdef`; `Icon.rdef` is `haiku/tools/icon.py`'s
+  (HVIF), held by a test. `haiku/package.sh` makes the `.hpkg` on Haiku.
+- **The Deskbar item runs inside Deskbar**, loaded from the app's binary
+  (`instantiate_deskbar_item`; the link exports dynamic symbols, or Deskbar
+  can't find it): no networking there, every action a message to the app,
+  and never a synchronous `BDeskbar` call from Deskbar's own thread.
+- Searches run on Return or a pill, never while typing, as everywhere.
 

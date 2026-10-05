@@ -275,6 +275,17 @@ static void TestSignIn()
 }
 
 // The outbox: the iOS rules (linux.test.mjs' outbox cases), with 401/403 held.
+static void TestTransport()
+{
+	CheckTrue("a certificate error", IsCertificateError("SSL error: certificate verify failed"));
+	CheckTrue("a TLS handshake", IsCertificateError("TLS handshake failure"));
+	CheckTrue("not one", !IsCertificateError("Connection refused") && !IsCertificateError(""));
+	Check("untrusted in words", TransportProblem("Hister", "certificate verify failed"),
+		"Hister's certificate isn't trusted (certificate verify failed): check the address, or trust its certificate on this computer.");
+	Check("unreachable in words", TransportProblem("Kura", "Connection refused"),
+		"Kura can't be reached (Connection refused): check your network or VPN, then try again.");
+}
+
 static void TestOutbox()
 {
 	Check("NewPageJSON with added", NewPageJSON("https://a.example/", "A", "", "1.0", 1790000000),
@@ -405,6 +416,7 @@ int main()
 	TestSignIn();
 	TestOutbox();
 	TestNoteText();
+	TestTransport();
 	printf("%d passed, %d failed\n", gPassed, gFailed);
 	return gFailed ? 1 : 0;
 }

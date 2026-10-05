@@ -68,4 +68,9 @@ std::string NewPageJSON(const std::string& url, const std::string& title,
 // HisterKit's Rejection, in words; '' for anything else.
 std::string RejectionReason(int status);
 
+// No answer, in words that say what to do (HisterError(transport:)): a TLS
+// or certificate failure is "isn't trusted", anything else "can't be reached".
+bool IsCertificateError(const std::string& error);
+std::string TransportProblem(const std::string& who, const std::string& error);
+
 }  // namespace shiori

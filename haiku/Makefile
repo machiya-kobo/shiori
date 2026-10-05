@@ -25,7 +25,12 @@ SRCS = \
 	app/SettingsWindow.cpp \
 	app/SignInWindow.cpp
 
-RDEFS = Shiori.rdef Icon.rdef
+# Shiori's one version (project.yml), for the app (client_version, About)
+# and its app_version resource (Version.rdef, generated, not committed).
+SHIORI_VERSION := $(shell sed -n 's/.*MARKETING_VERSION: *"\{0,1\}\([0-9][0-9.]*\).*/\1/p' ../project.yml | head -1)
+_VERSION_RDEF := $(shell sh tools/version-rdef.sh > Version.rdef)
+
+RDEFS = Shiori.rdef Icon.rdef Version.rdef
 RSRCS =
 
 # netservices2 is private API, linked statically (libnetservices2.a); it
@@ -40,7 +45,7 @@ LOCAL_INCLUDE_PATHS = core app
 
 OPTIMIZE := SOME
 LOCALES =
-DEFINES =
+DEFINES = 'SHIORI_VERSION="$(SHIORI_VERSION)"'
 WARNINGS = ALL
 SYMBOLS :=
 DEBUGGER :=

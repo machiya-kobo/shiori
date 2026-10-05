@@ -40,7 +40,7 @@ void RunSignIn(BMessenger target, Config config, std::string name, std::string p
 	HttpReply login = HttpRequestJSON(config, "POST", base + "api/login", LoginBody(name, password), true, false);
 	password.assign(password.size(), '\0');
 	if (login.status == 0) {
-		done.AddString("error", "The server didn't answer. Check your network or VPN, then try again.");
+		done.AddString("error", TransportProblem("Hister", login.error).c_str());
 		target.SendMessage(&done);
 		return;
 	}

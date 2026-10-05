@@ -151,6 +151,8 @@ void SaveWindow::MessageReceived(BMessage* message)
 			bool queued = message->GetBool("queued", false);
 			if (queued && (status == 401 || status == 403))
 				reason = "Kept for later: Hister wants you signed in (or a token) in Settings.";
+			else if (queued && status == 0 && IsCertificateError(message->GetString("error", "")))
+				reason = "Kept for later, but " + TransportProblem("Hister", message->GetString("error", ""));
 			else if (queued)
 				reason = "Kept for later: Hister can't take it now. It goes when Hister is back.";
 			else if (message->HasString("queueError"))
