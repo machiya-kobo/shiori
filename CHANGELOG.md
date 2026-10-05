@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.6.2 (2026-10-05)
+
+### Security
+
+- The apps no longer send Hister's token to Kura and Konbini when they
+  aren't signed in to Hister: a room that asks who you are now says to
+  sign in (Settings → Server). Hister's token goes to Hister alone,
+  everywhere in Shiori.
+
 ## 0.6.1 (2026-10-05)
 
 ### Security

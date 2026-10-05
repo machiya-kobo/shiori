@@ -31,10 +31,9 @@ it beside a sign-in; either is enough for Hister.
 **Where they go.** The session only to the configured Hister server, by
 origin. The rooms (Kura, Konbini) get the app's `mhs_` id, or on Linux a
 room token (`mht_`), under the same host rule as Machiya's token (below);
-neither ever goes to Hister. Hister's token goes to Hister. The apps alone
-still send it to the rooms when they aren't signed in (rooms in Hister
-sign-in mode accept it until the switch to per-room credentials); the
-Safari extension and Linux never do. Nothing
+neither ever goes to Hister. Hister's token goes to Hister alone: no
+Shiori sends it to a room. Not signed in, a room in Hister sign-in mode
+answers 401 and Shiori says to sign in. Nothing
 follows a redirect to another origin with any of them, none is ever in a
 URL or a log, and the offline capture queue stores none (its replays read
 the token afresh).

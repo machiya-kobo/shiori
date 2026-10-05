@@ -318,9 +318,10 @@ final class AppState {
         // Hister sign-in mode refuse the identity file's tokens); else the
         // Machiya token, as before.
         if let account = histerAccount, let signIn = MachiyaSignIn(sessionID: account.sessionID, rooms: rooms) { return signIn }
-        // Not signed in: the identity token, and Hister's token, which rooms
-        // in Hister sign-in mode take (X-Access-Token, read first there).
-        return MachiyaSignIn(token: machiyaToken, rooms: rooms, histerToken: histerToken)
+        // Not signed in: the identity file's token, if any. Never Hister's
+        // token: it stays for Hister, and a room in Hister sign-in mode asks
+        // you to sign in instead.
+        return MachiyaSignIn(token: machiyaToken, rooms: rooms)
     }
 
     /// Signs in with what was typed: a pairing code (paired against Kura,

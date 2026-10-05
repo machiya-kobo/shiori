@@ -50,8 +50,7 @@ holds the rules and the traps the code can't tell you.
   the configured Kura and Konbini by origin, less Hister's and SearXNG's;
   never across a redirect. Rooms in Hister sign-in mode get the app's
   `mhs_` id (the Safari extension asks the app for it), Linux a room token
-  (`mht_`, config `roomToken`); the extension and Linux never send Hister's
-  token to a room. It lives in the Keychain (`MachiyaKeychain`,
+  (`mht_`, config `roomToken`); no Shiori sends Hister's token to a room. It lives in the Keychain (`MachiyaKeychain`,
   service "Machiya"; Safari's extension asks the app, `machiya`),
   Linux's config.json; never UserDefaults, never logged.
   The extension hands it to its own pages only, never a content script;
