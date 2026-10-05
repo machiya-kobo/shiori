@@ -1,0 +1,19 @@
+# The tests that run anywhere: Node (search-core, the web pages, the Safari
+# extension's scripts, Linux's modules) and the Haiku app's portable C++ core.
+# The Swift apps and the Be API UI build on their own systems.
+name: tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  node-and-haiku-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Node tests (with the Haiku core, built by g++)
+        run: node --test scripts/*.test.mjs

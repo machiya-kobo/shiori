@@ -489,3 +489,23 @@ holds the rules and the traps the code can't tell you.
   `linux/save-test.sh`.
 - Over SSH, run with the desktop's session bus, or portals time out; never
   `pkill -f` a pattern that's in the SSH command.
+
+## Shiori for Haiku (`haiku/`)
+
+- Native C++17 on the Be API, HTTP through the Network Kit's netservices2
+  (private, linked statically). `haiku/core/` is portable (no Be headers):
+  JSON, the search query, results, settings and the credential rules, tested
+  anywhere by `make -f Makefile.test test` (Node's `scripts/haiku.test.mjs`
+  runs it where a C++ compiler exists; CI on Linux). `haiku/app/` is the Be
+  UI, built only on Haiku (`cd haiku && make`).
+- **The core's queries are search-core's twins**: `haiku/tests/vectors.inc`
+  is generated from search-core.js (`node haiku/tests/gen-vectors.mjs
+  patches/shiori/search-core.js > haiku/tests/vectors.inc`); a test fails
+  when they drift, so regenerate after changing search-core.
+- Settings: `~/config/settings/Shiori/config.json`, 0600, Linux's keys.
+  Hister's token only to Hister; the rooms get the sign-in's `mhs_` or a
+  room token (`mht_`), never Hister's token.
+- The Be UI can't be run from the Mac: UI checks run on the Haiku test VM
+  (`haiku/tests/ui-run.sh`, driven by `hey`, against `haiku/fake-services.py`)
+  by machiya's subagent. Never a write against a live Hister there either.
+
