@@ -69,7 +69,8 @@ holds the rules and the traps the code can't tell you.
   edits aliases only through Keep Collections Current (docs/ai.md).
 - **Settings are per device, never synced.** Anything on the network could
   write a shared document.
-- **A note from a private vault** (address `/v/<vault>/n/…`, a vault Kura's
+- **A note from a private vault** (address `/v/<vault>/n/…`, and any other
+  page under `/v/<vault>/`, its folder and tag pages included; a vault Kura's
   `/api/vaults` doesn't mark `private: false`; `Notes.isPrivateNote` /
   `S.isPrivateNote`) never goes to Hister, to any AI engine (on-device
   included), a cache, an export or a feed. Kura's config is the one switch
@@ -360,6 +361,15 @@ holds the rules and the traps the code can't tell you.
   is dropped, so a broken plugin fails closed.
 - `sw.js` caches only the app's own files and only `ok` responses, and waits
   for "New Version · Reload" (`SKIP_WAITING`).
+- **Menus close on the way out** (as the rooms' ui/machiya.js): a link or
+  form inside a menu or sheet shuts it before the page goes, and
+  `pageshow`, `popstate` and `pagehide` shut what's open (iOS's installed
+  apps restore the back/forward cache as left). **Pull to refresh** only in
+  the installed app (`S.pullStep`, the rooms' gesture); the web app's
+  `#list` counts as the page.
+- **Every href goes through `S.linkHref`** (the pages' element builders),
+  and a stored address opened from script through `S.safeHref`
+  (`SafeHref` in the apps): never `javascript:`, `data:` or `file:`.
 - The house's shared settings (theme, text size, hidden rooms) are
   `machiya_*` cookies on the network's domain (`S.houseSettings`).
 - AGPL section 13: `SHIORI_SOURCE_URL` puts a Source link in About; only a

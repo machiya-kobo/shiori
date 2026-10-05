@@ -98,7 +98,12 @@ this host too. So the host must:
 - pass `Cookie` through to `/kura/` and `/konbini/` unchanged, and their
   `Set-Cookie` back (a session is renewed on use);
 - take `machiya_session` out of the `Cookie` header on every other route
-  (Hister, SearXNG, the gateway): only the rooms read it.
+  (Hister, SearXNG, the gateway): only the rooms read it. The same for
+  the Hister sign-in helper's `machiya_sso` (above): on Hister's routes
+  nginx replaces the whole `Cookie` header, and it never goes to SearXNG
+  or the gateway. Two cookies, two sign-ins: `machiya_session` is the
+  rooms' own (the identity file), `machiya_sso` the helper's (Hister's
+  users).
 
 The pages only read the rooms, with one exception: signed in, the web app
 keeps your theme (one of the rooms' ten), appearance and text size in step with the rooms through Kura's

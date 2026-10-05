@@ -597,3 +597,20 @@ dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
 .room-icon[data-room="hister"] { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2FhMmY3IiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI1IiB5PSIzIiB3aWR0aD0iMTQiIGhlaWdodD0iMTgiIHJ4PSIyIi8+PHBhdGggZD0iTTggOGg4TTggMTJoOE04IDE2aDUiLz48L3N2Zz4K"); }
 .room-icon[data-room="searxng"] { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2FhMmY3IiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI5Ii8+PHBhdGggZD0iTTMgMTJoMThNMTIgM2MzIDMgMyAxNSAwIDE4TTEyIDNjLTMgMy0zIDE1IDAgMTgiLz48L3N2Zz4K"); }
 /* END ROOM ICONS */
+
+/* Pull to refresh in the installed app (the rooms' look, ui/machiya.css):
+   no rubber band to compete with it; a round reload mark that slides out
+   under the bars, the accent once ready, turning while it reloads. */
+html.pull-refresh, html.pull-refresh body, html.pull-refresh #list { overscroll-behavior-y: none; }
+.pull {
+  position: fixed; left: 50%; z-index: 40; width: 36px; height: 36px; margin-left: -18px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--card); border: 1px solid var(--line2); box-shadow: 0 2px 8px rgb(0 0 0 / 0.18); color: var(--secondary);
+  pointer-events: none; opacity: 0; transform: translateY(calc(var(--pull, 0px) - 40px));
+  transition: transform 0.2s ease, opacity 0.2s ease, color 0.15s ease;
+}
+.pull.held { transition: color 0.15s ease; }
+.pull.ready { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--line2)); }
+.pull svg { width: 20px; height: 20px; transform: rotate(var(--turn, 0deg)); }
+.pull.loading svg { animation: pull-spin 0.8s linear infinite; }
+@keyframes pull-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pull.loading svg { animation: none; } .pull { transition: opacity 0.2s ease; } }

@@ -65,8 +65,10 @@ public enum Notes {
     public static func otherVault(of url: String) -> String? {
         guard let path = kuraPath(of: url) else { return nil }
         let parts = path.split(separator: "/", omittingEmptySubsequences: false)
-        // "", "v", vault, "n", …
-        guard parts.count >= 5, parts[1] == "v", parts[3] == "n", !parts[2].isEmpty else { return nil }
+        // "", "v", vault, …: any page under /v/<name>/, a note (/n/…) and a
+        // folder or tag page too, which lists the vault's titles
+        // (over-inclusive, so safe).
+        guard parts.count >= 4, parts[1] == "v", !parts[2].isEmpty else { return nil }
         return String(parts[2])
     }
 

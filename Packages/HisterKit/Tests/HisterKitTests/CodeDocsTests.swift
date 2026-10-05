@@ -31,6 +31,14 @@ struct CodeDocsTests {
         #expect(pages[2].code == nil)
     }
 
+    /// The same cases as search-core.test.mjs's dangling quote test.
+    @Test func aDanglingQuoteIsClosed() {
+        let suffix = " -label:vault -metadata.source:vault -type:local -metadata.source:code"
+        #expect(SearchText.forHister("raspberry \"pi") == "raspberry \"pi\"" + suffix)
+        #expect(SearchText.forHister("\"raspberry pi\" zero") == "\"raspberry pi\" (zero|zero*)" + suffix)
+        #expect(SearchText.forHister("\"") == "\"\"" + suffix)
+    }
+
     @Test func rowsNameTheirForge() {
         #expect(CodeDocs.hostName("forgejo") == "Forgejo")
         #expect(CodeDocs.hostName("github") == "GitHub")

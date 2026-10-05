@@ -22,10 +22,11 @@ that error), since the real endpoint refuses a localhost origin.
 
 Requests pass through unchanged: in particular no `Origin: hister://` is
 added, so Hister's own check (same-origin allowed, cross-site refused)
-still guards writes. One exception: the Machiya sign-in's cookie
-(`machiya_session`) goes only to the rooms, /kura/ and /konbini/, and is
-taken out of the Cookie header everywhere else (Hister, SearXNG, the
-gateway). Replies pass back as they are, Set-Cookie included. For testing
+still guards writes. One exception: the Machiya sign-ins' cookies (the
+rooms' `machiya_session` and Hister's sign-in helper's `machiya_sso`) go
+only to the rooms, /kura/ and /konbini/, and are taken out of the Cookie
+header everywhere else (Hister, SearXNG, the gateway), as the hosts'
+shiori-routes.inc does. Replies pass back as they are, Set-Cookie included. For testing
 only; stdlib, no dependencies.
 """
 
@@ -56,14 +57,16 @@ AI_STUB = os.environ.get("AI_STUB") == "1"
 AI_ERRORS = {"cap": 429, "note": 403, "not_indexed": 404, "empty": 422, "engine": 502, "declined": 502, "unavailable": 503, "no_results": 422, "searx": 504}
 # The paths whose upstream is a Machiya room, which may read the sign-in cookie.
 ROOMS = ("/kura/", "/konbini/")
-SESSION_COOKIE = "machiya_session"
+# The sign-ins' cookies: the rooms' session (identity file) and Hister's
+# sign-in helper's (whose nginx adds Hister's own session on its hop).
+SESSION_COOKIES = ("machiya_session", "machiya_sso")
 HOP = {"connection", "keep-alive", "transfer-encoding", "upgrade", "host", "content-length", "proxy-connection"}
 
 
 def without_session(cookie):
-    """A Cookie header without the Machiya session ('' when nothing is left)."""
+    """A Cookie header without the Machiya sign-ins' cookies ('' when nothing is left)."""
     kept = [part.strip() for part in cookie.split(";")
-            if part.strip() and part.split("=", 1)[0].strip() != SESSION_COOKIE]
+            if part.strip() and part.split("=", 1)[0].strip() not in SESSION_COOKIES]
     return "; ".join(kept)
 
 

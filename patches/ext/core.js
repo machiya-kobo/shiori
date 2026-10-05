@@ -393,7 +393,7 @@
       // vaults are shared, every time; unanswered, every other vault is
       // private. Without search-core, every other vault's note is refused.
       const S = globalThis.ShioriSearch;
-      const refused = prepared.pageURL && (S ? await S.isPrivateNoteNow(prepared.pageURL, readVaults) : /\/v\/[^/]+\/n\//.test(prepared.pageURL));
+      const refused = prepared.pageURL && (S ? await S.isPrivateNoteNow(prepared.pageURL, readVaults) : /\/v\/[^/]+\//.test(prepared.pageURL));
       if (refused) {
         return new Response('{}', {
           status: 406,

@@ -224,6 +224,29 @@
     return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
   }
 
+  // --- pull to refresh in an installed app (the rooms' ui/machiya.js pullStep) ---
+  //   idle --start(ok)--> armed --move past the slop, mostly downward--> pulling
+  //   --end with d >= threshold--> reload; armed --sideways or upward--> off
+  //   (until the finger lifts); a move that's no longer ok --> off; end or
+  //   cancel otherwise --> idle. d is the mark's travel: the finger's past
+  //   the slop, times resist, at most max.
+  const PULL = Object.freeze({ slop: 10, resist: 0.6, threshold: 70, max: 100 });
+  const PULL_IDLE = Object.freeze({ phase: 'idle', d: 0 });
+  function pullStep(s, e) {
+    if (s.phase === 'reload') return s;
+    if (e.type === 'start') return e.ok ? { phase: 'armed', x: e.x, y: e.y, d: 0 } : PULL_IDLE;
+    if (e.type === 'cancel') return PULL_IDLE;
+    if (e.type === 'end') return s.phase === 'pulling' && s.d >= PULL.threshold ? { phase: 'reload', d: s.d } : PULL_IDLE;
+    if (s.phase !== 'armed' && s.phase !== 'pulling') return s;
+    if (!e.ok) return { phase: 'off', d: 0 };
+    const dx = e.x - s.x, dy = e.y - s.y;
+    if (s.phase === 'armed') {
+      if (Math.abs(dx) < PULL.slop && Math.abs(dy) < PULL.slop) return s;
+      if (dy < PULL.slop || dy < 1.5 * Math.abs(dx)) return { phase: 'off', d: 0 };
+    }
+    return { phase: 'pulling', x: s.x, y: s.y, d: Math.min(PULL.max, Math.max(0, (dy - PULL.slop) * PULL.resist)) };
+  }
+
   // --- safe links (HisterKit's SafeHref is the twin) --------------------------
 
   /**
@@ -448,7 +471,9 @@
    */
   function noteVault(url) {
     const path = kuraPath(url);
-    const m = path && path.match(/^\/v\/([^/]+)\/n\/./);
+    // Any page under /v/<name>/: a note (/n/…), and a folder or tag page
+    // too, which lists the vault's titles (over-inclusive, so safe).
+    const m = path && path.match(/^\/v\/([^/]+)\//);
     return m ? m[1] : null;
   }
   /**
@@ -1008,8 +1033,13 @@
   }
 
   /** A Hister search as sent: the last word a prefix, never the notes, and never the files or code unless it asks. */
+  /** A dangling quote closed: open, it swallowed the exclusions after it into one phrase (no results). */
+  function closeQuote(text) {
+    return (text.match(/"/g) || []).length % 2 ? text + '"' : text;
+  }
+
   function histerText(text) {
-    let sent = excludingNotes(prefixLastWord(String(text || '').trim(), { union: true }));
+    let sent = excludingNotes(prefixLastWord(closeQuote(String(text || '').trim()), { union: true }));
     const words = sent.split(/\s+/);
     if (!asksForFiles(sent) && !words.includes(FILES_EXCLUSION)) sent = `${sent} ${FILES_EXCLUSION}`;
     if (!asksForCode(sent) && !words.includes(CODE_EXCLUSION)) sent = `${sent} ${CODE_EXCLUSION}`;
@@ -1217,6 +1247,18 @@
     };
     document.addEventListener('click', outside);
     document.addEventListener('keydown', escape);
+    // Shut on the way out and on the way back: the back/forward cache (always
+    // on in an installed app on iOS) brought the page back with it open.
+    const away = () => {
+      if (!wrap.isConnected) {
+        for (const type of ['pageshow', 'popstate', 'pagehide']) window.removeEventListener(type, away);
+        return;
+      }
+      show(false);
+    };
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      for (const type of ['pageshow', 'popstate', 'pagehide']) window.addEventListener(type, away);
+    }
     wrap.append(button, menu);
     return wrap;
   }
@@ -2592,6 +2634,9 @@
     archiveURL,
     safeHref,
     linkHref,
+    PULL,
+    PULL_IDLE,
+    pullStep,
     frontendInstances,
     frontendLinks,
     originalLink,

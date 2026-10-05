@@ -703,7 +703,8 @@ test("decoded once, dots and backslashes as a browser reads them; anything Kura 
     'https://kura.example/v\\work\\n\\X',
   ];
   for (const url of ways) assert.equal(S.noteVault(url), 'work', url);
-  assert.equal(S.noteVault('https://kura.example/v/work/../n/X'), null);
+  // Resolved, that's /v/n/X: a vault named "n" (any /v/<name>/ page is its vault's).
+  assert.equal(S.noteVault('https://kura.example/v/work/../n/X'), 'n');
   S.useVaults([]);
   for (const url of [...ways, 'https://kura.example//v/work/n/X', 'https://kura.example/%76/work/n/X', 'https://kura.example/v/%2577ork/n/X']) {
     assert.equal(S.isPrivateNote(url), true, url);
@@ -719,6 +720,11 @@ test('work vaults: known by the address alone', () => {
   assert.equal(S.noteVault('https://example.com/v/x'), null);
   S.useVaults([]);
   assert.equal(S.isPrivateNote('https://kura.example/v/client/n/X'), true);
+  // A private vault's folder and tag pages list its titles: that vault's too.
+  for (const page of ['https://kura.example/v/client/', 'https://kura.example/v/client/f/Clients', 'https://kura.example/v/client/t/billing']) {
+    assert.equal(S.noteVault(page), 'client', page);
+    assert.equal(S.isPrivateNote(page), true, page);
+  }
   // Read as Kura serves it: a leading // folded, %XX decoded once.
   for (const same of ['https://kura.example//v/work/n/X', 'https://kura.example///v/work/n/X', 'https://kura.example/%76/work/n/X', 'https://kura.example/v/%77ork/n/X', 'https://kura.example/%2Fv/work/n/X']) {
     assert.equal(S.noteVault(same), 'work', same);
@@ -1215,4 +1221,35 @@ test("a page's own Settings keep only what SharedSettings.apply would, and never
     niwaURL: 'https://evil.example/', searxngURL: 'https://evil.example/', aiEnabled: true, histerCount2: 1, palette: 'nope', textSize: 'huge',
   })), { showInfobox: false, histerCount: 10, theme: 'day', obsidianVault: 'Sample', pills: ['all', '-web'] });
   assert.deepEqual(plain(S.pageSettings(null)), {});
+});
+
+// The same cases as CodeDocsTests' aDanglingQuoteIsClosed.
+test('a dangling quote is closed before the exclusions go on (SearchText twins)', () => {
+  const suffix = ' -label:vault -metadata.source:vault -type:local -metadata.source:code';
+  assert.equal(S.histerText('raspberry "pi'), 'raspberry "pi"' + suffix);
+  assert.equal(S.histerText('"raspberry pi" zero'), '"raspberry pi" (zero|zero*)' + suffix);
+  assert.equal(S.histerText('"'), '""' + suffix);
+});
+
+test("pull to refresh: the rooms' gesture, step by step (S.pullStep)", () => {
+  const run = (events) => events.reduce((s, e) => S.pullStep(s, e), S.PULL_IDLE);
+  const start = { type: 'start', ok: true, x: 100, y: 100 };
+  const move = (dx, dy, ok = true) => ({ type: 'move', ok, x: 100 + dx, y: 100 + dy });
+  // Down past the threshold and let go: reload.
+  assert.equal(run([start, move(0, 30), move(2, 140), { type: 'end' }]).phase, 'reload');
+  // Not far enough: back to idle.
+  assert.equal(run([start, move(0, 60), { type: 'end' }]).phase, 'idle');
+  // Within the dead zone it waits; the travel is 0.6x the finger past it, capped.
+  assert.equal(run([start, move(3, 8)]).phase, 'armed');
+  assert.equal(run([start, move(0, 60)]).d, 30);
+  assert.equal(run([start, move(0, 400)]).d, S.PULL.max);
+  // Sideways or upward first: off until the finger lifts.
+  assert.equal(run([start, move(40, 20)]).phase, 'off');
+  assert.equal(run([start, move(0, -30), move(0, 200), { type: 'end' }]).phase, 'idle');
+  // Not ok at the start (scrolled, a menu open, two fingers), or later: never.
+  assert.equal(run([{ ...start, ok: false }, move(0, 200), { type: 'end' }]).phase, 'idle');
+  assert.equal(run([start, move(0, 100), move(0, 200, false), { type: 'end' }]).phase, 'idle');
+  // A cancelled touch: idle. Once reloading, it stays.
+  assert.equal(run([start, move(0, 200), { type: 'cancel' }]).phase, 'idle');
+  assert.equal(S.pullStep({ phase: 'reload', d: 70 }, start).phase, 'reload');
 });

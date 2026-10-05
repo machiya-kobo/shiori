@@ -5,6 +5,24 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.5.8 (2026-10-05)
+
+### Added
+
+- **Pull to refresh** in the installed web app, as in the rooms' apps: at
+  the top of the list, pull down and let go once the mark turns blue.
+
+### Fixed
+
+- Menus close on the way out and on the way back: the installed web app
+  on iOS came back from another page with the Rooms menu still open.
+- A search with an unclosed quote (`raspberry "pi`) found nothing: the
+  quote is closed before Shiori's own terms go on.
+- A private vault's folder and tag pages (any `/v/<vault>/…` address, not
+  only its notes) are kept from Hister and AI like its notes.
+- The dev server keeps the Hister sign-in helper's cookie (`machiya_sso`)
+  from Hister and SearXNG, as it did the rooms' (`machiya_session`).
+
 ## 0.5.7 (2026-10-05)
 
 ### Security

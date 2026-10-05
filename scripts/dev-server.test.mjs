@@ -109,3 +109,10 @@ test('a Cookie header holding only the session is dropped for the others', () =>
   const [hister] = throughProxy(['/api/stats'], 'machiya_session=abc.def');
   assert.equal(hister.cookie, null);
 });
+
+test("the Hister sign-in helper's cookie (machiya_sso) reaches only the rooms too", () => {
+  const cookie = 'machiya_sso=opaque; machiya_session=abc.def; machiya_theme=night';
+  const [kura, hister, searx] = throughProxy(['/kura/api/vaults', '/api/stats', '/searx/search'], cookie);
+  assert.equal(kura.cookie, cookie);
+  for (const other of [hister, searx]) assert.equal(other.cookie, 'machiya_theme=night');
+});

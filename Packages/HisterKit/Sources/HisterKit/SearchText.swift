@@ -14,6 +14,12 @@ public enum SearchText {
     /// ("concurrency*" found 1 page of 45), and its (a|b) is a union, so
     /// this finds everything either does, highlighted. Kura has no (a|b):
     /// it keeps "hist*".
+    /// A dangling quote closed: open, it swallowed the exclusions after it
+    /// into one phrase, and Hister found nothing. `S.histerText` does the same.
+    static func closeQuote(_ text: String) -> String {
+        text.filter { $0 == "\"" }.count.isMultiple(of: 2) ? text : text + "\""
+    }
+
     public static func prefixLastWord(_ text: String, union: Bool = false) -> String {
         guard let last = text.last, !last.isWhitespace else { return text }
         guard text.filter({ $0 == "\"" }).count.isMultiple(of: 2) else { return text }
@@ -29,7 +35,7 @@ public enum SearchText {
     /// reads those from Kura, `Notes.exclusion`), and never the watched
     /// files unless it asks for them (the Files pill, `LocalFiles`).
     public static func forHister(_ text: String) -> String {
-        var sent = Notes.excluding(prefixLastWord(text.trimmingCharacters(in: .whitespaces), union: true))
+        var sent = Notes.excluding(prefixLastWord(closeQuote(text.trimmingCharacters(in: .whitespaces)), union: true))
         let words = sent.split(whereSeparator: \.isWhitespace)
         if !LocalFiles.asked(in: sent), !words.contains(where: { $0 == LocalFiles.exclusion }) { sent += " \(LocalFiles.exclusion)" }
         // Never the code (code-import's) unless it asks: the Code pill.

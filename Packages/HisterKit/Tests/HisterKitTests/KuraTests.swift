@@ -191,6 +191,10 @@ struct KuraLiveTests {
         #expect(Notes.otherVault(of: "https://kura.example/v/work/n/Literature%20Notes/Weekly") == "work")
         #expect(Notes.otherVault(of: "https://kura.example/n/Projects/Example") == nil)
         #expect(Notes.otherVault(of: "https://example.com/v/x") == nil)
+        // A private vault's folder and tag pages list its titles: that vault's too.
+        for page in ["https://kura.example/v/client/", "https://kura.example/v/client/f/Clients", "https://kura.example/v/client/t/billing"] {
+            #expect(Notes.otherVault(of: page) == "client", "\(page)")
+        }
         #expect(Notes.otherVault(of: "https://example.com/") == nil)
         // Read as Kura serves it: a leading // folded, %XX decoded once.
         for same in ["https://kura.example//v/work/n/X", "https://kura.example///v/work/n/X", "https://kura.example/%76/work/n/X",
@@ -231,7 +235,8 @@ struct KuraLiveTests {
         for url in ways {
             #expect(Notes.otherVault(of: url) == "work", "\(url)")
         }
-        #expect(Notes.otherVault(of: "https://kura.example/v/work/../n/X") == nil)
+        // Resolved, that's /v/n/X: a vault named "n" (any /v/<name>/ page is its vault's).
+        #expect(Notes.otherVault(of: "https://kura.example/v/work/../n/X") == "n")
         Notes.useVaults([])
         for url in ways + ["https://kura.example//v/work/n/X", "https://kura.example/%76/work/n/X", "https://kura.example/v/%2577ork/n/X"] {
             #expect(Notes.isPrivateNote(url), "\(url)")

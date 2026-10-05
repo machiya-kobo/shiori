@@ -813,6 +813,126 @@ const closeMenus = () => document.querySelectorAll('.menu-list').forEach((m) => 
 window.addEventListener('blur', closeMenus);
 document.addEventListener('keydown', (e) => e.key === 'Escape' && closeMenus());
 
+// Menus close on the way out (as the rooms' ui/machiya.js): an installed
+// app on iOS keeps the page in the back/forward cache and brought it back
+// as it was left, the Rooms menu still open. A link or form inside a menu
+// or sheet closes it before the page goes (so even the snapshot shown
+// during the back swipe is closed), and pageshow, popstate and pagehide
+// close whatever is still open. A link that leaves this page in place (a
+// new tab, a modifier key, a download, one a handler took) leaves it open.
+const SHEETS = 'details[open], dialog[open], .menu-list:not([hidden]), .rooms-menu:not([hidden])';
+function shutSheet(m) {
+  if (m.tagName === 'DETAILS') m.open = false;
+  else if (m.tagName === 'DIALOG') m.close();
+  else {
+    m.hidden = true;
+    const opener = m.parentElement && m.parentElement.querySelector('[aria-expanded="true"]');
+    if (opener) opener.setAttribute('aria-expanded', 'false');
+  }
+}
+/** every: the dialog too (pageshow from the cache, popstate, pagehide); else menus only. */
+function closeSheets(every) {
+  for (const m of document.querySelectorAll(SHEETS)) if (every || m.tagName !== 'DIALOG') shutSheet(m);
+}
+document.addEventListener('click', (ev) => {
+  const a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+  if (!a || ev.defaultPrevented || ev.button || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+  if ((a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+  const m = a.closest(SHEETS);
+  if (m) shutSheet(m);
+});
+document.addEventListener('submit', (ev) => {
+  const m = ev.target.closest && ev.target.closest(SHEETS);
+  if (m && (m.tagName !== 'DIALOG' || !ev.defaultPrevented)) shutSheet(m);
+});
+window.addEventListener('pageshow', (ev) => closeSheets(ev.persisted));
+window.addEventListener('popstate', () => closeSheets(true));
+window.addEventListener('pagehide', () => closeSheets(true));
+
+// Pull to refresh, only in the installed app (display-mode standalone, or
+// iOS's navigator.standalone): a browser tab has its own. The rooms'
+// gesture (S.pullStep): at the top of the list, one finger, mostly
+// downward; past the threshold, let go and the app reloads. Never with a
+// menu or sheet open, with text selected, from a field, the tab bar or a
+// toast, inside a pane that scrolls on its own (the list itself is this
+// app's page: it counts as the top when it's scrolled to its top), when
+// another handler took the move, or under [data-no-pull].
+(() => {
+  const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  if (!standalone) return;
+  document.documentElement.classList.add('pull-refresh');
+  let s = S.PULL_IDLE;
+  let mark = null;
+  let top = 0;
+  const page = () => $('list');
+  const scrolled = () => (window.scrollY || 0) > 0 || (page() ? page().scrollTop > 0 : false);
+  const selecting = () => {
+    try {
+      return String(getSelection()) !== '';
+    } catch (_) {
+      return false;
+    }
+  };
+  const busy = () => document.querySelector(SHEETS) !== null || selecting();
+  const pane = (el) => {
+    for (let n = el; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+      if (n === page()) return false;
+      if (n.scrollHeight > n.clientHeight && /(auto|scroll)/.test(getComputedStyle(n).overflowY)) return true;
+    }
+    return false;
+  };
+  const skip = (el) => !el || !el.closest || !!el.closest('input, textarea, select, [contenteditable], #tabs, .status, .update-toast, [data-no-pull]') || pane(el);
+  const draw = () => {
+    if (!mark) {
+      if (s.d === 0 && s.phase !== 'reload') return;
+      mark = h('div', { class: 'pull', 'aria-hidden': 'true' }, icon('refresh'));
+      document.body.append(mark);
+    }
+    const loading = s.phase === 'reload';
+    const d = loading ? S.PULL.threshold : s.d;
+    mark.style.top = top + 'px';
+    mark.style.setProperty('--pull', d + 'px');
+    mark.style.setProperty('--turn', Math.round((d / S.PULL.threshold) * 270) + 'deg');
+    mark.style.opacity = String(Math.min(1, d / (S.PULL.threshold * 0.6)));
+    mark.classList.toggle('ready', loading || s.d >= S.PULL.threshold);
+    mark.classList.toggle('loading', loading);
+    mark.classList.toggle('held', s.phase === 'pulling');
+  };
+  const step = (e) => {
+    const was = s;
+    s = S.pullStep(s, e);
+    if (s.phase === 'reload' && was.phase !== 'reload') {
+      draw();
+      location.reload();
+      return;
+    }
+    if (s !== was && (s.d !== was.d || s.phase !== was.phase)) draw();
+  };
+  window.addEventListener('touchstart', (ev) => {
+    const t = ev.touches[0];
+    const ok = ev.touches.length === 1 && !scrolled() && !busy() && !skip(ev.target);
+    if (ok) {
+      // Under the list's bars (the frosted top), where the rooms' slides out under their header.
+      const list = page();
+      top = list ? Math.max(0, list.getBoundingClientRect().top + (parseFloat(getComputedStyle(list).paddingTop) || 0)) : 0;
+    }
+    step({ type: 'start', ok, x: t.clientX, y: t.clientY });
+  }, { passive: true });
+  window.addEventListener('touchmove', (ev) => {
+    if (s.phase !== 'armed' && s.phase !== 'pulling') return;
+    const t = ev.touches[0];
+    step({ type: 'move', ok: ev.touches.length === 1 && !ev.defaultPrevented && !scrolled() && !busy(), x: t.clientX, y: t.clientY });
+  }, { passive: true });
+  window.addEventListener('touchend', () => step({ type: 'end' }), { passive: true });
+  window.addEventListener('touchcancel', () => step({ type: 'cancel' }), { passive: true });
+  window.addEventListener('pageshow', (ev) => {
+    if (ev.persisted) {
+      s = S.PULL_IDLE;
+      draw();
+    }
+  });
+})();
+
 /** The list's choices from its hash params: sort, group, filter word. */
 function listChoices(params, { search = false } = {}) {
   let sort = params.get('o') || (search ? 'best' : 'newest');
