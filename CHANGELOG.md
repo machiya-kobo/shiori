@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.8.1 (2026-10-05)
+
+### Changed
+
+- **No pull to refresh on Web and Small Web results** (the apps and the
+  installed web app): the same words find the same results, and each web
+  search counts. Every other list still refreshes on a pull.
+
 ## 0.8.0 (2026-10-05)
 
 ### Added
