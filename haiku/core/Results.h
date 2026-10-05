@@ -26,6 +26,17 @@ struct ResultPage {
 	std::string error;
 	int total = 0;
 	std::vector<Result> results;
+	// Paging: Hister's page_key for the next page ('' at the end); for Kura,
+	// how many came (rows dropped as non-web included), the next offset's step.
+	std::string next;
+	int received = 0;
+};
+
+// One of Kura's vaults (/api/vaults: {vaults: [{name, title, default, private}]}).
+struct Vault {
+	std::string name;
+	std::string title;
+	bool isDefault = false;
 };
 
 // The host of an http(s) URL, lowercased, without "www." or the port; ''.
@@ -35,6 +46,8 @@ std::string HostOf(const std::string& url);
 ResultPage ParseHister(const std::string& body);
 // Kura's /api/search or /api/recent: {total, results: [note]} (only http(s) urls kept).
 ResultPage ParseKura(const std::string& body);
+// Kura's /api/vaults, names checked as Kura allows them ([a-z0-9-]+); [] for anything else.
+std::vector<Vault> ParseVaults(const std::string& body);
 
 // A snippet as runs of plain text, `true` where it was inside <mark>:
 // entities decoded, every other tag dropped, whitespace folded.

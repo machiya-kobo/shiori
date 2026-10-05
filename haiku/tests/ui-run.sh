@@ -52,6 +52,7 @@ grep -q '"roomToken": "mht_K' "$CONFIG" && ok "room token stored" || bad "room t
 
 # 2. Search (All): notes from Kura, then pages from Hister.
 settext Shiori query "haiku"
+msg Sqgo of Window Shiori
 shot 03-search-all 2
 grep -q 'hister GET /search' "$LOG" && ok "Hister searched" || bad "Hister not searched"
 grep -q 'kura GET /api/search' "$LOG" && ok "Kura searched" || bad "Kura not searched"
@@ -64,11 +65,13 @@ shot 04-pill-notes 2
 msg Spil of Window Shiori with 'pill=int32(3)'
 cleartext Shiori query
 settext Shiori query "shiori"
+msg Sqgo of Window Shiori
 shot 05-pill-code 2
 grep -q 'metadata.source:code (shiori|shiori\*)' "$LOG" && ok "Code pill sends the code term" || bad "Code pill query"
 msg Spil of Window Shiori with 'pill=int32(1)'
 cleartext Shiori query
 settext Shiori query "raspberry pi"
+msg Sqgo of Window Shiori
 shot 06-pill-pages 2
 
 # 4. Open a result in WebPositive.
@@ -173,8 +176,10 @@ grep -q 'fake-password' "$SIGNIN" "$CONFIG" /boot/home/mh/app.log && bad "the pa
 send quit of Window "Shiori settings"
 cleartext Shiori query
 settext Shiori query "beos"
+msg Sqgo of Window Shiori
 shot 17-search-signed-in 2
 grep 'hister GET /search' "$LOG" | tail -1 | grep -q "'x-access-token': '-'" && ok "Hister searched without the token" || bad "token still sent"
+grep 'hister GET /search' "$LOG" | tail -1 | grep -q "cookie=hist…" && ok "Hister got the session cookie" || bad "no session cookie at Hister"
 grep 'kura GET' "$LOG" | tail -1 | grep -q "'authorization': 'mhs_" && ok "Kura got the mhs_ id" || bad "Kura didn't get the id"
 msg Sset
 sleep 1
@@ -216,6 +221,36 @@ grep 'hister POST /api/add' "$LOG" | grep '"url": "https://www.haiku-os.org/comm
 	&& ok "the drain sent it, with its first time" || bad "the drain didn't send it"
 n=$(ls "$OUTBOX"/*.json 2>/dev/null | wc -l)
 [ "$n" -eq 0 ] && ok "outbox empty after the drain" || bad "outbox still holds $n"
+hey Shiori quit >/dev/null 2>&1
+
+# 11. Typing alone never searches; Return does. Then the next page (Hister's
+# page_key, Kura's offset) and the Notes pill's vault choice.
+"$APP" >/boot/home/mh/app.log 2>&1 &
+sleep 2
+items() { hey Shiori count Item of View results of Window Shiori | sed -n 's/.*(B_INT32_TYPE) : \([0-9]*\).*/\1/p'; }
+msg Spil of Window Shiori with 'pill=int32(1)'
+before=$(grep -c 'hister GET /search' "$LOG")
+settext Shiori query "many"
+sleep 1.5
+[ "$(grep -c 'hister GET /search' "$LOG")" = "$before" ] && ok "typing alone doesn't search" || bad "a search ran while typing"
+msg Sqgo of Window Shiori
+shot 20-pages-first 2
+[ "$(items)" = 31 ] && ok "30 pages and Show More" || bad "pages list has $(items) rows"
+send do Item 30 of View results of Window Shiori
+shot 21-pages-more 2
+grep -q 'page_key": "p2"\|page_key":"p2"' "$LOG" && ok "Hister asked for page_key p2" || bad "no page_key sent"
+[ "$(items)" = 45 ] && ok "45 pages, no Show More" || bad "pages list has $(items) rows after more"
+msg Spil of Window Shiori with 'pill=int32(2)'
+shot 22-notes-vault-all 2
+grep -q 'kura vault=all offset=0' "$LOG" && ok "Notes asks every vault" || bad "Notes vault"
+send do Item 30 of View results of Window Shiori
+sleep 2
+grep -q 'kura vault=all offset=30' "$LOG" && ok "Kura's next offset" || bad "Kura offset"
+[ "$(items)" = 45 ] && ok "45 notes" || bad "notes list has $(items) rows"
+msg Svlt of Window Shiori with 'vault=work'
+shot 23-notes-vault-work 2
+grep -q 'kura vault=work' "$LOG" && ok "a chosen vault is sent" || bad "vault choice"
+grep -q 'kura vault=- offset=0' "$LOG" && ok "All asks the default vault only" || bad "All sent a vault"
 hey Shiori quit >/dev/null 2>&1
 
 echo "--- fake services log"

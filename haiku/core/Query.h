@@ -48,11 +48,15 @@ std::string WithSlash(const std::string& base);
 
 // Hister's JSON search: GET <server>search?query=<{"text","highlight","limit"}>
 // (HisterClient.search's request; Accept: application/json is the client's).
+// `pageKey`: the last reply's page_key, for the next page.
 std::string HisterSearchURL(const std::string& server, const std::string& typed, Pill pill,
-	int limit = 30);
-// search-core's kuraURL: api/search?limit&offset&q&sort, or api/recent.
+	int limit = 30, const std::string& pageKey = std::string());
+// search-core's kuraURL: api/search?limit&offset[&vault]&q&sort, or api/recent.
+// `vault`: one name or "all" (the Notes pill only); '' asks for the default vault.
 std::string KuraSearchURL(const std::string& kura, const std::string& typed, int limit = 20,
-	int offset = 0);
+	int offset = 0, const std::string& vault = std::string());
+// Kura's vault list.
+std::string KuraVaultsURL(const std::string& kura);
 
 // A deliberate save (linux/src/page.js newPage + addRequest): the body for
 // POST <server>api/add. `version` is the app's, `via` "haiku".

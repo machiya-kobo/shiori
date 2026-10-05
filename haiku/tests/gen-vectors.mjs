@@ -36,6 +36,8 @@ for (const s of inputs) {
   out.push(`  {"webQuery", ${q(s)}, ${q(S.webQuery(s))}},`);
   out.push(`  {"kuraQuery", ${q(s)}, ${q(S.kuraQuery(s))}},`);
   out.push(`  {"kuraURL", ${q(s)}, ${q(S.kuraURL('https://kura.example/', s, { limit: 5 }))}},`);
+  // The Notes pill's next page, over every vault.
+  out.push(`  {"kuraURLVault", ${q(s)}, ${q(S.kuraURL('https://kura.example/', s, { limit: 30, offset: 30, vault: 'all' }))}},`);
   // HisterClient.search's request, as the Linux client builds it (URLSearchParams + JSON.stringify).
   const hister = `https://h.example/search?${new URLSearchParams({ query: JSON.stringify({ text: S.histerText(s), highlight: 'HTML', limit: 30 }) })}`;
   out.push(`  {"histerSearchURL", ${q(s)}, ${q(hister)}},`);

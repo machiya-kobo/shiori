@@ -49,6 +49,7 @@ static void TestVectors()
 		else if (fn == "webQuery") got = WebQuery(in);
 		else if (fn == "kuraQuery") got = KuraQuery(in);
 		else if (fn == "kuraURL") got = KuraSearchURL("https://kura.example/", in, 5);
+		else if (fn == "kuraURLVault") got = KuraSearchURL("https://kura.example/", in, 30, 30, "all");
 		else if (fn == "histerSearchURL") got = HisterSearchURL("https://h.example", in, Pill::Pages);
 		else got = "(unknown function)";
 		Check(fn + "(" + in + ")", got, v.want);
@@ -56,6 +57,18 @@ static void TestVectors()
 	// Idempotent, as search-core's tests check.
 	Check("histerText twice", HisterText(HisterText("x")), HisterText("x"));
 	Check("kuraURL recent", KuraSearchURL("https://kura.example", "", 20), "https://kura.example/api/recent?limit=20&offset=0");
+	Check("Hister's next page", HisterSearchURL("https://h.example/", "beos", Pill::Pages, 30, "k2"),
+		"https://h.example/search?query=" + FormEncode("{\"text\":\"" + HisterText("beos") + "\",\"highlight\":\"HTML\",\"limit\":30,\"page_key\":\"k2\"}"));
+	Check("vaults URL", KuraVaultsURL("https://kura.example"), "https://kura.example/api/vaults");
+	ResultPage hp = ParseHister("{\"total\":3,\"page_key\":\"k2\",\"documents\":[{\"url\":\"javascript:x\"},{\"url\":\"https://a.example/\"}]}");
+	Check("Hister's page_key and count", hp.next + " " + std::to_string(hp.received) + " " + std::to_string(hp.results.size()), "k2 2 1");
+	ResultPage kp = ParseKura("{\"total\":9,\"results\":[{\"url\":\"https://k.example/n/a\"},{\"url\":\"file:///x\"}]}");
+	Check("Kura's count, dropped rows included", std::to_string(kp.received) + " " + std::to_string(kp.results.size()), "2 1");
+	std::vector<Vault> vaults = ParseVaults("{\"vaults\":[{\"name\":\"personal\",\"title\":\"Personal\",\"default\":true},"
+		"{\"name\":\"work\",\"title\":\"Work\",\"private\":true},{\"name\":\"Bad Name\"},{\"name\":\"bare\"}]}");
+	Check("vaults parsed", vaults.size() == 3 ? vaults[0].title + "/" + (vaults[0].isDefault ? "d" : "-") + " " + vaults[1].name + " " + vaults[2].title : "count " + std::to_string(vaults.size()),
+		"Personal/d work bare");
+	Check("not a vault list", std::to_string(ParseVaults("[]").size()), "0");
 	Check("code pill URL contains the term",
 		HisterSearchURL("https://h.example/", "tag page", Pill::Code).find("metadata.source%3Acode+tag") != std::string::npos ? "yes" : "no", "yes");
 }

@@ -99,6 +99,8 @@ ResultPage ParseHister(const std::string& body)
 		r.kind = d["metadata"]["source"].Str() == "code" ? Result::Code : Result::Page;
 		page.results.push_back(std::move(r));
 	}
+	page.received = int(v["documents"].items.size());
+	page.next = v["page_key"].Str();
 	return page;
 }
 
@@ -134,7 +136,33 @@ ResultPage ParseKura(const std::string& body)
 		r.updated = n["changed"].Num(r.added);
 		page.results.push_back(std::move(r));
 	}
+	page.received = int(results.items.size());
 	return page;
+}
+
+std::vector<Vault> ParseVaults(const std::string& body)
+{
+	std::vector<Vault> vaults;
+	json::Value v;
+	if (!json::Parse(body, v) || !v.IsObject())
+		return vaults;
+	for (const auto& item : v["vaults"].items) {
+		Vault vault;
+		vault.name = item["name"].Str();
+		bool sound = !vault.name.empty() && vault.name.size() <= 64;
+		for (char c : vault.name) {
+			if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'))
+				sound = false;
+		}
+		if (!sound)
+			continue;
+		vault.title = item["title"].Str(vault.name);
+		if (vault.title.empty())
+			vault.title = vault.name;
+		vault.isDefault = item["default"].type == json::Value::Bool && item["default"].boolean;
+		vaults.push_back(vault);
+	}
+	return vaults;
 }
 
 std::string DecodeEntities(const std::string& s)

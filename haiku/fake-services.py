@@ -116,7 +116,8 @@ class Hister(Base):
     def do_GET(self):
         url = urllib.parse.urlsplit(self.path)
         params = urllib.parse.parse_qs(url.query)
-        log("hister GET", url.path, self.creds(), "query=" + (params.get("query", [""])[0]))
+        log("hister GET", url.path, self.creds(), "cookie=" + mask(self.headers.get("Cookie", "")),
+            "query=" + (params.get("query", [""])[0]))
         if url.path == "/health":
             return self.reply(200, {"ok": True})
         if url.path == "/machiya/healthz":
@@ -127,6 +128,13 @@ class Hister(Base):
             return self.reply(404, {"error": "not found"})
         q = json.loads(params.get("query", ["{}"])[0] or "{}")
         text = q.get("text", "")
+        # "many": 45 pages, 30 then 15, through page_key (as Hister pages).
+        if "many" in words_of(text):
+            first = q.get("page_key") != "p2"
+            n = range(30) if first else range(30, 45)
+            docs = [{"url": f"https://example.com/many/{i}", "title": f"Many {i}", "domain": "example.com",
+                     "added": 1790000000, "text": "one of <mark>many</mark>", "metadata": {"source": "shiori"}} for i in n]
+            return self.reply(200, {"total": 45, "documents": docs, "page_key": "p2" if first else ""})
         code = "metadata.source:code" in text.split()
         words = words_of(text)
         docs = []
@@ -209,11 +217,20 @@ class Kura(Base):
         if bearer != "Bearer " + ROOM_TOKEN and not (SIGNED_IN["sid"] and bearer == "Bearer " + SID):
             return self.reply(401, {"error": "sign in", "signin": "http://127.0.0.1/signin"})
         limit = int(params.get("limit", ["20"])[0])
+        offset = int(params.get("offset", ["0"])[0])
+        log("kura vault=" + params.get("vault", ["-"])[0], "offset=" + str(offset))
+        if url.path == "/api/vaults":
+            return self.reply(200, {"vaults": [{"name": "personal", "title": "Personal", "default": True},
+                                               {"name": "work", "title": "Work", "private": True}]})
         words = words_of(params.get("q", [""])[0]) if url.path == "/api/search" else []
         if url.path not in ("/api/search", "/api/recent"):
             return self.reply(404, {"error": "not found"})
         results = []
-        for path, folder, title, summary in NOTES:
+        notes = list(NOTES)
+        # "many": 45 notes, for the Notes pill's paging by offset.
+        if "many" in words:
+            notes = [(f"Many/{i}.md", "Many", f"Many note {i}", "one of many") for i in range(45)]
+        for path, folder, title, summary in notes:
             if words and not all(w in (title + " " + summary).lower() for w in words):
                 continue
             slug = urllib.parse.quote(path[:-3])
@@ -223,7 +240,7 @@ class Kura(Base):
             if url.path == "/api/search":
                 note["snippet"] = mark(summary, words)
             results.append(note)
-        self.reply(200, {"total": len(results), "took_ms": 1, "results": results[:limit]})
+        self.reply(200, {"total": len(results), "took_ms": 1, "results": results[offset:offset + limit]})
 
 
 def serve(port, handler):

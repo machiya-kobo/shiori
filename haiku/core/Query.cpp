@@ -352,24 +352,33 @@ std::string WithSlash(const std::string& base)
 }
 
 std::string HisterSearchURL(const std::string& server, const std::string& typed, Pill pill,
-	int limit)
+	int limit, const std::string& pageKey)
 {
 	std::string text = pill == Pill::Code ? HisterText(CodeQuery(typed)) : HisterText(typed);
 	json::Value query = json::Value::MakeObject();
 	query.Set("text", json::Value::MakeString(text));
 	query.Set("highlight", json::Value::MakeString("HTML"));
 	query.Set("limit", json::Value::MakeNumber(limit));
+	if (!pageKey.empty())
+		query.Set("page_key", json::Value::MakeString(pageKey));
 	return WithSlash(server) + "search?query=" + FormEncode(json::Write(query));
 }
 
 std::string KuraSearchURL(const std::string& kura, const std::string& typed, int limit,
-	int offset)
+	int offset, const std::string& vault)
 {
 	std::string text = KuraQuery(typed);
 	std::string params = "limit=" + std::to_string(limit) + "&offset=" + std::to_string(offset);
+	if (!vault.empty())
+		params += "&vault=" + FormEncode(vault);
 	if (text.empty())
 		return WithSlash(kura) + "api/recent?" + params;
 	return WithSlash(kura) + "api/search?" + params + "&q=" + FormEncode(text) + "&sort=relevance";
+}
+
+std::string KuraVaultsURL(const std::string& kura)
+{
+	return WithSlash(kura) + "api/vaults";
 }
 
 bool IsWebURL(const std::string& url)

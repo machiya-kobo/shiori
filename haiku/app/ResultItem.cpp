@@ -157,3 +157,29 @@ void HeaderItem::DrawItem(BView* owner, BRect frame, bool complete)
 	owner->DrawString(fText.String(), BPoint(frame.left + 8, frame.top + 4 + fh.ascent));
 	owner->SetFont(&font);
 }
+
+MoreItem::MoreItem()
+{
+}
+
+void MoreItem::Update(BView* owner, const BFont* font)
+{
+	font_height fh;
+	font->GetHeight(&fh);
+	SetWidth(owner->Bounds().Width());
+	SetHeight(ceilf(fh.ascent + fh.descent) + 12);
+}
+
+void MoreItem::DrawItem(BView* owner, BRect frame, bool complete)
+{
+	rgb_color background = IsSelected() ? ui_color(B_LIST_SELECTED_BACKGROUND_COLOR)
+		: ui_color(B_LIST_BACKGROUND_COLOR);
+	owner->SetLowColor(background);
+	owner->FillRect(frame, B_SOLID_LOW);
+	font_height fh;
+	owner->GetFontHeight(&fh);
+	owner->SetHighColor(IsSelected() ? ui_color(B_LIST_SELECTED_ITEM_TEXT_COLOR)
+		: ui_color(B_LINK_TEXT_COLOR));
+	const char* text = fLoading ? "Loading" B_UTF8_ELLIPSIS : "Show More" B_UTF8_ELLIPSIS;
+	owner->DrawString(text, BPoint(frame.left + 8, frame.top + 6 + fh.ascent));
+}

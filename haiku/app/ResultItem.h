@@ -34,3 +34,15 @@ public:
 private:
 	BString fText;
 };
+
+// The last row while there's more: "Show More…", invoked like a result.
+class MoreItem : public BListItem {
+public:
+	MoreItem();
+	void DrawItem(BView* owner, BRect frame, bool complete = false) override;
+	void Update(BView* owner, const BFont* font) override;
+	void SetLoading(bool loading) { fLoading = loading; }
+
+private:
+	bool fLoading = false;
+};
