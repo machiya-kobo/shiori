@@ -1,0 +1,16 @@
+# The headless test of the portable core (no Be API): runs on Linux and Haiku.
+#   make -f Makefile.test test
+CXX ?= g++
+CXXFLAGS ?= -std=c++17 -O1 -g -Wall -Wextra
+CORE = core/Json.cpp core/Query.cpp core/Results.cpp core/Config.cpp
+
+test: test_core
+	./test_core
+
+test_core: $(CORE) core/*.h tests/test_core.cpp tests/vectors.inc
+	$(CXX) $(CXXFLAGS) -o $@ tests/test_core.cpp $(CORE)
+
+clean:
+	rm -f test_core
+
+.PHONY: test clean

@@ -1,0 +1,239 @@
+#include "Results.h"
+
+#include <cstdlib>
+
+#include "Json.h"
+#include "Query.h"
+
+namespace shiori {
+
+namespace {
+
+void AppendUtf8(std::string& out, unsigned long cp)
+{
+	if (cp == 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))
+		cp = 0xFFFD;
+	if (cp < 0x80) {
+		out += char(cp);
+	} else if (cp < 0x800) {
+		out += char(0xC0 | (cp >> 6));
+		out += char(0x80 | (cp & 0x3F));
+	} else if (cp < 0x10000) {
+		out += char(0xE0 | (cp >> 12));
+		out += char(0x80 | ((cp >> 6) & 0x3F));
+		out += char(0x80 | (cp & 0x3F));
+	} else {
+		out += char(0xF0 | (cp >> 18));
+		out += char(0x80 | ((cp >> 12) & 0x3F));
+		out += char(0x80 | ((cp >> 6) & 0x3F));
+		out += char(0x80 | (cp & 0x3F));
+	}
+}
+
+std::string LowerASCII(std::string s)
+{
+	for (char& c : s) {
+		if (c >= 'A' && c <= 'Z')
+			c = char(c - 'A' + 'a');
+	}
+	return s;
+}
+
+std::string FolderOf(const std::string& path)
+{
+	size_t slash = path.rfind('/');
+	return slash == std::string::npos ? std::string() : path.substr(0, slash);
+}
+
+}  // namespace
+
+std::string HostOf(const std::string& url)
+{
+	if (!IsWebURL(url))
+		return "";
+	size_t start = url.find("://") + 3;
+	size_t end = url.find_first_of("/?#", start);
+	std::string authority = url.substr(start, end == std::string::npos ? std::string::npos : end - start);
+	size_t at = authority.rfind('@');
+	if (at != std::string::npos)
+		authority = authority.substr(at + 1);
+	if (!authority.empty() && authority[0] != '[') {
+		size_t colon = authority.find(':');
+		if (colon != std::string::npos)
+			authority = authority.substr(0, colon);
+	}
+	authority = LowerASCII(authority);
+	if (authority.compare(0, 4, "www.") == 0)
+		authority = authority.substr(4);
+	return authority;
+}
+
+ResultPage ParseHister(const std::string& body)
+{
+	ResultPage page;
+	json::Value v;
+	if (!json::Parse(body, v, &page.error) || !v.IsObject()) {
+		if (page.error.empty())
+			page.error = "not a JSON object";
+		return page;
+	}
+	page.ok = true;
+	page.total = int(v["total"].Num(0));
+	for (const auto& d : v["documents"].items) {
+		std::string url = d["url"].Str();
+		// Only web addresses become rows: a stored javascript: or file: link never opens (SHIO-1).
+		if (!IsWebURL(url))
+			continue;
+		Result r;
+		r.url = url;
+		r.title = d["title"].Str();
+		if (r.title.empty())
+			r.title = url;
+		r.host = d["domain"].Str();
+		if (r.host.empty())
+			r.host = HostOf(url);
+		r.snippet = d["text"].Str();
+		r.label = d["label"].Str();
+		r.added = d["added"].Num(0);
+		r.updated = d["updated"].Num(r.added);
+		r.kind = d["metadata"]["source"].Str() == "code" ? Result::Code : Result::Page;
+		page.results.push_back(std::move(r));
+	}
+	return page;
+}
+
+ResultPage ParseKura(const std::string& body)
+{
+	ResultPage page;
+	json::Value v;
+	if (!json::Parse(body, v, &page.error) || !v.IsObject()) {
+		if (page.error.empty())
+			page.error = "not a JSON object";
+		return page;
+	}
+	page.ok = true;
+	const json::Value& results = v["results"];
+	page.total = int(v["total"].Num(double(results.items.size())));
+	for (const auto& n : results.items) {
+		std::string url = n["url"].Str();
+		if (!IsWebURL(url))
+			continue;
+		Result r;
+		r.kind = Result::Note;
+		r.url = url;
+		r.path = n["path"].Str();
+		r.title = n["title"].Str(r.path.empty() ? url : r.path);
+		if (r.title.empty())
+			r.title = r.path.empty() ? url : r.path;
+		r.host = n["folder"].Str(FolderOf(r.path));
+		r.snippet = n["snippet"].Str(n["summary"].Str());
+		if (r.snippet.empty())
+			r.snippet = n["summary"].Str();
+		r.label = "vault";
+		r.added = n["created"].Num(0);
+		r.updated = n["changed"].Num(r.added);
+		page.results.push_back(std::move(r));
+	}
+	return page;
+}
+
+std::string DecodeEntities(const std::string& s)
+{
+	std::string out;
+	for (size_t i = 0; i < s.size(); i++) {
+		if (s[i] != '&') {
+			out += s[i];
+			continue;
+		}
+		size_t semi = s.find(';', i);
+		if (semi == std::string::npos || semi - i > 10) {
+			out += s[i];
+			continue;
+		}
+		std::string name = s.substr(i + 1, semi - i - 1);
+		std::string rep;
+		if (name.size() > 1 && name[0] == '#') {
+			bool hex = name[1] == 'x' || name[1] == 'X';
+			const char* digits = name.c_str() + (hex ? 2 : 1);
+			char* end = nullptr;
+			unsigned long cp = strtoul(digits, &end, hex ? 16 : 10);
+			if (end != nullptr && *end == '\0' && *digits != '\0')
+				AppendUtf8(rep, cp);
+		} else {
+			std::string n = LowerASCII(name);
+			if (n == "amp") rep = "&";
+			else if (n == "lt") rep = "<";
+			else if (n == "gt") rep = ">";
+			else if (n == "quot") rep = "\"";
+			else if (n == "apos") rep = "'";
+			else if (n == "nbsp") rep = " ";
+		}
+		if (rep.empty()) {
+			out += s[i];
+			continue;
+		}
+		out += rep;
+		i = semi;
+	}
+	return out;
+}
+
+std::vector<std::pair<std::string, bool>> SnippetRuns(const std::string& html)
+{
+	std::vector<std::pair<std::string, bool>> runs;
+	bool marked = false;
+	std::string current;
+	auto flush = [&]() {
+		if (current.empty())
+			return;
+		std::string text = DecodeEntities(current);
+		// Fold whitespace (newlines included) to single spaces.
+		std::string folded;
+		bool space = false;
+		for (char c : text) {
+			if (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
+				space = true;
+				continue;
+			}
+			if (space && (!folded.empty() || !runs.empty()))
+				folded += ' ';
+			space = false;
+			folded += c;
+		}
+		if (space)
+			folded += ' ';
+		if (!folded.empty())
+			runs.emplace_back(folded, marked);
+		current.clear();
+	};
+	for (size_t i = 0; i < html.size(); i++) {
+		if (html[i] == '<') {
+			size_t close = html.find('>', i);
+			if (close == std::string::npos)
+				break;
+			std::string tag = LowerASCII(html.substr(i + 1, close - i - 1));
+			if (tag == "mark" || tag.compare(0, 5, "mark ") == 0) {
+				flush();
+				marked = true;
+			} else if (tag == "/mark") {
+				flush();
+				marked = false;
+			}
+			i = close;
+			continue;
+		}
+		current += html[i];
+	}
+	flush();
+	return runs;
+}
+
+std::string SnippetText(const std::string& html)
+{
+	std::string out;
+	for (const auto& run : SnippetRuns(html))
+		out += run.first;
+	return out;
+}
+
+}  // namespace shiori
