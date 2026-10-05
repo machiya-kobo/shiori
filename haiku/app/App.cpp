@@ -166,8 +166,9 @@ public:
 	{
 		fSearch = new SearchWindow();
 		fSearch->Show();
-		if (!fPendingQuery.IsEmpty()) {
-			fSearch->Lock();
+		// The first search: `--query`'s words, else the newest (an empty field
+		// shows Kura's recent notes and Hister's newest pages).
+		if (fSearch->Lock()) {
 			fSearch->SetQuery(fPendingQuery.String());
 			fSearch->Unlock();
 		}

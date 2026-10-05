@@ -256,18 +256,14 @@ void SearchWindow::StartSearch()
 		fStatus->SetText("Set up Hister and Kura in Settings (File " B_UTF8_ELLIPSIS ").");
 		return;
 	}
-	if (Trim(query).empty() && fPill != Pill::Notes) {
-		ClearList();
-		fStatus->SetText("Type, then Return, to search Hister and Kura.");
-		return;
-	}
+	// No words: the newest (Kura's recent notes, Hister's newest pages).
 	SearchRequest request;
 	request.pill = fPill;
 	request.query = query;
 	request.vault = fVault;
 	fShownQuery = query;
 	fShownPill = fPill;
-	fStatus->SetText("Searching" B_UTF8_ELLIPSIS);
+	fStatus->SetText(Trim(query).empty() ? "Loading the newest" B_UTF8_ELLIPSIS : "Searching" B_UTF8_ELLIPSIS);
 	std::thread(RunSearch, BMessenger(this), generation, request, config).detach();
 }
 
@@ -283,6 +279,7 @@ void SearchWindow::LoadMore()
 		more->SetLoading(true);
 		fList->InvalidateItem(fList->CountItems() - 1);
 	}
+	fStatus->SetText("Loading more" B_UTF8_ELLIPSIS);
 	SearchRequest request;
 	request.pill = fShownPill;
 	request.query = fShownQuery;
@@ -313,15 +310,18 @@ void SearchWindow::ShowResults(BMessage* message)
 		fPagesTotal = fNotesTotal = fPagesShown = fNotesShown = 0;
 	}
 
+	// All the new rows at once: one layout pass, not one per row.
+	BList rows;
 	bool sections = !outcome->more && outcome->askedNotes && outcome->askedPages;
 	if (sections && !outcome->notes.results.empty())
-		fList->AddItem(new HeaderItem("Notes"));
+		rows.AddItem(new HeaderItem("Notes"));
 	for (const auto& r : outcome->notes.results)
-		fList->AddItem(new ResultItem(r));
+		rows.AddItem(new ResultItem(r));
 	if (sections && !outcome->pages.results.empty())
-		fList->AddItem(new HeaderItem("Pages"));
+		rows.AddItem(new HeaderItem("Pages"));
 	for (const auto& r : outcome->pages.results)
-		fList->AddItem(new ResultItem(r));
+		rows.AddItem(new ResultItem(r));
+	fList->AddList(&rows);
 
 	// What's next: Kura by offset (the Notes pill only), Hister by page_key
 	// (a full page that names a next one).
@@ -336,9 +336,11 @@ void SearchWindow::ShowResults(BMessage* message)
 		fPagesTotal = outcome->pages.total;
 		fPagesShown += int(outcome->pages.results.size());
 		fHisterNext = outcome->pages.received >= kPageSize ? outcome->pages.next : std::string();
-	} else if (outcome->askedPages) {
+	} else if (outcome->askedPages && !outcome->more) {
 		fHisterNext.clear();
 	}
+	// A next page that failed keeps its place: Show More comes back to try
+	// again, the problem in the status line.
 	bool more = fShownPill == Pill::Notes ? fKuraNext > 0 : !fHisterNext.empty();
 	if (more)
 		fList->AddItem(new MoreItem());

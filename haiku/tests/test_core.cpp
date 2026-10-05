@@ -61,6 +61,10 @@ static void TestVectors()
 	Check("Hister's next page", HisterSearchURL("https://h.example/", "beos", Pill::Pages, 30, "k2"),
 		"https://h.example/search?query=" + FormEncode("{\"text\":\"" + HisterText("beos") + "\",\"highlight\":\"HTML\",\"limit\":30,\"page_key\":\"k2\"}"));
 	Check("vaults URL", KuraVaultsURL("https://kura.example"), "https://kura.example/api/vaults");
+	Check("no words: the newest pages", HisterSearchURL("https://h.example/", "  ", Pill::Pages, 30),
+		"https://h.example/search?query=" + FormEncode("{\"text\":\"" + HisterText("*") + "\",\"highlight\":\"HTML\",\"limit\":30,\"sort\":\"date\"}"));
+	CheckTrue("no words on Code: the newest code",
+		HisterSearchURL("https://h.example/", "", Pill::Code).find(FormEncode("metadata.source:code *")) != std::string::npos);
 	ResultPage hp = ParseHister("{\"total\":3,\"page_key\":\"k2\",\"documents\":[{\"url\":\"javascript:x\"},{\"url\":\"https://a.example/\"}]}");
 	Check("Hister's page_key and count", hp.next + " " + std::to_string(hp.received) + " " + std::to_string(hp.results.size()), "k2 2 1");
 	ResultPage kp = ParseKura("{\"total\":9,\"results\":[{\"url\":\"https://k.example/n/a\"},{\"url\":\"file:///x\"}]}");

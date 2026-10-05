@@ -14,6 +14,7 @@
 
 const int kPageSize = 30;
 const int kAllNotes = 3;   // All shows Kura's top notes, then Hister's pages
+const int kAllRecentNotes = 10;   // All with no words: the newest notes, then the newest pages
 
 struct SearchRequest {
 	shiori::Pill pill = shiori::Pill::All;

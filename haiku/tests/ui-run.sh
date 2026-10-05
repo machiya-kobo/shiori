@@ -229,6 +229,8 @@ hey Shiori quit >/dev/null 2>&1
 sleep 2
 items() { hey Shiori count Item of View results of Window Shiori | grep '"result"' | sed -n 's/.*(B_INT32_TYPE) : \([0-9]*\).*/\1/p'; }
 msg Spil of Window Shiori with 'pill=int32(1)'
+# The pill shows the newest at once (an empty field): let it land first.
+sleep 1.5
 before=$(grep -c 'hister GET /search' "$LOG")
 settext Shiori query "many"
 sleep 1.5
@@ -287,6 +289,33 @@ hey Shiori get Text [0 to 100000] of View _input_ of View query of Window Shiori
 shot 27-quick-to-window 0.5
 "$APP" --no-deskbar >/dev/null 2>&1
 shot 28-deskbar-removed 1
+hey Shiori quit >/dev/null 2>&1
+
+# 14. An empty field shows the newest: at launch All lists Kura's recent
+# notes and Hister's newest pages ("*", sort date). Then a Show More that
+# fails puts its row back.
+"$APP" >/boot/home/mh/app.log 2>&1 &
+sleep 3
+shot 29-newest-at-launch 0.5
+grep -q 'kura /api/recent' "$LOG" && ok "All asks Kura for its recent notes" || bad "no /api/recent at launch"
+grep 'hister GET /search' "$LOG" | tail -3 | grep -q '"sort":"date"' && ok "All asks Hister for the newest pages" || bad "no newest pages at launch"
+[ "$(items)" -gt 0 ] && ok "the newest are listed ($(items) rows)" || bad "an empty list at launch"
+msg Spil of Window Shiori with 'pill=int32(1)'
+sleep 1.5
+settext Shiori query "many"
+msg Sqgo of Window Shiori
+sleep 2
+kill "$(cat /boot/home/mh/fake.pid)" >/dev/null 2>&1
+sleep 1
+send do Item 30 of View results of Window Shiori
+shot 30-show-more-failed 2
+[ "$(items)" = 31 ] && ok "a failed Show More comes back" || bad "rows after a failed Show More: $(items)"
+python3 fake-services.py >> "$LOG" 2>&1 &
+echo $! > /boot/home/mh/fake.pid
+sleep 1
+send do Item 30 of View results of Window Shiori
+sleep 2
+[ "$(items)" = 45 ] && ok "Show More works again once Hister is back" || bad "rows after the retry: $(items)"
 hey Shiori quit >/dev/null 2>&1
 
 echo "--- fake services log"

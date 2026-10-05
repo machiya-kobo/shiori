@@ -356,11 +356,17 @@ std::string WithSlash(const std::string& base)
 std::string HisterSearchURL(const std::string& server, const std::string& typed, Pill pill,
 	int limit, const std::string& pageKey)
 {
-	std::string text = pill == Pill::Code ? HisterText(CodeQuery(typed)) : HisterText(typed);
+	// No words: the newest ("*" sorted by date, Hister's "recent"), as every
+	// Shiori shows when the field is empty.
+	bool newest = Trim(typed).empty();
+	std::string words = newest ? "*" : typed;
+	std::string text = pill == Pill::Code ? HisterText(CodeQuery(words)) : HisterText(words);
 	json::Value query = json::Value::MakeObject();
 	query.Set("text", json::Value::MakeString(text));
 	query.Set("highlight", json::Value::MakeString("HTML"));
 	query.Set("limit", json::Value::MakeNumber(limit));
+	if (newest)
+		query.Set("sort", json::Value::MakeString("date"));
 	if (!pageKey.empty())
 		query.Set("page_key", json::Value::MakeString(pageKey));
 	return WithSlash(server) + "search?query=" + FormEncode(json::Write(query));

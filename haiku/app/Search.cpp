@@ -1,6 +1,7 @@
 #include "Search.h"
 
 #include <memory>
+#include <thread>
 
 #include "Http.h"
 #include "Shiori.h"
@@ -39,22 +40,33 @@ void RunSearch(BMessenger target, int32 generation, SearchRequest request, Confi
 		wantNotes = pill == Pill::Notes && hasKura;
 		wantPages = pill != Pill::Notes && hasHister;
 	} else {
-		// All's notes need words; the Notes pill without any lists the recent ones.
-		wantNotes = hasKura && (pill == Pill::Notes || (pill == Pill::All && !trimmed.empty()));
-		wantPages = pill != Pill::Notes && hasHister && !trimmed.empty();
+		// No words is the newest, as every Shiori shows an empty field: Kura's
+		// recent notes (/api/recent), Hister's newest pages (or code).
+		wantNotes = hasKura && (pill == Pill::Notes || pill == Pill::All);
+		wantPages = pill != Pill::Notes && hasHister;
 	}
 
+	// Kura and Hister at once (on their own thread each), not one after the
+	// other: the slower of the two, not the sum, before the list shows.
+	std::thread notesThread;
+	SearchOutcome* out = outcome.get();
+	auto fetchNotes = [&config, &request, out, pill, trimmed]() {
+		bool notesPill = pill == Pill::Notes;
+		std::string url = KuraSearchURL(config.kura, request.query,
+			notesPill ? kPageSize : (trimmed.empty() ? kAllRecentNotes : kAllNotes), out->kuraOffset, notesPill ? request.vault : std::string());
+		HttpReply reply = HttpRequestJSON(config, "GET", url);
+		if (reply.status >= 200 && reply.status <= 299)
+			out->notes = ParseKura(reply.body);
+		out->notesProblem = Problem("Kura", reply, out->notes, !CredentialHeaders(config, url).empty());
+	};
 	if (wantNotes) {
 		outcome->askedNotes = true;
 		// Other vaults only on the Notes pill; All asks for the default vault.
-		bool notesPill = pill == Pill::Notes;
 		outcome->kuraOffset = request.more ? request.kuraOffset : 0;
-		std::string url = KuraSearchURL(config.kura, request.query,
-			notesPill ? kPageSize : kAllNotes, outcome->kuraOffset, notesPill ? request.vault : std::string());
-		HttpReply reply = HttpRequestJSON(config, "GET", url);
-		if (reply.status >= 200 && reply.status <= 299)
-			outcome->notes = ParseKura(reply.body);
-		outcome->notesProblem = Problem("Kura", reply, outcome->notes, !CredentialHeaders(config, url).empty());
+		if (wantPages)
+			notesThread = std::thread(fetchNotes);
+		else
+			fetchNotes();
 	}
 	if (wantPages) {
 		outcome->askedPages = true;
@@ -65,6 +77,8 @@ void RunSearch(BMessenger target, int32 generation, SearchRequest request, Confi
 			outcome->pages = ParseHister(reply.body);
 		outcome->pagesProblem = Problem("Hister", reply, outcome->pages, !CredentialHeaders(config, url).empty());
 	}
+	if (notesThread.joinable())
+		notesThread.join();
 
 	BMessage message(kMsgResults);
 	message.AddInt32("generation", generation);

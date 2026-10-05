@@ -39,7 +39,9 @@ for (const s of inputs) {
   // The Notes pill's next page, over every vault.
   out.push(`  {"kuraURLVault", ${q(s)}, ${q(S.kuraURL('https://kura.example/', s, { limit: 30, offset: 30, vault: 'all' }))}},`);
   // HisterClient.search's request, as the Linux client builds it (URLSearchParams + JSON.stringify).
-  const hister = `https://h.example/search?${new URLSearchParams({ query: JSON.stringify({ text: S.histerText(s), highlight: 'HTML', limit: 30 }) })}`;
+  // No words: the newest pages ("*" sorted by date, Hister's "recent"), as the Library's "*".
+  const newest = !s.trim();
+  const hister = `https://h.example/search?${new URLSearchParams({ query: JSON.stringify({ text: S.histerText(newest ? '*' : s), highlight: 'HTML', limit: 30, ...(newest ? { sort: 'date' } : {}) }) })}`;
   out.push(`  {"histerSearchURL", ${q(s)}, ${q(hister)}},`);
 }
 out.push('};');

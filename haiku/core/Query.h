@@ -48,7 +48,8 @@ std::string WithSlash(const std::string& base);
 
 // Hister's JSON search: GET <server>search?query=<{"text","highlight","limit"}>
 // (HisterClient.search's request; Accept: application/json is the client's).
-// `pageKey`: the last reply's page_key, for the next page.
+// `pageKey`: the last reply's page_key, for the next page. No words: the
+// newest pages ("*", sort date).
 std::string HisterSearchURL(const std::string& server, const std::string& typed, Pill pill,
 	int limit = 30, const std::string& pageKey = std::string());
 // search-core's kuraURL: api/search?limit&offset[&vault]&q&sort, or api/recent.
