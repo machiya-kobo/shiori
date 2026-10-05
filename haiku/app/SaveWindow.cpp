@@ -11,6 +11,7 @@
 #include <StringView.h>
 #include <TextControl.h>
 
+#include "../core/Outbox.h"
 #include "../core/Query.h"
 #include "Http.h"
 #include "Shiori.h"
@@ -44,6 +45,17 @@ void RunSave(BMessenger target, Config config, std::string url, std::string titl
 	BMessage done(kMsgSaved);
 	done.AddInt32("status", reply.status);
 	done.AddString("error", reply.error.c_str());
+	// Unreachable, unwell (429, 5xx) or not signed in (401, 403): it waits in
+	// the outbox. A refusal (406, 413, 422) is said, not kept.
+	SaveOutcome outcome = OutcomeOf(reply.status);
+	if (outcome == SaveOutcome::Retry || outcome == SaveOutcome::Hold) {
+		std::string error;
+		done.AddBool("queued", QueueSave(url, title, label, &error));
+		done.AddString("queueError", error.c_str());
+	} else if (outcome == SaveOutcome::Sent) {
+		// Hister answers again: send what waited.
+		be_app->PostMessage(kMsgDrain);
+	}
 	target.SendMessage(&done);
 }
 
@@ -136,10 +148,14 @@ void SaveWindow::MessageReceived(BMessage* message)
 				break;
 			}
 			std::string reason = RejectionReason(status);
-			if (status == 0)
-				reason = std::string("Hister can't be reached: ") + message->GetString("error", "");
-			else if (status == 403)
-				reason = "Hister refused this device's token (403): check Settings.";
+			bool queued = message->GetBool("queued", false);
+			if (queued && (status == 401 || status == 403))
+				reason = "Kept for later: Hister wants you signed in (or a token) in Settings.";
+			else if (queued)
+				reason = "Kept for later: Hister can't take it now. It goes when Hister is back.";
+			else if (message->HasString("queueError"))
+				reason = std::string("Hister can't take it now, and it couldn't be kept: ")
+					+ message->GetString("queueError", "");
 			else if (reason.empty())
 				reason = "Hister answered " + std::to_string(status) + ".";
 			fStatus->SetText(reason.c_str());

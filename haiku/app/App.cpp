@@ -1,19 +1,27 @@
-// Shiori for Haiku: the application.
+// Shiori for Haiku: the application. It drains the outbox at start, after a
+// settings change or a save that reached Hister, and every five minutes
+// while pages wait.
 //
 //   Shiori                      the search window
 //   Shiori --query <words>      the search window, searching
 //   Shiori --save <url> [label] the Save window, filled in
+#include <atomic>
+#include <ctime>
 #include <mutex>
 #include <string>
+#include <thread>
 
 #include <Alert.h>
 #include <Application.h>
 #include <FindDirectory.h>
+#include <MessageRunner.h>
 #include <Path.h>
 #include <Url.h>
 
 #include "../core/Config.h"
+#include "../core/Outbox.h"
 #include "../core/Query.h"
+#include "Http.h"
 #include "SaveWindow.h"
 #include "SearchWindow.h"
 #include "SettingsWindow.h"
@@ -23,6 +31,8 @@ namespace {
 
 std::mutex gConfigLock;
 shiori::Config gConfig;
+// The outbox's files are touched by save threads and the drain: one at a time.
+std::mutex gOutboxLock;
 
 }  // namespace
 
@@ -43,6 +53,61 @@ std::string SignInPath()
 	path.Append("Shiori/sign-in.json");
 	return path.Path();
 }
+
+std::string OutboxPath()
+{
+	BPath path;
+	if (find_directory(B_USER_SETTINGS_DIRECTORY, &path) != B_OK)
+		path.SetTo("/boot/home/config/settings");
+	path.Append("Shiori/outbox");
+	return path.Path();
+}
+
+bool QueueSave(const std::string& url, const std::string& title, const std::string& label,
+	std::string* error)
+{
+	shiori::QueuedPage page;
+	page.url = url;
+	page.title = title;
+	page.label = label;
+	std::lock_guard<std::mutex> lock(gOutboxLock);
+	return shiori::Outbox(OutboxPath()).Enqueue(page, (int64_t)time(nullptr), error);
+}
+
+int WaitingCount()
+{
+	std::lock_guard<std::mutex> lock(gOutboxLock);
+	return shiori::Outbox(OutboxPath()).Count();
+}
+
+namespace {
+
+// Sends what waits, oldest first, with the settings of the moment (the
+// outbox keeps no credential).
+void RunDrain(BMessenger app)
+{
+	shiori::DrainResult result;
+	int left = 0;
+	{
+		std::lock_guard<std::mutex> lock(gOutboxLock);
+		shiori::Outbox box(OutboxPath());
+		shiori::Config config = CurrentConfig();
+		if (!shiori::OriginOf(config.server).empty() && box.Count() > 0) {
+			result = box.Drain([&config](const shiori::QueuedPage& page) {
+				return HttpRequestJSON(config, "POST", shiori::AddURL(config.server),
+					shiori::NewPageJSON(page.url, page.title, page.label, SHIORI_VERSION, page.added), true).status;
+			}, (int64_t)time(nullptr));
+		}
+		left = box.Count();
+	}
+	BMessage done(kMsgDrained);
+	done.AddInt32("sent", result.sent);
+	done.AddInt32("dropped", result.dropped);
+	done.AddInt32("left", left);
+	app.SendMessage(&done);
+}
+
+}  // namespace
 
 shiori::Config CurrentConfig()
 {
@@ -90,6 +155,17 @@ public:
 		shiori::Config config = CurrentConfig();
 		if (shiori::Trim(config.server).empty() && shiori::Trim(config.kura).empty())
 			OpenSettings();
+		// What waits goes now, then every five minutes while something does.
+		PostMessage(kMsgDrain);
+		BMessage tick(kMsgDrain);
+		fDrainTimer = new BMessageRunner(BMessenger(this), &tick, 5 * 60 * 1000000LL);
+	}
+
+	bool QuitRequested() override
+	{
+		delete fDrainTimer;
+		fDrainTimer = nullptr;
+		return BApplication::QuitRequested();
 	}
 
 	void ArgvReceived(int32 argc, char** argv) override
@@ -132,6 +208,17 @@ public:
 			case kMsgConfigChanged:
 				if (fSearch != nullptr)
 					BMessenger(fSearch).SendMessage(kMsgConfigChanged);
+				// New settings or a sign-in: what waits may go now.
+				PostMessage(kMsgDrain);
+				break;
+			case kMsgDrain:
+				if (!fDraining) {
+					fDraining = true;
+					std::thread(RunDrain, BMessenger(this)).detach();
+				}
+				break;
+			case kMsgDrained:
+				fDraining = false;
 				break;
 			default:
 				BApplication::MessageReceived(message);
@@ -154,6 +241,8 @@ private:
 
 	SearchWindow* fSearch = nullptr;
 	BString fPendingQuery;
+	BMessageRunner* fDrainTimer = nullptr;
+	bool fDraining = false;
 };
 
 int main()

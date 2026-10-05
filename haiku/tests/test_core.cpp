@@ -10,6 +10,7 @@
 
 #include "../core/Config.h"
 #include "../core/Json.h"
+#include "../core/Outbox.h"
 #include "../core/Query.h"
 #include "../core/Results.h"
 #include "../core/SignIn.h"
@@ -259,6 +260,76 @@ static void TestSignIn()
 	rmdir(dir);
 }
 
+// The outbox: the iOS rules (linux.test.mjs' outbox cases), with 401/403 held.
+static void TestOutbox()
+{
+	Check("NewPageJSON with added", NewPageJSON("https://a.example/", "A", "", "1.0", 1790000000),
+		"{\"url\":\"https://a.example/\",\"title\":\"A\",\"added\":1790000000,\"metadata\":{\"source\":\"shiori\",\"client\":\"shiori\",\"client_version\":\"1.0\",\"via\":\"haiku\",\"ignore_skip_rules\":true}}");
+	CheckTrue("2xx sent", OutcomeOf(201) == SaveOutcome::Sent);
+	CheckTrue("406/413/422/404 dropped", OutcomeOf(406) == SaveOutcome::Drop && OutcomeOf(413) == SaveOutcome::Drop
+		&& OutcomeOf(422) == SaveOutcome::Drop && OutcomeOf(404) == SaveOutcome::Drop);
+	CheckTrue("429/5xx retried", OutcomeOf(429) == SaveOutcome::Retry && OutcomeOf(502) == SaveOutcome::Retry);
+	CheckTrue("401/403 held", OutcomeOf(401) == SaveOutcome::Hold && OutcomeOf(403) == SaveOutcome::Hold);
+
+	char dir[] = "/tmp/shiori-outbox-XXXXXX";
+	if (mkdtemp(dir) == nullptr)
+		return;
+	std::string path = std::string(dir) + "/outbox";
+	Outbox box(path);
+	QueuedPage a;
+	a.url = "https://a.example/";
+	a.title = "A";
+	QueuedPage b;
+	b.url = "https://b.example/";
+	CheckTrue("queued", box.Enqueue(a, 1000) && box.Enqueue(b, 1001));
+	struct stat st;
+	Check("outbox dir 0700", stat(path.c_str(), &st) == 0 ? std::to_string(st.st_mode & 0777) : "missing", std::to_string(0700));
+	a.title = "A, again";
+	box.Enqueue(a, 2000);
+	std::vector<QueuedPage> pages = box.Pages();
+	Check("one per URL", std::to_string(pages.size()), "2");
+	Check("oldest first", pages.size() == 2 ? pages[0].url : "", "https://b.example/");
+	Check("a newer save keeps the first time", pages.size() == 2 ? std::to_string(pages[1].added) + " " + pages[1].title : "",
+		"1000 A, again");
+
+	// Unreachable: nothing counted, all kept.
+	DrainResult r = box.Drain([](const QueuedPage&) { return 0; }, 3000);
+	CheckTrue("unreachable stops", r.stopped && r.sent == 0 && box.Count() == 2);
+	// Signed out: kept, no try counted.
+	r = box.Drain([](const QueuedPage&) { return 403; }, 3000);
+	CheckTrue("403 holds", r.stopped && box.Count() == 2 && box.Pages()[0].attempts == 0);
+	// 5xx: counted; the fifth drops it.
+	for (int i = 0; i < 4; i++)
+		box.Drain([](const QueuedPage&) { return 503; }, 3000);
+	Check("four tries counted", std::to_string(box.Pages()[0].attempts), "4");
+	r = box.Drain([](const QueuedPage&) { return 503; }, 3000);
+	CheckTrue("the fifth drops it", r.dropped == 1 && box.Count() == 1);
+	// A refusal drops it; a success sends the rest.
+	box.Enqueue(b, 3001);
+	std::vector<std::string> seen;
+	r = box.Drain([&seen](const QueuedPage& p) {
+		seen.push_back(p.url);
+		return p.url == "https://a.example/" ? 422 : 201;
+	}, 3002);
+	CheckTrue("refused dropped, the rest sent", !r.stopped && r.dropped == 1 && r.sent == 1 && box.Count() == 0);
+	Check("drain order", seen.size() == 2 ? seen[0] + " " + seen[1] : "", "https://a.example/ https://b.example/");
+	// Fourteen days: dropped unsent.
+	box.Enqueue(a, 1000);
+	bool called = false;
+	r = box.Drain([&called](const QueuedPage&) { called = true; return 201; }, 1000 + kOutboxMaxAge + 1);
+	CheckTrue("too old: dropped unsent", !called && r.dropped == 1 && box.Count() == 0);
+	// An unreadable file is dropped.
+	FILE* junk = fopen((path + "/000000000001-x.json").c_str(), "w");
+	if (junk != nullptr) {
+		fputs("not json", junk);
+		fclose(junk);
+	}
+	r = box.Drain([](const QueuedPage&) { return 201; }, 5000);
+	CheckTrue("unreadable dropped", r.dropped == 1 && box.Count() == 0);
+	rmdir(path.c_str());
+	rmdir(dir);
+}
+
 int main()
 {
 	TestVectors();
@@ -268,6 +339,7 @@ int main()
 	TestCredentials();
 	TestConfigFile();
 	TestSignIn();
+	TestOutbox();
 	printf("%d passed, %d failed\n", gPassed, gFailed);
 	return gFailed ? 1 : 0;
 }

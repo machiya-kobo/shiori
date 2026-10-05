@@ -189,6 +189,35 @@ cp /boot/home/mh/config.good "$CONFIG"
 chmod 600 "$CONFIG"
 grep -q LEAK "$LOG" && bad "a credential went where it mustn't: $(grep LEAK "$LOG" | head -1)" || ok "no credential leaked (signed in)"
 
+# 10. The outbox: with Hister away a save is kept (0600), and goes on the
+# next drain once Hister is back, with its first time.
+OUTBOX=/boot/home/config/settings/Shiori/outbox
+rm -rf "$OUTBOX"
+"$APP" >/boot/home/mh/app.log 2>&1 &
+sleep 2
+kill "$(cat /boot/home/mh/fake.pid)" >/dev/null 2>&1
+sleep 1
+"$APP" --save "https://www.haiku-os.org/community/" queued >/dev/null 2>&1
+sleep 1
+msg Sdsv of Window "Save to Hister"
+shot 19-kept-for-later 2
+n=$(ls "$OUTBOX"/*.json 2>/dev/null | wc -l)
+[ "$n" -eq 1 ] && ok "kept in the outbox" || bad "outbox holds $n"
+mode=$(stat -c %a "$(ls "$OUTBOX"/*.json | head -1)" 2>/dev/null)
+[ "$mode" = 600 ] && ok "outbox entry mode 600" || bad "outbox entry mode is '$mode'"
+grep -q -i 'token\|mhs_\|hister=' "$OUTBOX"/*.json && bad "a credential was stored in the outbox" || ok "no credential in the outbox"
+send quit of Window "Save to Hister"
+python3 fake-services.py >> "$LOG" 2>&1 &
+echo $! > /boot/home/mh/fake.pid
+sleep 1
+msg Sdrn
+sleep 2
+grep 'hister POST /api/add' "$LOG" | grep '"url": "https://www.haiku-os.org/community/"' | grep -q '"added": [0-9]' \
+	&& ok "the drain sent it, with its first time" || bad "the drain didn't send it"
+n=$(ls "$OUTBOX"/*.json 2>/dev/null | wc -l)
+[ "$n" -eq 0 ] && ok "outbox empty after the drain" || bad "outbox still holds $n"
+hey Shiori quit >/dev/null 2>&1
+
 echo "--- fake services log"
 cat "$LOG"
 exit $fail

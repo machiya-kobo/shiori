@@ -4,6 +4,7 @@
 // When search-core's rules change, these change in the same series.
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -57,8 +58,9 @@ std::string KuraSearchURL(const std::string& kura, const std::string& typed, int
 // POST <server>api/add. `version` is the app's, `via` "haiku".
 bool IsWebURL(const std::string& url);
 std::string AddURL(const std::string& server);
+// `added`: unix seconds (a queued page keeps its first time), 0 for none.
 std::string NewPageJSON(const std::string& url, const std::string& title,
-	const std::string& label, const std::string& version);
+	const std::string& label, const std::string& version, int64_t added = 0);
 // HisterKit's Rejection, in words; '' for anything else.
 std::string RejectionReason(int status);
 

@@ -39,12 +39,24 @@ enum {
 	kMsgSignOut = 'Ssou',
 	kMsgSignedOut = 'Ssod',
 	kMsgAccountChanged = 'Sacc',
+
+	// The outbox
+	kMsgDrain = 'Sdrn',
+	kMsgDrained = 'Sdrd',
 };
 
 // ~/config/settings/Shiori/config.json
 std::string ConfigPath();
 // ~/config/settings/Shiori/sign-in.json (the Hister sign-in: session and id, 0600)
 std::string SignInPath();
+
+// ~/config/settings/Shiori/outbox (pages waiting for Hister, one 0600 file each)
+std::string OutboxPath();
+// Queues a page for Hister (thread-safe); the app drains the outbox.
+bool QueueSave(const std::string& url, const std::string& title, const std::string& label,
+	std::string* error = nullptr);
+// How many pages wait (thread-safe).
+int WaitingCount();
 
 // The app's current settings (a copy; the app owns them).
 shiori::Config CurrentConfig();

@@ -389,13 +389,16 @@ std::string AddURL(const std::string& server)
 }
 
 std::string NewPageJSON(const std::string& url, const std::string& title,
-	const std::string& label, const std::string& version)
+	const std::string& label, const std::string& version, int64_t added)
 {
 	json::Value page = json::Value::MakeObject();
 	page.Set("url", json::Value::MakeString(url));
 	page.Set("title", json::Value::MakeString(title));
 	if (!label.empty())
 		page.Set("label", json::Value::MakeString(label));
+	// An integer of unix seconds (a string is a 400).
+	if (added > 0)
+		page.Set("added", json::Value::MakeNumber((double)added));
 	json::Value meta = json::Value::MakeObject();
 	meta.Set("source", json::Value::MakeString("shiori"));
 	meta.Set("client", json::Value::MakeString("shiori"));

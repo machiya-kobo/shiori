@@ -11,6 +11,7 @@ SRCS = \
 	core/Results.cpp \
 	core/Config.cpp \
 	core/SignIn.cpp \
+	core/Outbox.cpp \
 	app/App.cpp \
 	app/Http.cpp \
 	app/ResultItem.cpp \
