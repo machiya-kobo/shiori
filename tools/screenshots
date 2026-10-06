@@ -2,19 +2,23 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """screenshots - make the README's screenshots from invented sample data.
 
-    tools/screenshots [--kura URL] [out_dir]          # default: docs/screenshots
+    tools/screenshots [--kura URL] [--hister URL] [out_dir]          # default: docs/screenshots
 
 Starts a throwaway Hister in a container (podman or docker) on a free port, fills it with the Quickstart's sample
 pages (tools/quickstart/seed-hister.py), builds the search page and the web app, serves them with web/dev-server.py
-(TZ=UTC), takes the shots with Playwright's Chromium, and removes it all. With --kura, Notes come from that Kura,
-which must serve Machiya's sample vault (the Machiya stack's Kura, e.g. http://127.0.0.1:8083/); without it the
-shots have no notes. The web search is a stand-in serving an invented Info card and web results (real ones would
-show real sites). Nothing but the sample pages, the sample vault and those invented results is ever shown.
+(TZ=UTC), takes the shots with Playwright's Chromium, and removes it all. With --hister, it fills and uses a Hister
+already running on this machine instead (a fresh, empty one: built from vendor/hister, say, where there's no container
+engine); seed-hister.py refuses any other. With --kura, Notes come from that Kura, which must serve Machiya's sample
+vault (the Machiya stack's Kura, e.g. http://127.0.0.1:8083/); without it a stand-in Kura serves a few invented
+notes in the sample vault's theme. Hister's sign-in helper is a stand-in with nobody signed in, and the web search
+is a stand-in too, serving an invented Info card and web results (real ones would show real sites). Nothing but the
+sample pages, the sample notes and those invented results is ever shown.
 
 Shots, as <out_dir>/shiori-<what>-<light|dark>.png, squeezed to a small palette when over 200 KB:
 the web app's Library with a page open (1280x800, light and dark), Shiori for "lantern" (1280x800, light
-and dark), and the web app's Library at phone width (390x844, light). Dates in them ("2 days ago") are relative to
-the day of the capture: run it again to refresh them.
+and dark), the web app's Notes with a note open (1280x800, light), the web app's Settings (1280x800, dark), and the
+web app's Library at phone width (390x844, light). Dates in them ("2 days ago") are relative to the day of the
+capture: run it again to refresh them.
 
 Needs Playwright for Python with its Chromium (`pip install playwright pillow && playwright install chromium`, in
 any virtual environment); run it with that environment's python3. Standard library, Playwright and Pillow only.
@@ -108,6 +112,117 @@ def stand_in_searxng():
     return server
 
 
+# A stand-in Kura for the shots (without --kura): a few invented notes from the sample vault's paper-lantern workshop
+# and Kyoto trip, answering the calls Shiori makes (api/search, api/recent, api/vaults, api/note).
+NOTES = [
+    ("Projects/Lantern festival kit", ["lanterns", "festival"], 1,
+     "Everything for the summer lantern festival stall: six folded chōchin, warm-white LED inserts, spare washi, "
+     "a jar of nori paste and the folding stand.",
+     ["Six chōchin, folded flat in the long box", "Twelve LED inserts and spare batteries",
+      "Kozo washi offcuts for repairs", "Nori paste and a soft brush", "The folding stand and its pegs"]),
+    ("Workshop/Chōchin build log", ["lanterns", "workshop"], 2,
+     "Day three: the spiral rib held its shape after steaming, and the lantern took its washi in four panels.",
+     ["Steam the rib for ten minutes", "Bend it round the jig", "Paste the panels top to bottom"]),
+    ("Workshop/Washi offcuts", ["paper"], 4,
+     "Keep kozo offcuts for patching torn lantern panels; gampi is too glossy to take the paste.",
+     ["Kozo: patches and new panels", "Mitsumata: labels", "Gampi: not for lanterns"]),
+    ("Travel/Kyoto trip plan", ["travel"], 7,
+     "Two nights in a machiya near the river, with the lantern festival on the second evening.",
+     ["Day 1: arrive, walk the river", "Day 2: the lantern festival after dark", "Day 3: the washi shops"]),
+    ("Workshop/Nori paste recipe", ["workshop"], 9,
+     "One part wheat starch to five of water, cooked slowly until it turns clear.",
+     ["Stir all the way", "Strain it while warm", "Keep it a week in the cold"]),
+]
+
+
+def stand_in_kura():
+    """A tiny server answering Kura's API with NOTES, at its own address (the notes' /n/ pages)."""
+    import html
+    import http.server
+    import json
+    import re
+    import threading
+    import urllib.parse
+
+    now = int(time.time())
+
+    def note(path, tags, days, summary, items, base, snippet=None):
+        return {"url": base + "n/" + urllib.parse.quote(path), "title": path.rsplit("/", 1)[-1], "path": path + ".md",
+                "vault": "", "snippet": snippet or html.escape(summary), "summary": summary, "tags": tags,
+                "created": now - days * 86400 - 7200, "changed": now - days * 86400}
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            url = urllib.parse.urlsplit(self.path)
+            args = dict(urllib.parse.parse_qsl(url.query))
+            base = "http://%s:%d/" % self.server.server_address[:2]
+            status, reply = 200, None
+            if url.path == "/api/vaults":
+                reply = {"vaults": [{"name": "sample", "title": "Sample", "default": True, "private": False,
+                                     "obsidian": "Sample"}]}
+            elif url.path in ("/api/search", "/api/recent"):
+                words = [w.strip('"*').lower() for w in args.get("q", "").split() if w.strip('"*')]
+                found = []
+                for path, tags, days, summary, items in NOTES:
+                    hay = " ".join([path, summary, " ".join(tags)]).lower()
+                    if all(re.search(r"\b" + re.escape(w), hay) for w in words):
+                        snippet = html.escape(summary)
+                        for w in words:
+                            snippet = re.sub(r"(?i)\b(%s\w*)" % re.escape(html.escape(w)), r"<mark>\1</mark>", snippet)
+                        found.append(note(path, tags, days, summary, items, base, snippet))
+                reply = {"total": len(found), "results": found}
+            elif url.path == "/api/note":
+                want = args.get("path", "")
+                for path, tags, days, summary, items in NOTES:
+                    if want in (path, path + ".md"):
+                        body = "".join("<li>%s</li>" % html.escape(i) for i in items)
+                        reply = {"title": path.rsplit("/", 1)[-1], "path": path + ".md",
+                                 "html": "<p>%s</p><ul>%s</ul><p>%s</p>" % (
+                                     html.escape(summary), body, " ".join("#" + t for t in tags))}
+                if reply is None:
+                    status, reply = 404, {"error": "not_found"}
+            else:
+                status, reply = 404, {"error": "not_found"}
+            body = json.dumps(reply).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def stand_in_helper():
+    """Hister's sign-in helper (/machiya/), as a sample install would answer it: nobody signed in (401), so Settings
+    says how the settings would follow you instead of that sign-in is out of reach."""
+    import http.server
+    import threading
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def reply(self):
+            body = b'{"error": "signed_out"}'
+            self.send_response(401)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        do_GET = do_PUT = do_POST = reply
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
 def squeeze(path):
     if os.path.getsize(path) <= LIMIT:
         return
@@ -119,12 +234,13 @@ def squeeze(path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--kura", default="", help="a Kura serving Machiya's sample vault, for the notes")
+    ap.add_argument("--hister", default="", help="a throwaway Hister already running on this machine, instead of a container")
     ap.add_argument("--keep", action="store_true", help="leave Hister and the pages up afterwards, and say where")
     ap.add_argument("out", nargs="?", default=os.path.join(ROOT, "docs", "screenshots"))
     a = ap.parse_args()
     engine = shutil.which("podman") or shutil.which("docker")
-    if not engine:
-        sys.exit("screenshots: needs podman or docker for Hister")
+    if not engine and not a.hister:
+        sys.exit("screenshots: needs podman or docker for Hister (or --hister)")
 
     work = tempfile.mkdtemp(prefix="shiori-shots-", dir=os.environ.get("SHOTS_TMP", "/var/tmp"))
     hister_port, site_port, app_port = free_port(), free_port(), free_port()
@@ -133,23 +249,26 @@ def main():
     env = {k: v for k, v in os.environ.items() if not k.startswith(("SHIORI_", "HISTER_", "KURA_", "SEARXNG_"))}
     env["TZ"] = "UTC"
     try:
-        subprocess.run([engine, "run", "-d", "--name", name, "-p", "127.0.0.1:%d:4433" % hister_port,
-                        "-e", "HISTER__SERVER__ADDRESS=0.0.0.0:4433",
-                        "-e", "HISTER__SERVER__BASE_URL=http://localhost:%d" % hister_port, HISTER_IMAGE],
-                       check=True, capture_output=True)
-        hister = "http://127.0.0.1:%d/" % hister_port
+        if a.hister:
+            hister = a.hister.rstrip("/") + "/"
+        else:
+            subprocess.run([engine, "run", "-d", "--name", name, "-p", "127.0.0.1:%d:4433" % hister_port,
+                            "-e", "HISTER__SERVER__ADDRESS=0.0.0.0:4433",
+                            "-e", "HISTER__SERVER__BASE_URL=http://localhost:%d" % hister_port, HISTER_IMAGE],
+                           check=True, capture_output=True)
+            hister = "http://127.0.0.1:%d/" % hister_port
         subprocess.run([os.path.join(ROOT, "tools", "quickstart", "seed-hister.py"), hister], check=True, env=env)
         site, app = os.path.join(work, "site"), os.path.join(work, "app")
-        build_env = dict(env)
-        if a.kura:
-            build_env["SHIORI_NIWA_URL"] = a.kura
+        kura = a.kura or "http://127.0.0.1:%d/" % stand_in_kura().server_address[1]
+        build_env = dict(env, SHIORI_NIWA_URL=kura)
         subprocess.run([os.path.join(ROOT, "scripts", "build-web.sh"), site, "http://localhost:%d/" % site_port],
                        check=True, cwd=ROOT, env=build_env, capture_output=True)
         subprocess.run([os.path.join(ROOT, "scripts", "build-pwa.sh"), app], check=True, cwd=ROOT, env=build_env,
                        capture_output=True)
         searx = stand_in_searxng()
+        helper = "http://127.0.0.1:%d/" % stand_in_helper().server_address[1]
         for path, port in ((site, site_port), (app, app_port)):
-            serve_env = dict(env, HISTER_URL=hister, PORT=str(port), KURA_URL=a.kura,
+            serve_env = dict(env, HISTER_URL=hister, PORT=str(port), KURA_URL=kura, MACHIYA_URL=helper,
                              SEARXNG_URL="http://127.0.0.1:%d/" % searx.server_address[1])
             servers.append(subprocess.Popen([sys.executable, os.path.join(ROOT, "web", "dev-server.py"), path],
                                             cwd=ROOT, env=serve_env, stdout=subprocess.DEVNULL,
@@ -181,8 +300,13 @@ def main():
                 print("%s  %d KB" % (out, os.path.getsize(out) // 1024))
 
             def open_page(page):
-                page.get_by_text("Folding a chōchin lantern").first.click()
-                page.get_by_text("A chōchin collapses flat").first.wait_for(timeout=15000)
+                page.get_by_text("A chōchin collapses flat").first.click()  # the row; its title opens the page itself
+                page.frame_locator("iframe").get_by_text("A chōchin collapses flat").first.wait_for(timeout=15000)
+                page.evaluate("document.querySelectorAll('#list, main, body').forEach((e) => e.scrollTo(0, 0))")
+
+            def open_note(page):
+                page.get_by_text("Everything for the summer lantern festival").first.click()  # the row; its title opens Kura
+                page.frame_locator("iframe").get_by_text("Twelve LED inserts").first.wait_for(timeout=15000)
                 page.evaluate("document.querySelectorAll('#list, main, body').forEach((e) => e.scrollTo(0, 0))")
 
             def open_sections(page):
@@ -197,6 +321,8 @@ def main():
                 shot("library", app_url + "/", DESKTOP, scheme, "Folding a chōchin lantern", (open_page,))
                 # All mixes your pages into the web's results (no "Your Pages" section since 0.2.0).
                 shot("search", site_url + "/?q=lantern", DESKTOP, scheme, "Folding a chōchin lantern", (open_sections,))
+            shot("notes", app_url + "/#/library?s=notes", DESKTOP, "light", "Lantern festival kit", (open_note,))
+            shot("settings", app_url + "/#/settings", DESKTOP, "dark", "Appearance")
             shot("library-phone", app_url + "/", PHONE, "light", "Folding a chōchin lantern")
             browser.close()
     finally:
@@ -210,7 +336,8 @@ def main():
                     os.killpg(s.pid, signal.SIGTERM)
                 except OSError:
                     pass
-            subprocess.run([engine, "rm", "-f", name], capture_output=True)
+            if not a.hister:
+                subprocess.run([engine, "rm", "-f", name], capture_output=True)
             shutil.rmtree(work, ignore_errors=True)
 
 
