@@ -13,6 +13,9 @@ struct DocumentView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.previewFocus) private var focus
     @State private var preview: PagePreview?
+    /// When the preview on screen was kept (`OfflineStore`), while Hister
+    /// or Kura can't be reached; nil for a fresh one.
+    @State private var offlineAsOf: Date?
     /// Another of the server's extractors, from Show As (nil: its default).
     @State private var extractor: String?
     @State private var extractors: [Extractor] = []
@@ -58,6 +61,14 @@ struct DocumentView: View {
                 showCachedSummary()
                 await loadExtras()
             }
+            // An offline copy: the server is asked again until it answers.
+            .task(id: offlineAsOf) {
+                while offlineAsOf != nil, !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(30))
+                    guard !Task.isCancelled else { return }
+                    await load()
+                }
+            }
             .onDisappear { summarizing?.cancel() }
             .sheet(isPresented: $labelling) {
                 LabelPicker(document: document) { failure = $0 }
@@ -99,8 +110,14 @@ struct DocumentView: View {
             .opacity(rendered && !renderFailed ? 1 : 0)
             // Above the page, not over it: the preview keeps its own scroll.
             .safeAreaInset(edge: .top, spacing: 0) {
-                if summary != .none {
-                    SummaryCard(state: summary, regenerate: { summarize(note: note != nil, fresh: true) }, close: closeSummary)
+                VStack(spacing: 0) {
+                    if let offlineAsOf {
+                        OfflineNote(asOf: offlineAsOf) { Task { await load() } }
+                            .padding(.vertical, 6)
+                    }
+                    if summary != .none {
+                        SummaryCard(state: summary, regenerate: { summarize(note: note != nil, fresh: true) }, close: closeSummary)
+                    }
                 }
             }
             .overlay {
@@ -304,7 +321,9 @@ struct DocumentView: View {
     private func load() async {
         if app.noteLinks(for: document) != nil || Notes.otherVault(of: document.url) != nil {
             // Every note from Kura, its sanitized HTML (notes come only from
-            // Kura; Hister may not hold one). Shown, never cached.
+            // Kura; Hister may not hold one). A private vault's is never kept
+            // (`OfflineStore.keepable`); the default vault's may be, for
+            // reading offline.
             let vault = Notes.otherVault(of: document.url) ?? ""
             guard let kura = app.notesKura, let path = Notes.path(of: document.url, cards: []) else {
                 error = .unreachable
@@ -312,13 +331,12 @@ struct DocumentView: View {
             }
             do {
                 let html = try await kura.noteHTML(path: path, vault: vault)
-                preview = PagePreview(
+                loaded(PagePreview(
                     title: document.displayTitle, contentHTML: html, added: document.added, updated: document.updated,
-                    label: Notes.label, visits: 0, author: nil, summary: nil)
-                error = nil
+                    label: Notes.label, visits: 0, author: nil, summary: nil))
             } catch .cancelled {
             } catch let failure {
-                error = failure
+                failed(failure)
             }
             return
         }
@@ -327,12 +345,38 @@ struct DocumentView: View {
             return
         }
         do {
-            preview = try await client.preview(of: document.url, extractor: extractor)
-            error = nil
+            loaded(try await client.preview(of: document.url, extractor: extractor))
         } catch .cancelled {
         } catch let failure {
-            error = failure
+            failed(failure)
         }
+    }
+
+    /// Where offline copies come from: this server and Kura.
+    private var offlineOrigin: String { OfflineStore.origin(server: app.serverURL, kura: app.searchPage.niwaURL) }
+
+    /// A fresh preview, kept for reading offline (the server's own view
+    /// only, not another Show As).
+    private func loaded(_ fresh: PagePreview) {
+        if preview != fresh { rendered = false }
+        preview = fresh
+        error = nil
+        offlineAsOf = nil
+        if extractor == nil { OfflineStore.savePreview(fresh, for: document, origin: offlineOrigin) }
+    }
+
+    /// Out of reach: the copy kept from the last time, if any; a copy
+    /// already on screen stays.
+    private func failed(_ failure: HisterError) {
+        if offlineAsOf != nil { return }
+        if failure == .unreachable, extractor == nil, preview == nil,
+           let copy = OfflineStore.preview(for: document, origin: offlineOrigin) {
+            preview = copy.preview
+            offlineAsOf = copy.savedAt
+            error = nil
+            return
+        }
+        error = failure
     }
 
     /// Versions and extractors, for the menu: quietly nothing on failure.

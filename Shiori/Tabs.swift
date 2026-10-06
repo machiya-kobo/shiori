@@ -197,9 +197,10 @@ struct RecentScreen: View {
     // One list per choice, so switching back doesn't start over.
     // All: your pages and notes, newest first; Pages from Hister, Notes
     // from Kura.
-    @State private var all = ResultsModel(query: "*", sort: .newest, source: .all)
-    @State private var pages = ResultsModel(query: "*", sort: .newest)
-    @State private var notes = ResultsModel(query: "*", sort: .newest, source: .notes)
+    // Each keeps its first page for offline reading (`OfflineStore`).
+    @State private var all = ResultsModel(query: "*", sort: .newest, source: .all, offlineName: "all")
+    @State private var pages = ResultsModel(query: "*", sort: .newest, offlineName: "pages")
+    @State private var notes = ResultsModel(query: "*", sort: .newest, source: .notes, offlineName: "notes")
     /// The folders Hister watches, newest first.
     @State private var files = ResultsModel(query: LocalFiles.query(""), sort: .newest)
     /// False beside the sidebar, whose selected row already says Library:

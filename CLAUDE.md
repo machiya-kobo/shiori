@@ -337,6 +337,13 @@ holds the rules and the traps the code can't tell you.
   spinner where it couldn't be seen and its haptic came late. Ours (iOS)
   arms at 70 pt with a haptic, reloads on letting go, and shows its mark
   under the bars. Web and Small Web have none (the same words find the same).
+- **Offline reading** (`OfflineStore`, apps only): the Library's All,
+  Pages and Notes keep their first page, and the last 50 previews opened
+  are kept, in Caches, per server and Kura. Shown only when Hister or Kura
+  is unreachable, as "Offline · as of <time>", and replaced when it answers.
+  Never a private vault's note, a file or code (checked on writing and on
+  reading); signing out of Hister or Machiya empties it, a delete drops its
+  preview. Not the web app.
 - **Lists watch for new items, never redraw under you**: every 60 s while
   the app is in front (the web app: the tab visible), an open list asks
   Hister and Kura (never the web) what arrived (`ResultsModel.checkForNew`,

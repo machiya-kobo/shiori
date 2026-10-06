@@ -297,6 +297,8 @@ final class AppState {
         }
         HisterKeychain.signOut()
         histerAccount = nil
+        // What was kept for reading offline was this account's.
+        OfflineStore.clear()
         credentialsChanged()
     }
 
@@ -352,6 +354,8 @@ final class AppState {
     /// server with the identity CLI's `device revoke` or `token revoke`).
     func signOutOfMachiya() {
         MachiyaKeychain.signOut()
+        // Kura's notes kept for reading offline came with this sign-in.
+        OfflineStore.clear()
         machiyaChanged()
     }
 
@@ -715,6 +719,7 @@ final class AppState {
         guard let client else { throw .unreachable }
         guard !(await isWorkNoteNow(document.url)), !isLocalFile(document.url) else { throw .notFound }
         try await client.delete(url: document.url)
+        OfflineStore.forget(url: document.url)
         if deletedURLs.count >= 2000 { deletedURLs.removeAll() }
         deletedURLs.insert(document.url)
     }

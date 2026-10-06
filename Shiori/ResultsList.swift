@@ -37,7 +37,13 @@ struct ResultsList<Empty: View>: View {
                 }
             }
             .overlay(alignment: .top) {
-                if model.newCount > 0, model.phase == .loaded {
+                if let asOf = model.offlineAsOf, model.phase == .loaded {
+                    // The Library's copy from the last time Hister answered;
+                    // it's replaced once the list loads again.
+                    OfflineNote(asOf: asOf) { Task { await load() } }
+                        .padding(.top, 8)
+                        .transition(.opacity)
+                } else if model.newCount > 0, model.phase == .loaded {
                     NewItemsBanner(count: model.newCount) {
                         Task {
                             await load()
@@ -63,6 +69,7 @@ struct ResultsList<Empty: View>: View {
         // notes list searches the vaults picked in its filter.
         model.kura = app.notesKura
         model.vaults = model.source == .notes ? app.notesVault : nil
+        model.offlineOrigin = OfflineStore.origin(server: app.serverURL, kura: app.searchPage.niwaURL)
         await model.load(using: app.client)
     }
 
@@ -611,6 +618,29 @@ struct NoteLinksMenu: View {
             }
             Divider()
         }
+    }
+}
+
+/// "Offline · as of 3:42 PM": a copy kept on the device (`OfflineStore`)
+/// is on screen. A tap tries the server again.
+struct OfflineNote: View {
+    let asOf: Date
+    let retry: () -> Void
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        Button(action: retry) {
+            Label(asOf.offlineAsOf, systemImage: "wifi.slash")
+                .textStyle(.subheadline, weight: .semibold)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(palette.surface, in: Capsule())
+                .overlay(Capsule().strokeBorder(palette.secondaryText.opacity(0.3)))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(palette.secondaryText)
+        .help("Try Again")
+        .accessibilityHint("Tries your server again")
     }
 }
 

@@ -125,6 +125,14 @@ final class ResultsModel {
     /// Which of Kura's vaults a notes list searches ("all", or a name);
     /// nil for the default only. Set by the list (`AppState.notesVault`).
     var vaults: String?
+    /// A Library list's name for its offline copy ("all", "pages",
+    /// "notes"; `OfflineStore`), and the server and Kura it belongs to
+    /// (set by the list before it loads). Nil for every other list.
+    var offlineName: String?
+    var offlineOrigin = ""
+    /// When the copy on screen was saved, while Hister can't be reached;
+    /// nil once a load gets through.
+    private(set) var offlineAsOf: Date?
     /// The Library's All while it merges (newest first, no filters).
     private var merge: NewestFirstMerge?
     private var nextPageKey: String?
@@ -133,8 +141,9 @@ final class ResultsModel {
 
     init(
         query: String, sort: SearchSort = .relevance, source: Source = .pages, filterable: Bool = true,
-        respellable: (text: String, wrap: (String) -> String)? = nil
+        respellable: (text: String, wrap: (String) -> String)? = nil, offlineName: String? = nil
     ) {
+        self.offlineName = offlineName
         self.baseQuery = query
         self.respellable = respellable
         self.order = Order(sort)
@@ -295,10 +304,11 @@ final class ResultsModel {
             opened = []
             if pages.facets != nil || !options.facets { facets = pages.facets }
             phase = .loaded
+            savedOnline()
         } catch .cancelled {
         } catch {
             guard mine == generation else { return }
-            if documents.isEmpty { phase = .failed(error) }
+            if documents.isEmpty, !showOffline(for: error) { phase = .failed(error) }
         }
     }
 
@@ -372,6 +382,36 @@ final class ResultsModel {
         return Array(out.prefix(limit))
     }
 
+    /// Only the plain list, newest first, unfiltered, is the Library's own.
+    private var keepsOffline: Bool {
+        offlineName != nil && order == .newest && filters.isEmpty && dateRange == nil && respelledAs == nil && !loadsAll
+    }
+
+    /// A first page that loaded: kept for offline reading.
+    private func savedOnline() {
+        offlineAsOf = nil
+        if keepsOffline, let offlineName { OfflineStore.saveList(offlineName, origin: offlineOrigin, pages: documents) }
+    }
+
+    /// Hister (or Kura) out of reach with nothing on screen: the copy kept
+    /// from the last time, if there is one. False to show the error.
+    private func showOffline(for error: HisterError) -> Bool {
+        guard error == .unreachable, keepsOffline, let offlineName,
+              let copy = OfflineStore.list(offlineName, origin: offlineOrigin)
+        else { return false }
+        documents = []
+        seen = []
+        append(copy.pages)
+        total = documents.count
+        nextPageKey = nil
+        merge = nil
+        suggestion = nil
+        opened = []
+        offlineAsOf = copy.savedAt
+        phase = .loaded
+        return true
+    }
+
     func load(using client: HisterClient?) async {
         guard let client else {
             phase = .failed(.unreachable)
@@ -408,12 +448,14 @@ final class ResultsModel {
             opened = page.opened
             if page.facets != nil || !options.facets { facets = page.facets }
             phase = .loaded
+            savedOnline()
         } catch .cancelled {
             // A newer load (or leaving the screen) superseded this one.
         } catch {
             guard mine == generation else { return }
-            // Keep what is already on screen; only an empty list shows the error.
-            if documents.isEmpty { phase = .failed(error) }
+            // Keep what is already on screen; only an empty list shows the
+            // error, or the Library's offline copy.
+            if documents.isEmpty, !showOffline(for: error) { phase = .failed(error) }
         }
     }
 
@@ -440,6 +482,11 @@ final class ResultsModel {
     /// any other order, how much Hister's total grew. Only Hister and Kura
     /// are asked (never the web), with no facets. Sets `newCount`.
     func checkForNew(using client: HisterClient?) async {
+        // An offline copy is replaced as soon as the list loads again.
+        if offlineAsOf != nil {
+            await load(using: client)
+            return
+        }
         guard let client, phase == .loaded, !isLoadingMore else { return }
         let mine = generation
         let plain = SearchOptions(dateFrom: dateRange?.lowerBound, dateTo: dateRange?.upperBound, semantic: semantic)
