@@ -5,6 +5,21 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.11.0 (2026-10-05)
+
+### Changed
+
+- **Settings in a clearer order**, the same in every Machiya app:
+  Appearance first, then Search, Results, Safari, AI and Feeds & Export,
+  then Account (the server, sign-ins, pages waiting to send) with About
+  last. Seven pages instead of eight in the apps; the web app and the
+  search page follow the same order and names.
+- **Settings that depend on another stay hidden until it's on** (Small
+  Web's gateway, AI Answer under Web Results…), and Search with Shiori no
+  longer greys out settings the app itself uses.
+- **Shorter explanations**: footers and tooltips are a sentence or two.
+- The search page's gear has Fold Repeated Sites.
+
 ## 0.10.0 (2026-10-05)
 
 ### Added

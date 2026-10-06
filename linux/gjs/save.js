@@ -11,7 +11,7 @@ import { newPage, addRequest, titleIn, capped, rejectionReason, MAX_BYTES } from
 import * as outbox from '../src/outbox.js';
 import { requestJSON } from './http.js';
 
-export const VERSION = '0.10.0';
+export const VERSION = '0.11.0';
 
 /** The outbox: one JSON file per page in $XDG_DATA_HOME/shiori/outbox. */
 export function fileStore(dir = GLib.build_filenamev([GLib.get_user_data_dir(), 'shiori', 'outbox'])) {
