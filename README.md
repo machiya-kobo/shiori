@@ -2,7 +2,7 @@
 
 Machiya is a set of small self-hosted apps for finding what you've read: your pages (Hister), the web (SearXNG), your notes (an Obsidian vault in git) and your code.
 
-Shiori ("bookmark"), the search app, searches your [Hister](https://github.com/asciimoo/hister) from iPhone, iPad, Mac, Linux, Haiku and the web, and adds Hister to Safari.
+Shiori (栞, "bookmark"), the search app, searches your [Hister](https://github.com/asciimoo/hister) from iPhone, iPad, Mac, Linux, Haiku and the web, and adds Hister to Safari.
 
 Hister is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server, so you can search your history later. Hister's [official extensions](https://hister.org/docs/browser-extension) cover Firefox and Chrome, and [hister-safari](https://github.com/nburns/hister-safari) brings it to Safari on the Mac. Safari on iPhone and iPad loads only extensions that ship inside a signed app, so Shiori carries Hister's own extension, built for Safari. It runs on the Mac too: there, use Shiori's or hister-safari, not both.
 
