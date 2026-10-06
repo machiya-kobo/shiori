@@ -148,7 +148,7 @@ is dropped at once, so a reload never shares again. Without
 
 - Themes: Settings → Theme offers the Machiya rooms' ten (Tokyo Night,
   Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa,
-  Everforest, Ayu) and Appearance (System, Light, Dark), shared with the
+  Everforest, Ayu) and Mode (System, Light, Dark), shared with the
   rooms like the text size (cookie `machiya_palette`, the account's
   `palette`). `web/app/palettes.css` is made by `node scripts/palettes.mjs`
   from `web/app/palettes.json`, the rooms' table from machiya's

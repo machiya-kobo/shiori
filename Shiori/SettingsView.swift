@@ -142,7 +142,7 @@ struct SettingsView: View {
                         Text(palette.name).tag(palette)
                     }
                 }
-                Picker("Appearance", selection: $app.theme) {
+                Picker("Mode", selection: $app.theme) {
                     ForEach(AppTheme.allCases) { theme in
                         Text(theme.label).tag(theme)
                     }

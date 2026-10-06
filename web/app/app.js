@@ -2276,7 +2276,7 @@ function viewSettings() {
       // Shiori's own, Account and About last.
       group('Appearance', [
         choice('palette', 'Theme', Object.entries(S.PALETTES).map(([key, p]) => [key, p.name])),
-        choice('theme', 'Appearance', [['system', 'System'], ['day', 'Light'], ['night', 'Dark']]),
+        choice('theme', 'Mode', [['system', 'System'], ['day', 'Light'], ['night', 'Dark']]),
         // The house's five sizes (the account's text_size, the rooms' steps).
         choice('textSize', 'Text Size', [['xSmall', 'Extra Small'], ['small', 'Small'], ['system', 'Standard'], ['large', 'Large'], ['xLarge', 'Extra Large']]),
         ...deviceSizeRows(),

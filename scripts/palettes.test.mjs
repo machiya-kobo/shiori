@@ -125,7 +125,7 @@ test('the palette is shared with the rooms: cookie, house value, bar colours', (
 test('the app offers the ten as Theme, System / Light / Dark as Appearance, and loads palettes.css', () => {
   const app = read('../web/app/app.js');
   assert.match(app, /choice\('palette', 'Theme', Object\.entries\(S\.PALETTES\)/);
-  assert.match(app, /choice\('theme', 'Appearance', \[\['system', 'System'\], \['day', 'Light'\], \['night', 'Dark'\]\]\)/);
+  assert.match(app, /choice\('theme', 'Mode', \[\['system', 'System'\], \['day', 'Light'\], \['night', 'Dark'\]\]\)/);
   assert.match(app, /document\.documentElement\.dataset\.palette = palette/);
   // The palette follows the person through the account (S.accountValues).
   assert.match(app, /S\.accountValues\(settings, \{ steps: 'rooms' \}\)/);

@@ -983,7 +983,7 @@
     // page through the app), but this browser's own size.
     ['Appearance', [
       { key: 'palette', label: 'Theme', options: Object.entries(S.PALETTES).map(([key, p]) => [key, p.name]) },
-      { key: 'theme', label: 'Appearance', options: [['system', 'System'], ['day', 'Light'], ['night', 'Dark']] },
+      { key: 'theme', label: 'Mode', options: [['system', 'System'], ['day', 'Light'], ['night', 'Dark']] },
       { key: 'textSize', label: 'Text Size', options: HOUSE_SIZE_CHOICES },
       ...(HOSTED ? [{ action: 'device-size' }] : []),
     ], () => `Follows you when signed in${HOSTED ? ', except This Device’s Size' : ''}. ${prefsStateLine()}`],
