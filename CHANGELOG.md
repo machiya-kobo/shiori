@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.12.1 (2026-10-06)
+
+### Fixed
+
+- **The hosted search page's start page shows its logo** again: it was
+  left pointing at the extension's copy, which the hosted page doesn't
+  have. Both web builds now check that every file a page names is in the
+  build.
+
 ## 0.12.0 (2026-10-05)
 
 ### Added
