@@ -4,7 +4,7 @@
 
 import { execFileSync } from 'node:child_process';
 import vm from 'node:vm';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -210,5 +210,38 @@ test('one version everywhere: project.yml, Linux, and a CHANGELOG section for it
     } finally {
       rmSync(out, { recursive: true, force: true });
     }
+  }
+});
+
+// Both web builds end with scripts/check-assets.py: every file a page,
+// manifest or stylesheet names is in the build (the start page's logo was
+// left on the extension's path and showed broken on the hosted page).
+test('both web builds ship every file their pages name', () => {
+  const pwa = build();
+  const web = mkdtempSync(join(tmpdir(), 'shiori-web-'));
+  try {
+    execFileSync('bash', ['scripts/build-web.sh', web, 'https://search.example/'], { cwd: repo, env: { ...process.env, SHIORI_ROOM_LOGOS: '' }, stdio: 'pipe' });
+    const page = readFileSync(join(web, 'index.html'), 'utf8');
+    assert.doesNotMatch(page, /assets\/icons\//, 'no logo left on the extension\'s path');
+    assert.equal((page.match(/src="\/_shiori\/icon-256\.png"/g) || []).length, 2, 'the bar and the start page');
+    for (const out of [pwa, web]) execFileSync('python3', ['scripts/check-assets.py', out], { cwd: repo, stdio: 'pipe' });
+  } finally {
+    rmSync(pwa, { recursive: true, force: true });
+    rmSync(web, { recursive: true, force: true });
+  }
+});
+
+test('the asset check fails a build that names a file it lacks', () => {
+  const out = mkdtempSync(join(tmpdir(), 'shiori-assets-'));
+  try {
+    writeFileSync(join(out, 'index.html'), '<img src="assets/icons/icon-256.png"><a href="?q=x"></a><link href="/searx/x"><img src="/_shiori/here.png">');
+    mkdirSync(join(out, '_shiori'));
+    writeFileSync(join(out, '_shiori', 'here.png'), '');
+    assert.throws(
+      () => execFileSync('python3', ['scripts/check-assets.py', out], { cwd: repo, stdio: 'pipe' }),
+      (e) => /index\.html: assets\/icons\/icon-256\.png/.test(String(e.stderr)) && !/here\.png|searx/.test(String(e.stderr)),
+    );
+  } finally {
+    rmSync(out, { recursive: true, force: true });
   }
 });

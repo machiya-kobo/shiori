@@ -52,7 +52,8 @@ for old, new in (
 ):
     if old not in html:
         sys.exit("search.html lost " + old)
-    html = html.replace(old, new, 1)
+    # The mark is drawn twice (the bar and the start page): every one.
+    html = html.replace(old, new) if old.startswith('src="assets/') else html.replace(old, new, 1)
 open(dst, "w", encoding="utf-8").write(html)
 PY
 
@@ -105,5 +106,9 @@ XML
 python3 scripts/status-json.py "$out"
 # What changed, for the house's status page (Recent Deploys).
 cp -- CHANGELOG.md "$out/_shiori/CHANGELOG.md"
+
+# Every file the page names is in the build (a logo left on the extension's
+# path showed broken on the hosted page).
+python3 scripts/check-assets.py "$out"
 
 echo "==> Web page in $out (for $base)"

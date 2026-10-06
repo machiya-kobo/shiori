@@ -105,4 +105,7 @@ python3 scripts/status-json.py "$out"
 # What changed, for the house's status page (Recent Deploys).
 cp -- CHANGELOG.md "$out/_shiori/CHANGELOG.md"
 
+# Every file the pages name is in the build.
+python3 scripts/check-assets.py "$out"
+
 echo "==> Web app in $out ($version)"
