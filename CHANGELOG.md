@@ -5,6 +5,23 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.10.0 (2026-10-05)
+
+### Added
+
+- **Click Opens** (Settings → Search → Searching in the apps, Settings →
+  Searching in the web app): what a click or tap on a result opens, the
+  original (a page in the browser, a note in Obsidian) or Shiori's
+  preview. Automatic, the default, keeps what 0.9.0 did: the preview
+  beside a preview pane, the original elsewhere. The other one leads the
+  result's right-click or long-press menu and its first swipe (in the web
+  app, the › at the row's end). Kept on each device.
+
+### Changed
+
+- **A result's title always opens the original**, whatever a click on the
+  rest of it does; label, vault and place chips still open their own.
+
 ## 0.9.0 (2026-10-05)
 
 ### Changed
