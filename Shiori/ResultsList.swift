@@ -222,19 +222,26 @@ struct FoldedRow: View {
 /// Open, share and copy links for a page, shared by menus.
 struct DocumentLinks: View {
     let document: StoredPage
+    /// Leave out where a click opens it (`OpenOriginalButton`), when the
+    /// menu already leads with it.
+    var skipOriginal = false
     @Environment(AppState.self) private var app
 
     var body: some View {
-        NoteLinksMenu(document: document)
+        NoteLinksMenu(document: document, skipOriginal: skipOriginal)
         if LocalFiles.isLocalFile(document.url) {
             // Hister's copy: the file:// address means nothing here.
             if let served = app.servedFile(document.url) {
-                Link(destination: served) { Label("Open", systemImage: "doc") }
+                if !skipOriginal {
+                    Link(destination: served) { Label("Open", systemImage: "doc") }
+                }
                 Button("Copy Link", systemImage: "link") { Pasteboard.copy(served) }
             }
         } else if let url = SafeHref.url(document.url) {
-            Link(destination: url) {
-                Label("Open in Browser", systemImage: "safari")
+            if !skipOriginal || app.noteLinks(for: document) != nil {
+                Link(destination: url) {
+                    Label("Open in Browser", systemImage: "safari")
+                }
             }
             ShareLink(item: url) {
                 Label("Share…", systemImage: "square.and.arrow.up")
@@ -307,6 +314,7 @@ struct DocumentRow: View {
     /// chip only filters Notes, without switching to it.
     @Environment(SearchSession.self) private var session: SearchSession?
     @Environment(\.mixedIn) private var mixedIn
+    @Environment(\.openURL) private var openURL
     @ScaledMetric(relativeTo: .headline) private var scaledIcon: CGFloat = 20
     @Environment(\.macTextScale) private var macScale
 
@@ -340,10 +348,20 @@ struct DocumentRow: View {
                         .foregroundStyle(palette.tint(mixedIn.tint))
                 }
                 // The accent, as the search page and the web app draw titles.
-                Text(document.displayTitle)
-                    .textStyle(.headline)
-                    .foregroundStyle(palette.accent)
-                    .lineLimit(2)
+                // A link: it always opens the original, whatever a click on
+                // the rest of the row does (Click Opens).
+                Button {
+                    actions.opened(document)
+                    openURL.openPage(document, app: app)
+                } label: {
+                    Text(document.displayTitle)
+                        .textStyle(.headline)
+                        .foregroundStyle(palette.accent)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                .buttonStyle(.borderless)
+                .help(OpenOriginalButton.title(for: document, app: app))
                 HStack(spacing: 6) {
                     if let code = document.code {
                         // Which forge (most are Forgejo, and the rows looked alike),
@@ -576,14 +594,16 @@ enum Pasteboard {
 /// For a vault note: open it in Obsidian, on Niwa, or its Konbini card.
 struct NoteLinksMenu: View {
     let document: StoredPage
+    /// Leave out the note's original (Obsidian, else Kura): the menu leads with it.
+    var skipOriginal = false
     @Environment(AppState.self) private var app
 
     var body: some View {
         if let links = app.noteLinks(for: document) {
-            if let url = links.obsidian {
+            if let url = links.obsidian, !skipOriginal {
                 Link(destination: url) { Label("Edit in Obsidian", systemImage: "doc.text") }
             }
-            if let url = links.niwa {
+            if let url = links.niwa, !(skipOriginal && links.obsidian == nil) {
                 Link(destination: url) { Label("View in Kura", systemImage: "book") }
             }
             if let url = links.konbini {

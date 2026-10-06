@@ -59,6 +59,10 @@ nonisolated enum SharedSettings {
         /// "tint" (an outlined card in the pill's colour), "solid" (a plain
         /// card), "bar" (a line down the leading edge) or "none".
         static let resultStyle = "resultStyle"
+        /// What a click (a tap) on a result's card opens: "auto" (the
+        /// preview beside a preview pane, else the original), "original"
+        /// or "preview". This device's own, never sent to the account.
+        static let clickOpens = "clickOpens"
         /// Matching labels and collections at the top of search suggestions.
         static let labelSuggestions = "labelSuggestions"
         /// The user's NewsBlur, for subscribe links.
@@ -118,6 +122,7 @@ nonisolated enum SharedSettings {
     static let urlKeys = [Key.searxngURL, Key.niwaURL, Key.konbiniURL, Key.newsBlurURL, Key.smallwebURL]
     static let resultStyles = ["tint", "solid", "bar", "none"]
     static let smallWebOpens = ["gateway", "direct"]
+    static let clickOpensChoices = ["auto", "original", "preview"]
     /// The rooms' theme keys, `AppPalette.all`'s (here because the Safari
     /// extension doesn't link HisterKit; tests keep the three lists alike).
     static let palettes = [

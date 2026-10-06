@@ -321,12 +321,15 @@ holds the rules and the traps the code can't tell you.
 - **Keys** (`AIKeychain`): on the Mac the login keychain (the data-protection
   one needs an entitlement a free team's build lacks; writes fail, reads say
   "not found"). Every query names service and account.
-- **A tap anywhere on a result opens it in its own app** (`openPage`, the
-  web app's `openInApp`, the search page's card click): a note in
-  Obsidian (else Kura), a file from Hister's copy, a page in the browser.
-  Shiori's preview is a swipe, the menu or the web app's chevron. Beside
-  a preview pane a click previews instead (double-click or Return opens).
-  Chips and links inside a result keep their own.
+- **A click (tap) anywhere on a result opens the original or Shiori's
+  preview**, as Settings → Click Opens says (`clickOpens`, per device,
+  never sent to the account: `clickOpensOriginal`, the web app's twin).
+  Automatic previews beside a preview pane and opens the original
+  elsewhere. The original is `openPage` / the web app's `openInApp`: a
+  note in Obsidian (else Kura), a file from Hister's copy, a page in the
+  browser. The other one leads the menu and is the first swipe (the web
+  app's ›). The title always opens the original; chips and links inside
+  a result keep their own. The search page: a card opens as its title.
 - Every delete is Undo, not a confirmation: the delete goes to Hister only
   after the toast.
 - **Pull to refresh is Shiori's own (`.pullToRefresh`), not `.refreshable`**:

@@ -178,7 +178,7 @@ const DEFAULTS = {
   // The notes' homes, from the build (the server passes them in).
   niwaURL: fromBuild('__SHIORI_NIWA_URL__'), konbiniURL: fromBuild('__SHIORI_KONBINI_URL__'),
   foldRepeats: true, searchFilters: true, labelSuggestions: true, newsBlurURL: '', aiAnswer: true,
-  showOpened: false, resultStyle: 'tint', smallWebTab: true, smallWebOpen: 'gateway',
+  showOpened: false, resultStyle: 'tint', clickOpens: 'auto', smallWebTab: true, smallWebOpen: 'gateway',
   // Which of Kura's vaults the Notes lists search: 'all', or one's name.
   notesVault: 'all',
 };
@@ -286,6 +286,8 @@ function applyLook() {
   }
   // How your pages, notes and opened pages stand apart: app.css keys off it.
   document.body.dataset.resultStyle = ['tint', 'solid', 'bar', 'none'].includes(settings.resultStyle) ? settings.resultStyle : 'tint';
+  // What a click on a row opens (rows read clickOpensOriginal); app.css shows the › for Shiori's page when it doesn't.
+  document.body.dataset.clickOpens = ['auto', 'original', 'preview'].includes(settings.clickOpens) ? settings.clickOpens : 'auto';
   // This device's own size (Use This Device's Size), else the shared one.
   const size = deviceTextSize() || settings.textSize;
   document.documentElement.style.fontSize = `${Math.round(100 * (TEXT_SCALE[size] || systemTextScale()))}%`;
@@ -537,7 +539,7 @@ function codeRow(doc, code) {
     h(
       'div',
       {},
-      h('div', { class: 'title' }, doc.title || doc.url),
+      titleLink(doc, doc.title || doc.url),
       h('div', { class: 'meta' },
         // Which forge it's on: most are Forgejo, and the rows looked alike.
         code.host ? [h('span', { class: `code-host code-host-${code.host}` }, S.codeHostName(code.host)), ' '] : null,
@@ -571,7 +573,7 @@ function docRow(doc) {
     h(
       'div',
       {},
-      h('div', { class: 'title' }, doc.title || doc.url),
+      titleLink(doc, doc.title || doc.url),
       // A file: where it lives on the server, not Hister's "local".
       h('div', { class: 'meta' }, n && n.place ? n.place : h('span', { class: 'domain' }, file ? S.localFilePath(doc.url) : doc.domain || hostOf(doc.url)), when ? ` · ${when}` : ''),
       doc.text ? snippet(doc.text) : null,
@@ -592,13 +594,19 @@ function hostOf(url) {
 }
 
 /**
- * A whole row opens its page: in the preview beside the list when the
- * window is wide, else in the page's own app (`openInApp`), with a Preview
- * button at the row's end for Shiori's page (its label, delete, summary).
- * The chips inside (label, vault) keep their own clicks.
+ * Whether a click on a row opens the original (else Shiori's preview):
+ * Settings → Click Opens, whose Automatic previews beside the preview.
+ */
+const clickOpensOriginal = () => settings.clickOpens === 'original' || (settings.clickOpens !== 'preview' && !wide());
+
+/**
+ * A whole row opens its page: the original (`openInApp`) or Shiori's
+ * preview, as Click Opens says. The › at its end is Shiori's page, shown
+ * while a click opens the original (app.css), and the title is a link to
+ * the original. The chips inside (label, vault) keep their own clicks.
  */
 function opensFromRow(row, doc) {
-  const open = () => (wide() ? openDoc(doc, row) : openInApp(doc));
+  const open = () => (clickOpensOriginal() ? openInApp(doc) : openDoc(doc, row));
   row.addEventListener('click', open);
   row.addEventListener('keydown', (e) => {
     if (e.target !== row) return;
@@ -614,6 +622,27 @@ function opensFromRow(row, doc) {
     onkeydown: (e) => e.stopPropagation(),
   }, icon('chevron')));
   return row;
+}
+
+/** Where a result's original is: a note's Obsidian (or Kura), a file's copy, the page. */
+function originalHref(doc) {
+  const n = note(doc);
+  if (n) return n.obsidian || n.niwa || doc.url;
+  return S.isLocalFile(doc.url) ? S.localFileURL(location.origin, doc.url) : doc.url;
+}
+
+/** A row's title: a link that always opens the original, whatever a click on the row does. */
+function titleLink(doc, text) {
+  return h('a', {
+    class: 'title', href: S.linkHref(originalHref(doc), location.href) || undefined, target: '_blank', rel: 'noopener noreferrer',
+    onclick: (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
+      openInApp(doc);
+    },
+    onkeydown: (e) => e.stopPropagation(),
+  }, text);
 }
 
 // A web or Small Web row opens its link from anywhere on it, not only from
@@ -2253,12 +2282,13 @@ function viewSettings() {
       exportGroup(group),
       group('Searching', [toggle('rememberOpened', 'Remember What You Open'), toggle('showOpened', 'Show Opened'),
         choice('resultStyle', 'Result Style', [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']]),
+        choice('clickOpens', 'Click Opens', [['auto', 'Automatic'], ['original', 'The Original'], ['preview', 'Shiori’s Preview']]),
         toggle('smallWebTab', 'Small Web Tab'),
         choice('smallWebOpen', 'Open Small Web Results', [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']]), toggle('searchFilters', 'Search Filters'),
         toggle('foldRepeats', 'Fold Repeated Sites'), toggle('labelSuggestions', 'Labels in Search Page Suggestions'), toggle('webResults', 'Web Results'), toggle('aiAnswer', 'AI Answer'),
         toggle('previewImages', 'Images in Previews'),
       ],
-        'These follow you when signed in, but AI Answer, which stays in this browser. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”.'),
+        'These follow you when signed in, but AI Answer and Click Opens, which stay in this browser. Click Opens sets what a click on a result opens: the original (a page in a new tab, a note in Obsidian) or Shiori’s preview, with the › at its end for the other; Automatic previews beside the preview and opens the original elsewhere. A result’s title always opens the original. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”.'),
       group('Feeds', [text('newsBlurURL', 'NewsBlur', 'https://newsblur.example/')], 'For Subscribe in NewsBlur, which opens NewsBlur with a list’s feed.'),
       group('Search History', [
         toggle('searchHistory', 'Recent Searches'),

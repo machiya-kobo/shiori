@@ -931,6 +931,13 @@ struct SearchPageOptions: Equatable {
     var resultStyle = "tint"
     /// Set once Result Style has been put back to Tint (0.5.0).
     static let resultStyleResetKey = "resultStyleTintReset"
+    /// What a click on a result's card opens (`SharedSettings.Key.clickOpens`).
+    var clickOpens = "auto"
+    /// Whether a click on a result's card opens the original (else Shiori's
+    /// preview): Automatic previews beside a preview pane.
+    func clickOpensOriginal(pane: Bool) -> Bool {
+        clickOpens == "original" || (clickOpens != "preview" && !pane)
+    }
     /// Labels and collections lead the search field's suggestions.
     var labelSuggestions = true
     /// The user's NewsBlur, for "Subscribe in NewsBlur" (opened in the browser).
@@ -992,6 +999,7 @@ struct SearchPageOptions: Equatable {
             defaults.set(true, forKey: Self.resultStyleResetKey)
         }
         if let v = defaults.string(forKey: K.resultStyle), SharedSettings.resultStyles.contains(v) { resultStyle = v }
+        if let v = defaults.string(forKey: K.clickOpens), SharedSettings.clickOpensChoices.contains(v) { clickOpens = v }
         flag(K.labelSuggestions, &labelSuggestions)
         if let v = defaults.string(forKey: K.newsBlurURL) { newsBlurURL = v }
         if let v = defaults.string(forKey: K.obsidianVault), !v.isEmpty { obsidianVault = v }
@@ -1025,6 +1033,7 @@ struct SearchPageOptions: Equatable {
         defaults.set(foldRepeats, forKey: K.foldRepeats)
         defaults.set(showOpened, forKey: K.showOpened)
         defaults.set(resultStyle, forKey: K.resultStyle)
+        defaults.set(clickOpens, forKey: K.clickOpens)
         defaults.set(labelSuggestions, forKey: K.labelSuggestions)
         defaults.set(newsBlurURL, forKey: K.newsBlurURL)
         defaults.removeObject(forKey: K.pageTextSize)

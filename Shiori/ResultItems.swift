@@ -178,11 +178,13 @@ extension View {
     }
 }
 
-/// One page from Hister, with its swipes and menu. A vault note opens
-/// straight in Obsidian (Niwa if Obsidian can't open it), with Shiori's
-/// preview in its menu; anything else opens Shiori's preview. Beside a
-/// preview pane (`previewSelection`), a row selects instead, and the list
-/// carries the menu.
+/// One page from Hister, with its swipes and menu. A click (a tap) on it
+/// opens the original (`openPage`: a page in the browser, a note in
+/// Obsidian, a file from Hister's copy) or Shiori's preview, as Settings →
+/// Click Opens says (`clickOpensOriginal`); the other is the first swipe and
+/// leads its menu. Its title always opens the original. Beside a preview
+/// pane (`previewSelection`), previewing is selecting, and the list carries
+/// the menu.
 struct DocumentItem: View {
     let document: StoredPage
     /// One of the pages you opened for this search (All's Your Pages lifts
@@ -200,59 +202,65 @@ struct DocumentItem: View {
 
     var body: some View {
         let note = app.noteLinks(for: document)
+        let original = app.searchPage.clickOpensOriginal(pane: selection != nil)
         if let selection {
-            DocumentRow(document: document, label: app.label(of: document), notePlace: note?.place)
-                .tag(document)
-                // Its place in the list, for j and k.
-                .preference(key: ListOrderKey.self, value: [document])
-                // The theme's background, and a tint for the selected page.
-                .listRowBackground(ResultBar(kind: kind(note), selected: selection.wrappedValue == document,
-                                             palette: palette, style: app.searchPage.resultStyle))
-                .resultSeparator(app.searchPage.resultStyle)
-                .modifier(Swipes(document: document, note: note, pane: true))
+            Group {
+                // Selecting previews; a row that opens the original is a
+                // button, which takes the click before the list selects.
+                if original {
+                    row(note: note, original: true)
+                } else {
+                    DocumentRow(document: document, label: app.label(of: document), notePlace: note?.place)
+                }
+            }
+            .tag(document)
+            // Its place in the list, for j and k.
+            .preference(key: ListOrderKey.self, value: [document])
+            // The theme's background, and a tint for the selected page.
+            .listRowBackground(ResultBar(kind: kind(note), selected: selection.wrappedValue == document,
+                                         palette: palette, style: app.searchPage.resultStyle))
+            .resultSeparator(app.searchPage.resultStyle)
+            .modifier(Swipes(document: document, note: note, original: original))
         } else {
-            row(note: note)
+            row(note: note, original: original)
                 .listRowBackground(ResultBar(kind: kind(note), palette: palette, style: app.searchPage.resultStyle))
                 .resultSeparator(app.searchPage.resultStyle)
-                .modifier(Swipes(document: document, note: note, pane: false))
-                .contextMenu { DocumentMenu(document: document, previewable: true) }
+                .modifier(Swipes(document: document, note: note, original: original))
+                .contextMenu { DocumentMenu(document: document) }
         }
     }
 
     private struct Swipes: ViewModifier {
         let document: StoredPage
         let note: AppState.NoteLinks?
-        /// Beside a preview pane a tap previews, so the swipe opens instead.
-        let pane: Bool
+        /// A click opens the original, so the swipe previews (else the
+        /// other way round).
+        let original: Bool
         @Environment(\.palette) private var palette
         @Environment(\.openURL) private var openURL
         @Environment(\.resultActions) private var actions
-
-        @Environment(AppState.self) private var app
 
         func body(content: Content) -> some View {
             content
                 .swipeActions(edge: .leading) {
                     // The first is the full swipe. A note's label is "vault"
                     // (it's what makes it a note); its tags are Obsidian's.
-                    // A file is never labelled. A row's tap opens it in its
-                    // own app, and Shiori's preview is here (beside a pane,
-                    // the other way round).
+                    // A file is never labelled.
                     if LocalFiles.isLocalFile(document.url) {
-                        preview.tint(palette.tint(SearchScope.files.tint))
+                        other.tint(palette.tint(SearchScope.files.tint))
                     } else if note == nil {
                         // A code document is code-import's: never labelled here.
                         if document.code == nil {
                             Button("Label", systemImage: "tag") { actions.label(document) }
                                 .tint(palette.accent)
                         }
-                        preview.tint(palette.tint(.cyan))
+                        other.tint(palette.tint(.cyan))
                     } else {
                         if let niwa = note?.niwa {
                             Button("Kura", systemImage: "book") { openURL(niwa) }
                                 .tint(palette.tint(.orange))
                         }
-                        preview.tint(palette.accent)
+                        other.tint(palette.accent)
                     }
                     if !LocalFiles.isLocalFile(document.url), let url = URL(string: document.url) {
                         Button("Copy Link", systemImage: "link") { Pasteboard.copy(url) }
@@ -270,36 +278,63 @@ struct DocumentItem: View {
                 }
         }
 
-        @ViewBuilder private var preview: some View {
-            if pane {
-                Button("Open", systemImage: note?.obsidian != nil ? "doc.text" : note != nil ? "book" : "safari") {
-                    actions.opened(document)
-                    openURL.openPage(document, app: app)
-                }
+        /// What a click doesn't do.
+        @ViewBuilder private var other: some View {
+            if original {
+                PreviewButton(document: document)
             } else {
-                Button("Preview", systemImage: "doc.text.magnifyingglass") {
-                    actions.opened(document)
-                    actions.preview(document)
-                }
+                OpenOriginalButton(document: document, short: true)
             }
         }
     }
 
-    /// The whole row opens the result in its own app (`openPage`): Shiori's
-    /// preview is a swipe and in the menu. A button, not a NavigationLink:
-    /// on iOS 27 a gesture added beside a link (to record the open)
-    /// swallowed its tap.
-    private func row(note: AppState.NoteLinks?) -> some View {
+    /// The whole row as one button: the original (`openPage`) or Shiori's
+    /// preview. A button, not a NavigationLink: on iOS 27 a gesture added
+    /// beside a link (to record the open) swallowed its tap.
+    private func row(note: AppState.NoteLinks?, original: Bool) -> some View {
         Button {
             actions.opened(document)
-            openURL.openPage(document, app: app)
+            if original { openURL.openPage(document, app: app) } else { actions.preview(document) }
         } label: {
             DocumentRow(document: document, label: app.label(of: document), notePlace: note?.place)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .help(note?.obsidian != nil ? "Edit in Obsidian" : note != nil ? "View in Kura" : "Open")
-        .accessibilityHint(note?.obsidian != nil ? "Opens in Obsidian" : note != nil ? "Opens in Kura" : "Opens the page")
+        .help(original ? OpenOriginalButton.title(for: document, app: app) : "Preview")
+        .accessibilityHint(original ? OpenOriginalButton.hint(for: document, app: app) : "Shows Shiori's preview")
+    }
+}
+
+/// Opens a result's original (`openPage`), named for where it goes: a
+/// page's browser, a note's Obsidian (or Kura), a file's copy.
+struct OpenOriginalButton: View {
+    let document: StoredPage
+    /// "Open", for a swipe's narrow button.
+    var short = false
+    @Environment(AppState.self) private var app
+    @Environment(\.openURL) private var openURL
+    @Environment(\.resultActions) private var actions
+
+    var body: some View {
+        Button(short ? "Open" : Self.title(for: document, app: app), systemImage: Self.symbol(for: document, app: app)) {
+            actions.opened(document)
+            openURL.openPage(document, app: app)
+        }
+    }
+
+    static func title(for document: StoredPage, app: AppState) -> String {
+        if let note = app.noteLinks(for: document) { return note.obsidian != nil ? "Edit in Obsidian" : "View in Kura" }
+        return LocalFiles.isLocalFile(document.url) ? "Open" : "Open in Browser"
+    }
+
+    static func hint(for document: StoredPage, app: AppState) -> String {
+        if let note = app.noteLinks(for: document) { return note.obsidian != nil ? "Opens in Obsidian" : "Opens in Kura" }
+        return LocalFiles.isLocalFile(document.url) ? "Opens Hister's copy" : "Opens the page"
+    }
+
+    static func symbol(for document: StoredPage, app: AppState) -> String {
+        if let note = app.noteLinks(for: document) { return note.obsidian != nil ? "doc.text" : "book" }
+        return LocalFiles.isLocalFile(document.url) ? "doc" : "safari"
     }
 }
 
@@ -353,15 +388,23 @@ struct PreviewButton: View {
     }
 }
 
-/// A page's menu: label and delete (the swipe actions, first, as the HIG
-/// asks), Shiori's preview for a note, then open, share and copy.
+/// A page's menu: what a click doesn't do first (Shiori's preview, or the
+/// original), then label and delete (the swipe actions, as the HIG asks),
+/// then open, share and copy.
 struct DocumentMenu: View {
     let document: StoredPage
-    var previewable = false
     @Environment(\.resultActions) private var actions
+    @Environment(\.previewSelection) private var selection
     @Environment(AppState.self) private var app
 
     var body: some View {
+        let original = app.searchPage.clickOpensOriginal(pane: selection != nil)
+        if original {
+            PreviewButton(document: document)
+        } else {
+            OpenOriginalButton(document: document)
+        }
+        Divider()
         // Not for a note: its label must stay "vault" (see Swipes). Neither
         // for a file: Hister watches its folder, and the file stays as it is.
         // Nor for code: code-import owns those documents (it re-reads the forge).
@@ -373,9 +416,6 @@ struct DocumentMenu: View {
             Button("Delete…", systemImage: "trash", role: .destructive) { actions.delete(document) }
         }
         Divider()
-        if previewable {
-            PreviewButton(document: document)
-        }
         // Save This Note's Links: the default vault's notes only, shared vaults
         // included in that "not": Kura's /api/note is asked by path alone,
         // which it reads in the default vault.
@@ -389,7 +429,8 @@ struct DocumentMenu: View {
             }
             Divider()
         }
-        DocumentLinks(document: document)
+        // The original is already at the top when a click previews.
+        DocumentLinks(document: document, skipOriginal: !original)
     }
 }
 

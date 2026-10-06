@@ -159,11 +159,18 @@ struct OpenedListView: View {
 
     @ViewBuilder private func row(_ entry: OpenedEntry) -> some View {
         let page = StoredPage(opened: OpenedResult(url: entry.url, title: entry.title))
+        let original = app.searchPage.clickOpensOriginal(pane: selection != nil)
         let row = VStack(alignment: .leading, spacing: 3) {
-            Text(page.displayTitle)
-                .textStyle(.headline)
-                .foregroundStyle(palette.accent)
-                .lineLimit(2)
+            // A link: the title always opens the original.
+            Button { openURL.openPage(page, app: app) } label: {
+                Text(page.displayTitle)
+                    .textStyle(.headline)
+                    .foregroundStyle(palette.accent)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            .buttonStyle(.borderless)
+            .help(OpenOriginalButton.title(for: page, app: app))
             Text("For “\(entry.typedQuery)” · \(entry.added.formatted(date: model.byDay ? .omitted : .abbreviated, time: .shortened))")
                 .textStyle(.subheadline)
                 .foregroundStyle(palette.secondaryText)
@@ -171,12 +178,15 @@ struct OpenedListView: View {
         }
         .padding(.vertical, 2)
         Group {
-            if selection != nil {
-                row.tag(page)
-            } else {
-                // The whole row opens the page in its own app.
+            if original {
+                // A click opens the original (Click Opens).
                 Button { openURL.openPage(page, app: app) } label: { row.contentShape(.rect) }
                     .buttonStyle(.plain)
+                    .tag(page)
+            } else if selection != nil {
+                row.tag(page)
+            } else {
+                NavigationLink(value: page) { row }
             }
         }
         .listRowBackground(ResultBar(kind: app.isNotePage(page.url) ? .note : .opened, selected: selection?.wrappedValue == page,
@@ -184,12 +194,12 @@ struct OpenedListView: View {
         .resultSeparator(app.searchPage.resultStyle)
         .task { await model.loadMoreIfNeeded(after: entry, using: app.client) }
         .contextMenu {
-            Button("Forget for This Search", systemImage: "eye.slash") { forget(entry) }
-            if selection == nil {
-                PreviewButton(document: page)
-            }
+            // What a click doesn't do, first.
+            if original { PreviewButton(document: page) } else { OpenOriginalButton(document: page) }
             Divider()
-            DocumentLinks(document: page)
+            Button("Forget for This Search", systemImage: "eye.slash") { forget(entry) }
+            Divider()
+            DocumentLinks(document: page, skipOriginal: !original)
         }
         .swipeActions(edge: .trailing) {
             Button("Forget", systemImage: "eye.slash") { forget(entry) }

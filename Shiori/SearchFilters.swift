@@ -403,13 +403,11 @@ struct OpenedSection: View {
     @ViewBuilder private func row(_ opened: OpenedResult) -> some View {
         let page = page(opened)
         let note = app.noteLinks(for: page)
+        let original = app.searchPage.clickOpensOriginal(pane: selection != nil)
         let label = DocumentRow(document: page, label: app.label(of: page), notePlace: note?.place)
         Group {
-            if selection != nil {
-                label.tag(page)
-                    .preference(key: ListOrderKey.self, value: [page])
-            } else {
-                // The whole row opens the page in its own app.
+            if original {
+                // A click opens the original (Click Opens).
                 Button {
                     actions.opened(page)
                     openURL.openPage(page, app: app)
@@ -417,18 +415,24 @@ struct OpenedSection: View {
                     label.contentShape(.rect)
                 }
                 .buttonStyle(.plain)
+                .tag(page)
+            } else if selection != nil {
+                label.tag(page)
+            } else {
+                NavigationLink(value: page) { label }
             }
         }
+        .preference(key: ListOrderKey.self, value: selection != nil ? [page] : [])
         .listRowBackground(ResultBar(kind: note != nil ? .note : .opened, selected: selection?.wrappedValue == page,
                                      palette: palette, style: app.searchPage.resultStyle))
-                .resultSeparator(app.searchPage.resultStyle)
+        .resultSeparator(app.searchPage.resultStyle)
         .contextMenu {
-            Button("Forget for This Search", systemImage: "eye.slash") { forget(opened) }
-            if selection == nil {
-                PreviewButton(document: page)
-            }
+            // What a click doesn't do, first.
+            if original { PreviewButton(document: page) } else { OpenOriginalButton(document: page) }
             Divider()
-            DocumentLinks(document: page)
+            Button("Forget for This Search", systemImage: "eye.slash") { forget(opened) }
+            Divider()
+            DocumentLinks(document: page, skipOriginal: !original)
         }
         .swipeActions(edge: .trailing) {
             Button("Forget", systemImage: "eye.slash") { forget(opened) }

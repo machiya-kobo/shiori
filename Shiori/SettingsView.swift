@@ -275,6 +275,11 @@ struct SettingsView: View {
                     Text("Left Bar").tag("bar")
                     Text("None").tag("none")
                 }
+                Picker(Self.clickOpensTitle, selection: $app.searchPage.clickOpens) {
+                    Text("Automatic").tag("auto")
+                    Text("The Original").tag("original")
+                    Text("Shiori's Preview").tag("preview")
+                }
                 Toggle("Search Filters", isOn: $app.searchPage.searchFilters)
                 Toggle("Fold Repeated Sites", isOn: $app.searchPage.foldRepeats)
                 Toggle("Labels in Search Page Suggestions", isOn: $app.searchPage.labelSuggestions)
@@ -455,8 +460,14 @@ struct SettingsView: View {
         .onDisappear(perform: saveDrafts)
     }
 
+    #if os(macOS)
+    static let clickOpensTitle = "Click Opens"
+    #else
+    static let clickOpensTitle = "Tap Opens"
+    #endif
+
     private var searchingFooter: String {
-        var text = "Remember What You Open tells Hister which result you opened for a search, so it comes first next time, in Shiori and in Safari's results. Show Opened shows those pages (first in Your Pages, and the Opened list); off, they're left out. Result Style sets how your pages, notes and opened pages stand apart: a tinted card, a bar down the edge, or nothing. Search Filters adds date, site and visit filters above results. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”. Labels in Search Page Suggestions lists matching labels and collections first as you type in Shiori (Safari's results page); Shiori's own search fields suggest nothing, and your recent searches are in the sidebar. A label's tag on a result shows all its pages."
+        var text = "Remember What You Open tells Hister which result you opened for a search, so it comes first next time, in Shiori and in Safari's results. Show Opened shows those pages (first in Your Pages, and the Opened list); off, they're left out. Result Style sets how your pages, notes and opened pages stand apart: a tinted card, a bar down the edge, or nothing. \(Self.clickOpensTitle) sets what a result opens: the original (a page in the browser, a note in Obsidian) or Shiori's preview; Automatic previews beside the preview pane and opens the original elsewhere. The other is in the result's menu, and its title always opens the original. Search Filters adds date, site and visit filters above results. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”. Labels in Search Page Suggestions lists matching labels and collections first as you type in Shiori (Safari's results page); Shiori's own search fields suggest nothing, and your recent searches are in the sidebar. A label's tag on a result shows all its pages."
         if app.capabilities?.semantic != true {
             text += " Meaning-based search appears here once it's set up on the server."
         }
