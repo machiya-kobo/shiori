@@ -1,8 +1,8 @@
 # Shiori
 
-[Machiya](https://github.com/machiya-kobo/machiya) is a set of small self-hosted apps for finding what you've read: your pages (Hister), the web (SearXNG), your notes (an Obsidian vault in git) and your code.
+[Machiya](https://github.com/machiya-kobo/machiya) is a set of small self-hosted apps for finding what you've read: your pages ([Hister](https://github.com/asciimoo/hister)), the web ([SearXNG](https://github.com/searxng/searxng)), your notes (an [Obsidian](https://obsidian.md) vault in git) and your code.
 
-Shiori (栞, "bookmark"), the search app, searches your [Hister](https://github.com/asciimoo/hister) from iPhone, iPad, Mac, Linux, Haiku and the web, and adds Hister to Safari.
+Shiori (栞, "bookmark"), the search app, searches your Hister from iPhone, iPad, Mac, Linux, Haiku and the web, and adds Hister to Safari.
 
 <p align="center">
 <a href="https://machiya-kobo.github.io/machiya/">Machiya</a> · <a href="#what-it-does">Features</a> · <a href="#quickstart">Quickstart</a> · <a href="#sign-in-to-hister">Sign In</a> · <a href="#the-safari-extension">Safari</a> · <a href="#build">Build</a> · <a href="#linux">Linux</a> · <a href="#haiku">Haiku</a> · <a href="#hosting-the-web-pages">Hosting</a> · <a href="#credits-and-license">License</a>
