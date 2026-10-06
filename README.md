@@ -1,12 +1,14 @@
-# Shiori 栞
+# Shiori
 
-Shiori (栞, "bookmark") is [Hister](https://github.com/asciimoo/hister) for Safari on iPhone, iPad, and Mac: a native app to search your Hister server, plus the Safari extension that feeds it. On Firefox and Chrome, use upstream Hister's own extension ([Firefox](https://addons.mozilla.org/firefox/addon/hister/), [Chrome](https://chromewebstore.google.com/detail/hister/cciilamhchpmbdnniabclekddabkifhb)).
+Machiya is a set of small self-hosted apps for finding what you've read: your pages (Hister), the web (SearXNG), your notes (an Obsidian vault in git) and your code.
 
-Hister is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server, so you can search your history later. Upstream ships extensions for Firefox and Chrome only and has declined Safari support in-tree ([issue #49](https://github.com/asciimoo/hister/issues/49)). iOS only loads extensions that ship inside a signed app, so Shiori is that app.
+Shiori (栞, "bookmark"), the search app, searches your [Hister](https://github.com/asciimoo/hister) from iPhone, iPad, Mac, Linux, Haiku and the web, and adds Hister to Safari.
+
+Hister is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server, so you can search your history later. Hister's [official extensions](https://hister.org/docs/browser-extension) cover Firefox and Chrome, and [hister-safari](https://github.com/nburns/hister-safari) brings it to Safari on the Mac. Safari on iPhone and iPad loads only extensions that ship inside a signed app, so Shiori carries Hister's own extension, built for Safari. It runs on the Mac too: there, use Shiori's or hister-safari, not both.
 
 > **Unofficial.** Shiori is not affiliated with or endorsed by the Hister project.
 
-**Part of Machiya.** Shiori is one of the [Machiya](https://github.com/machiya-kobo/machiya) services, small self-hosted apps around one person's own Hister; each is called a *room*: Kura (a notes search and reader), Konbini (a project board), Niwa (a published notes garden) and Shiori. Shiori needs only a Hister server; the other rooms are optional, and where these docs say *owner* they mean the person the install belongs to.
+**Part of Machiya.** Each [Machiya](https://github.com/machiya-kobo/machiya) app is a *room*: Kura (a notes search and reader), Konbini (a project board), Niwa (a published notes garden) and Shiori. Shiori needs only a Hister server; the other rooms are optional. Where these docs say *owner*, they mean the person the install belongs to.
 
 <p>
   <img src="docs/screenshots/shiori-library-dark.png" alt="The web app's Library in the dark theme: collections and labels in the sidebar, sample pages in the list, one open in the preview" width="49%">
@@ -294,14 +296,14 @@ revoke it on the server. [docs/signing-in.md](docs/signing-in.md) has the detail
 - **Labels**: your server's aliases (collections are the `@` ones, like `@reading`) and topic labels.
 - **Search**: Hister's query syntax, with completions for aliases, `label:` values and operators. Results show the matching text highlighted.
 - **A page**: Hister's readable copy, shown with scripts off and no referrer. You can open it, share it, edit its label, or delete it from Hister (deleting checks that exactly one page matches first). A page's images are the one thing a preview loads from elsewhere; switch off Settings → Results → Images in Previews to keep previews to your server alone (Safari's results page follows it too).
-- **Search scopes**: All (your top pages, your top notes, then the web, like All in Safari's results), Hister, Notes and Web.
+- **Views**: All (your top pages, your top notes, then the web, like All in Safari's results), Pages, Notes, Web and Small Web, plus Files and Code once Hister has some.
 - **Notes**: your Obsidian notes, from Kura (a notes search and reader; optional). Search them on their own (Search → Notes). A note opens in Obsidian, with its Kura page and Konbini card a tap away.
-- **Files**: the folders your Hister server watches (its [local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)), on a Files pill of their own once it has some, in the apps, the web app and the search page. A file opens from Hister's copy; it's never labelled, deleted, recorded as opened or given to an AI.
-- **Code**: your repos as Hister holds them (repo cards, READMEs and docs, issues, pull requests and releases, imported by a companion importer), on a Code pill of their own once Hister has some, in the apps, the web app and the search page. Filter by kind, forge, open or private; each row opens at its forge. Code is never labelled, deleted or folded, and only an on-device model may summarize it.
+- **Files**: the folders your Hister server watches (its [local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)), in the Files view once it has some, in the apps, the web app and the search page. A file opens from Hister's copy; it's never labelled, deleted, recorded as opened or given to an AI.
+- **Code**: your repos as Hister holds them (repo cards, READMEs and docs, issues, pull requests and releases, imported by a companion importer), in the Code view once Hister has some, in the apps, the web app and the search page. Filter by kind, forge, open or private; each row opens at its forge. Code is never labelled, deleted or folded, and only an on-device model may summarize it.
 - **Search history**: tap a search field (in the app, or on Safari's results page) for your last 5 searches, one list for both. Switch it off, or clear it, in Settings → Results → History; it stays on the device.
 - **Themes**: the Machiya rooms' ten (Tokyo Night, Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa, Everforest, Ayu), each light and dark (Settings → Appearance: Theme, and Mode to follow the system or pick light or dark). Per device. Shiori's search page (Safari's results page and the hosted page) follows the app's, and on the hosted page it is shared with the rooms.
 - **Text size**: follow the system, or pick a size for Shiori alone (Settings → Appearance), on the Mac too. It covers Safari's results page as well.
-- **Settings that follow you**: signed in to Hister, the house's shared ones (Settings → Appearance: theme, mode, text size; and the pills) and the results' options follow you to every device and every Machiya app. Addresses, sign-ins, AI and a device's own text size (Appearance → Use This Device's Size) stay on the device. The app, Safari's results page (its gear) and the extension share one copy on each device.
+- **Settings that follow you**: signed in to Hister, the house's shared ones (Settings → Appearance: theme, mode and text size; and Settings → Search → Pills) and the results' options follow you to every device and every Machiya app. Addresses, sign-ins, AI and a device's own text size (Appearance → Use This Device's Size) stay on the device. The app, Safari's results page (its gear) and the extension share one copy on each device.
 
 - **Save to Shiori** in the share sheet (iPhone, iPad, and the Mac's Share menu): save the page you're on, or a link from any app (NewsBlur, Mail, a reader's in-app browser), with an optional label. From Safari it saves the page as you see it; from other apps it downloads the page. If Hister is out of reach the page waits on the device (out of your backups), keeping the time you saved it, and Shiori sends it when it next opens; after 14 days it gives up.
 - **Remember what you open**: open a result from a search and Hister puts it first the next time you search the same thing, in the app and on Safari's results page (Settings → Results → History).
@@ -376,7 +378,7 @@ To install on the Mac (a signed Release in `/Applications`, replacing any earlie
 scripts/install-mac.sh
 ```
 
-Then turn Shiori on in Safari → Settings → Extensions and allow it on every website. If you used another Hister extension for Safari (such as hister-safari), turn it off, or every page is sent twice.
+Then turn Shiori on in Safari → Settings → Extensions and allow it on every website. Use one Hister extension in Safari, not both: if hister-safari is on, turn one of them off, or Safari sends every page twice.
 
 Never edit `Shiori.xcodeproj` (it is generated and gitignored) or `ShioriExtension/Resources/` (the staged bundle). Change `project.yml` or `patches/` instead.
 
@@ -413,7 +415,7 @@ Shiori for Haiku is a native C++ app on the Be API: search your pages and notes 
 
 Shiori's search page and the web app are plain static files that any browser can use and install. Build them with `scripts/build-web.sh` and `scripts/build-pwa.sh`, and serve them from one host that also routes, on the same origin, to your Hister server, SearXNG, and optionally Kura, Konbini, the small-web gateway and the AI endpoint. Pass requests through unchanged, keep the host reachable only by you (your network or VPN is the gate; with Hister's users on, its nginx also signs Hister's calls in, web/README.md), and set the build's environment for the options you use. [web/README.md](web/README.md) has the routing table and the variables.
 
-**Add Page and sharing to the web app.** Built with `SHIORI_SMALLWEB_URL` (the small-web gateway, routed at `/smallweb/`), the web app has **Add Page** (the + beside Library in the sidebar, or the Add Page tab on a phone): an address (http, https, gemini or gopher) and an optional title, sent to the gateway's `POST /api/save`, which fetches the page and saves it in Hister. Installed from a browser that supports it (Chrome or Edge, on Android or a computer), the app also appears in the system's share menu: sharing a link opens Add Page filled in, and nothing is saved until you tap Save. The gateway answers before it fetches, so the app says "Saving…", not "Saved". Kura's notes are never sent (notes live in Kura, and a private vault's `/v/<vault>/` address is refused in every form). The gateway must accept this host's origin: put the web app's address in its `SMALLWEB_ORIGINS`. Without the gateway there is no Add Page and no share target.
+**Add Page and sharing to the web app.** Built with `SHIORI_SMALLWEB_URL` (the small-web gateway, routed at `/smallweb/`), the web app has **Add Page** (the + beside Library in the sidebar, or the Add Page tab on a phone): an address (http, https, Gemini or Gopher) and an optional title, sent to the gateway's `POST /api/save`, which fetches the page and saves it in Hister. Installed from a browser that supports it (Chrome or Edge, on Android or a computer), the app also appears in the system's share menu: sharing a link opens Add Page filled in, and nothing is saved until you tap Save. The gateway answers before it fetches, so the app says "Saving…", not "Saved". Kura's notes are never sent (notes live in Kura, and a private vault's `/v/<vault>/` address is refused in every form). The gateway must accept this host's origin: put the web app's address in its `SMALLWEB_ORIGINS`. Without the gateway there is no Add Page and no share target.
 
 ## Updating upstream
 
@@ -428,7 +430,7 @@ The build fails if upstream asks for a new permission or moves its default serve
 
 ## Credits and license
 
-- [Hister](https://github.com/asciimoo/hister) by Adam Tauber (asciimoo) and contributors: the extension this app ships.
+- [Hister](https://github.com/asciimoo/hister) by Adam Tauber (asciimoo) and contributors: the search engine Shiori searches, and the extension it builds for Safari. Hister's [official extensions](https://hister.org/docs/browser-extension) are the ones to use in Firefox and Chrome.
 - [hister-safari](https://github.com/nburns/hister-safari) by Nick Burns: the macOS Safari port whose build pipeline, manifest merge, and background shim Shiori started from.
 
 Copyright (C) 2026 Micheal Waltz and Machiya contributors.
