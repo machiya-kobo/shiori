@@ -209,19 +209,21 @@ struct DocumentItem: View {
                 .listRowBackground(ResultBar(kind: kind(note), selected: selection.wrappedValue == document,
                                              palette: palette, style: app.searchPage.resultStyle))
                 .resultSeparator(app.searchPage.resultStyle)
-                .modifier(Swipes(document: document, note: note))
+                .modifier(Swipes(document: document, note: note, pane: true))
         } else {
             row(note: note)
                 .listRowBackground(ResultBar(kind: kind(note), palette: palette, style: app.searchPage.resultStyle))
                 .resultSeparator(app.searchPage.resultStyle)
-                .modifier(Swipes(document: document, note: note))
-                .contextMenu { DocumentMenu(document: document, previewable: note?.obsidian != nil) }
+                .modifier(Swipes(document: document, note: note, pane: false))
+                .contextMenu { DocumentMenu(document: document, previewable: true) }
         }
     }
 
     private struct Swipes: ViewModifier {
         let document: StoredPage
         let note: AppState.NoteLinks?
+        /// Beside a preview pane a tap previews, so the swipe opens instead.
+        let pane: Bool
         @Environment(\.palette) private var palette
         @Environment(\.openURL) private var openURL
         @Environment(\.resultActions) private var actions
@@ -233,36 +235,24 @@ struct DocumentItem: View {
                 .swipeActions(edge: .leading) {
                     // The first is the full swipe. A note's label is "vault"
                     // (it's what makes it a note); its tags are Obsidian's.
-                    // A file opens from Hister's copy, and is never labelled.
+                    // A file is never labelled. A row's tap opens it in its
+                    // own app, and Shiori's preview is here (beside a pane,
+                    // the other way round).
                     if LocalFiles.isLocalFile(document.url) {
-                        if let served = app.servedFile(document.url) {
-                            Button("Open", systemImage: "doc") { openURL(served) }
-                                .tint(palette.tint(SearchScope.files.tint))
-                        }
+                        preview.tint(palette.tint(SearchScope.files.tint))
                     } else if note == nil {
                         // A code document is code-import's: never labelled here.
                         if document.code == nil {
                             Button("Label", systemImage: "tag") { actions.label(document) }
                                 .tint(palette.accent)
                         }
-                        if let url = SafeHref.url(document.url) {
-                            Button("Open in Browser", systemImage: "safari") {
-                                actions.opened(document)
-                                openURL(url)
-                            }
-                            .tint(palette.tint(.cyan))
-                        }
+                        preview.tint(palette.tint(.cyan))
                     } else {
                         if let niwa = note?.niwa {
                             Button("Kura", systemImage: "book") { openURL(niwa) }
                                 .tint(palette.tint(.orange))
                         }
-                        // A note's tap opens Obsidian; Shiori's preview is here.
-                        Button("Preview", systemImage: "doc.text.magnifyingglass") {
-                            actions.opened(document)
-                            actions.preview(document)
-                        }
-                        .tint(palette.accent)
+                        preview.tint(palette.accent)
                     }
                     if !LocalFiles.isLocalFile(document.url), let url = URL(string: document.url) {
                         Button("Copy Link", systemImage: "link") { Pasteboard.copy(url) }
@@ -279,40 +269,37 @@ struct DocumentItem: View {
                     }
                 }
         }
+
+        @ViewBuilder private var preview: some View {
+            if pane {
+                Button("Open", systemImage: note?.obsidian != nil ? "doc.text" : note != nil ? "book" : "safari") {
+                    actions.opened(document)
+                    openURL.openPage(document, app: app)
+                }
+            } else {
+                Button("Preview", systemImage: "doc.text.magnifyingglass") {
+                    actions.opened(document)
+                    actions.preview(document)
+                }
+            }
+        }
     }
 
-    @ViewBuilder
+    /// The whole row opens the result in its own app (`openPage`): Shiori's
+    /// preview is a swipe and in the menu. A button, not a NavigationLink:
+    /// on iOS 27 a gesture added beside a link (to record the open)
+    /// swallowed its tap.
     private func row(note: AppState.NoteLinks?) -> some View {
-        if let note, note.obsidian != nil {
-            Button {
-                actions.opened(document)
-                openURL.openNote(note)
-            } label: {
-                DocumentRow(document: document, label: app.label(of: document), notePlace: note.place)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .help("Edit in Obsidian")
-            .accessibilityHint("Opens in Obsidian")
-        } else {
-            // A button, not a NavigationLink: on iOS 27 a gesture added beside
-            // a link (to record the open) swallowed its tap, so nothing opened.
-            // The screen's ResultActionsHost pushes the page.
-            Button {
-                actions.opened(document)
-                actions.preview(document)
-            } label: {
-                HStack(spacing: 8) {
-                    DocumentRow(document: document, label: app.label(of: document))
-                    Image(systemName: "chevron.right")
-                        .textStyle(.footnote, weight: .semibold)
-                        .foregroundStyle(.tertiary)
-                        .accessibilityHidden(true)
-                }
+        Button {
+            actions.opened(document)
+            openURL.openPage(document, app: app)
+        } label: {
+            DocumentRow(document: document, label: app.label(of: document), notePlace: note?.place)
                 .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
         }
+        .buttonStyle(.plain)
+        .help(note?.obsidian != nil ? "Edit in Obsidian" : note != nil ? "View in Kura" : "Open")
+        .accessibilityHint(note?.obsidian != nil ? "Opens in Obsidian" : note != nil ? "Opens in Kura" : "Opens the page")
     }
 }
 
@@ -352,6 +339,20 @@ struct WebItem: View {
     }
 }
 
+/// Shiori's preview of a page, for a menu: a view of its own, so it reads
+/// the screen's `resultActions` from inside its host.
+struct PreviewButton: View {
+    let document: StoredPage
+    @Environment(\.resultActions) private var actions
+
+    var body: some View {
+        Button("Preview", systemImage: "doc.richtext") {
+            actions.opened(document)
+            actions.preview(document)
+        }
+    }
+}
+
 /// A page's menu: label and delete (the swipe actions, first, as the HIG
 /// asks), Shiori's preview for a note, then open, share and copy.
 struct DocumentMenu: View {
@@ -373,7 +374,7 @@ struct DocumentMenu: View {
         }
         Divider()
         if previewable {
-            Button("Preview", systemImage: "doc.richtext") { actions.preview(document) }
+            PreviewButton(document: document)
         }
         // Save This Note's Links: the default vault's notes only, shared vaults
         // included in that "not": Kura's /api/note is asked by path alone,
@@ -393,6 +394,18 @@ struct DocumentMenu: View {
 }
 
 extension OpenURLAction {
+    /// Opens a result in its own app: a note in Obsidian (Kura when it
+    /// can't), a file from Hister's copy, anything else in the browser.
+    func openPage(_ document: StoredPage, app: AppState) {
+        if let note = app.noteLinks(for: document) {
+            openNote(note)
+        } else if LocalFiles.isLocalFile(document.url) {
+            if let served = app.servedFile(document.url) { self(served) }
+        } else if let url = SafeHref.url(document.url) {
+            self(url)
+        }
+    }
+
     /// Opens a note in Obsidian, or on Niwa when Obsidian can't take it
     /// (`openURL`'s completion says whether it was accepted). On macOS
     /// that completion arrives on LaunchServices' own queue, not the main

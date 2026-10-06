@@ -377,6 +377,8 @@ struct OpenedSection: View {
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
     @Environment(\.previewSelection) private var selection
+    @Environment(\.openURL) private var openURL
+    @Environment(\.resultActions) private var actions
 
     var body: some View {
         if app.searchPage.showOpened, !model.opened.isEmpty {
@@ -407,7 +409,14 @@ struct OpenedSection: View {
                 label.tag(page)
                     .preference(key: ListOrderKey.self, value: [page])
             } else {
-                NavigationLink(value: page) { label }
+                // The whole row opens the page in its own app.
+                Button {
+                    actions.opened(page)
+                    openURL.openPage(page, app: app)
+                } label: {
+                    label.contentShape(.rect)
+                }
+                .buttonStyle(.plain)
             }
         }
         .listRowBackground(ResultBar(kind: note != nil ? .note : .opened, selected: selection?.wrappedValue == page,
@@ -415,6 +424,9 @@ struct OpenedSection: View {
                 .resultSeparator(app.searchPage.resultStyle)
         .contextMenu {
             Button("Forget for This Search", systemImage: "eye.slash") { forget(opened) }
+            if selection == nil {
+                PreviewButton(document: page)
+            }
             Divider()
             DocumentLinks(document: page)
         }

@@ -437,14 +437,11 @@ struct ResultsListContainer<Content: View>: View {
         session.scope = all[i + by]
     }
 
-    /// A note in Obsidian (Niwa if Obsidian can't); anything else in the browser.
+    /// In its own app (`openPage`): a note in Obsidian, a file from
+    /// Hister's copy, anything else in the browser.
     private func open(_ document: StoredPage) {
         actions.opened(document)
-        if let note = app.noteLinks(for: document), note.obsidian != nil {
-            openURL.openNote(note)
-        } else if let url = SafeHref.url(document.url) {
-            openURL(url)
-        }
+        openURL.openPage(document, app: app)
     }
 }
 

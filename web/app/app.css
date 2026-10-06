@@ -337,6 +337,19 @@ body[data-result-style="none"] .doc-row { margin: 0; border: 0; border-radius: 0
 .row:hover { background: color-mix(in srgb, var(--card) 55%, transparent); }
 .row[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .row .icon { width: 20px; height: 20px; margin-top: 2px; border-radius: 4px; }
+/* A row opens its page in its own app; the chevron at its end is Shiori's
+   preview (the wide layout's click previews, so it has none). */
+.row.previewable { grid-template-columns: 22px minmax(0, 1fr) auto; }
+.row-preview {
+  align-self: center; display: grid; place-items: center; width: 32px; height: 32px; margin: -6px -8px -6px 0;
+  padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--secondary); cursor: pointer;
+}
+.row-preview svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+.row-preview:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+@media (min-width: 1100px) {
+  .row.previewable { grid-template-columns: 22px minmax(0, 1fr); }
+  .row-preview { display: none; }
+}
 .row .icon svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.6; }
 .row .title { font-size: 1.0625rem; font-weight: 600; color: var(--accent); overflow-wrap: anywhere; }
 .row .meta { font-size: 0.8125rem; color: var(--secondary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

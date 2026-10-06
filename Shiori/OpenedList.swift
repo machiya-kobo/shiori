@@ -72,6 +72,7 @@ struct OpenedListView: View {
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
     @Environment(\.previewSelection) private var selection
+    @Environment(\.openURL) private var openURL
     @State private var model: OpenedModel
 
     init(filter: String = "") {
@@ -173,7 +174,9 @@ struct OpenedListView: View {
             if selection != nil {
                 row.tag(page)
             } else {
-                NavigationLink(value: page) { row }
+                // The whole row opens the page in its own app.
+                Button { openURL.openPage(page, app: app) } label: { row.contentShape(.rect) }
+                    .buttonStyle(.plain)
             }
         }
         .listRowBackground(ResultBar(kind: app.isNotePage(page.url) ? .note : .opened, selected: selection?.wrappedValue == page,
@@ -182,6 +185,9 @@ struct OpenedListView: View {
         .task { await model.loadMoreIfNeeded(after: entry, using: app.client) }
         .contextMenu {
             Button("Forget for This Search", systemImage: "eye.slash") { forget(entry) }
+            if selection == nil {
+                PreviewButton(document: page)
+            }
             Divider()
             DocumentLinks(document: page)
         }

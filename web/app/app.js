@@ -549,15 +549,7 @@ function codeRow(doc, code) {
     ),
   );
   row._doc = doc;
-  const open = () => openDoc(doc, row);
-  row.addEventListener('click', open);
-  row.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      open();
-    }
-  });
-  return row;
+  return opensFromRow(row, doc);
 }
 
 // A code row's kind, as a glyph and in words.
@@ -588,15 +580,7 @@ function docRow(doc) {
   );
   // The page it shows, for the keyboard (vi keys) and delete's undo.
   row._doc = doc;
-  const open = () => openDoc(doc, row);
-  row.addEventListener('click', open);
-  row.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      open();
-    }
-  });
-  return row;
+  return opensFromRow(row, doc);
 }
 
 function hostOf(url) {
@@ -605,6 +589,51 @@ function hostOf(url) {
   } catch (_) {
     return url;
   }
+}
+
+/**
+ * A whole row opens its page: in the preview beside the list when the
+ * window is wide, else in the page's own app (`openInApp`), with a Preview
+ * button at the row's end for Shiori's page (its label, delete, summary).
+ * The chips inside (label, vault) keep their own clicks.
+ */
+function opensFromRow(row, doc) {
+  const open = () => (wide() ? openDoc(doc, row) : openInApp(doc));
+  row.addEventListener('click', open);
+  row.addEventListener('keydown', (e) => {
+    if (e.target !== row) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      open();
+    }
+  });
+  row.classList.add('previewable');
+  row.append(h('button', {
+    type: 'button', class: 'row-preview', 'aria-label': 'Preview', title: 'Preview',
+    onclick: (e) => (e.stopPropagation(), openDoc(doc, row)),
+    onkeydown: (e) => e.stopPropagation(),
+  }, icon('chevron')));
+  return row;
+}
+
+// A web or Small Web row opens its link from anywhere on it, not only from
+// the title and snippet the link covers; its other links (the Small Web's
+// other way to open) keep their own.
+document.addEventListener('click', (e) => {
+  const row = e.target.closest && e.target.closest('li.web-row');
+  if (!row || e.target.closest('a[href], button') || e.button !== 0) return;
+  row.querySelector('a[href]')?.click();
+});
+
+/**
+ * A result in its own app: a note in Obsidian (Kura without a vault name),
+ * a file from Hister's copy, anything else in a new tab.
+ */
+function openInApp(doc) {
+  if (settings.rememberOpened && listSearch) api.recordOpened(doc.url, doc.title || '', listSearch);
+  const n = note(doc);
+  if (n && n.obsidian) location.href = n.obsidian;
+  else openTab(n && n.niwa ? n.niwa : S.isLocalFile(doc.url) ? S.localFileURL(location.origin, doc.url) : doc.url);
 }
 
 function openDoc(doc, row) {
@@ -2703,10 +2732,7 @@ const keyboard = (() => {
       if (url) openTab(url);
       return;
     }
-    if (settings.rememberOpened && listSearch) api.recordOpened(doc.url, doc.title || '', listSearch);
-    const n = note(doc);
-    if (n && n.obsidian) location.href = n.obsidian;
-    else openTab(n && n.niwa ? n.niwa : hrefOf(row));
+    openInApp(doc);
   }
   const KEYS = [
     ['j / k', 'Next / previous result'], ['h / l', 'Previous / next pill'], ['Enter, o', 'Open the result'],

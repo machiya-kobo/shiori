@@ -280,6 +280,8 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
   display: grid; grid-template-columns: 1fr auto; column-gap: 12px; overflow-wrap: anywhere;
 }
 .card > * { grid-column: 1; }
+/* The whole card opens it, as its title does (search.js). */
+.card:has(> a.title) { cursor: pointer; }
 .card .thumb {
   grid-column: 2; grid-row: 1 / span 4; width: 84px; height: 84px; object-fit: cover;
   border-radius: 10px; background: var(--raised);

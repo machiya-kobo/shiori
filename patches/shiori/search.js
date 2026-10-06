@@ -795,6 +795,20 @@
     return { update, clear, show, on, isOpen: () => current !== null };
   })();
 
+  // A card opens from anywhere on it, as its title does (the preview pane,
+  // when it's on, has taken its own clicks first). Its links, chips and
+  // buttons keep theirs, and a drag that selects text opens nothing.
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const card = event.target.closest && event.target.closest('.card');
+    if (!card || event.target.closest('a[href], button, input, select, summary, label')) return;
+    const title = card.querySelector('a.title[href]');
+    if (!title) return;
+    const selected = getSelection();
+    if (selected && !selected.isCollapsed && card.contains(selected.anchorNode)) return;
+    title.click();
+  });
+
   // --- The AI endpoint (docs/ai.md), for the AI Answer ----------------------
   // On this page's own host: only the hosted page has one (web/shim.js sets
   // aiURL, when built with SHIORI_AI=1), so the extension page never offers
