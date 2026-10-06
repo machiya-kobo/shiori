@@ -8,15 +8,17 @@ Shiori (栞, "bookmark"), the search app, searches your [Hister](https://github.
 <a href="https://machiya-kobo.github.io/machiya/">Machiya</a> · <a href="#what-it-does">Features</a> · <a href="#quickstart">Quickstart</a> · <a href="#sign-in-to-hister">Sign In</a> · <a href="#the-safari-extension">Safari</a> · <a href="#build">Build</a> · <a href="#linux">Linux</a> · <a href="#haiku">Haiku</a> · <a href="#hosting-the-web-pages">Hosting</a> · <a href="#credits-and-license">License</a>
 </p>
 
-<p><a href="docs/screenshots/shiori-search-dark.png"><img src="docs/screenshots/shiori-search-dark.png" alt="Shiori searching for lantern in the dark theme: invented web results with a sample page marked Your page and a sample note marked Your note among them, the Pages 5 and Notes 4 tabs above, and an Info card about paper lanterns on the right" width="100%"></a></p>
+<p align="center"><a href="docs/screenshots/shiori-search-dark.png"><img src="docs/screenshots/shiori-search-dark.png" alt="Shiori searching for lantern in the dark theme: invented web results with a sample page marked Your page and a sample note marked Your note among them, the Pages 5 and Notes 4 tabs above, and an Info card about paper lanterns on the right" width="100%"></a><br>Search everything at once</p>
 
-<p>
-<a href="docs/screenshots/shiori-library-light.png"><img src="docs/screenshots/shiori-library-light.png" alt="The web app's Library in the light theme: sample collections and labels in the sidebar, sample pages newest first, and Folding a chōchin lantern open in the preview" width="32%"></a>
-<a href="docs/screenshots/shiori-notes-light.png"><img src="docs/screenshots/shiori-notes-light.png" alt="The web app's Notes in the light theme: sample notes from Kura with their folders, and the Lantern festival kit note open in the preview with its checklist" width="32%"></a>
-<a href="docs/screenshots/shiori-settings-dark.png"><img src="docs/screenshots/shiori-settings-dark.png" alt="The web app's Settings in the dark theme: theme, mode and text size, then which views show over every list, in what order" width="32%"></a>
-</p>
+<table>
+  <tr>
+    <td align="center" width="33%"><a href="docs/screenshots/shiori-library-light.png"><img src="docs/screenshots/shiori-library-light.png" alt="The web app's Library in the light theme: sample collections and labels in the sidebar, sample pages newest first, and Folding a chōchin lantern open in the preview" width="100%"></a><br>Browse your library</td>
+    <td align="center" width="33%"><a href="docs/screenshots/shiori-notes-light.png"><img src="docs/screenshots/shiori-notes-light.png" alt="The web app's Notes in the light theme: sample notes from Kura with their folders, and the Lantern festival kit note open in the preview with its checklist" width="100%"></a><br>Read your notes</td>
+    <td align="center" width="33%"><a href="docs/screenshots/shiori-settings-dark.png"><img src="docs/screenshots/shiori-settings-dark.png" alt="The web app's Settings in the dark theme: theme, mode and text size, then which views show over every list, in what order" width="100%"></a><br>Pick a theme and your views</td>
+  </tr>
+</table>
 
-<p align="center"><a href="docs/screenshots/shiori-library-phone-light.png"><img src="docs/screenshots/shiori-library-phone-light.png" alt="The web app's Library at phone width in the light theme: sample pages as cards, and the Library, Labels, Settings and Rooms tabs at the bottom" width="24%"></a></p>
+<p align="center"><a href="docs/screenshots/shiori-library-phone-light.png"><img src="docs/screenshots/shiori-library-phone-light.png" alt="The web app's Library at phone width in the light theme: sample pages as cards, and the Library, Labels, Settings and Rooms tabs at the bottom" width="24%"></a><br>Search from your phone</p>
 
 ## What it does
 
