@@ -21,45 +21,43 @@ struct SettingsView: View {
         case failed(String)
     }
 
-    /// Settings in pages (it was one list of eighteen sections): an index on iPhone and iPad, the Settings
-    /// window's tabs on the Mac. The same pages everywhere.
+    /// Settings in pages, in the house's order (Appearance first, then
+    /// Shiori's own, Account and About last): an index on iPhone and iPad,
+    /// the Settings window's tabs on the Mac. The same pages everywhere.
     enum Page: String, CaseIterable, Identifiable {
-        case general, server, search, preview, notes, safari, ai, feeds
+        case appearance, search, results, safari, ai, feeds, account
         var id: Self { self }
         var title: String {
             switch self {
-            case .general: "General"
-            case .server: "Server"
+            case .appearance: "Appearance"
             case .search: "Search"
-            case .preview: "Preview"
-            case .notes: "Notes"
+            case .results: "Results"
             case .safari: "Safari"
             case .ai: "AI"
             case .feeds: "Feeds & Export"
+            case .account: "Account"
             }
         }
         var symbol: String {
             switch self {
-            case .general: "gearshape"
-            case .server: "server.rack"
+            case .appearance: "paintbrush"
             case .search: "magnifyingglass"
-            case .preview: "doc.text.magnifyingglass"
-            case .notes: "note.text"
+            case .results: "list.bullet.rectangle"
             case .safari: "safari"
             case .ai: "sparkles"
             case .feeds: "dot.radiowaves.up.forward"
+            case .account: "person.crop.circle"
             }
         }
         var summary: String {
             switch self {
-            case .general: "Theme, appearance, text size, app icon, about"
-            case .server: "Hister and waiting pages"
-            case .search: "SearXNG, Search from Safari, and what searches show"
-            case .preview: "The preview pane and its images"
-            case .notes: "Obsidian, Kura and Konbini, and signing in to Machiya"
-            case .safari: "The Safari extension"
+            case .appearance: "Theme, appearance, text size, app icon"
+            case .search: "Pills, the web, Small Web and your notes"
+            case .results: "How results look and open, and your history"
+            case .safari: "The extension, and Shiori's results in Safari"
             case .ai: "Summaries, AI providers and keys; off unless you turn it on"
             case .feeds: "Feeds, NewsBlur, export"
+            case .account: "Hister, signing in, waiting pages, about"
             }
         }
     }
@@ -112,15 +110,15 @@ struct SettingsView: View {
         searxngDraft = app.searxngURL
     }
 
-    /// The house's text sizes, as the Shared Text Size offers them.
+    /// The house's text sizes, as Appearance's Text Size offers them.
     static let houseSizes = [("xsmall", "Extra Small"), ("small", "Small"), ("standard", "Standard"), ("large", "Large"), ("xlarge", "Extra Large")]
 
     /// Where the shared settings stand (the contract's state line).
     private var prefsStateLine: String {
         switch app.prefsState {
-        case .notSignedIn: "Sign in to Hister (Settings → Server) and these follow you; until then they stay on this device."
+        case .notSignedIn: "Sign in to Hister (Settings → Account) and these follow you; until then they stay on this device."
         case .synced: "Signed in: these follow you."
-        case .signInNeeded: "Sign in to Hister again (Settings → Server) and these follow you again."
+        case .signInNeeded: "Sign in to Hister again (Settings → Account) and these follow you again."
         case .unavailable: "Sign-in is unavailable right now: these stay on this device, and go once it answers."
         }
     }
@@ -134,9 +132,10 @@ struct SettingsView: View {
         @Bindable var app = app
         Form {
             switch page {
-            case .general:
-            // Shared first, as every Machiya app has it: these follow the
-            // person to every app and device (AccountPrefs).
+            case .appearance:
+            // The house's first section, as every Machiya app has it: these
+            // follow the person to every app and device (AccountPrefs), but
+            // this device's own size and the app icon.
             Section {
                 Picker("Theme", selection: $app.palette) {
                     ForEach(AppPalette.all) { palette in
@@ -156,20 +155,6 @@ struct SettingsView: View {
                         Text(name).tag(key)
                     }
                 }
-            } header: {
-                Text("Shared")
-            } footer: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Follows you on every Machiya app when signed in.")
-                    Text(prefsStateLine)
-                }
-            }
-            .listRowBackground(palette.surface)
-
-            PillsSection()
-                .listRowBackground(palette.surface)
-
-            Section {
                 Toggle("Use This Device's Size", isOn: Binding(
                     get: { app.deviceTextSize != nil },
                     set: { app.deviceTextSize = $0 ? app.textSize : nil }))
@@ -184,61 +169,19 @@ struct SettingsView: View {
                 }
                 AppIconPicker()
             } header: {
-                Text("This Device")
+                Text("Appearance")
             } footer: {
-                Text("This device's own text size (\(TextSize.system.label) follows the system's), over the shared one, which your other devices keep.")
-            }
-            .listRowBackground(palette.surface)
-
-            Section("About") {
-                LabeledContent("Version", value: Bundle.main.shortVersion)
-                Link("Hister by Adam Tauber", destination: URL(string: "https://github.com/asciimoo/hister")!)
-                Link(
-                    "Based on hister-safari by Nick Burns",
-                    destination: URL(string: "https://github.com/nburns/hister-safari")!)
-                // The source (AGPL-3.0 section 13), when the build names it.
-                if let source = SourceLink.url(Bundle.main.object(forInfoDictionaryKey: "ShioriSourceURL") as? String) {
-                    Link("View the Source", destination: source)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Follows you when signed in, except This Device's Size and the app icon.")
+                    Text(prefsStateLine)
                 }
-                Text("Shiori is free software under the \(SourceLink.licence).")
-                    .textStyle(.footnote)
-                    .foregroundStyle(palette.secondaryText)
-            }
-            .listRowBackground(palette.surface)
-            case .server:
-            Section {
-                TextField("Server", text: $draft, prompt: Text("https://hister.example/"))
-                    .textContentType(.URL)
-                    #if os(iOS)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                    .autocorrectionDisabled()
-                    .textStyle(.body, design: .monospaced)
-                    .onSubmit(save)
-                Button("Check Connection", action: { Task { await checkConnection() } })
-                    .disabled(check == .checking || HisterClient(serverURL: draft) == nil)
-                connectionStatus
-                unencryptedNote(draft)
-                ServerStatsRow()
-            } header: {
-                Text("Hister Server")
-            } footer: {
-                Text("Shiori talks only to this server. The Safari extension follows this address too.")
             }
             .listRowBackground(palette.surface)
 
-            HisterSignInSection()
-                .listRowBackground(palette.surface)
-
-            HisterTokenSection()
-                .listRowBackground(palette.surface)
-
-            WaitingSection()
-                .listRowBackground(palette.surface)
             case .search:
-            // SearXNG and Search from Safari first (they were under Safari,
-            // though the web results everywhere use SearXNG).
+            PillsSection()
+                .listRowBackground(palette.surface)
+
             Section {
                 TextField("SearXNG", text: $searxngDraft, prompt: Text("https://searxng.example/"))
                     .textContentType(.URL)
@@ -250,100 +193,38 @@ struct SettingsView: View {
                     .textStyle(.body, design: .monospaced)
                     .onSubmit(saveSearxng)
                 unencryptedNote(searxngDraft)
+                Toggle("Web Results", isOn: $app.searchPage.webResults)
+                // An answer from the web results, only when opened.
+                if app.searchPage.webResults {
+                    Toggle("AI Answer", isOn: $app.searchPage.aiAnswer)
+                }
             } header: {
-                Text("Web Search")
+                Text("Web")
             } footer: {
                 Text("Your SearXNG: the web results in Shiori and in Safari's results. Thumbnails come only through its image proxy.")
             }
             .listRowBackground(palette.surface)
 
             Section {
-                Toggle("Search with Shiori", isOn: $app.combinedSearch)
-            } header: {
-                Text("Search from Safari")
-            } footer: {
-                Text("Keep DuckDuckGo as Safari's search engine: address-bar searches then open Shiori's results. Bangs like !w still go to DuckDuckGo.")
-            }
-            .listRowBackground(palette.surface)
-
-            Section {
-                Toggle("Remember What You Open", isOn: $app.searchPage.rememberOpened)
-                Toggle("Show Opened", isOn: $app.searchPage.showOpened)
-                Picker("Result Style", selection: $app.searchPage.resultStyle) {
-                    Text("Tint").tag("tint")
-                    Text("Solid").tag("solid")
-                    Text("Left Bar").tag("bar")
-                    Text("None").tag("none")
+                Toggle("Small Web", isOn: $app.searchPage.smallWebTab)
+                if app.searchPage.smallWebTab {
+                    LabeledContent("Gateway") {
+                        TextField("Gateway", text: $app.searchPage.smallwebURL, prompt: Text("https://smallweb.example/"))
+                            .labelsHidden()
+                            .multilineTextAlignment(.trailing)
+                            .textContentType(.URL)
+                            .autocorrectionDisabled()
+                            #if os(iOS)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            #endif
+                            .textStyle(.body, design: .monospaced)
+                    }
+                    Picker("Open Results", selection: $app.searchPage.smallWebOpen) {
+                        Text("Through the Gateway").tag("gateway")
+                        Text("In a Gemini App").tag("direct")
+                    }
                 }
-                Picker(Self.clickOpensTitle, selection: $app.searchPage.clickOpens) {
-                    Text("Automatic").tag("auto")
-                    Text("The Original").tag("original")
-                    Text("Shiori's Preview").tag("preview")
-                }
-                Toggle("Search Filters", isOn: $app.searchPage.searchFilters)
-                Toggle("Fold Repeated Sites", isOn: $app.searchPage.foldRepeats)
-                Toggle("Labels in Search Page Suggestions", isOn: $app.searchPage.labelSuggestions)
-                if app.capabilities?.semantic == true {
-                    Toggle("Meaning-Based Search", isOn: $app.searchPage.semanticSearch)
-                }
-            } header: {
-                Text("Searching")
-            } footer: {
-                Text(searchingFooter)
-            }
-            .listRowBackground(palette.surface)
-            .task { await app.loadCapabilitiesIfNeeded() }
-
-            Section {
-                Toggle("Recent Searches", isOn: $app.searchPage.searchHistory)
-                Button("Clear Recent Searches", role: .destructive) {
-                    app.clearRecentSearches()
-                }
-                .disabled(app.recentSearches.isEmpty)
-            } header: {
-                Text("Search History")
-            } footer: {
-                Text("Your last \(SharedSettings.recentLimit) searches, from Shiori and from Safari, shown when you tap a search field. Kept on this device only.")
-            }
-            .listRowBackground(palette.surface)
-            .onAppear { app.reloadRecentSearches() }
-
-            Section("Results") {
-                Toggle("Web Results", isOn: $app.searchPage.webResults)
-                Toggle("Info Box", isOn: $app.searchPage.showInfobox)
-                    .disabled(!app.searchPage.webResults)
-                Toggle("Related Searches", isOn: $app.searchPage.showRelated)
-                    .disabled(!app.searchPage.webResults)
-                // Shiori's search page, hosted, and the web app: an
-                // answer from the web results, only when opened.
-                Toggle("AI Answer", isOn: $app.searchPage.aiAnswer)
-                    .disabled(!app.searchPage.webResults)
-                Toggle("Thumbnails", isOn: $app.searchPage.showThumbnails)
-                    .disabled(!app.searchPage.webResults)
-            }
-            .disabled(!app.combinedSearch)
-            .listRowBackground(palette.surface)
-
-            Section {
-                Toggle("Small Web Tab", isOn: $app.searchPage.smallWebTab)
-                Picker("Open Results", selection: $app.searchPage.smallWebOpen) {
-                    Text("Through the Gateway").tag("gateway")
-                    Text("In a Gemini App").tag("direct")
-                }
-                .disabled(!app.searchPage.smallWebTab)
-                LabeledContent("Gateway") {
-                    TextField("Gateway", text: $app.searchPage.smallwebURL, prompt: Text("https://smallweb.example/"))
-                        .labelsHidden()
-                        .multilineTextAlignment(.trailing)
-                        .textContentType(.URL)
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        #endif
-                        .textStyle(.body, design: .monospaced)
-                }
-                .disabled(!app.searchPage.smallWebTab)
             } header: {
                 Text("Small Web")
             } footer: {
@@ -351,38 +232,6 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.surface)
 
-            Section {
-                Toggle("In All", isOn: $app.searchPage.histerInGeneral)
-                Toggle("Pages Tab", isOn: $app.searchPage.histerTab)
-            } header: {
-                Text("Your Pages")
-            } footer: {
-                Text("Pages from Hister: their top matches at the top of All, and the full search on the Pages tab.")
-            }
-            .disabled(!app.combinedSearch)
-            .listRowBackground(palette.surface)
-
-            Section {
-                Toggle("In All", isOn: $app.searchPage.vaultInGeneral)
-                Toggle("Notes Tab", isOn: $app.searchPage.vaultTab)
-            } header: {
-                Text("Your Notes")
-            } footer: {
-                Text("Notes from your Obsidian vault, found by Kura (Settings → Notes).")
-            }
-            .disabled(!app.combinedSearch)
-            .listRowBackground(palette.surface)
-
-            case .preview:
-            Section {
-                Toggle("Preview Pane", isOn: $app.searchPage.previewPane)
-                // Off: a preview fetches nothing from the page's own sites.
-                Toggle("Images in Previews", isOn: $app.searchPage.previewImages)
-            } footer: {
-                Text("Preview Pane shows a page beside the results on a wide screen. Images in Previews loads pictures from the page's own site; off, previews reach only your Hister.")
-            }
-            .listRowBackground(palette.surface)
-            case .notes:
             Section {
                 // Each field in a labelled row with its own label hidden: a
                 // Mac Form shows a TextField's label as well (it read twice).
@@ -426,14 +275,92 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.surface)
 
-            MachiyaSignInSection()
-                .listRowBackground(palette.surface)
+            case .results:
+            Section {
+                Picker("Result Style", selection: $app.searchPage.resultStyle) {
+                    Text("Tint").tag("tint")
+                    Text("Solid").tag("solid")
+                    Text("Left Bar").tag("bar")
+                    Text("None").tag("none")
+                }
+                Toggle("Fold Repeated Sites", isOn: $app.searchPage.foldRepeats)
+                Toggle("Search Filters", isOn: $app.searchPage.searchFilters)
+                if app.capabilities?.semantic == true {
+                    Toggle("Meaning-Based Search", isOn: $app.searchPage.semanticSearch)
+                }
+            } header: {
+                Text("Results")
+            }
+            .listRowBackground(palette.surface)
+            .task { await app.loadCapabilitiesIfNeeded() }
+
+            Section {
+                Picker(Self.clickOpensTitle, selection: $app.searchPage.clickOpens) {
+                    Text("Automatic").tag("auto")
+                    Text("The Original").tag("original")
+                    Text("Shiori's Preview").tag("preview")
+                }
+                Toggle("Preview Pane", isOn: $app.searchPage.previewPane)
+                // Off: a preview fetches nothing from the page's own sites.
+                Toggle("Images in Previews", isOn: $app.searchPage.previewImages)
+            } header: {
+                Text("Opening")
+            } footer: {
+                Text(openingFooter)
+            }
+            .listRowBackground(palette.surface)
+
+            Section {
+                Toggle("Recent Searches", isOn: $app.searchPage.searchHistory)
+                Button("Clear Recent Searches", role: .destructive) {
+                    app.clearRecentSearches()
+                }
+                .disabled(app.recentSearches.isEmpty)
+                Toggle("Remember What You Open", isOn: $app.searchPage.rememberOpened)
+                Toggle("Show Opened", isOn: $app.searchPage.showOpened)
+            } header: {
+                Text("History")
+            } footer: {
+                Text("Your last \(SharedSettings.recentLimit) searches, from Shiori and from Safari, shown when you tap a search field and kept on this device only. Remember What You Open puts the results you open first next time.")
+            }
+            .listRowBackground(palette.surface)
+            .onAppear { app.reloadRecentSearches() }
 
             case .safari:
             Section {
                 ExtensionSetup()
             } header: {
                 Text("Safari Extension")
+            }
+            .listRowBackground(palette.surface)
+
+            Section {
+                Toggle("Search with Shiori", isOn: $app.combinedSearch)
+            } header: {
+                Text("Search from Safari")
+            } footer: {
+                Text("Keep DuckDuckGo as Safari's search engine: address-bar searches then open Shiori's results. Bangs like !w still go to DuckDuckGo.")
+            }
+            .listRowBackground(palette.surface)
+
+            // Shiori Search's own options (Safari's results page and the
+            // hosted page); the app's lists don't read them. Not tied to
+            // Search with Shiori: the hosted page follows them too.
+            Section {
+                Toggle("Your Pages in All", isOn: $app.searchPage.histerInGeneral)
+                Toggle("Your Notes in All", isOn: $app.searchPage.vaultInGeneral)
+                Toggle("Pages Tab", isOn: $app.searchPage.histerTab)
+                Toggle("Notes Tab", isOn: $app.searchPage.vaultTab)
+                if app.searchPage.webResults {
+                    Toggle("Info Box", isOn: $app.searchPage.showInfobox)
+                    Toggle("Related Searches", isOn: $app.searchPage.showRelated)
+                    Toggle("Thumbnails", isOn: $app.searchPage.showThumbnails)
+                }
+                Toggle("Labels in Suggestions", isOn: $app.searchPage.labelSuggestions)
+            } header: {
+                Text("Shiori Search")
+            } footer: {
+                Text("Safari's results page and the hosted search page: your pages' and notes' top matches lead All, and each has its tab. Info Box, Related Searches and Thumbnails come with Web Results (Settings → Search).")
             }
             .listRowBackground(palette.surface)
 
@@ -451,6 +378,57 @@ struct SettingsView: View {
 
             FeedsSection()
                 .listRowBackground(palette.surface)
+
+            case .account:
+            Section {
+                TextField("Server", text: $draft, prompt: Text("https://hister.example/"))
+                    .textContentType(.URL)
+                    #if os(iOS)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    #endif
+                    .autocorrectionDisabled()
+                    .textStyle(.body, design: .monospaced)
+                    .onSubmit(save)
+                Button("Check Connection", action: { Task { await checkConnection() } })
+                    .disabled(check == .checking || HisterClient(serverURL: draft) == nil)
+                connectionStatus
+                unencryptedNote(draft)
+                ServerStatsRow()
+            } header: {
+                Text("Hister Server")
+            } footer: {
+                Text("Shiori talks only to this server. The Safari extension follows this address too.")
+            }
+            .listRowBackground(palette.surface)
+
+            HisterSignInSection()
+                .listRowBackground(palette.surface)
+
+            HisterTokenSection()
+                .listRowBackground(palette.surface)
+
+            MachiyaSignInSection()
+                .listRowBackground(palette.surface)
+
+            WaitingSection()
+                .listRowBackground(palette.surface)
+
+            Section("About") {
+                LabeledContent("Version", value: Bundle.main.shortVersion)
+                Link("Hister by Adam Tauber", destination: URL(string: "https://github.com/asciimoo/hister")!)
+                Link(
+                    "Based on hister-safari by Nick Burns",
+                    destination: URL(string: "https://github.com/nburns/hister-safari")!)
+                // The source (AGPL-3.0 section 13), when the build names it.
+                if let source = SourceLink.url(Bundle.main.object(forInfoDictionaryKey: "ShioriSourceURL") as? String) {
+                    Link("View the Source", destination: source)
+                }
+                Text("Shiori is free software under the \(SourceLink.licence).")
+                    .textStyle(.footnote)
+                    .foregroundStyle(palette.secondaryText)
+            }
+            .listRowBackground(palette.surface)
             }
         }
         .formStyle(.grouped)
@@ -466,8 +444,8 @@ struct SettingsView: View {
     static let clickOpensTitle = "Tap Opens"
     #endif
 
-    private var searchingFooter: String {
-        "Remember What You Open puts the results you open first next time. \(Self.clickOpensTitle) picks what a result opens; the other choice is in its menu."
+    private var openingFooter: String {
+        "\(Self.clickOpensTitle) picks what a result opens; the other choice is in its menu. Preview Pane shows a page beside the results on a wide screen; both stay on this device. Images in Previews loads pictures from the page's own site; off, previews reach only your Hister."
     }
 
     /// An http:// address sends pages and searches unencrypted (only a

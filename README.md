@@ -259,10 +259,10 @@ on, [Sign in to Machiya](#sign-in-to-machiya).
 Shiori needs no sign-in while Hister has no users (the default). When Hister has them (`app.user_handling`, v0.20.0+,
 with Machiya's sign-in helper on Hister's host), each Shiori signs in once:
 
-- **The apps:** Settings → Server → Sign in to Hister (shown only while Hister has users): first **Sign In with
+- **The apps:** Settings → Account → Sign in to Hister (shown only while Hister has users): first **Sign In with
   Tailscale** when Hister offers its OIDC sign-in, else **Sign In with Saved Password** (Hister's page, where your saved
   password is offered), or a name and password. Both stay in the Keychain.
-- **Safari's extension** can't use the sign-in: paste your Hister user's token in the app (Settings → Server → Safari
+- **Safari's extension** can't use the sign-in: paste your Hister user's token in the app (Settings → Account → Safari
   Extension Token) on each device with the extension, and it takes the token from there.
 - **The hosted pages** send you to Hister's sign-in when it asks, and back.
 - **Linux:** `shiori sign-in` (a small window), `shiori sign-out`, and `"histerToken"` in config.json.
@@ -281,7 +281,7 @@ they do, Kura and Konbini ask who is calling, and each Shiori signs in once, on 
   one-time code for ten minutes; type it into Shiori, which trades it with Kura for a device token.
 - **Or with a token** from `python3 -m vaultkit.identity token mint <you> --label iPhone`, pasted in.
 
-Where: the iPhone, iPad and Mac apps in Settings → Notes → Sign in to Machiya (kept in the Keychain; Safari's extension
+Where: the iPhone, iPad and Mac apps in Settings → Account → Sign in to Machiya (kept in the Keychain; Safari's extension
 asks the app); Linux as `"machiyaToken"` in
 `~/.config/shiori/config.json` (`shiori pair <code>` prints it); the hosted pages use Kura's own `/signin` cookie. The
 token goes only to the configured Kura and Konbini, never to Hister or SearXNG. Sign Out deletes it from the device;
@@ -293,18 +293,18 @@ revoke it on the server. [docs/signing-in.md](docs/signing-in.md) has the detail
 - **Library**: everything Hister has, newest first (by when you last saw it), scrolling back to the start: All, Pages (without your notes) or Notes.
 - **Labels**: your server's aliases (collections are the `@` ones, like `@reading`) and topic labels.
 - **Search**: Hister's query syntax, with completions for aliases, `label:` values and operators. Results show the matching text highlighted.
-- **A page**: Hister's readable copy, shown with scripts off and no referrer. You can open it, share it, edit its label, or delete it from Hister (deleting checks that exactly one page matches first). A page's images are the one thing a preview loads from elsewhere; switch off Settings → Images in Previews to keep previews to your server alone (Safari's results page follows it too).
+- **A page**: Hister's readable copy, shown with scripts off and no referrer. You can open it, share it, edit its label, or delete it from Hister (deleting checks that exactly one page matches first). A page's images are the one thing a preview loads from elsewhere; switch off Settings → Results → Images in Previews to keep previews to your server alone (Safari's results page follows it too).
 - **Search scopes**: All (your top pages, your top notes, then the web, like All in Safari's results), Hister, Notes and Web.
 - **Notes**: your Obsidian notes, from Kura (a notes search and reader; optional). Search them on their own (Search → Notes). A note opens in Obsidian, with its Kura page and Konbini card a tap away.
 - **Files**: the folders your Hister server watches (its [local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)), on a Files pill of their own once it has some, in the apps, the web app and the search page. A file opens from Hister's copy; it's never labelled, deleted, recorded as opened or given to an AI.
 - **Code**: your repos as Hister holds them (repo cards, READMEs and docs, issues, pull requests and releases, imported by a companion importer), on a Code pill of their own once Hister has some, in the apps, the web app and the search page. Filter by kind, forge, open or private; each row opens at its forge. Code is never labelled, deleted or folded, and only an on-device model may summarize it.
-- **Search history**: tap a search field (in the app, or on Safari's results page) for your last 5 searches, one list for both. Switch it off, or clear it, in Settings → Search History; it stays on the device.
+- **Search history**: tap a search field (in the app, or on Safari's results page) for your last 5 searches, one list for both. Switch it off, or clear it, in Settings → Results → History; it stays on the device.
 - **Themes**: the Machiya rooms' ten (Tokyo Night, Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa, Everforest, Ayu), each light and dark (Settings → Appearance: Theme, and Appearance to follow the system or pick one). Per device. Shiori's search page (Safari's results page and the hosted page) follows the app's, and on the hosted page it is shared with the rooms.
 - **Text size**: follow the system, or pick a size for Shiori alone (Settings → Appearance), on the Mac too. It covers Safari's results page as well.
-- **Settings that follow you**: signed in to Hister, the Shared ones (theme, appearance, text size, pills) and the results' options follow you to every device and every Machiya app (Settings → General → Shared). Addresses, sign-ins, AI and a device's own text size (This Device → Use This Device's Size) stay on the device. The app, Safari's results page (its gear) and the extension share one copy on each device.
+- **Settings that follow you**: signed in to Hister, the house's shared ones (Settings → Appearance: theme, appearance, text size; and the pills) and the results' options follow you to every device and every Machiya app. Addresses, sign-ins, AI and a device's own text size (Appearance → Use This Device's Size) stay on the device. The app, Safari's results page (its gear) and the extension share one copy on each device.
 
 - **Save to Shiori** in the share sheet (iPhone, iPad, and the Mac's Share menu): save the page you're on, or a link from any app (NewsBlur, Mail, a reader's in-app browser), with an optional label. From Safari it saves the page as you see it; from other apps it downloads the page. If Hister is out of reach the page waits on the device (out of your backups), keeping the time you saved it, and Shiori sends it when it next opens; after 14 days it gives up.
-- **Remember what you open**: open a result from a search and Hister puts it first the next time you search the same thing, in the app and on Safari's results page (Settings → Searching).
+- **Remember what you open**: open a result from a search and Hister puts it first the next time you search the same thing, in the app and on Safari's results page (Settings → Results → History).
 - **Filters**: narrow results by date (or a custom range), site (or hide one), visits, language and type, with counts.
 - **By Date**: the Library by day and month, for pages Hister saved or results you opened.
 - **Feeds and export**: every search, collection and label as an RSS feed (copy it, or Subscribe in NewsBlur; all collections at once as OPML), and any results as JSON, CSV or RSS. Feeds need a companion feed service on the Hister host, not part of this repository: `GET /shiori/feed?q=<query>[&title=…][&exclude_label=…]` answering RSS 2.0 with the 50 newest matches. Without it, export still works, but the feed links don't answer.
@@ -312,7 +312,7 @@ revoke it on the server. [docs/signing-in.md](docs/signing-in.md) has the detail
 - **Add Page**: save a page by its address (Library → ⋯, or ⇧⌘A on the Mac).
 - **Shortcuts and Siri**: "Search Hister" and "Save URL to Hister" (with an optional label).
 - **Waiting to Send** (Settings): how many pages are waiting, from Safari and from the share sheet and shortcuts.
-- **Search from Safari** (on by default; Settings → Search from Safari): keep DuckDuckGo as Safari's search engine, and address-bar searches open Shiori's combined results instead, laid out like SearXNG's (info box, related searches, All/Hister/Vault/Images/Videos/News, time range, paging): your Hister pages and vault notes first, then the web from your [SearXNG](https://github.com/searxng/searxng), with web results you've already visited or kept marked. Thumbnails come only through your SearXNG's image proxy (`/image_proxy`): an image from anywhere else is never loaded, so the device never contacts the engines' image hosts. That needs SearXNG to proxy the images in its JSON too; stock SearXNG proxies only its HTML, so it needs a SearXNG plugin that adds them to the JSON (not part of this repository; without it the results have no thumbnails). `!bangs` still go to DuckDuckGo, and if SearXNG can't be reached your own pages stay (or, with none, you land on DuckDuckGo as usual).
+- **Search from Safari** (on by default; Settings → Safari → Search from Safari): keep DuckDuckGo as Safari's search engine, and address-bar searches open Shiori's combined results instead, laid out like SearXNG's (info box, related searches, All/Hister/Vault/Images/Videos/News, time range, paging): your Hister pages and vault notes first, then the web from your [SearXNG](https://github.com/searxng/searxng), with web results you've already visited or kept marked. Thumbnails come only through your SearXNG's image proxy (`/image_proxy`): an image from anywhere else is never loaded, so the device never contacts the engines' image hosts. That needs SearXNG to proxy the images in its JSON too; stock SearXNG proxies only its HTML, so it needs a SearXNG plugin that adds them to the JSON (not part of this repository; without it the results have no thumbnails). `!bangs` still go to DuckDuckGo, and if SearXNG can't be reached your own pages stay (or, with none, you land on DuckDuckGo as usual).
 
 The app talks only to the servers you configure: your Hister server and, if you set them, SearXNG, Kura, Konbini, a small-web gateway and the companion feed service, plus the AI providers you switch on (Settings → AI, off by default).
 
@@ -334,7 +334,7 @@ The popup, skip rules, "index this page", "skip this page/domain", and PDF index
 ### Safari-only behaviour
 
 - **Offline queue.** When the server can't be reached (VPN off, no signal), a captured page is kept on the device, stamped with the time you visited it, and sent when the server answers again. This is on by default, with no error badge. The queue holds the newest 100 pages (24 M characters at most) and one entry per URL. Pages the server refuses (a skip rule, too large, or sensitive content) are dropped, not retried. The last skip rules fetched from the server still apply while offline, so skipped sites never reach the queue. Until the rules have been fetched once, nothing is queued. Queued pages never store credentials, and are dropped after 14 days. When the app's server changes, queued pages go to the new one and its skip rules are fetched at once.
-- **Waiting count on the toolbar button** (the Mac): how many pages are waiting to send, and the button's tooltip says so. The app's Settings → Waiting to Send shows the same.
+- **Waiting count on the toolbar button** (the Mac): how many pages are waiting to send, and the button's tooltip says so. The app's Settings → Account → Waiting to Send shows the same.
 - **Right-click menu** (the Mac; iOS has none): Search Shiori for the selected words; Save Page to Hister, Never Save This Page, Never Save This Site (upstream's own commands); Save Link to Hister, by Save This Note's Links' rules (never a file or a page Hister has, skip rules holding, `gemini://` and `gopher://` through the small-web gateway). The answer shows on the toolbar button for a few seconds.
 - **Sites never saved on their own**: Safari has no containers. Turn Shiori off in a Safari profile (Safari Settings → Profiles → Extensions) and browse those sites there.
 - **Size cap.** Page HTML over 2 M characters is truncated at a tag boundary, never dropped. Mobile Safari kills extensions that use too much memory. A page's text isn't sent beside its HTML, since Hister reads the text from the HTML itself (text alone, with no HTML, is capped at 1 M).

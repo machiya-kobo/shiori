@@ -1225,7 +1225,7 @@ const ROOMS_SETTINGS = { href: '#/settings', open: () => go('settings') };
 /** Kura on this host (web/README.md), for the notes lists' feeds. */
 const KURA_BASE = location.origin + '/kura/';
 
-/** The list last on screen, for Settings → Export & Feed (as the apps). */
+/** The list last on screen, for Settings → Feeds & Export (as the apps). */
 let shownList = null;
 const withWord = (query, word) => (word ? `${query} ${word}` : query);
 
@@ -2245,10 +2245,15 @@ function viewSettings() {
     const line = document.querySelector('.prefs-state');
     if (line) line.textContent = prefsStateLine();
   });
+  // A setting whose dependents show only while it's on redraws the page.
+  const redraws = ['webResults', 'smallWebTab'];
   const toggle = (key, title) => {
     const input = h('input', { type: 'checkbox', class: 'switch', 'aria-label': title });
     input.checked = !!settings[key];
-    input.addEventListener('change', () => changeSetting(key, input.checked));
+    input.addEventListener('change', () => {
+      changeSetting(key, input.checked);
+      if (redraws.includes(key)) viewSettings();
+    });
     return h('label', { class: 'item' }, h('span', {}, title), input);
   };
   const choice = (key, title, options) => {
@@ -2261,41 +2266,52 @@ function viewSettings() {
     input.addEventListener('change', () => changeSetting(key, input.value.trim()));
     return h('label', { class: 'item' }, h('span', {}, title), input);
   };
-  const group = (title, items, foot) => [h('h2', {}, title), h('div', { class: 'group' }, items), foot ? h('p', { class: 'footnote' }, foot) : null];
+  // Not null as a child: replaceChildren writes it out as the text "null".
+  const group = (title, items, foot) => [h('h2', {}, title), h('div', { class: 'group' }, items.filter(Boolean)), foot ? h('p', { class: 'footnote' }, foot) : null].filter(Boolean);
   $('list').replaceChildren(
     h(
       'div',
       { class: 'settings' },
-      accountGroup(group),
-      // Shared first, as every Machiya app has it: these follow the person.
-      group('Shared', [
+      // The house's order: Appearance first (it follows the person), then
+      // Shiori's own, Account and About last.
+      group('Appearance', [
         choice('palette', 'Theme', Object.entries(S.PALETTES).map(([key, p]) => [key, p.name])),
         choice('theme', 'Appearance', [['system', 'System'], ['day', 'Light'], ['night', 'Dark']]),
         // The house's five sizes (the account's text_size, the rooms' steps).
         choice('textSize', 'Text Size', [['xSmall', 'Extra Small'], ['small', 'Small'], ['system', 'Standard'], ['large', 'Large'], ['xLarge', 'Extra Large']]),
+        ...deviceSizeRows(),
       ], [
-        h('span', {}, 'Follows you on every Machiya app when signed in. '),
+        h('span', {}, 'Follows you when signed in, except This Device’s Size. '),
         h('span', { class: 'prefs-state' }, prefsStateLine()),
       ]),
       pillsGroup(group),
-      deviceGroup(group),
-      exportGroup(group),
-      group('Searching', [toggle('rememberOpened', 'Remember What You Open'), toggle('showOpened', 'Show Opened'),
+      group('Web', [
+        toggle('webResults', 'Web Results'),
+        AI_BUILT && settings.webResults ? toggle('aiAnswer', 'AI Answer') : null,
+      ], AI_BUILT && settings.webResults ? 'AI Answer stays in this browser.' : ''),
+      group('Small Web', [
+        toggle('smallWebTab', 'Small Web'),
+        settings.smallWebTab ? choice('smallWebOpen', 'Open Results', [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']]) : null,
+      ], 'Gemini and Gopher search through the small-web gateway, run when you press Return.'),
+      group('Notes', [text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/')],
+        'Notes open in this Obsidian vault, with their Kura page and Konbini card linked beside them.'),
+      group('Results', [
         choice('resultStyle', 'Result Style', [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']]),
+        toggle('foldRepeats', 'Fold Repeated Sites'),
+        toggle('searchFilters', 'Search Filters'),
+      ]),
+      group('Opening', [
         choice('clickOpens', 'Click Opens', [['auto', 'Automatic'], ['original', 'The Original'], ['preview', 'Shiori’s Preview']]),
-        toggle('smallWebTab', 'Small Web Tab'),
-        choice('smallWebOpen', 'Open Small Web Results', [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']]), toggle('searchFilters', 'Search Filters'),
-        toggle('foldRepeats', 'Fold Repeated Sites'), toggle('labelSuggestions', 'Labels in Search Page Suggestions'), toggle('webResults', 'Web Results'), toggle('aiAnswer', 'AI Answer'),
         toggle('previewImages', 'Images in Previews'),
-      ],
-        'These follow you when signed in, except AI Answer and Click Opens. Click Opens picks what a result opens; the › is the other choice.'),
-      group('Feeds', [text('newsBlurURL', 'NewsBlur', 'https://newsblur.example/')], 'For Subscribe in NewsBlur, which opens NewsBlur with a list’s feed.'),
-      group('Search History', [
+      ], 'Click Opens picks what a result opens; the › is the other choice. It stays in this browser; the other options follow you when signed in.'),
+      group('History', [
         toggle('searchHistory', 'Recent Searches'),
         h('div', { class: 'item' }, h('button', { type: 'button', class: 'button', style: 'margin:0;color:var(--danger)', onclick: () => ((recents = []), writeLocal('shioriAppRecents', []), toast('Cleared')) }, 'Clear Recent Searches')),
-      ], 'Kept in this browser only.'),
-      group('Notes', [text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/'), machiyaRow()],
-        settings.niwaURL ? 'Signing in to Kura and out happens on Kura’s own pages.' : ''),
+        toggle('rememberOpened', 'Remember What You Open'),
+        toggle('showOpened', 'Show Opened'),
+      ], 'Recent searches are kept in this browser only. Remember What You Open puts the results you open first next time.'),
+      feedsGroup(group, text),
+      accountGroup(group),
       group('About', [
         h('div', { class: 'item' }, h('span', {}, 'Saving pages'), h('span', { style: 'color:var(--secondary);text-align:right' },
           SMALLWEB ? 'Add Page, or share a link to Shiori (installed from Chrome or Edge). Safari’s extension is in the Shiori app.' : 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
@@ -2310,13 +2326,28 @@ function viewSettings() {
 }
 
 /**
- * Settings → Account, first: who Hister says is signed in on this browser
- * (S.histerAccount from /api/profile), with Sign Out (the helper's sessions
- * page: its sign-out takes only its own origin's posts), or Sign In when
- * signed out. Nothing while Hister has no users.
+ * Settings → Account, after Shiori's own (the house's order): who Hister
+ * says is signed in on this browser (S.histerAccount from /api/profile),
+ * with Sign Out (the helper's sessions page: its sign-out takes only its
+ * own origin's posts), or Sign In when signed out; then whether Kura knows
+ * you (machiyaRow). Hister's rows only while Hister has users; nothing at
+ * all with neither.
  */
 function accountGroup(group) {
-  const box = h('div', { hidden: true });
+  const box = h('div', {});
+  const machiya = machiyaRow();
+  let histerRows = [];
+  let histerSignedIn = false;
+  const foot = () => [
+    histerSignedIn ? 'Signed in once, every Machiya room knows you. Sign Out ends it in this browser and every room; Sessions… ends another device’s.' : '',
+    machiya ? 'Signing in to Kura and out happens on Kura’s own pages.' : '',
+  ].filter(Boolean).join(' ');
+  const draw = () => {
+    const rows = [...histerRows, machiya].filter(Boolean);
+    box.hidden = !rows.length;
+    box.replaceChildren(...(rows.length ? group('Account', rows, foot()) : []));
+  };
+  draw();
   const sessions = S.histerSessionsURL(ROOMS_STAMP, location.origin);
   const signIn = S.histerSignInURL(ROOMS_STAMP, location.origin, location.href);
   void api.profile().then(({ status, json }) => {
@@ -2326,30 +2357,27 @@ function accountGroup(group) {
     // and in every room); Sessions… is its page for every device's.
     const signOut = h('form', { method: 'post', action: '/machiya/signout', class: 'sign-out' },
       h('button', { type: 'submit', class: 'link-button' }, 'Sign Out'));
-    const rows = account.state === 'in'
+    histerSignedIn = account.state === 'in';
+    histerRows = histerSignedIn
       ? [h('div', { class: 'item' }, h('span', {}, 'Signed in as ', h('strong', {}, account.name)), signOut),
         sessions ? h('div', { class: 'item' }, h('span', {}, 'Other Devices'), h('a', { class: 'link-button', href: sessions }, 'Sessions…')) : null]
       : [h('div', { class: 'item' }, h('span', {}, 'Not signed in'), signIn ? h('a', { class: 'link-button', href: signIn }, 'Sign In') : null)];
-    // Not null as a child: replaceChildren writes it out as the text "null".
-    box.replaceChildren(...group('Account', rows.filter(Boolean),
-      account.state === 'in' ? 'Signed in once, every Machiya room knows you. Sign Out ends it in this browser and every room; Sessions… ends another device’s.' : '').filter(Boolean));
-    box.hidden = false;
+    draw();
   });
   return box;
 }
 
-/** Settings → Pills: their order, and which show (S.pillEditor), redrawn in place. */
-/** Settings' state line for the Shared settings (the contract's). */
+/** Settings' state line for Appearance (the contract's). */
 function prefsStateLine() {
   return {
     synced: 'Signed in: these follow you.',
-    signedOut: 'Sign in (Settings → Signing In) and these follow you; until then they stay in this browser.',
+    signedOut: 'Sign in (Settings → Account) and these follow you; until then they stay in this browser.',
     unavailable: 'Sign-in is unavailable right now: these stay in this browser, and go once it answers.',
   }[prefsState] || 'Checking…';
 }
 
-/** Settings → This Device: this browser's own text size over the shared one. */
-function deviceGroup(group) {
+/** Settings → Appearance → Use This Device's Size: this browser's own text size over the shared one. */
+function deviceSizeRows() {
   const own = deviceTextSize();
   const sizes = [['xsmall', 'Extra Small'], ['small', 'Small'], ['standard', 'Standard'], ['large', 'Large'], ['xlarge', 'Extra Large']];
   const toggle = h('input', { type: 'checkbox', class: 'switch', 'aria-label': 'Use This Device’s Size' });
@@ -2361,12 +2389,13 @@ function deviceGroup(group) {
     viewSettings();
   });
   select.addEventListener('change', () => setDeviceTextSize(select.value));
-  return group('This Device', [
+  return [
     h('label', { class: 'item' }, h('span', {}, 'Use This Device’s Size'), toggle),
     own ? h('label', { class: 'item' }, h('span', {}, 'This Device’s Size'), select) : null,
-  ], 'This browser’s own text size, over the shared one, which your other devices keep. The other Machiya rooms in this browser use it too.');
+  ];
 }
 
+/** Settings → Pills: their order, and which show (S.pillEditor), redrawn in place. */
 function pillsGroup(group) {
   const items = S.PILLS.filter(([key]) => !['images', 'videos', 'news'].includes(key) && (key !== 'files' || hasLocalFiles));
   const box = h('div', {});
@@ -2381,11 +2410,11 @@ function pillsGroup(group) {
     }
   };
   draw();
-  return group('Pills', [box], 'The pills over every list and search, in this order. All always shows; Opened only with Show Opened, Small Web only with its tab.');
+  return group('Pills', [box], 'The pills over every list and search, in this order. All always shows; Opened only with Show Opened, Small Web only with Small Web on.');
 }
 
 /**
- * Settings → Notes → Machiya, as the apps' Sign in to Machiya: whether
+ * Settings → Account → Machiya, as the apps' Sign in to Machiya: whether
  * Kura knows you (its /api/prefs answering 200, 401 or 404), with Sign In
  * (Kura's /signin) or Sign Out (Kura's Settings: its sign-out is a form
  * on Kura's own origin, which this host doesn't pass). Asked afresh each
@@ -2413,12 +2442,14 @@ function machiyaRow() {
   return row;
 }
 
-/** Settings → Export & Feed, for the list last on screen (as iOS; File on the Mac). */
-function exportGroup(group) {
+/**
+ * Settings → Feeds & Export: Export & Feed for the list last on screen (as
+ * iOS; File on the Mac), then where NewsBlur is.
+ */
+function feedsGroup(group, text) {
   const list = shownList;
-  if (!list) return null;
   const items = [];
-  if (list.query) {
+  if (list && list.query) {
     for (const [format, name] of [['json', 'JSON'], ['csv', 'CSV'], ['rss', 'RSS']]) {
       const button = h('button', { type: 'button', class: 'link-button' }, `Export as ${name}…`);
       button.addEventListener('click', async () => {
@@ -2442,12 +2473,16 @@ function exportGroup(group) {
       items.push(h('div', { class: 'item' }, button));
     }
   }
-  if (list.feed) {
+  if (list && list.feed) {
     items.push(h('div', { class: 'item' }, h('button', { type: 'button', class: 'link-button', onclick: () => copy(list.feed) }, 'Copy Feed Link')));
     const subscribe = S.newsBlurSubscribeURL(settings.newsBlurURL, list.feed);
     if (subscribe) items.push(h('div', { class: 'item' }, h('a', { class: 'link-button', href: subscribe, target: '_blank', rel: 'noopener' }, 'Subscribe in NewsBlur')));
   }
-  return group('Export & Feed', items, `For ${list.title}, the list you were on. An export holds the whole list (up to 1,000), not only what’s loaded.`);
+  items.push(text('newsBlurURL', 'NewsBlur', 'https://newsblur.example/'));
+  return group('Feeds & Export', items, [
+    list ? `For ${list.title}, the list you were on. An export holds the whole list (up to 1,000), not only what’s loaded.` : '',
+    'NewsBlur is for Subscribe in NewsBlur, which opens NewsBlur with a list’s feed.',
+  ].filter(Boolean).join(' '));
 }
 
 /** The whole list, page after page, up to 1,000 (as the app's export). */

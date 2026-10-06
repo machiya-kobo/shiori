@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 #endif
 
-/// Settings → Notes → Sign in to Machiya: for rooms that run with
+/// Settings → Account → Sign in to Machiya: for rooms that run with
 /// Machiya's identity file, which want to know who is calling. One field
 /// takes a pairing code from `identity pair` (paired against Kura) or a
 /// pasted token from `identity token mint`; the token goes to the Keychain

@@ -127,7 +127,7 @@ extension Saver {
         } catch .cancelled where Task.isCancelled {
             return .cancelled
         } catch .signedOut {
-            return .failed("Hister wants you signed in: Settings → Server.")
+            return .failed("Hister wants you signed in: Settings → Account.")
         } catch .unreachable, .untrusted, .cancelled {
             return .failed("Hister is out of reach, so this couldn't be checked: try again later.")
         } catch {
@@ -257,7 +257,7 @@ extension HisterError {
         case .invalidQuery(let message): message.isEmpty ? "Hister couldn't read that page." : message
         case .server(let status, let message): message.isEmpty ? "The server answered \(status)." : "The server answered \(status): \(message)"
         case .badResponse: "The server's reply didn't make sense."
-        case .signedOut: "Hister wants you to sign in: sign in again in Shiori's Settings → Server."
+        case .signedOut: "Hister wants you to sign in: sign in again in Shiori's Settings → Account."
         default: localizedDescription
         }
     }

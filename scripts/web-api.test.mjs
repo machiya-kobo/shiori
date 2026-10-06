@@ -196,11 +196,12 @@ test('the web app follows the account: one contact on load, on return and after 
 
 test("the web app's Settings say whether Kura knows you, and All says when it asks", () => {
   const app = read('../web/app/app.js');
-  const row = app.slice(app.indexOf('function machiyaRow()'), app.indexOf('/** Settings → Export & Feed'));
+  const row = app.slice(app.indexOf('function machiyaRow()'), app.indexOf('/**\n * Settings → Feeds & Export'));
   assert.match(row, /200: \['Signed in'/);
   assert.match(row, /401: \['Not signed in', link\(signIn, 'Sign In'\)\]/);
   assert.match(row, /loadKuraStatus\(\)\.then/, 'asked afresh');
-  assert.match(app, /group\('Notes', \[[^\n]*machiyaRow\(\)\]/);
+  // In Account, with Hister's rows (the house's order).
+  assert.match(app.slice(app.indexOf('function accountGroup('), app.indexOf('function prefsStateLine(')), /const machiya = machiyaRow\(\);/);
   // All: a 401 from Kura is the Notes pill's notice, not silence.
   assert.match(app, /error\.status === 401 \? \{ signIn: true/);
   assert.match(app, /if \(notes && notes\.signIn\) container\.append\(h\('section', \{ class: 'list-section' \}, signInStatus\(/);
@@ -450,15 +451,16 @@ test('the web is searched only on purpose: Return, a recent search, Did you mean
   assert.doesNotMatch(app, /api\.web\([^)]*\)\.then\(\(d\) => d\.suggestions/);
 });
 
-test("Settings opens on who's signed in, read without a trip to the sign-in", () => {
+test("Settings opens on Appearance and ends on Account and About; who's signed in is read without a trip to the sign-in", () => {
   const app = read('../web/app/app.js');
   const api = read('../web/app/api.js');
-  assert.match(app, /accountGroup\(group\),\n\s+\/\/ Shared first[^\n]*\n\s+group\('Shared'/);
+  assert.match(app, /\{ class: 'settings' \},\n(\s+\/\/[^\n]*\n)*\s+group\('Appearance', \[/);
+  assert.match(app, /feedsGroup\(group, text\),\n\s+accountGroup\(group\),\n\s+group\('About'/);
   assert.match(app, /const account = S\.histerAccount\(status, json\);/);
   const fn = api.slice(api.indexOf('export async function profile('), api.indexOf('export async function profile(') + 900);
   assert.doesNotMatch(fn, /request\(/);
   assert.match(fn, /credentials: 'same-origin'/);
-  assert.match(read('../patches/shiori/search.js'), /const body = \[\.\.\.accountGroup\(\)\];/);
+  assert.match(read('../patches/shiori/search.js'), /body\.push\(\.\.\.accountGroup\(\)\);\n(\s+\/\/[^\n]*\n)*\s+const source = /);
 });
 
 test("the hosted pages' Sign Out posts to the helper on their own origin", () => {

@@ -237,7 +237,7 @@
     const where = sameOrigin(kuraBase) ? S.machiyaSignInURL(niwaBase) : '';
     return where
       ? [`${room} asks you to sign in. `, el('a', { href: where }, 'Sign In')]
-      : [`${room} asks you to sign in: Settings → Sign in to Machiya.`];
+      : [`${room} asks you to sign in: Settings → Account → Sign in to Machiya.`];
   }
   /** Notes from Kura, in Hister's shape ({documents, total}). */
   async function kuraNotes(text, options) {
@@ -443,7 +443,7 @@
     drawRecent();
   });
 
-  // Recent searches (the app's Settings → Search History): one list with
+  // Recent searches (the app's Settings → Results → History): one list with
   // the app's, kept in the App Group. Tapping the field shows them; typing
   // narrows them. This search joins the list, unless it's a page coming
   // Back from its saved copy.
@@ -973,61 +973,53 @@
   // Changes go to the app's App Group through the background, so the app
   // and this page share one set. Theme and text size apply at once; the
   // rest redraw the page when the sheet closes.
-  const choices = (values, label = String) => values.map((v) => [v, label(v)]);
-  // The same choices as the app's (on a Mac, Standard stands for Large).
-  const TEXT_SIZE_CHOICES = [
-    ['system', IS_MAC ? 'Standard' : 'System'],
-    ['xSmall', 'Extra Small'],
-    ['small', 'Small'],
-    ['medium', 'Medium'],
-    ...(IS_MAC ? [] : [['large', 'Large']]),
-    ['xLarge', 'Extra Large'],
-    ['xxLarge', 'Extra Extra Large'],
-    ['xxxLarge', 'Largest'],
-  ];
   // The house's five sizes, as the account keeps them (HOUSE_STEPS.apple).
   const HOUSE_SIZE_CHOICES = [['xSmall', 'Extra Small'], ['small', 'Small'], ['system', 'Standard'], ['xLarge', 'Large'], ['xxLarge', 'Extra Large']];
+  // The house's order, as the app's Settings: Appearance first (it follows
+  // the person), then Shiori's own; Account and About close the sheet. A
+  // row that `needs` another shows only while that one is on.
   const SETTINGS_ROWS = [
-    // Shared first, as every Machiya app has it: these follow the person
-    // (the hosted page's own contact; Safari's page through the app).
-    ['Shared', [
+    // These follow the person (the hosted page's own contact; Safari's
+    // page through the app), but this browser's own size.
+    ['Appearance', [
       { key: 'palette', label: 'Theme', options: Object.entries(S.PALETTES).map(([key, p]) => [key, p.name]) },
       { key: 'theme', label: 'Appearance', options: [['system', 'System'], ['day', 'Light'], ['night', 'Dark']] },
       { key: 'textSize', label: 'Text Size', options: HOUSE_SIZE_CHOICES },
-      // Their order, and which show (S.pillEditor).
-      { action: 'pills' },
-    ], () => `Follows you on every Machiya app when signed in. ${prefsStateLine()}`],
-    ['This Device', [
-      { key: 'previewPane', label: 'Preview Pane' },
       ...(HOSTED ? [{ action: 'device-size' }] : []),
-    ]],
-    ['Results', [
-      { key: 'previewImages', label: 'Images in Previews' },
-      { key: 'rememberOpened', label: 'Remember What You Open' },
-      { key: 'showOpened', label: 'Show Opened' },
-      { key: 'resultStyle', label: 'Result Style', options: [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']] },
+    ], () => `Follows you when signed in${HOSTED ? ', except This Device’s Size' : ''}. ${prefsStateLine()}`],
+    // Their order, and which show (S.pillEditor).
+    ['Pills', [{ action: 'pills' }]],
+    ['Web', [
       { key: 'webResults', label: 'Web Results' },
       { key: 'showInfobox', label: 'Info Box', needs: 'webResults' },
       { key: 'showRelated', label: 'Related Searches', needs: 'webResults' },
-      { key: 'aiAnswer', label: 'AI Answer', needs: 'webResults' },
       { key: 'showThumbnails', label: 'Thumbnails', needs: 'webResults' },
+      { key: 'aiAnswer', label: 'AI Answer', needs: 'webResults' },
     ]],
     ['Small Web', [
-      { key: 'smallWebTab', label: 'Small Web Tab' },
+      { key: 'smallWebTab', label: 'Small Web' },
       { key: 'smallWebOpen', label: 'Open Results', options: [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']], needs: 'smallWebTab' },
     ]],
-    ['Your Pages', [
-      { key: 'histerInGeneral', label: 'In All' },
+    ['Your Pages and Notes', [
+      { key: 'histerInGeneral', label: 'Your Pages in All' },
+      { key: 'vaultInGeneral', label: 'Your Notes in All' },
       { key: 'histerTab', label: 'Pages Tab' },
-    ]],
-    ['Your Notes', [
-      { key: 'vaultInGeneral', label: 'In All' },
       { key: 'vaultTab', label: 'Notes Tab' },
     ]],
-    ['Search History', [
+    ['Results', [
+      { key: 'resultStyle', label: 'Result Style', options: [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']] },
+      { key: 'foldRepeats', label: 'Fold Repeated Sites' },
+    ]],
+    ['Opening', [
+      { key: 'previewPane', label: 'Preview Pane' },
+      { key: 'previewImages', label: 'Images in Previews' },
+    ], () => 'Preview Pane is this device’s own; the rest follow you when signed in.'],
+    ['History', [
       { key: 'searchHistory', label: 'Recent Searches' },
-      { key: 'labelSuggestions', label: 'Labels in Suggestions' },
       { action: 'clear-recent', label: 'Clear Recent Searches' },
+      { key: 'labelSuggestions', label: 'Labels in Suggestions' },
+      { key: 'rememberOpened', label: 'Remember What You Open' },
+      { key: 'showOpened', label: 'Show Opened' },
     ]],
   ];
   const LOOK_KEYS = ['theme', 'palette', 'textSize', 'previewPane'];
@@ -1076,7 +1068,7 @@
 
   function drawSettings() {
     askAccount();
-    const body = [...accountGroup()];
+    const body = [];
     for (const [title, rows, foot] of SETTINGS_ROWS) {
       body.push(el('h3', { class: 'group-title' }, title));
       const group = el('div', { class: 'group' });
@@ -1103,7 +1095,8 @@
           }
           continue;
         }
-        const off = row.needs && !settings[row.needs];
+        // A dependent row shows only while what it needs is on.
+        if (row.needs && !settings[row.needs]) continue;
         const id = `setting-${row.key || row.action}`;
         let control;
         if (row.action === 'pills') {
@@ -1128,7 +1121,7 @@
           continue;
         }
         if (row.options) {
-          control = el('select', { id, disabled: off });
+          control = el('select', { id });
           for (const [value, text] of row.options) {
             const option = el('option', { value: String(value) }, text);
             if (String(settings[row.key] ?? CHOICE_DEFAULTS[row.key] ?? '') === String(value)) option.selected = true;
@@ -1139,15 +1132,17 @@
             change({ [row.key]: typeof row.options[0][0] === 'number' ? Number(raw) : raw });
           });
         } else {
-          control = el('input', { id, type: 'checkbox', role: 'switch', class: 'switch', disabled: off });
+          control = el('input', { id, type: 'checkbox', role: 'switch', class: 'switch' });
           control.checked = !!settings[row.key];
           control.addEventListener('change', () => change({ [row.key]: control.checked }));
         }
-        group.append(el('div', { class: 'setting' + (off ? ' disabled' : '') }, el('label', { for: id }, row.label), control));
+        group.append(el('div', { class: 'setting' }, el('label', { for: id }, row.label), control));
       }
       body.push(group);
       if (foot) body.push(el('p', { class: 'group-foot' }, foot()));
     }
+    // Account (the hosted page's) and About close the sheet, in the house's order.
+    body.push(...accountGroup());
     // The source, as AGPL-3.0 section 13 asks of a page served over the
     // network: only when the build names it (SHIORI_SOURCE_URL).
     const source = S.sourceLink(S.fromBuild('__SHIORI_SOURCE_URL__'));
@@ -1189,7 +1184,7 @@
     return {
       app: 'Shiori’s app keeps these in step with your account.',
       synced: 'Signed in: these follow you.',
-      signedOut: 'Sign in (Account, above) and these follow you; until then they stay in this browser.',
+      signedOut: 'Sign in (Account, below) and these follow you; until then they stay in this browser.',
       unavailable: 'Sign-in is unavailable right now: these stay in this browser, and go once it answers.',
     }[prefsState] || 'Checking…';
   }
@@ -2287,7 +2282,7 @@
     $('tools-row').append(controls);
     controls.append($('sort-label'));
     if (code) $('web-results').before(codeFilterBar());
-    if (vault && !kuraBase) return showStatus('No Kura address is set up (Settings → Notes).');
+    if (vault && !kuraBase) return showStatus('No Kura address is set up (Settings → Search → Notes).');
     if (!vault && !histerBase) return showStatus('No Hister server is set up.');
     let result = pageState[category];
     if (vault) {

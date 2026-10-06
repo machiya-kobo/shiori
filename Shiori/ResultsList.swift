@@ -566,7 +566,7 @@ extension HisterError {
         case .rejected(let rejection):
             rejection.reason
         case .signedOut:
-            "Hister wants you to sign in: sign in again in Settings → Server (or check the access token there)."
+            "Hister wants you to sign in: sign in again in Settings → Account (or check the access token there)."
         }
     }
 }

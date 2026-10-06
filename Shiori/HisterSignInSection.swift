@@ -5,7 +5,7 @@ import SwiftUI
 import UIKit
 #endif
 
-/// Settings → Server → Sign in to Hister (docs/signing-in.md): for a Hister
+/// Settings → Account → Sign in to Hister (docs/signing-in.md): for a Hister
 /// with users. Inert until then: shown only while the sign-in helper on
 /// Hister's host says Hister has users (`HisterAccount.available`), or
 /// while this device is signed in. Two ways in: the name and password

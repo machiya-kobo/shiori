@@ -126,7 +126,7 @@ struct ResultBar: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
         let selection = selected ? palette.accent.opacity(0.22) : Color.clear
-        // Settings → Search → Result Style: the tinted card, a plain card
+        // Settings → Results → Result Style: the tinted card, a plain card
         // (Solid), a bar down the leading edge, or plain.
         switch style {
         case "solid":

@@ -119,7 +119,7 @@ final class ResultsModel {
     var wantsFacets = false
     var semantic = false
     /// Kura, for a notes list and the Library's All (nil without a Kura
-    /// address in Settings → Notes: then there are no notes). Set by the
+    /// address in Settings → Search → Notes: then there are no notes). Set by the
     /// list before it loads.
     var kura: KuraClient?
     /// Which of Kura's vaults a notes list searches ("all", or a name);

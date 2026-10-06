@@ -34,7 +34,7 @@ nonisolated final class SafariWebExtensionHandler: NSObject, NSExtensionRequestH
                 reply = SharedSettings.extensionPayload()
             }
         case "machiya":
-            // The Machiya sign-in (Settings → Notes), for Kura and Konbini:
+            // The Machiya sign-in (Settings → Account), for Kura and Konbini:
             // the background applies the host rule and never stores it.
             // Signing in and out happens only in the app. Signed in to
             // Hister, the app's own id (mhs_…, the helper's) goes to the
@@ -47,7 +47,7 @@ nonisolated final class SafariWebExtensionHandler: NSObject, NSExtensionRequestH
                 reply = ["token": token, "principal": MachiyaKeychain.principal]
             }
         case "hister":
-            // Hister's token (Settings → Server), sent as X-Access-Token;
+            // Hister's token (Settings → Account), sent as X-Access-Token;
             // set and removed only in the app (which checked it; the
             // background checks it again). None: an empty reply.
             let token = HisterKeychain.token

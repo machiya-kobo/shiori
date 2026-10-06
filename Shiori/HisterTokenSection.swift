@@ -1,7 +1,7 @@
 import HisterKit
 import SwiftUI
 
-/// Settings → Server → Safari Extension Token: Hister's token for this
+/// Settings → Account → Safari Extension Token: Hister's token for this
 /// device, when the server has users. It's Safari's extension's credential:
 /// an extension can't send the sign-in's session (no `Cookie` header), so
 /// it asks the app for this token. The app itself carries it beside the

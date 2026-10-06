@@ -4,7 +4,8 @@ import ShioriAIOnDevice
 import SwiftUI
 
 /// Settings → AI (docs/ai.md): the switch, the engines in
-/// the order they're tried, their keys and models, and a test for each.
+/// the order they're tried, their keys and models, and a test for each,
+/// then Automatic Labels (with AI on).
 /// Everything here stays on this device.
 struct AISettingsPage: View {
     @Environment(AppState.self) private var app
@@ -35,42 +36,6 @@ struct AISettingsPage: View {
             Toggle("AI Features", isOn: $app.ai.enabled)
         } footer: {
             Text("Off until you turn it on. The engines below are tried in order; settings and keys stay on this device.")
-        }
-        .listRowBackground(palette.surface)
-
-        Section {
-            Toggle("Label New Pages", isOn: $app.ai.autoLabel)
-            if app.ai.autoLabel, app.ai.appleIntelligence {
-                Toggle("Apply Apple Intelligence's Labels", isOn: $app.ai.applyAppleLabels)
-            }
-            Toggle("Keep Collections Current", isOn: $app.ai.autoCollections)
-            SuggestCollectionsButton()
-            if app.ai.autoLabel {
-                LabeledContent("Waiting for You", value: app.labeller.state.pending.count.formatted())
-                LabeledContent("Applied Today", value: appliedToday.formatted())
-            }
-            let trust = LabelStat.trust(app.labeller.state.stats)
-            if !trust.held.isEmpty {
-                LabeledContent("Held for Review", value: trust.held.sorted().joined(separator: ", "))
-            }
-            if !trust.trustedAtMedium.isEmpty {
-                LabeledContent("Trusted Sooner", value: trust.trustedAtMedium.sorted().joined(separator: ", "))
-            }
-            if !app.labeller.state.corrections.isEmpty || !app.labeller.state.stats.isEmpty {
-                Button("Forget What It Learnt", role: .destructive) { app.labeller.forgetLearning() }
-                    .tint(palette.danger)
-            }
-            DisclosureGroup {
-                NeverSuggestedGrid()
-                    .padding(.vertical, 4)
-            } label: {
-                Text(app.ai.neverSuggest.isEmpty ? "Never Suggested: none" : "Never Suggested: \(app.ai.neverSuggest.joined(separator: ", "))")
-                    .lineLimit(2)
-            }
-        } header: {
-            Text("Automatic Labels")
-        } footer: {
-            Text(autoLabelFooter)
         }
         .listRowBackground(palette.surface)
         .onChange(of: app.ai.autoLabel || app.ai.autoCollections) { _, on in
@@ -143,6 +108,63 @@ struct AISettingsPage: View {
         .onChange(of: anthropicKey) { _, key in keyChanged(key, .anthropic) }
         .onChange(of: openAIKey) { _, key in keyChanged(key, .openAI) }
         .onChange(of: localToken) { _, key in keyChanged(key, .local) }
+
+        // Automatic Labels after the engines it runs on; only with AI on.
+        if app.ai.enabled {
+            Section {
+                Toggle("Label New Pages", isOn: $app.ai.autoLabel)
+                if app.ai.autoLabel, app.ai.appleIntelligence {
+                    Toggle("Apply Apple Intelligence's Labels", isOn: $app.ai.applyAppleLabels)
+                }
+                Toggle("Keep Collections Current", isOn: $app.ai.autoCollections)
+                SuggestCollectionsButton()
+                DisclosureGroup {
+                    NeverSuggestedGrid()
+                        .padding(.vertical, 4)
+                } label: {
+                    Text(app.ai.neverSuggest.isEmpty ? "Never Suggested: none" : "Never Suggested: \(app.ai.neverSuggest.joined(separator: ", "))")
+                        .lineLimit(2)
+                }
+                // What it has done and learnt: occasional, so folded away.
+                if hasLearning {
+                    DisclosureGroup("Learning") {
+                        learningRows
+                    }
+                }
+            } header: {
+                Text("Automatic Labels")
+            } footer: {
+                Text(autoLabelFooter)
+            }
+            .listRowBackground(palette.surface)
+        }
+    }
+
+    private var trust: LabelTrust { LabelStat.trust(app.labeller.state.stats) }
+
+    private var hasLearning: Bool {
+        app.ai.autoLabel || !trust.held.isEmpty || !trust.trustedAtMedium.isEmpty
+            || !app.labeller.state.corrections.isEmpty || !app.labeller.state.stats.isEmpty
+    }
+
+    /// Automatic Labels' status: what waits, what went on today, the labels
+    /// held or trusted sooner, and Forget What It Learnt.
+    @ViewBuilder private var learningRows: some View {
+        if app.ai.autoLabel {
+            LabeledContent("Waiting for You", value: app.labeller.state.pending.count.formatted())
+            LabeledContent("Applied Today", value: appliedToday.formatted())
+        }
+        let stats = trust
+        if !stats.held.isEmpty {
+            LabeledContent("Held for Review", value: stats.held.sorted().joined(separator: ", "))
+        }
+        if !stats.trustedAtMedium.isEmpty {
+            LabeledContent("Trusted Sooner", value: stats.trustedAtMedium.sorted().joined(separator: ", "))
+        }
+        if !app.labeller.state.corrections.isEmpty || !app.labeller.state.stats.isEmpty {
+            Button("Forget What It Learnt", role: .destructive) { app.labeller.forgetLearning() }
+                .tint(palette.danger)
+        }
     }
 
     private var appliedToday: Int {

@@ -95,7 +95,7 @@ struct OpenedListView: View {
                 if model.entries.isEmpty {
                     ContentUnavailableView(
                         "Nothing Opened Yet", systemImage: "eye",
-                        description: Text("Results you open from a search show up here (Settings → Remember What You Open)."))
+                        description: Text("Results you open from a search show up here (Settings → Results → Remember What You Open)."))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .themedBackground()
                 } else {

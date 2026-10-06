@@ -33,7 +33,7 @@ final class AppState {
         }
     }
 
-    /// Settings → This Device → Use This Device's Size: this device's own
+    /// Settings → Appearance → Use This Device's Size: this device's own
     /// text size, over the shared one (which every other device follows).
     /// nil follows the shared size. Never sent; Safari's results page reads
     /// it from the App Group (`textSizeDevice`).
@@ -103,7 +103,7 @@ final class AppState {
         }
     }
 
-    /// How the combined results page looks (Settings → Search from Safari).
+    /// How the combined results page looks (Settings → Results, and Safari → Shiori Search).
     var searchPage: SearchPageOptions {
         didSet {
             searchPage.save(to: SharedSettings.defaults)
@@ -200,7 +200,7 @@ final class AppState {
     var addPageRequests = 0
     /// Bumped when a search is submitted (Return): the results list takes
     /// the keyboard, for its vi keys.
-    /// Kura, where every notes list comes from (Settings → Notes → Kura);
+    /// Kura, where every notes list comes from (Settings → Search → Notes → Kura);
     /// nil without an address: then there are no notes. Signed in to
     /// Machiya when the device is (`machiyaSignIn`).
     var notesKura: KuraClient? {
@@ -209,7 +209,7 @@ final class AppState {
 
     // MARK: Hister's token
 
-    /// Hister's access token (Settings → Server), from the Keychain
+    /// Hister's access token (Settings → Account), from the Keychain
     /// (`HisterKeychain`, never UserDefaults): every request to Hister
     /// carries it as `X-Access-Token`; empty, none does. Read at launch
     /// and after every change; never shown back or logged.
@@ -243,7 +243,7 @@ final class AppState {
 
     // MARK: Signing in to Hister (docs/signing-in.md)
 
-    /// This device's own sign-in (Settings → Server → Sign in to Hister):
+    /// This device's own sign-in (Settings → Account → Sign in to Hister):
     /// its Hister session, the sign-in helper's id and who, from the
     /// Keychain (`HisterKeychain`). nil when signed out. Never logged.
     private(set) var histerAccount: HisterAccount.SignedIn? = AppState.storedAccount()
@@ -255,7 +255,7 @@ final class AppState {
         return HisterAccount.SignedIn(session: session, sessionID: sid, username: HisterKeychain.username)
     }
 
-    /// Whether to offer signing in (Settings → Server → Sign in to Hister):
+    /// Whether to offer signing in (Settings → Account → Sign in to Hister):
     /// the sign-in helper on the server's host says Hister has users
     /// (`HisterAccount.available`). Checked at launch, on every return to
     /// the foreground and when the server changes; here, not in the view,
@@ -302,14 +302,14 @@ final class AppState {
 
     // MARK: Machiya sign-in
 
-    /// The Machiya sign-in (Settings → Notes → Sign in to Machiya): the
+    /// The Machiya sign-in (Settings → Account → Sign in to Machiya): the
     /// token and who it signs in as, from the Keychain (`MachiyaKeychain`,
     /// never UserDefaults), read at launch and after every change.
     private(set) var machiyaToken = MachiyaKeychain.token
     private(set) var machiyaPrincipal = MachiyaKeychain.principal
 
     /// The sign-in for the room clients: the token, and the rooms it may go
-    /// to by origin (Kura and Konbini as set in Settings → Notes, less
+    /// to by origin (Kura and Konbini as set in Settings → Search → Notes, less
     /// Hister's and SearXNG's origins). Hister's and SearXNG's clients never
     /// take it. nil when signed out.
     var machiyaSignIn: MachiyaSignIn? {
@@ -386,7 +386,7 @@ final class AppState {
         didSet { SharedSettings.defaults?.set(pills, forKey: SharedSettings.Key.pills) }
     }
 
-    /// The small-web gateway, while its tab is on (Settings → Search).
+    /// The small-web gateway, while Small Web is on (Settings → Search → Small Web).
     var smallweb: SmallWebClient? {
         searchPage.smallWebTab ? SmallWebClient(serverURL: searchPage.smallwebURL) : nil
     }
@@ -776,7 +776,7 @@ final class AppState {
         }
     }
 
-    // MARK: Opened results (Settings → Remember What You Open)
+    // MARK: Opened results (Settings → Results → Remember What You Open)
 
     /// Tells Hister `document` was opened from a search for `query`, so it
     /// ranks it first the next time. Not for the Library's `*`, and quietly
@@ -944,7 +944,7 @@ struct SearchPageOptions: Equatable {
     var newsBlurURL = ""
     /// Obsidian matches vault names exactly. The default is the build's
     /// `SHIORI_OBSIDIAN_VAULT` (local.yml), if a build sets one; empty,
-    /// notes link to Kura only until Settings → Notes names one.
+    /// notes link to Kura only until Settings → Search → Notes names one.
     var obsidianVault = ""
     var niwaURL = ""
     var konbiniURL = ""

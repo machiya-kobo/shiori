@@ -93,7 +93,7 @@ final class SaveLinksModel {
 
     func load(app: AppState) async {
         guard let kura = app.notesKura else {
-            phase = .failed("Set Kura's address in Settings → Notes first.")
+            phase = .failed("Set Kura's address in Settings → Search first.")
             return
         }
         do {

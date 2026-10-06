@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Machiya sign-in (Settings → Notes → Sign in to Machiya): the
+/// The Machiya sign-in (Settings → Account → Sign in to Machiya): the
 /// device's token and who it signs in as, in the Keychain under the
 /// service "Machiya", never in UserDefaults (`SharedKeychain`'s rules).
 /// The Safari extension's handler reads it too (the `machiya` native

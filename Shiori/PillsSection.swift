@@ -44,7 +44,7 @@ struct PillsSection: View {
         } header: {
             Text("Pills")
         } footer: {
-            Text("The pills over every list and search, in this order. All always shows; Opened only with Show Opened, Small Web only with its tab.")
+            Text("The pills over every list and search, in this order. All always shows; Opened only with Show Opened, Small Web only with Small Web on.")
         }
     }
 }

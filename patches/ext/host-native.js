@@ -10,7 +10,7 @@
 //                       (SharedSettings.applyFromPage); rejects without it
 //   canReportQueue()    whether reportQueue can reach anything
 //   reportQueue(count, oldest)  the offline queue's size, for the app's
-//                       Settings → Waiting to Send
+//                       Settings → Account → Waiting to Send
 //   machiya()           the Machiya sign-in, {token, principal}, from the
 //                       app's Keychain; {} when signed out or unreachable.
 //                       Never stored here: asked again when needed.

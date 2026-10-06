@@ -21,7 +21,7 @@ nonisolated enum SharedSettings {
         /// The theme (one of the Machiya rooms' ten, `AppPalette`): the app,
         /// the share extension and Safari's pages, which the page's gear may set.
         static let palette = "palette"
-        /// Combined search page options (Settings → Search from Safari).
+        /// Combined search page options (Settings → Safari → Shiori Search).
         static let showInfobox = "showInfobox"
         static let showRelated = "showRelated"
         /// The AI answer atop a web search (the hosted pages, on request).

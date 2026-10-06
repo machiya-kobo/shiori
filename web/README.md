@@ -113,7 +113,7 @@ accepts that `PUT` only from its own origin (`KURA_PUBLIC_URL`), so through
 this host it is refused (403) unless Kura accepts this host's origin too;
 reading still works. When Kura answers 401, the Notes list (and All) says
 so with a Sign In link to Kura's own sign-in page, and the web app's
-Settings → Notes → Machiya shows whether you're signed in, with Sign In
+Settings → Account → Machiya shows whether you're signed in, with Sign In
 (Kura's `/signin`) or Sign Out (Kura's Settings: its sign-out is a form
 on Kura's own origin).
 

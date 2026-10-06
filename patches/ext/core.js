@@ -168,7 +168,7 @@
   }
 
   // Tell the host how many captures are waiting (the app's Settings →
-  // Waiting to Send; it can't read the browser's storage). Debounced; best
+  // Account → Waiting to Send; it can't read the browser's storage). Debounced; best
   // effort.
   let reportTimer = null;
   function reportQueue() {
@@ -581,7 +581,7 @@ const shioriMachiya = (() => {
           // The token itself, for the results page's own fetches (it applies the host rule).
           return answer(signIn().then((v) => ({ ok: true, token: v.token || '', principal: v.principal || '' })));
         case 'machiya-status':
-          // Signing in and out happens in the app (Settings → Notes).
+          // Signing in and out happens in the app (Settings → Account).
           return answer(signIn({ fresh: true }).then((v) => ({
             ok: true, signedIn: !!v.token, principal: v.principal || '', owns: false, text: S() ? S().machiyaStatusText(v) : '',
           })));
@@ -612,7 +612,7 @@ const shioriMachiya = (() => {
     theme: 'system',
     // One of the Machiya rooms' themes (S.PALETTES).
     palette: 'tokyo-night',
-    // The results page's options (the app's Settings → Search from Safari).
+    // The results page's options (the app's Settings → Results, and Safari → Shiori Search).
     showInfobox: true,
     showRelated: true,
     aiAnswer: true,
