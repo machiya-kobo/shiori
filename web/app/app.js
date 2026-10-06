@@ -2288,7 +2288,7 @@ function viewSettings() {
         toggle('foldRepeats', 'Fold Repeated Sites'), toggle('labelSuggestions', 'Labels in Search Page Suggestions'), toggle('webResults', 'Web Results'), toggle('aiAnswer', 'AI Answer'),
         toggle('previewImages', 'Images in Previews'),
       ],
-        'These follow you when signed in, but AI Answer and Click Opens, which stay in this browser. Click Opens sets what a click on a result opens: the original (a page in a new tab, a note in Obsidian) or Shiori’s preview, with the › at its end for the other; Automatic previews beside the preview and opens the original elsewhere. A result’s title always opens the original. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”.'),
+        'These follow you when signed in, except AI Answer and Click Opens. Click Opens picks what a result opens; the › is the other choice.'),
       group('Feeds', [text('newsBlurURL', 'NewsBlur', 'https://newsblur.example/')], 'For Subscribe in NewsBlur, which opens NewsBlur with a list’s feed.'),
       group('Search History', [
         toggle('searchHistory', 'Recent Searches'),
@@ -2298,7 +2298,7 @@ function viewSettings() {
         settings.niwaURL ? 'Signing in to Kura and out happens on Kura’s own pages.' : ''),
       group('About', [
         h('div', { class: 'item' }, h('span', {}, 'Saving pages'), h('span', { style: 'color:var(--secondary);text-align:right' },
-          SMALLWEB ? 'Add Page, or share a link to Shiori where your browser lists it (installed from Chrome or Edge). Safari’s extension is in the Shiori app.' : 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
+          SMALLWEB ? 'Add Page, or share a link to Shiori (installed from Chrome or Edge). Safari’s extension is in the Shiori app.' : 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
         statusURL ? h('div', { class: 'item' }, h('span', {}, 'Server'), statusLink()) : null,
         // The source (AGPL-3.0 section 13), only when the build names it.
         SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'Source'), h('a', { href: SOURCE_URL, target: '_blank', rel: 'noopener noreferrer' }, 'View the source')) : null,

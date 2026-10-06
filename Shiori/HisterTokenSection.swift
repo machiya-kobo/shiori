@@ -54,7 +54,7 @@ struct HisterTokenSection: View {
         } header: {
             Text("Safari Extension Token")
         } footer: {
-            Text("Only when your Hister has users. Safari's extension can't use your sign-in, so it saves pages with your Hister user's token instead: paste it here, on each device with the extension, and again after a new token is made in Hister. The app uses your sign-in (this token only while signed out). It stays in this device's Keychain and goes only to the server above. Remove deletes it here.")
+            Text("Only when your Hister has users: Safari's extension saves pages with your Hister token, pasted here. It stays in this device's Keychain and goes only to your Hister.")
         }
     }
 

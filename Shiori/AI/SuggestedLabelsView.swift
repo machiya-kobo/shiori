@@ -34,7 +34,7 @@ struct SuggestedLabelsView: View {
                 } header: {
                     Text("Collections")
                 } footer: {
-                    Text("A label in no collection doesn't show up under any collection. Adding it puts it in one; only @ collections that are a plain list of labels are changed.")
+                    Text("Adding a label puts it in a collection. Only @ collections that are a plain list of labels are changed.")
                 }
                 .listRowBackground(palette.surface)
             }
@@ -64,7 +64,7 @@ struct SuggestedLabelsView: View {
                 } header: {
                     Text("Labelled Automatically")
                 } footer: {
-                    Text("Applied when Anthropic was sure, or when it and Apple Intelligence picked the same label. Orange: Apple Intelligence disagreed, worth a look. Green: both agreed. Undo takes a label off again, and Shiori learns from it.")
+                    Text("Orange: Apple Intelligence disagreed, worth a look. Green: both agreed. Undo takes a label off, and Shiori learns from it.")
                 }
                 .listRowBackground(palette.surface)
             }

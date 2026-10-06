@@ -34,7 +34,7 @@ struct AISettingsPage: View {
         Section {
             Toggle("AI Features", isOn: $app.ai.enabled)
         } footer: {
-            Text("Off until you turn it on. Summarize is on a page's ⋯ menu (and its ✦ button on the Mac and iPad). Shiori tries the engines below in order and says which one answered. These settings and keys stay on this device: they're never synced.")
+            Text("Off until you turn it on. The engines below are tried in order; settings and keys stay on this device.")
         }
         .listRowBackground(palette.surface)
 
@@ -150,17 +150,14 @@ struct AISettingsPage: View {
     }
 
     private var autoLabelFooter: String {
-        var text = "New pages without a label are labelled while Shiori is open: Anthropic's sure answers are applied, and every other page waits in Suggested Labels, with Apple Intelligence's suggestion first. Pages you've labelled are never changed; every automatic label can be undone. At most \(AutoLabeller.dailyCloudLimit) Anthropic requests a day."
-        if app.ai.applyAppleLabels {
-            text += " Apply Apple Intelligence's Labels: when Anthropic doesn't settle a page (or isn't used), Apple Intelligence's first choice is applied rather than suggested, the waiting suggestions too; undo any you disagree with, and a label you undo twice goes back to being only suggested."
+        let start = if app.ai.applyAppleLabels {
+            "New pages get Anthropic's sure answer, else Apple Intelligence's first choice."
         } else if app.ai.cloud != .anthropic {
-            text += " Without Anthropic as the AI provider, every page waits for you, unless Apply Apple Intelligence's Labels is on."
+            "Without Anthropic as the AI provider, new pages' labels wait in Suggested Labels."
+        } else {
+            "Anthropic's sure answers label new pages; the rest wait in Suggested Labels."
         }
-        text += " Turn it on on one device (the Mac is the natural home), so each page is asked about once."
-        text += " Never Suggested: labels the AI never applies or suggests, here or in Edit Label (you can still use them yourself)."
-        text += " Keep Collections Current puts a label in no collection into one (automatically on the same terms, otherwise asked) and proposes new collections for loose labels that share a theme, always asked. Suggest Collections does the same once, on request, and only asks. It only changes @ collections that are a plain list of labels, and every change can be undone."
-        text += " It learns from you: every label you apply becomes an example, a suggestion you overrule or an automatic label you undo is remembered as a correction, a label you undo twice (a third of the time) is held for review, and one whose suggestions you've accepted five times without a miss is trusted sooner."
-        return text
+        return start + " Use it on one device only; every change can be undone."
     }
 
     private var cloudFooter: String {
@@ -168,9 +165,9 @@ struct AISettingsPage: View {
         case .none:
             "None: pages stay on your devices and servers."
         case .anthropic:
-            "When the engines above can't answer, page text goes to Anthropic (api.anthropic.com). Your notes never do. The key stays in this device's Keychain; any Anthropic API key works (the platform console's included)."
+            "When the engines above can't answer, page text goes to Anthropic. Your notes never do; the key stays in this device's Keychain."
         case .openAI:
-            "When the engines above can't answer, page text goes to OpenAI (api.openai.com). Your notes never do. The key stays in this device's Keychain."
+            "When the engines above can't answer, page text goes to OpenAI. Your notes never do; the key stays in this device's Keychain."
         }
     }
 

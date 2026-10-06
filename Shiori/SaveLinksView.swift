@@ -392,17 +392,17 @@ private struct LinkRow: View {
             Text("Needs the small-web gateway")
                 .textStyle(.caption, weight: .medium)
                 .foregroundStyle(palette.secondaryText)
-                .help("Gemini and Gopher pages are saved through the small-web gateway: set it in Settings → Search.")
+                .help("Set the small-web gateway in Settings → Search.")
         case .viaGateway:
             Label("Sent to the gateway", systemImage: "arrow.up.circle")
                 .textStyle(.caption, weight: .medium)
                 .foregroundStyle(palette.accent)
-                .help("The small-web gateway fetches it and saves it to Hister in a moment.")
+                .help("The gateway saves it to Hister in a moment.")
         case .file:
             Text("A file, not a web page")
                 .textStyle(.caption, weight: .medium)
                 .foregroundStyle(palette.secondaryText)
-                .help("Packages, images and PDFs aren't web pages, so there's nothing for Hister to read.")
+                .help("Not a web page: nothing for Hister to read.")
         case .notYet, .failed, .skipped, .rejected:
             EmptyView()
         }

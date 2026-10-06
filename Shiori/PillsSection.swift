@@ -44,7 +44,7 @@ struct PillsSection: View {
         } header: {
             Text("Pills")
         } footer: {
-            Text("The pills over every list and search, in this order, here and in Safari's results. All always shows; Opened only with Show Opened, Small Web only with its tab, Files once Hister has some. Images, Videos and News are Safari's results page's.")
+            Text("The pills over every list and search, in this order. All always shows; Opened only with Show Opened, Small Web only with its tab.")
         }
     }
 }

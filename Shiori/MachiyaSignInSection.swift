@@ -73,7 +73,7 @@ struct MachiyaSignInSection: View {
         } header: {
             Text("Sign in to Machiya")
         } footer: {
-            Text("Only when your rooms use Machiya's identity file. Make a code on the server with identity pair (it pairs with Kura, above), or paste a token from identity token mint. The token stays in this device's Keychain and goes only to your Kura and Konbini, never to Hister or SearXNG; Safari's extension asks the app for it. Sign Out deletes it here; revoke it on the server with identity device revoke or identity token revoke.")
+            Text("Only when your rooms use Machiya's identity file: enter a code from identity pair, or a token. It stays in this device's Keychain and goes only to your Kura and Konbini.")
         }
     }
 

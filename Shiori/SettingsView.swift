@@ -262,7 +262,7 @@ struct SettingsView: View {
             } header: {
                 Text("Search from Safari")
             } footer: {
-                Text("Keep DuckDuckGo as Safari's search engine. Searches from the address bar then open Shiori's results: your pages and notes, then the web from SearXNG. Bangs like !w still go to DuckDuckGo, and when SearXNG can't be reached you land on DuckDuckGo as usual.")
+                Text("Keep DuckDuckGo as Safari's search engine: address-bar searches then open Shiori's results. Bangs like !w still go to DuckDuckGo.")
             }
             .listRowBackground(palette.surface)
 
@@ -347,7 +347,7 @@ struct SettingsView: View {
             } header: {
                 Text("Small Web")
             } footer: {
-                Text("Gemini and Gopher search (TLGS, Kennedy, Veronica-2) through your small-web gateway, run when you press Return. Pages read through the gateway are saved to Hister; one opened in a Gemini app such as Lagrange is saved too, if the gateway can fetch it. Without an app for the link, it opens through the gateway.")
+                Text("Gemini and Gopher search through your small-web gateway, run when you press Return. Pages you open are saved to Hister.")
             }
             .listRowBackground(palette.surface)
 
@@ -379,7 +379,7 @@ struct SettingsView: View {
                 // Off: a preview fetches nothing from the page's own sites.
                 Toggle("Images in Previews", isOn: $app.searchPage.previewImages)
             } footer: {
-                Text("Preview Pane shows a page beside the results (Mac and iPad, and Safari's results in a wide window). Images in Previews loads a page's own pictures, the one request that goes to its site; off, a preview reaches only your Hister.")
+                Text("Preview Pane shows a page beside the results on a wide screen. Images in Previews loads pictures from the page's own site; off, previews reach only your Hister.")
             }
             .listRowBackground(palette.surface)
             case .notes:
@@ -422,7 +422,7 @@ struct SettingsView: View {
             } header: {
                 Text("Notes")
             } footer: {
-                Text("A note opens in this Obsidian vault; its Kura page (the vault's reader) and Konbini card are linked beside it, in Shiori and in Safari's results.")
+                Text("Notes open in this Obsidian vault, with their Kura page and Konbini card linked beside them.")
             }
             .listRowBackground(palette.surface)
 
@@ -467,11 +467,7 @@ struct SettingsView: View {
     #endif
 
     private var searchingFooter: String {
-        var text = "Remember What You Open tells Hister which result you opened for a search, so it comes first next time, in Shiori and in Safari's results. Show Opened shows those pages (first in Your Pages, and the Opened list); off, they're left out. Result Style sets how your pages, notes and opened pages stand apart: a tinted card, a bar down the edge, or nothing. \(Self.clickOpensTitle) sets what a result opens: the original (a page in the browser, a note in Obsidian) or Shiori's preview; Automatic previews beside the preview pane and opens the original elsewhere. The other is in the result's menu, and its title always opens the original. Search Filters adds date, site and visit filters above results. Fold Repeated Sites shows the first of several pages in a row from one site, then “N more”. Labels in Search Page Suggestions lists matching labels and collections first as you type in Shiori (Safari's results page); Shiori's own search fields suggest nothing, and your recent searches are in the sidebar. A label's tag on a result shows all its pages."
-        if app.capabilities?.semantic != true {
-            text += " Meaning-based search appears here once it's set up on the server."
-        }
-        return text
+        "Remember What You Open puts the results you open first next time. \(Self.clickOpensTitle) picks what a result opens; the other choice is in its menu."
     }
 
     /// An http:// address sends pages and searches unencrypted (only a
@@ -867,7 +863,7 @@ private struct FeedsSection: View {
         } header: {
             Text("Feeds")
         } footer: {
-            Text("Every search, collection and label has a feed: Export & Feed above for the list you were on (File on the Mac), or a collection's menu. OPML subscribes NewsBlur to all of them at once (NewsBlur → Import). Feeds other than New Pages come from your server's feed service.")
+            Text("Every search, collection and label has a feed. OPML subscribes NewsBlur to all your collections and labels at once.")
         }
         .onAppear { draft = app.searchPage.newsBlurURL }
         .onDisappear(perform: save)

@@ -103,7 +103,7 @@ struct HisterSignInSection: View {
         } header: {
             Text("Sign in to Hister")
         } footer: {
-            Text("Your Hister has users: sign in once on this device. The session stays in this device's Keychain and goes only to your Hister (and the rooms get an id for it, never the session). Sign In with Tailscale signs in through your tailnet; Sign In with Saved Password opens Hister's sign-in page privately, where your saved password is offered; or type your name and password below. Sign Out ends the session everywhere; Hister's sessions page lists every device.")
+            Text("Your Hister has users: sign in once on this device. The session stays in this device's Keychain and goes only to your Hister.")
         }
         .buttonStyle(.borderless)
     }
