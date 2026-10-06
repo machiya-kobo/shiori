@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.11.1 (2026-10-05)
+
+### Changed
+
+- **Mode** is the light/dark choice (System, Light, Dark) under
+  Appearance, as in every Machiya app; it was also called Appearance.
+
 ## 0.11.0 (2026-10-05)
 
 ### Changed
