@@ -5,6 +5,19 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.12.0 (2026-10-05)
+
+### Added
+
+- **Read offline in the apps**: the Library's All, Pages and Notes keep
+  their newest page, and the last 50 pages and notes you previewed are
+  kept on the device. Without a connection they show with "Offline · as
+  of <time>", and they're replaced as soon as your server answers again.
+  A private vault's note, a file or code is never kept, and signing out
+  clears it all.
+- The account settings' copy of the shared schema calls light and dark
+  Mode.
+
 ## 0.11.1 (2026-10-05)
 
 ### Changed
