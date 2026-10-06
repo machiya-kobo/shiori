@@ -5,6 +5,19 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.9.0 (2026-10-05)
+
+### Changed
+
+- **A tap anywhere on a result opens it**, not only on its title: a page
+  in the browser, a note in Obsidian (Kura without it), a file from
+  Hister's copy. In the apps on iPhone, the web app on a phone and the
+  search page. Shiori's own preview is a swipe or the menu in the apps,
+  and the › at a row's end in the web app. With a preview pane (Mac, iPad,
+  a wide window) a click still previews, and a double-click or Return
+  opens. Chips (labels, Obsidian, Kura, Konbini…) open what they always
+  did.
+
 ## 0.8.2 (2026-10-05)
 
 ### Fixed
