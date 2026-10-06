@@ -8,7 +8,7 @@ Shiori (栞, "bookmark"), the search app, searches your [Hister](https://github.
 <a href="https://machiya-kobo.github.io/machiya/">Machiya</a> · <a href="#what-it-does">Features</a> · <a href="#quickstart">Quickstart</a> · <a href="#sign-in-to-hister">Sign In</a> · <a href="#the-safari-extension">Safari</a> · <a href="#build">Build</a> · <a href="#linux">Linux</a> · <a href="#haiku">Haiku</a> · <a href="#hosting-the-web-pages">Hosting</a> · <a href="#credits-and-license">License</a>
 </p>
 
-<p align="center"><a href="docs/screenshots/shiori-search-dark.png"><img src="docs/screenshots/shiori-search-dark.png" alt="Shiori searching for lantern in the dark theme: invented web results with a sample page marked Your page and a sample note marked Your note among them, the Pages 5 and Notes 4 tabs above, and an Info card about paper lanterns on the right" width="100%"></a><br>Search everything at once</p>
+<p align="center"><a href="docs/screenshots/shiori-search-dark.png"><img src="docs/screenshots/shiori-search-dark.png" alt="Shiori searching for lantern in the dark theme: invented web results with a sample page marked Your page and a sample note marked Your note among them, the Pages 5 and Notes 4 tabs above, and an Info card about paper lanterns on the right" width="100%"></a><br>Everything everywhere all at once</p>
 
 <table>
   <tr>
