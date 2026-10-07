@@ -187,21 +187,21 @@ test('a section count is always there: some of all, or all', () => {
 });
 
 test('a collection gets an icon from a word in its name', () => {
-  assert.equal(S.collectionIcon('arts'), 'palette');
-  assert.equal(S.collectionIcon('games'), 'controller');
-  assert.equal(S.collectionIcon('k8s'), 'helm');
-  assert.equal(S.collectionIcon('kept'), 'bookmark');
-  assert.equal(S.collectionIcon('life'), 'leaf');
-  assert.equal(S.collectionIcon('tech'), 'cpu');
+  assert.equal(S.collectionIcon('drawings'), 'palette');
+  assert.equal(S.collectionIcon('boardgames'), 'controller');
+  assert.equal(S.collectionIcon('clusters'), 'helm');
+  assert.equal(S.collectionIcon('saved'), 'bookmark');
+  assert.equal(S.collectionIcon('garden'), 'leaf');
+  assert.equal(S.collectionIcon('software'), 'cpu');
   assert.equal(S.collectionIcon('misc'), 'stack');
-  assert.equal(S.collectionIcon('@retro'), 'clock');
-  assert.equal(S.collectionIcon('@unix'), 'terminal');
-  assert.equal(S.collectionIcon('@smallweb'), 'globe');
-  assert.equal(S.collectionIcon('@gear'), 'wrench');
-  assert.equal(S.collectionIcon('@culture'), 'masks');
-  assert.equal(S.collectionIcon('@homelab'), 'server');
-  assert.equal(S.collectionTitle('@work'), 'work');
-  assert.equal(S.collectionTitle('kept'), 'kept');
+  assert.equal(S.collectionIcon('@vintage'), 'clock');
+  assert.equal(S.collectionIcon('@shell'), 'terminal');
+  assert.equal(S.collectionIcon('@indieweb'), 'globe');
+  assert.equal(S.collectionIcon('@tools'), 'wrench');
+  assert.equal(S.collectionIcon('@kyoto-culture'), 'masks');
+  assert.equal(S.collectionIcon('@selfhost'), 'server');
+  assert.equal(S.collectionTitle('@workshop'), 'workshop');
+  assert.equal(S.collectionTitle('saved'), 'saved');
 });
 
 test('labels and collections for the word being typed', () => {
@@ -1116,7 +1116,7 @@ test('Code: its own pill, never anywhere else, filters as metadata terms (CodeDo
   assert.equal(S.codeNotePath('o/a b'), '');
   assert.equal(S.codeNotePath('../x'), 'Repos/x.git.md'); // the last segment only
   // @code is no collection, as @notes isn't; the pill is in the order setting, after Files.
-  assert.deepEqual(Object.keys(S.collectionAliases({ '@code': 'metadata.source:code', '@retro': 'label:(a|b)' })), ['@retro']);
+  assert.deepEqual(Object.keys(S.collectionAliases({ '@code': 'metadata.source:code', '@lanterns': 'label:(a|b)' })), ['@lanterns']);
   assert.deepEqual(plain(S.PILL_KEYS.slice(-3)), ['files', 'code', 'opened']);
 });
 

@@ -46,7 +46,7 @@ struct AllResults: View {
     /// Pages and Notes pills).
     static let count = 30
 
-    /// Not for a search of Hister syntax alone (label:bsd, @retro), and
+    /// Not for a search of Hister syntax alone (label:paper, @lanterns), and
     /// only for a search run on purpose (`SearchSession.webAllowed`): while
     /// typing, yours alone.
     private var webOn: Bool {

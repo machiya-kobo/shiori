@@ -7,7 +7,7 @@ import SwiftUI
 /// web app and the search page use the same table, `S.collectionIcon`).
 enum CollectionIcon {
     /// A collection's name as shown: Hister's alias keyword without its
-    /// "@" (the aliases are "@retro", "@work"…, so a plain word in a search
+    /// "@" (the aliases are "@lanterns", "@kyoto"…, so a plain word in a search
     /// stays a word: an alias replaces its keyword anywhere in a query).
     static func title(for name: String) -> String {
         name.hasPrefix("@") ? String(name.dropFirst()) : name

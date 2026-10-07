@@ -2215,8 +2215,8 @@
   }
 
   /**
-   * The note's tags that name an existing label ("retro", or a nested
-   * "topic/retro", for the label `retro`; case aside). Never an invented
+   * The note's tags that name an existing label ("lanterns", or a nested
+   * "crafts/lanterns", for the label `lanterns`; case aside). Never an invented
    * label. HisterKit's `SaveLinks.labelCandidates` is the twin.
    */
   function tagLabelCandidates(tags, labels) {

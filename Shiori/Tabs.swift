@@ -589,7 +589,7 @@ struct SearchTips: View {
     @Environment(\.palette) private var palette
 
     private let tips: [(String, String)] = [
-        ("@tech", "A collection: all the labels it names"),
+        ("@crafts", "A collection: all the labels it names"),
         ("label:books", "Pages with one label (exact, case-sensitive)"),
         ("domain:www.example.com", "One site; the whole host"),
         ("added:>2026-01-01", "Added after a date"),
