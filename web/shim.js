@@ -19,7 +19,7 @@
     'vaultInGeneral', 'vaultTab', 'webResults', 'searchHistory', 'previewPane', 'previewImages',
     'rememberOpened', 'showOpened', 'resultStyle', 'pills', 'smallWebTab', 'smallWebOpen', 'searchFilters', 'semanticSearch', 'aiAnswer', 'histerCount', 'vaultCount', 'niwaURL',
     'labelSuggestions', 'foldRepeats',
-    'konbiniURL', 'newsBlurURL', 'theme', 'palette', 'textSize', 'obsidianVault',
+    'konbiniURL', 'newsBlurURL', 'theme', 'palette', 'textSize', 'obsidianVault', 'notesSource',
   ];
   // The notes' homes, from the build (the server passes them in); a
   // browser's own choice wins.
@@ -59,7 +59,11 @@
   function withAddresses(settings) {
     const homes = {};
     for (const [key, value] of Object.entries(NOTE_HOMES)) if (!value.startsWith('__')) homes[key] = value;
-    return { ...homes, ...(settings || {}), searxngURL: ROOT + 'searx/', konbiniAPIURL: ROOT + 'konbini/', aiURL: AI_BUILD === '1' ? ROOT + 'shiori/ai/' : '', kuraAPIURL: ROOT + 'kura/', smallwebAPIURL: ROOT + 'smallweb/' };
+    const merged = { ...homes, ...(settings || {}) };
+    // Kura is set up when this host has a Kura home (the build's, or this
+    // browser's): /kura/ is always routed, so its address alone can't say.
+    // Notes From follows it until the person picks (S.notesSource).
+    return { ...merged, searxngURL: ROOT + 'searx/', konbiniAPIURL: ROOT + 'konbini/', aiURL: AI_BUILD === '1' ? ROOT + 'shiori/ai/' : '', kuraAPIURL: ROOT + 'kura/', kuraConfigured: !!merged.niwaURL, smallwebAPIURL: ROOT + 'smallweb/' };
   }
 
   const storage = {

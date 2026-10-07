@@ -193,10 +193,17 @@
   // The AI endpoint: set only on the hosted page (web/shim.js), and only
   // when its build has one (SHIORI_AI=1).
   const aiBase = withSlash(settings.aiURL || '');
-  // Notes come only from Kura:
-  // its API on the page's own host for the hosted page (/kura/), else on
-  // the Kura reader's. Hister's queries leave the notes out (S.histerText).
+  // Notes come from Kura or from Hister (settings.notesSource; until the
+  // person picks, Kura when one is set up). Kura: its API on the page's own
+  // host for the hosted page (/kura/), else on the Kura reader's. Hister:
+  // its label:vault documents, the default vault's alone (S.histerNoteDocuments).
+  // Hister's other queries leave the notes out (S.histerText).
   const kuraBase = withSlash(settings.kuraAPIURL || '') || niwaBase;
+  // Kura set up: the hosted page says so (web/shim.js: /kura/ is always routed); else its address.
+  const kuraSetUp = 'kuraConfigured' in settings ? !!settings.kuraConfigured : !!kuraBase;
+  const notesFromHister = S.notesSource(settings.notesSource || '', kuraSetUp) === 'hister';
+  // Where notes can be asked at all.
+  const notesBase = notesFromHister ? histerBase : kuraBase;
   // Machiya sign-in (docs/signing-in.md). In the extension: its token,
   // which the background hands to its own pages only, sent to Kura and
   // Konbini through search-core's host rule (never Hister or SearXNG,
@@ -242,6 +249,22 @@
   /** Notes from Kura, in Hister's shape ({documents, total}). */
   async function kuraNotes(text, options) {
     return S.kuraDocuments(await fetchJSON(S.kuraURL(kuraBase, text, options), { timeout: 8000, room: true }));
+  }
+  /**
+   * Notes from Hister (notesSource 'hister'): its label:vault documents,
+   * the default vault's alone, in the same shape; `page_key` for the next page.
+   */
+  async function histerNotes(text, { limit = 20, page_key = '', sort = '' } = {}) {
+    const t = String(text || '').trim();
+    const query = JSON.stringify({
+      text: S.histerNotesText(text), limit, highlight: 'HTML',
+      ...(page_key ? { page_key } : {}),
+      ...(sort === 'date' || !t || t === '*' ? { sort: 'date' } : {}),
+    });
+    const reply = await fetchJSON(`${histerBase}search?format=json&query=${encodeURIComponent(query)}`, {
+      headers: histerAuth({ Accept: 'application/json' }),
+    });
+    return { ...S.histerNoteDocuments(reply), page_key: (reply && reply.page_key) || '' };
   }
   // Kura's vaults (/api/vaults), for a work note's title and Obsidian vault,
   // the Notes tab's filter, and which vaults are shared (S.useVaults; until
@@ -738,12 +761,12 @@
       frame.hidden = false;
       frame.srcdoc = `<!doctype html><meta charset="utf-8"><body style="background:transparent"></body>`;
       try {
-        // Every note from Kura, its sanitized HTML (notes come only from
-        // Kura; Hister may not hold one): a vault's note by its vault.
+        // A note from Kura, its sanitized HTML (a vault's note by its
+        // vault); from Hister's readable copy when notes come from Hister.
         const other = S.noteVault(url);
         const note = other || (card && card.classList.contains('vault-card'));
         const path = note ? S.notePath(url, other ? [] : await konbiniCards()) : '';
-        const p = note && kuraBase && path
+        const p = note && kuraBase && path && !notesFromHister
           ? { title: card?.querySelector('.title')?.textContent || url, content: ((await fetchJSON(`${kuraBase}api/note?${new URLSearchParams({ path, ...(other ? { vault: other } : {}) })}`, { timeout: 10000, room: true })) || {}).html }
           : await fetchJSON(`${histerBase}api/preview?url=${encodeURIComponent(url)}`, { timeout: 10000, headers: histerAuth() });
         if (current !== url) return;
@@ -1005,7 +1028,9 @@
       { key: 'vaultInGeneral', label: 'Your Notes in All' },
       { key: 'histerTab', label: 'Pages Tab' },
       { key: 'vaultTab', label: 'Notes Tab' },
-    ]],
+      // This device's own (never the account's), as Kura's address is.
+      { key: 'notesSource', label: 'Notes From', options: [['kura', 'Kura'], ['hister', 'Hister']] },
+    ], () => 'From Hister: your default vault’s notes only.'],
     ['Results', [
       { key: 'resultStyle', label: 'Result Style', options: [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']] },
       { key: 'foldRepeats', label: 'Fold Repeated Sites' },
@@ -1024,7 +1049,8 @@
   ];
   const LOOK_KEYS = ['theme', 'palette', 'textSize', 'previewPane'];
   // What a choice shows while it was never set.
-  const CHOICE_DEFAULTS = { theme: 'system', palette: 'tokyo-night' };
+  // Notes From: until chosen, Kura when one is set up (S.notesSource).
+  const CHOICE_DEFAULTS = { theme: 'system', palette: 'tokyo-night', notesSource: S.notesSource('', kuraSetUp) };
   const saving = [];
   let redraw = false;
 
@@ -1124,7 +1150,9 @@
           control = el('select', { id });
           for (const [value, text] of row.options) {
             const option = el('option', { value: String(value) }, text);
-            if (String(settings[row.key] ?? CHOICE_DEFAULTS[row.key] ?? '') === String(value)) option.selected = true;
+            // '' is never a choice (Notes From until picked): its default shows.
+            const current = settings[row.key] === '' && row.key in CHOICE_DEFAULTS ? CHOICE_DEFAULTS[row.key] : settings[row.key];
+            if (String(current ?? CHOICE_DEFAULTS[row.key] ?? '') === String(value)) option.selected = true;
             control.append(option);
           }
           control.addEventListener('change', () => {
@@ -2024,7 +2052,8 @@
    * Konbini and Hister are chips below.
    */
   function vaultCard(d, cards) {
-    const path = S.notePath(d.url, cards);
+    // From the address; else the path Kura or Hister (metadata.vault_path) gave.
+    const path = S.notePath(d.url, cards) || d.path || '';
     // A work vault's note: its own vault's name and Obsidian vault, read in
     // Kura, never a Konbini card or Hister.
     const other = S.noteVault(d.url);
@@ -2282,10 +2311,11 @@
     $('tools-row').append(controls);
     controls.append($('sort-label'));
     if (code) $('web-results').before(codeFilterBar());
-    if (vault && !kuraBase) return showStatus('No Kura address is set up (Settings → Search → Notes).');
+    if (vault && !notesBase) return showStatus(notesFromHister ? 'No Hister server is set up.' : 'No Kura address is set up (Settings → Search → Notes).');
     if (!vault && !histerBase) return showStatus('No Hister server is set up.');
     let result = pageState[category];
-    if (vault) {
+    // From Hister: the default vault's notes alone, so no vault menu.
+    if (vault && !notesFromHister) {
       await vaultsReady();
       // Which vaults: All, or one (work vaults are searchable in Notes).
       if (kuraVaults.length > 1) {
@@ -2298,6 +2328,16 @@
         select.value = kuraVaults.some((v) => v.name === vaultParam) ? vaultParam : 'all';
         select.addEventListener('change', () => (location.href = link({ v: select.value, p: 1 })));
         controls.prepend(select);
+      }
+    }
+    if (!result && vault && notesFromHister) {
+      // Hister pages by its page key, as for your pages.
+      try {
+        result = await histerNotes(q, { limit: PAGE_SIZE, page_key: histerKey, sort: histerSort === 'new' ? 'date' : '' });
+        pageState[category] = result;
+        saveState();
+      } catch (_) {
+        return showStatus('Hister could not be reached.');
       }
     }
     if (!result && vault) {
@@ -2479,13 +2519,13 @@
   if (category === 'general' && page === 1 && hasCode && histerBase && q) {
     histerSearch(S.codeQuery(q), 1).then((r) => setPillCount('code', (r && r.total) || 0)).catch(() => {});
   }
-  const showVault = category === 'general' && settings.vaultInGeneral && page === 1 && !!kuraBase;
-  // Your notes, from Kura (Hister's queries leave them out).
+  const showVault = category === 'general' && settings.vaultInGeneral && page === 1 && !!notesBase;
+  // Your notes, from Kura or Hister (Hister's page searches leave them out).
   const vaultResult = !showVault
     ? Promise.resolve(null)
     : pageState.vault
       ? Promise.resolve(pageState.vault)
-      : kuraNotes(q, { limit: ALL_COUNT }).then((r) => {
+      : (notesFromHister ? histerNotes(q, { limit: ALL_COUNT }) : kuraNotes(q, { limit: ALL_COUNT })).then((r) => {
           pageState.vault = r;
           saveState();
           return r;

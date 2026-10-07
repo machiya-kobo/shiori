@@ -11,7 +11,7 @@ import { ShimURL, ShimURLSearchParams, installURL } from '../linux/src/url.js';
 import { newPage, addRequest, titleIn, capped, MAX_HTML_CHARACTERS } from '../linux/src/page.js';
 import * as outbox from '../linux/src/outbox.js';
 import { parseArgs, saveLinksTarget } from '../linux/src/cli.js';
-import { providerQuery, providerResults, activation } from '../linux/src/provider.js';
+import { providerQuery, providerResults, activation, notesFromHister, notesSearch, notesFromReply } from '../linux/src/provider.js';
 import { roomHeaders, roomOrigins, signInStatus, pairedMessage } from '../linux/src/machiya.js';
 import { histerHeaders, histerTokenStatus } from '../linux/src/hister.js';
 
@@ -207,6 +207,36 @@ test('the desktop search provider: pages, then notes', () => {
   ]);
   assert.deepEqual(plain(activation(rows[1].id)), { kind: 'note', url: 'https://kura.example/n/Projects/Sample' });
   assert.equal(activation('bogus'), null);
+});
+
+test('quick search notes: from Kura, or from Hister when chosen or without a Kura', () => {
+  const S = shimmedCore();
+  const withKura = { server: 'https://hister.example', kura: 'https://kura.example' };
+  const noKura = { server: 'https://hister.example' };
+  // until chosen: Kura when the config names one, else Hister
+  assert.equal(notesFromHister(S, withKura), false);
+  assert.equal(notesFromHister(S, noKura), true);
+  assert.equal(notesFromHister(S, { ...withKura, notesSource: 'hister' }), true);
+  assert.equal(notesFromHister(S, { ...noKura, notesSource: 'kura' }), true);
+  // Kura: its API
+  const kura = notesSearch(S, withKura, 'lantern');
+  assert.equal(kura.hister, false);
+  assert.match(kura.url, /^https:\/\/kura\.example\/api\/search\?/);
+  // Hister: its label:vault search, the newest first with no words
+  const hister = notesSearch(S, noKura, 'lantern');
+  assert.equal(hister.hister, true);
+  assert.equal(JSON.parse(new URL(hister.url).searchParams.get('query')).text, '(lantern|lantern*) label:vault');
+  assert.equal(JSON.parse(new URL(notesSearch(S, noKura, '').url).searchParams.get('query')).sort, 'date');
+  assert.equal(notesSearch(S, { notesSource: 'hister' }, 'x'), null);
+  // Hister's reply: the default vault's notes alone, in Kura's shape
+  const notes = notesFromReply(S, { total: 2, documents: [
+    { url: 'https://kura.example/n/Projects/Lantern%20festival%20kit', title: 'Lantern festival kit', metadata: { vault_path: 'Projects/Lantern festival kit.md' } },
+    { url: 'https://kura.example/v/work/n/Secret', title: 'Secret' },
+  ] }, true);
+  assert.deepEqual(notes.documents.map((d) => d.url), ['https://kura.example/n/Projects/Lantern%20festival%20kit']);
+  const rows = providerResults(null, notes);
+  assert.deepEqual(plain(rows.map((r) => r.description)), ['Projects › Lantern festival kit']);
+  assert.equal(notesFromReply(S, null, true), null);
 });
 
 

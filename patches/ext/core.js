@@ -645,6 +645,8 @@ const shioriMachiya = (() => {
     obsidianVault: '__SHIORI_OBSIDIAN_VAULT__',
     niwaURL: '__SHIORI_NIWA_URL__',
     konbiniURL: '__SHIORI_KONBINI_URL__',
+    // Where notes come from: '' until chosen (Kura when one is set up), 'kura' or 'hister' (S.notesSource).
+    notesSource: '',
   };
   // The results page asks for fresh settings as it opens, just after the
   // search handed it over, which asked the app already.

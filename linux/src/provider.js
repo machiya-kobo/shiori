@@ -47,6 +47,40 @@ export function providerResults(histerReply, kuraReply, { pages = PAGES, notes =
   return rows;
 }
 
+/**
+ * Where notes come from (search-core's notesSource): config.json's
+ * `notesSource` ('kura' or 'hister'; absent until chosen), else Kura when
+ * the config names one. `S` is search-core.
+ */
+export function notesFromHister(S, config) {
+  return S.notesSource(String((config && config.notesSource) || ''), !!String((config && config.kura) || '').trim()) === 'hister';
+}
+
+/**
+ * The notes search: { url, hister } for `text` (the default vault only), or
+ * null without a server to ask. From Hister: its label:vault search
+ * (S.histerNotesText), answered with S.histerNoteDocuments; else Kura's API.
+ */
+export function notesSearch(S, config, text, limit = 8) {
+  const slash = (u) => (u && !u.endsWith('/') ? u + '/' : u || '');
+  if (notesFromHister(S, config)) {
+    const server = slash(String(config.server || '').trim());
+    if (!server) return null;
+    const t = String(text || '').trim();
+    const query = { text: S.histerNotesText(text), limit, highlight: '' };
+    if (!t || t === '*') query.sort = 'date';
+    return { url: `${server}search?${new URLSearchParams({ query: JSON.stringify(query) })}`, hister: true };
+  }
+  const kura = slash(String(config.kura || '').trim());
+  return kura ? { url: S.kuraURL(kura, text, { limit }), hister: false } : null;
+}
+
+/** A notes search's reply as notes, in Kura's shape (Hister's: the default vault's alone). */
+export function notesFromReply(S, json, hister) {
+  if (!json) return null;
+  return hister ? S.histerNoteDocuments(json) : S.kuraDocuments(json);
+}
+
 /** What an activated row opens: a page in the browser, a note in Kura's reader. */
 export function activation(id) {
   const m = String(id).match(/^(page|note):(https?:\/\/.+)$/i);

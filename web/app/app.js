@@ -181,6 +181,8 @@ const DEFAULTS = {
   showOpened: false, resultStyle: 'tint', clickOpens: 'auto', smallWebTab: true, smallWebOpen: 'gateway',
   // Which of Kura's vaults the Notes lists search: 'all', or one's name.
   notesVault: 'all',
+  // Where notes come from: '' until chosen (Kura when one is set up), 'kura' or 'hister'.
+  notesSource: '',
 };
 // Result Style back to Tint, once, whatever was saved before (the user's
 // call, 0.5.0); a style chosen after that is kept.
@@ -437,9 +439,22 @@ async function loadRules() {
 let konbiniCards = [];
 /** Kura's vaults (/api/vaults), for the Notes filter and a work note's place. */
 let kuraVaults = [];
+
+/**
+ * Notes From (S.notesSource): Kura, or Hister's label:vault notes, the
+ * default vault's alone. Until the person picks, Kura when one is set up
+ * (a Kura home: the build's, or Settings → Notes).
+ */
+const notesFromHister = () => S.notesSource(settings.notesSource || '', !!settings.niwaURL) === 'hister';
+/** One page of notes from either, in api.kura's shape (Hister has no vaults to filter: the default alone). */
+function notesList(text, options = {}) {
+  return notesFromHister() ? api.histerNotes(text, options) : api.kura(text, options);
+}
+
 function note(doc) {
   if (doc.label !== 'vault') return null;
-  const path = S.notePath(doc.url, konbiniCards);
+  // From the address; else the path Kura or Hister (metadata.vault_path) gave.
+  const path = S.notePath(doc.url, konbiniCards) || doc.path || '';
   // A work vault's note: its own vault's name and Obsidian vault, read in
   // Kura, never a Konbini card.
   const other = S.noteVault(doc.url);
@@ -802,10 +817,10 @@ function resultsList(container, options) {
   /** One page of this list, in api.search's shape. */
   async function fetchPage(first) {
     // A Notes list searches the vaults its filter names (All, or one).
-    if (source === 'notes') return api.kura(query, { sort, pageKey: first ? '' : next, vault: settings.notesVault || 'all' });
+    if (source === 'notes') return notesList(query, { sort, pageKey: first ? '' : next, vault: settings.notesVault || 'all' });
     if (!merging) return api.search(query, { sort, pageKey: first ? '' : next });
     // Kura asking who you are (401) leaves the notes out, and says so.
-    const notesPage = (key) => api.kura('*', { sort: 'date', pageKey: key }).catch((error) => {
+    const notesPage = (key) => notesList('*', { sort: 'date', pageKey: key }).catch((error) => {
       if (error.status === 401) notesWantSignIn = true;
       return null;
     });
@@ -928,15 +943,15 @@ function resultsList(container, options) {
     });
     async function count() {
       if (merging) {
-        const [pages, notes] = await Promise.all([api.search(query, { sort }).catch(() => null), api.kura('*', { sort: 'date' }).catch(() => null)]);
+        const [pages, notes] = await Promise.all([api.search(query, { sort }).catch(() => null), notesList('*', { sort: 'date' }).catch(() => null)]);
         if (!pages) return null;
         return S.newItemsCount([...pages.documents, ...((notes && notes.documents) || [])], seen, newestShown);
       }
       if (sort === 'date' && !group) {
-        const reply = source === 'notes' ? await api.kura(query, { sort, vault: settings.notesVault || 'all' }) : await api.search(query, { sort });
+        const reply = source === 'notes' ? await notesList(query, { sort, vault: settings.notesVault || 'all' }) : await api.search(query, { sort });
         return S.newItemsCount(reply.documents, seen, newestShown);
       }
-      const reply = source === 'notes' ? await api.kura(query, { sort, limit: 1, vault: settings.notesVault || 'all' }) : await api.search(query, { sort, limit: 1 });
+      const reply = source === 'notes' ? await notesList(query, { sort, limit: 1, vault: settings.notesVault || 'all' }) : await api.search(query, { sort, limit: 1 });
       return Math.max(0, (reply.total || 0) - firstTotal);
     }
     const timer = setInterval(async () => {
@@ -1217,8 +1232,8 @@ function controls(view, params, { search = false, notes = false } = {}) {
               ]),
         ]),
     // A Notes list: which of Kura's vaults (All, or one; work vaults are
-    // searchable in Notes wherever Shiori runs).
-    notes && kuraVaults.length > 1
+    // searchable in Notes wherever Shiori runs). From Hister: the default alone.
+    notes && kuraVaults.length > 1 && !notesFromHister()
       ? dropMenu(quiet('stack', (kuraVaults.find((v) => v.name === settings.notesVault) || { title: 'All Vaults' }).title, (settings.notesVault || 'all') !== 'all'), () => [
           { text: 'All Vaults', checked: (settings.notesVault || 'all') === 'all', pick: () => (changeSetting('notesVault', 'all'), render()) },
           ...kuraVaults.map((v) => ({ text: v.title, checked: settings.notesVault === v.name, pick: () => (changeSetting('notesVault', v.name), render()) })),
@@ -1365,7 +1380,7 @@ function viewLibrary(params) {
   const query = withWord('*', c.word);
   const title = { all: 'Library', hister: 'Pages', notes: 'Notes' }[filter] || 'Library';
   const source = { all: 'all', hister: 'pages', notes: 'notes' }[filter] || 'all';
-  shownList = { title, query, sort: c.hister, source, feed: S.feedURL(location.origin, { query, title, source, kuraBase: KURA_BASE }) };
+  shownList = { title, query, sort: c.hister, source, feed: S.feedURL(location.origin, { query, title, source, kuraBase: notesFromHister() ? '' : KURA_BASE }) };
   resultsList(list, {
     query,
     sort: c.hister,
@@ -1558,7 +1573,7 @@ function viewSearch(params) {
   const text = q;
   listSearch = text;
   const source = scope === 'notes' ? 'notes' : 'pages';
-  shownList = { title: q, query: withWord(text, c.word), sort: c.hister, source, feed: S.feedURL(location.origin, { query: withWord(text, c.word), title: q, source, kuraBase: KURA_BASE }) };
+  shownList = { title: q, query: withWord(text, c.word), sort: c.hister, source, feed: S.feedURL(location.origin, { query: withWord(text, c.word), title: q, source, kuraBase: notesFromHister() ? '' : KURA_BASE }) };
   if (listed) {
     const notes = scope === 'notes';
     resultsList($('list'), {
@@ -1605,11 +1620,11 @@ const ALL_COUNT = 30;
 
 async function searchAll(container, q, { web = true } = {}) {
   container.replaceChildren(h('div', { class: 'spinner' }));
-  // Pages from Hister (which sends no notes), notes from Kura.
+  // Pages from Hister (which sends no notes), notes from Kura or Hister (Notes From).
   const both = (text) => Promise.all([
     api.search(text, { limit: ALL_COUNT }).catch(() => null),
     // Kura asking who you are (401): a Sign In notice where the notes go.
-    api.kura(text, { limit: ALL_COUNT }).catch((error) => (error.status === 401 ? { signIn: true, total: 0, documents: [], opened: [] } : null)),
+    notesList(text, { limit: ALL_COUNT }).catch((error) => (error.status === 401 ? { signIn: true, total: 0, documents: [], opened: [] } : null)),
   ]);
   let [pages, notes] = await both(q);
   const found = (r) => r && (r.total || r.documents.length || r.opened.length);
@@ -2016,9 +2031,9 @@ async function showPreview(doc, { extractor = '' } = {}) {
   );
   pane.replaceChildren(h('div', { class: 'spinner' }));
   try {
-    // A work note's preview is Kura's sanitized HTML (Hister never has it); shown, never cached.
-    // Every note from Kura (notes come only from Kura; Hister may not hold one).
-    const p = n && n.path ? { title: doc.title, content: await api.kuraNote(n.path, n.vault || '') } : await api.preview(doc.url, extractor);
+    // A note from Kura: its sanitized HTML (a work note's too: Hister never has it); shown, never cached.
+    // Notes From Hister: Hister's readable copy, the default vault's notes alone (api.preview refuses any other).
+    const p = n && n.path && !notesFromHister() ? { title: doc.title, content: await api.kuraNote(n.path, n.vault || '') } : await api.preview(doc.url, extractor);
     if (token !== previewToken) return;
     const frame = h('iframe', { title: 'Preview', sandbox: 'allow-popups allow-popups-to-escape-sandbox', referrerpolicy: 'no-referrer' });
     frame.srcdoc = previewHTML(doc, p, n);
@@ -2298,6 +2313,13 @@ function viewSettings() {
     select.addEventListener('change', () => changeSetting(key, typeof settings[key] === 'number' ? Number(select.value) : select.value));
     return h('label', { class: 'item' }, h('span', {}, title), select);
   };
+  // Notes From: the source in use until one's picked ('' isn't a choice).
+  const notesFrom = () => {
+    const now = notesFromHister() ? 'hister' : 'kura';
+    const select = h('select', { 'aria-label': 'Notes From' }, [['kura', 'Kura'], ['hister', 'Hister']].map(([v, t]) => h('option', { value: v, selected: now === v }, t)));
+    select.addEventListener('change', () => changeSetting('notesSource', select.value));
+    return h('label', { class: 'item' }, h('span', {}, 'Notes From'), select);
+  };
   const text = (key, title, placeholder, type = 'url') => {
     const input = h('input', { type, value: settings[key] || '', placeholder, 'aria-label': title, autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false' });
     input.addEventListener('change', () => changeSetting(key, input.value.trim()));
@@ -2330,8 +2352,8 @@ function viewSettings() {
         toggle('smallWebTab', 'Small Web'),
         settings.smallWebTab ? choice('smallWebOpen', 'Open Results', [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']]) : null,
       ], 'Gemini and Gopher search through the small-web gateway, run when you press Return.'),
-      group('Notes', [text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/')],
-        'Notes open in this Obsidian vault, with their Kura page and Konbini card linked beside them.'),
+      group('Notes', [notesFrom(), text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/')],
+        'Notes open in this Obsidian vault, with their Kura page and Konbini card linked beside them. From Hister: your default vault’s notes only.'),
       group('Results', [
         choice('resultStyle', 'Result Style', [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']]),
         toggle('foldRepeats', 'Fold Repeated Sites'),
@@ -2529,7 +2551,7 @@ async function allResults(list) {
   let key = '';
   do {
     // A notes list's from Kura; any other from Hister (pages only, All too).
-    const reply = await (list.source === 'notes' ? api.kura : api.search)(list.query, { sort: list.sort || '', pageKey: key, limit: 100 });
+    const reply = await (list.source === 'notes' ? notesList : api.search)(list.query, { sort: list.sort || '', pageKey: key, limit: 100 });
     for (const d of reply.documents) {
       // No private vault's note leaves the device in an export.
       if (seen.has(d.url) || S.isPrivateNote(d.url)) continue;

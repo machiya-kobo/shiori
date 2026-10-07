@@ -42,6 +42,8 @@ globalThis.fetch = async (url, init = {}) => {
     return new Response(JSON.stringify({ vaults: server.vaults }));
   }
   if (url === '/api/delete') return new Response(JSON.stringify({ matched: 1 }));
+  // Hister's search: `server.search` when set (notes from Hister).
+  if (server.search && String(url).startsWith('/search?')) return new Response(JSON.stringify(server.search));
   return new Response('{}');
 };
 const api = await import('../web/app/api.js');
@@ -469,4 +471,59 @@ test("the hosted pages' Sign Out posts to the helper on their own origin", () =>
     assert.match(src, /\{ method: 'post', action: '\/machiya\/signout', class: 'sign-out' \}/, file);
     assert.match(src, /'Sessions…'/, file);
   }
+});
+
+test("notes from Hister: its label:vault search, the default vault's notes alone, in Kura's shape", async () => {
+  reset(null);
+  server.search = {
+    total: 3,
+    page_key: 'next-key',
+    documents: [
+      { url: 'https://kura.example/n/Projects/Lantern%20festival%20kit', title: 'Lantern festival kit', label: 'vault', metadata: { vault_path: 'Projects/Lantern festival kit.md' } },
+      { url: WORK, title: 'Plan', label: 'vault' },
+      { url: 'https://kura.example/n/Workshop/Log', title: 'Log', label: 'vault' },
+    ],
+  };
+  try {
+    const page = await api.histerNotes('lantern', { limit: 3 });
+    const sent = server.calls.find((c) => String(c.url).startsWith('/search?'));
+    const query = JSON.parse(new URLSearchParams(String(sent.url).split('?')[1]).get('query'));
+    assert.equal(query.text, '(lantern|lantern*) label:vault');
+    assert.equal(query.sort, undefined);
+    assert.deepEqual(page.documents.map((d) => d.url), ['https://kura.example/n/Projects/Lantern%20festival%20kit', 'https://kura.example/n/Workshop/Log']);
+    assert.equal(page.documents[0].path, 'Projects/Lantern festival kit.md');
+    assert.equal(page.total, 2);
+    // a full page from Hister: its key goes on
+    assert.equal(page.next, 'next-key');
+    // no Kura was asked
+    assert.ok(!server.calls.some((c) => String(c.url).startsWith('/kura/')));
+    // the newest first with no words
+    server.calls = [];
+    await api.histerNotes('', { limit: 3 });
+    const newest = server.calls.find((c) => String(c.url).startsWith('/search?'));
+    assert.equal(JSON.parse(new URLSearchParams(String(newest.url).split('?')[1]).get('query')).sort, 'date');
+  } finally {
+    server.search = null;
+  }
+});
+
+test('the search page and the web app read notes from the source Notes From picks', () => {
+  const page = read('../patches/shiori/search.js');
+  assert.match(page, /S\.notesSource\(settings\.notesSource \|\| '', kuraSetUp\)/);
+  assert.match(page, /S\.histerNotesText\(text\)/);
+  assert.match(page, /S\.histerNoteDocuments\(reply\)/);
+  // a note previews from Kura only when notes come from Kura
+  assert.match(page, /note && kuraBase && path && !notesFromHister/);
+  assert.match(page, /key: 'notesSource', label: 'Notes From'/);
+  const app = read('../web/app/app.js');
+  assert.match(app, /S\.notesSource\(settings\.notesSource \|\| '', !!settings\.niwaURL\)/);
+  // every notes list goes through notesList (api.kura only inside it)
+  assert.equal((app.match(/api\.kura\(/g) || []).length, 1);
+  assert.match(app, /n && n\.path && !notesFromHister\(\)/);
+  // Notes From is this device's own: never the account's
+  assert.ok(!read('./prefs.schema.json').includes('notes_source'));
+  // the extension's background knows the key, '' until chosen
+  assert.match(read('../patches/ext/core.js'), /notesSource: '',/);
+  // the hosted page says whether Kura is set up (/kura/ is always routed)
+  assert.match(read('../web/shim.js'), /kuraConfigured: !!merged\.niwaURL/);
 });

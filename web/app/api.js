@@ -444,3 +444,21 @@ export async function kura(text, { sort = '', pageKey = '', limit = 30, vault = 
   const { documents, total } = S.kuraDocuments(reply);
   return { total, documents, next: offset + documents.length < total ? String(offset + documents.length) : '', opened: [], suggestion: '' };
 }
+
+/**
+ * One page of notes from Hister (Notes From: Hister): its label:vault
+ * documents, the default vault's alone (S.histerNoteDocuments), in the
+ * shape `kura` returns. "" or "*": the newest first.
+ */
+export async function histerNotes(text, { sort = '', pageKey = '', limit = 30 } = {}) {
+  const S = globalThis.ShioriSearch;
+  const t = String(text || '').trim();
+  const q = { text: S.histerNotesText(text), highlight: 'HTML', limit };
+  if (sort === 'date' || !t || t === '*') q.sort = 'date';
+  if (pageKey) q.page_key = pageKey;
+  const reply = await request(`search?${query({ format: 'json', query: JSON.stringify(q) })}`);
+  const { documents, total } = S.histerNoteDocuments(reply);
+  // Hister's own page count: its key goes on while it sent a full page.
+  const sent = (reply && Array.isArray(reply.documents) && reply.documents.length) || 0;
+  return { total, documents, next: sent >= limit ? (reply && reply.page_key) || '' : '', opened: [], suggestion: '' };
+}

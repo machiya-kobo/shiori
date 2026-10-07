@@ -108,6 +108,10 @@ a private vault is never cached, exported or sent to Hister.
   Flatpak reads it read-only (`--filesystem=xdg-config/shiori:ro`); that
   mount also covers the app's own config dir, so the host's file is the one
   it reads.
+- **Where notes come from** in the quick search and the menu's search:
+  `"notesSource": "kura"` or `"hister"`. Without it, Kura when `kura` is
+  set, else Hister, which shows your default vault's notes only. The
+  window's web app has its own choice (Settings → Notes → Notes From).
 - **Signing in to Machiya** (when Kura runs with Machiya's identity file,
   docs/signing-in.md): put a token in the same file, `"machiyaToken":
   "mch_…"`, and `chmod 600 ~/.config/shiori/config.json`. There's no
