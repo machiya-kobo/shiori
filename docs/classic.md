@@ -104,9 +104,9 @@ the same way (`hister update-user <name> --regen-token` makes one).
 ## Installing
 
 From a release, use the `.dsk` (an 800K floppy image, for a BlueSCSI's SD
-card, an emulator or a floppy) or the `.sit.hqx` (a StuffIt archive in
-BinHex, to download on the old Mac; StuffIt Expander opens it). Each holds
-three files:
+card, an emulator or a floppy), the `.sit` (StuffIt 1.5) or the `.hqx`
+(that archive in BinHex, to download on the old Mac; StuffIt Expander opens
+it). Each holds three files:
 
 - **Shiori**: the application. Copy it anywhere.
 - **Shiori Search**: the desk accessory, as a Font/DA Mover suitcase. On
