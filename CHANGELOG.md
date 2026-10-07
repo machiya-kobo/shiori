@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.12.2 (2026-10-06)
+
+### Changed
+
+- **Preview is always in a result's menu** (long press, or right-click on
+  the Mac), beside Open in Browser, whatever Tap Opens says.
+
 ## 0.12.1 (2026-10-06)
 
 ### Fixed
