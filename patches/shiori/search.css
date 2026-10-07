@@ -693,7 +693,8 @@ body.home footer #ddg, body.home footer #timing, body.home footer #engines { dis
 #q:placeholder-shown ~ #clear { visibility: hidden; }
 #q::placeholder { color: var(--secondary); opacity: 0.8; }
 /* All, first page: the results wait unseen for the web and its Info card
-   (at most 1.5 s), so the page doesn't jump when the card arrives. */
+   (your pages and notes are drawn among its results), so the page doesn't
+   jump when they arrive. */
 body.settling > main > :not(#skeleton) { opacity: 0; }
 body > main > * { transition: opacity 120ms ease-out; }
 /* Meanwhile, cards that shimmer where the results will be: a page that

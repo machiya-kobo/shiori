@@ -2470,7 +2470,10 @@
   // --- Hold the page until the web is in (All, first page) -------------------------
   // The Info card comes with the web results, a second after your pages:
   // drawing those first made the page jump when it arrived. So the results
-  // wait, unseen, for the web (at most 1.5 s), then show at once.
+  // wait, unseen under the shimmering placeholders, until the web is in or
+  // has failed (restoreScroll() settles every path). Not a fixed time: on
+  // All your pages and notes are drawn among the web's results, so a page
+  // shown before the web was in was empty but for the AI answer.
   const holding = webLike && page === 1 && settings.webResults && settings.showInfobox !== false && !!searxBase;
   // var: restoreScroll() calls settle() on paths that return before here.
   var settled = false;
@@ -2481,8 +2484,16 @@
   }
   if (holding) {
     document.body.classList.add('settling');
-    setTimeout(settle, 1500);
+    // Only a stop for a path that never settles (an error): the web gives
+    // up after WEB_TIMEOUT_MS, and the Wikipedia lookup waits 3 s more.
+    setTimeout(settle, WEB_TIMEOUT_MS + 5000);
   }
+
+  // The right column (a wide window) takes the AI answer and Related
+  // Searches from the start: two-col is settled by now. Waiting for the
+  // web's results drew the answer in the left column, then moved it.
+  placeSide.ready = true;
+  placeSide();
 
   // --- Hister in General (first page) -----------------------------------------------
 
@@ -2731,8 +2742,7 @@
 
   const results = S.wikiFirst(data.results, wiki.article, wiki.found).filter((r) => r && isHTTP(r.url));
   $('web').hidden = false;
-  placeSide.ready = true;
-  placeSide();
+  placeSide(); // lined up again with the results drawn
   $('web-title').textContent = webLike ? 'Web' : CATEGORIES.find(([c]) => c === category)[1];
   const count = data.number_of_results > 0 ? `${data.number_of_results.toLocaleString()} results · ` : '';
   // On All and Web the web's results need no heading: they're the list
@@ -2834,8 +2844,8 @@
       && !document.body.classList.contains('with-preview') && matchMedia('(min-width: 1100px)').matches;
   }
   function placeSide() {
-    // Only once the web results are drawn: they decide it (the preview
-    // pane calls this from the start).
+    // Only once the page's layout is settled (the preview pane calls this
+    // from the start).
     if (!placeSide.ready) return;
     const slot = $('infobox-slot');
     const side = sideColumn();

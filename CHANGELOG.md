@@ -5,6 +5,18 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.17.3 (2026-10-07)
+
+### Fixed
+
+- **The search page no longer goes blank while the web search is slow.**
+  On All, with the web taking more than a second and a half, the page
+  showed only the AI Answer, in the left column, and nothing else until
+  the results came; then the answer jumped to the right. The shimmering
+  placeholders now stay until the web is in (or gives up, when your pages
+  and notes show on their own), and on a wide window the AI Answer and
+  Related Searches sit in the right column from the start.
+
 ## 0.17.2 (2026-10-07)
 
 ### Fixed
