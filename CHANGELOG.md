@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.14.2 (2026-10-06)
+
+### Fixed
+
+- **Summaries and AI Answer can't be steered by the page**: text in a page
+  or a search result that imitates Shiori's prompt markers is neutralized,
+  as it already was for automatic labels.
+
 ## 0.14.1 (2026-10-06)
 
 ### Fixed
