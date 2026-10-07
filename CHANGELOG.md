@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.14.0 (2026-10-06)
+
+### Changed
+
+- **Filter opens a sheet** in the apps: Date, Site, Label, Visits,
+  Language and Type in one place, with a search over sites and labels, and
+  Hide for a site or label. No more submenus stacked over the menu.
+- **Find a label** in the web app's Filter.
+
 ## 0.13.0 (2026-10-06)
 
 ### Added
