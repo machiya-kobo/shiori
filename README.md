@@ -5,7 +5,7 @@
 Shiori (栞, "bookmark") is the search app for Machiya and searches Hister and SearXNG from an iPhone, iPad, Mac, Linux, Haiku or the web. It's also a Hister extension for Safari on macOS and iOS, or you can use Hister's [official](https://hister.org/docs/browser-extension) or [community](https://github.com/nburns/hister-safari) extensions.
 
 <p align="center">
-<a href="https://machiya-kobo.github.io/machiya/">Machiya</a> · <a href="#what-it-does">Features</a> · <a href="#quickstart">Quickstart</a> · <a href="docs/signing-in.md">Sign In</a> · <a href="docs/extension.md">Safari</a> · <a href="docs/build.md">Build</a> · <a href="docs/linux.md">Linux</a> · <a href="docs/haiku.md">Haiku</a> · <a href="web/README.md">Hosting</a> · <a href="#credits-and-license">License</a>
+<a href="https://machiya-kobo.github.io/">Machiya</a> · <a href="#what-it-does">Features</a> · <a href="#quickstart">Quickstart</a> · <a href="docs/signing-in.md">Sign In</a> · <a href="docs/extension.md">Safari</a> · <a href="docs/build.md">Build</a> · <a href="docs/linux.md">Linux</a> · <a href="docs/haiku.md">Haiku</a> · <a href="web/README.md">Hosting</a> · <a href="#credits-and-license">License</a>
 </p>
 
 <p align="center"><a href="docs/screenshots/shiori-search-dark.png"><img src="docs/screenshots/shiori-search-dark.png" alt="Shiori searching for lantern in the dark theme: invented web results with a sample page marked Your page and a sample note marked Your note among them, the Pages 5 and Notes 4 tabs above, and an Info card about paper lanterns on the right" width="100%"></a><br>Everything everywhere all at once</p>
