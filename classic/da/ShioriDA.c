@@ -15,6 +15,7 @@
 #include <Memory.h>
 #include <OSUtils.h>
 #include <Retro68Runtime.h>
+#include <string.h>
 
 /* dNeedLock | dNeedTime | dCtlEnable; events: mouseDown keyDown autoKey update activate */
 __asm__(
@@ -125,7 +126,8 @@ short DAControl(ParmBlkPtr pb, DCtlPtr dce)
 	WindowPtr w = (WindowPtr) dce->dCtlWindow;
 
 	if (cp->csCode == accEvent && w != NULL) {
-		EventRecord *e = *(EventRecord **) cp->csParam;
+		EventRecord *e;
+		memcpy(&e, cp->csParam, sizeof(e));     /* csParam holds the event's address */
 		if (e->what == updateEvt && (WindowPtr) e->message == w) {
 			BeginUpdate(w);
 			Draw(w);

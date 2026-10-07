@@ -5,10 +5,10 @@ project(Shiori C)
 if(NOT DEFINED SHIORI_VERSION)
     set(SHIORI_VERSION "0.0.0-dev")
 endif()
-# The probe's bridge and token (phase 0): from local.env through build.sh.
-set(SHIORI_PROBE_HISTER "" CACHE STRING "the bridge's Hister address, http://host:8070/")
-set(SHIORI_PROBE_KURA "" CACHE STRING "the bridge's Kura address, http://host:8071/")
-set(SHIORI_PROBE_TOKEN "" CACHE STRING "the Mac's room token")
+# The bridge and token until Preferences has them: from local.env through build.sh.
+set(SHIORI_DEFAULT_HISTER "" CACHE STRING "the bridge's Hister address, http://host:8070/")
+set(SHIORI_DEFAULT_KURA "" CACHE STRING "the bridge's Kura address, http://host:8071/")
+set(SHIORI_DEFAULT_TOKEN "" CACHE STRING "the Mac's room token")
 
 configure_file(resources/shiori.r.in ${CMAKE_CURRENT_BINARY_DIR}/shiori.r @ONLY)
 
@@ -16,6 +16,9 @@ set(SHIORI_SOURCES
     app/main.c
     app/net.c
     app/fetch.c
+    app/draw.c
+    app/resultlist.c
+    app/searchwin.c
     core/json.c
     core/http.c
     core/query.c
@@ -43,7 +46,7 @@ add_application(Shiori CREATOR "SHIO" ${SHIORI_SOURCES} ${CMAKE_CURRENT_BINARY_D
     ${CMAKE_CURRENT_BINARY_DIR}/ShioriDA.rsrc.bin)
 
 target_compile_definitions(Shiori PRIVATE SHIORI_VERSION="${SHIORI_VERSION}")
-foreach(v SHIORI_PROBE_HISTER SHIORI_PROBE_KURA SHIORI_PROBE_TOKEN)
+foreach(v SHIORI_DEFAULT_HISTER SHIORI_DEFAULT_KURA SHIORI_DEFAULT_TOKEN)
     if(${v})
         target_compile_definitions(Shiori PRIVATE ${v}="${${v}}")
     endif()

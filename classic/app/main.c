@@ -1,10 +1,8 @@
 /*
- * Shiori for Classic Macintosh: the probe (phases 0 and 2). One window that
- * runs requests through the bridge and reports what they took on this Mac:
- * File > Run Probe (⌘R) a Hister and a Kura search; File > Error Probes (⌘E)
- * the ways a request can fail. The network runs from the event loop, so
- * the window keeps drawing and ⌘-. stops a request. The search window
- * replaces this in phase 3.
+ * Shiori for Classic Macintosh: the application. The event loop, the menus
+ * and desk accessories; the search window (searchwin.c) does the rest.
+ * The network moves along from the loop (no sleep while a search is under
+ * way), so the window always answers and ⌘-. stops a search.
  */
 #include <Quickdraw.h>
 #include <Fonts.h>
@@ -18,209 +16,72 @@
 #include <Memory.h>
 #include <Traps.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "../core/config.h"
-#include "../core/results.h"
-#include "fetch.h"
+#include "net.h"
+#include "searchwin.h"
 
-/* The bridge and the Mac's room token for the probe. Builds take them from
-   classic/local.env (gitignored); these neutral defaults reach nothing. */
-#ifndef SHIORI_PROBE_HISTER
-#define SHIORI_PROBE_HISTER "http://192.0.2.1:8070/"
+/* The bridge and the Mac's room token until Preferences has them. Builds take
+   them from classic/local.env (gitignored); these neutral defaults reach nothing. */
+#ifndef SHIORI_DEFAULT_HISTER
+#define SHIORI_DEFAULT_HISTER "http://192.0.2.1:8070/"
 #endif
-#ifndef SHIORI_PROBE_KURA
-#define SHIORI_PROBE_KURA "http://192.0.2.1:8071/"
+#ifndef SHIORI_DEFAULT_KURA
+#define SHIORI_DEFAULT_KURA "http://192.0.2.1:8071/"
 #endif
-#ifndef SHIORI_PROBE_TOKEN
-#define SHIORI_PROBE_TOKEN ""
-#endif
-#ifndef SHIORI_VERSION
-#define SHIORI_VERSION "0.0.0-dev"
+#ifndef SHIORI_DEFAULT_TOKEN
+#define SHIORI_DEFAULT_TOKEN ""
 #endif
 
-enum { kAppleMenu = 128, kFileMenu = 129, kEditMenu = 130 };
+enum { kAppleMenu = 128, kFileMenu = 129, kEditMenu = 130, kSearchMenu = 131 };
 enum { kAboutItem = 1 };
-enum { kRunItem = 1, kErrorsItem = 2, kQuitItem = 4 };
+enum { kOpenItem = 1, kCloseItem = 2, kPrefsItem = 4, kQuitItem = 6 };
+enum { kUndoItem = 1, kCutItem = 3, kCopyItem = 4, kPasteItem = 5, kClearItem = 6, kSelectAllItem = 7, kCopyLinkItem = 9 };
+enum { kFindItem = 1, kAllItem = 3, kPagesItem = 4, kNotesItem = 5, kCodeItem = 6, kMoreItem = 8, kStopItem = 9 };
 enum { kAboutAlert = 128 };
+/* osEvt's suspend/resume (Inside Macintosh VI; not in Multiversal) */
+enum { kSuspendResumeMessage = 1, kResumeFlag = 1 };
 
-#define MAX_LINES 24
-#define MAX_REPLY (256L * 1024L)
-
-typedef struct Step {
-	const char *name;
-	int kura;               /* 0: Hister's address, 1: Kura's, 2: a bad address */
-	const char *target;
-	int tokenless;          /* send no room token */
-	long cap;               /* the largest reply kept (0: MAX_REPLY) */
-} Step;
-
-#define HEAVY "search?query=%7B%22text%22%3A%22heavy+-label%3Avault+-metadata.source%3Avault+-type%3Alocal" \
-	"+-metadata.source%3Acode%22%2C%22highlight%22%3A%22HTML%22%2C%22limit%22%3A20%7D"
-
-static const Step kSearchSteps[] = {
-	{"Hister", 0, HEAVY, 0, 0},
-	{"Kura", 1, "api/search?limit=20&offset=0&q=many&sort=relevance", 0, 0},
-};
-
-/* Slow first, so ⌘-. a few seconds in stops it. */
-static const Step kErrorSteps[] = {
-	{"Slow (Cmd-. stops it)", 1, "api/search?limit=5&offset=0&q=slow", 0, 0},
-	{"No token", 0, "search?query=%7B%22text%22%3A%22x%22%7D", 1, 0},
-	{"Redirect", 1, "api/search?limit=5&offset=0&q=redirect", 0, 0},
-	{"Over the Mac's cap (8 KB here)", 0, HEAVY, 0, 8192},
-	{"Over the bridge's cap", 1, "api/search?limit=5&offset=0&q=huge", 0, 0},
-	{"Not an address", 2, "api/recent", 0, 0},
-};
-
-static WindowPtr gWindow;
-static char gLines[MAX_LINES][160];
-static int gLineCount;
 static Boolean gQuit;
 static Boolean gHasWNE;
-static ShioriConfig gConfig;
-static Fetch gFetch;
-static const Step *gSteps;
-static int gStepCount, gStep;
-static int gRows;
+static Boolean gInBackground;
 
-static void Redraw(void);
-
-static void AddLine(const char *text)
+static void Enable(MenuHandle m, short item, Boolean on)
 {
-	if (gLineCount == MAX_LINES) {
-		memmove(gLines[0], gLines[1], sizeof(gLines[0]) * (MAX_LINES - 1));
-		gLineCount--;
-	}
-	strncpy(gLines[gLineCount], text, sizeof(gLines[0]) - 1);
-	gLines[gLineCount][sizeof(gLines[0]) - 1] = '\0';
-	gLineCount++;
-	Redraw();
+	if (on)
+		EnableItem(m, item);
+	else
+		DisableItem(m, item);
 }
 
-static void Redraw(void)
+/* What the menus offer depends on the front window and the window's state. */
+static void AdjustMenus(void)
 {
-	GrafPtr old;
-	int i;
-	Rect r;
+	WindowPtr front = FrontWindow();
+	Boolean ours = IsSearchWindow(front);
+	Boolean da = front != NULL && ((WindowPeek) front)->windowKind < 0;
+	MenuHandle file = GetMenuHandle(kFileMenu), edit = GetMenuHandle(kEditMenu), search = GetMenuHandle(kSearchMenu);
+	short i;
 
-	GetPort(&old);
-	SetPort(gWindow);
-	r = gWindow->portRect;
-	EraseRect(&r);
-	TextFont(kFontIDGeneva);
-	TextSize(9);
-	for (i = 0; i < gLineCount; i++) {
-		unsigned char pstr[160];
-		size_t n = strlen(gLines[i]);
-		pstr[0] = (unsigned char) n;
-		memcpy(pstr + 1, gLines[i], n);
-		MoveTo(8, 14 + i * 12);
-		DrawString(pstr);
-	}
-	SetPort(old);
-}
-
-static void DoUpdate(WindowPtr w)
-{
-	BeginUpdate(w);
-	if (w == gWindow)
-		Redraw();
-	EndUpdate(w);
-}
-
-static void Tenths(char *out, unsigned long ticks)
-{
-	unsigned long t = (ticks * 10 + 30) / 60;
-	sprintf(out, "%lu.%lu s", t / 10, t % 10);
-}
-
-static void CountRow(void *ctx, const ShioriRow *row)
-{
-	(void) ctx;
-	(void) row;
-	gRows++;
-}
-
-static void StartStep(void)
-{
-	const Step *s;
-	ShioriConfig config = gConfig;
-	char line[100];
-
-	if (gStep >= gStepCount) {
-		sprintf(line, "Done. Free memory: %ld K", FreeMem() / 1024);
-		AddLine(line);
-		InitCursor();
-		gSteps = NULL;
-		return;
-	}
-	s = &gSteps[gStep];
-	if (s->tokenless)
-		config.roomToken[0] = '\0';
-	sprintf(line, "%s: asking\311", s->name);
-	AddLine(line);
-	FetchStart(&gFetch, &config, s->kura == 2 ? "http://bridge.example:8071/" : s->kura ? config.kura : config.hister,
-		s->target, s->cap ? s->cap : MAX_REPLY, gStep);
-}
-
-static void StepDone(void)
-{
-	const Step *s = &gSteps[gStep];
-	char line[240], connect[16], transfer[16], parse[16], problem[160];
-	unsigned long t0;
-	long len;
-	const char *body;
-	ShioriPage page;
-
-	if (gFetch.state == FETCH_DONE && gFetch.head.status == 200) {
-		body = FetchBody(&gFetch, &len);
-		gRows = 0;
-		t0 = TickCount();
-		if (s->kura)
-			shiori_parse_kura(body, len, &page, CountRow, NULL);
-		else
-			shiori_parse_hister(body, len, &page, CountRow, NULL);
-		Tenths(parse, TickCount() - t0);
-		Tenths(connect, gFetch.connected - gFetch.started);
-		Tenths(transfer, gFetch.finished - gFetch.connected);
-		sprintf(line, "%s: %ld bytes, %d rows%s. Connect %s, transfer %s (%ld reads), parse %s", s->name, len,
-			gRows, page.ok ? "" : " (unreadable)", connect, transfer, gFetch.receives, parse);
-	} else {
-		FetchProblem(&gFetch, s->kura ? "Kura" : "Hister", problem, (long) sizeof(problem));
-		Tenths(transfer, (gFetch.finished ? gFetch.finished : TickCount()) - gFetch.started);
-		sprintf(line, "%s: %s (%s)", s->name, problem, transfer);
-	}
-	AddLine(line);
-	FetchReset(&gFetch);
-	gStep++;
-	StartStep();
-}
-
-static void RunSteps(const Step *steps, int count)
-{
-	OSErr err = NetInit();
-	char line[100];
-
-	if (gSteps != NULL)
-		return;
-	if (err != noErr) {
-		sprintf(line, "MacTCP isn't available (%d).", err);
-		AddLine(line);
-		return;
-	}
-	SetCursor(*GetCursor(watchCursor));
-	gSteps = steps;
-	gStepCount = count;
-	gStep = 0;
-	StartStep();
+	Enable(file, kOpenItem, ours && SearchWindowHasSelection());
+	Enable(file, kCloseItem, da);
+	Enable(file, kPrefsItem, false);              /* phase 5 */
+	Enable(edit, kUndoItem, da);
+	for (i = kCutItem; i <= kSelectAllItem; i++)
+		Enable(edit, i, ours || da);
+	Enable(edit, kCopyLinkItem, ours && SearchWindowHasSelection());
+	for (i = kFindItem; i <= kStopItem; i++)
+		Enable(search, i, ours);
+	Enable(search, kMoreItem, ours && SearchWindowHasMore());
+	Enable(search, kStopItem, ours && SearchWindowBusy());
 }
 
 static void DoMenu(long choice)
 {
 	short menu = HiWord(choice), item = LoWord(choice);
 
-	if (menu == kAppleMenu) {
+	switch (menu) {
+	case kAppleMenu:
 		if (item == kAboutItem) {
 			Alert(kAboutAlert, NULL);
 		} else {
@@ -228,15 +89,36 @@ static void DoMenu(long choice)
 			GetMenuItemText(GetMenuHandle(kAppleMenu), item, name);
 			OpenDeskAcc(name);
 		}
-	} else if (menu == kFileMenu) {
-		if (item == kRunItem)
-			RunSteps(kSearchSteps, (int) (sizeof(kSearchSteps) / sizeof(kSearchSteps[0])));
-		else if (item == kErrorsItem)
-			RunSteps(kErrorSteps, (int) (sizeof(kErrorSteps) / sizeof(kErrorSteps[0])));
-		else if (item == kQuitItem)
+		break;
+	case kFileMenu:
+		if (item == kOpenItem) {
+			SearchWindowOpenSelected();
+		} else if (item == kCloseItem) {
+			WindowPtr front = FrontWindow();
+			if (front != NULL && ((WindowPeek) front)->windowKind < 0)
+				CloseDeskAcc(((WindowPeek) front)->windowKind);
+		} else if (item == kQuitItem) {
 			gQuit = true;
-	} else if (menu == kEditMenu) {
-		SystemEdit(item - 1);
+		}
+		break;
+	case kEditMenu:
+		if (SystemEdit((short) (item - 1)))
+			break;
+		if (item == kCopyLinkItem)
+			SearchWindowCopyLink();
+		else
+			SearchWindowEdit((short) (item - 1));
+		break;
+	case kSearchMenu:
+		switch (item) {
+		case kFindItem: SearchWindowFind(); break;
+		case kAllItem: case kPagesItem: case kNotesItem: case kCodeItem:
+			SearchWindowPill(item - kAllItem);
+			break;
+		case kMoreItem: SearchWindowShowMore(); break;
+		case kStopItem: SearchWindowStop(); break;
+		}
+		break;
 	}
 	HiliteMenu(0);
 }
@@ -248,6 +130,7 @@ static void DoMouseDown(EventRecord *e)
 
 	switch (part) {
 	case inMenuBar:
+		AdjustMenus();
 		DoMenu(MenuSelect(e->where));
 		break;
 	case inSysWindow:
@@ -259,15 +142,43 @@ static void DoMouseDown(EventRecord *e)
 		DragWindow(w, e->where, &bounds);
 		break;
 	}
+	case inGrow:
+		if (IsSearchWindow(w))
+			SearchWindowGrow(e->where);
+		break;
+	case inZoomIn:
+	case inZoomOut:
+		if (IsSearchWindow(w))
+			SearchWindowZoom(e->where, part);
+		break;
 	case inGoAway:
 		if (TrackGoAway(w, e->where))
-			gQuit = true;
+			gQuit = true;               /* one window: closing it quits, as the Haiku app does */
 		break;
 	case inContent:
 		if (w != FrontWindow())
 			SelectWindow(w);
+		else if (IsSearchWindow(w))
+			SearchWindowClick(e);
 		break;
 	}
+}
+
+static void DoKey(EventRecord *e)
+{
+	char c = (char) (e->message & charCodeMask);
+
+	if (e->modifiers & cmdKey) {
+		if (c == '.') {
+			SearchWindowStop();
+			return;
+		}
+		AdjustMenus();
+		DoMenu(MenuKey(c));
+		return;
+	}
+	if (IsSearchWindow(FrontWindow()))
+		SearchWindowKey(e);
 }
 
 static Boolean GetEvent(EventRecord *e, long sleep)
@@ -278,11 +189,8 @@ static Boolean GetEvent(EventRecord *e, long sleep)
 	return GetNextEvent(everyEvent, e);
 }
 
-static void Setup(void)
+static void Setup(ShioriConfig *config)
 {
-	Rect r;
-	char line[100];
-
 	InitGraf(&qd.thePort);
 	InitFonts();
 	FlushEvents(everyEvent, 0);
@@ -292,52 +200,60 @@ static void Setup(void)
 	InitDialogs(NULL);
 	InitCursor();
 	MaxApplZone();
+	MoreMasters();
+	MoreMasters();
 	gHasWNE = NGetTrapAddress(_WaitNextEvent, kToolboxTrapType) != NGetTrapAddress(_Unimplemented, kToolboxTrapType);
 
 	SetMenuBar(GetNewMBar(128));
 	AppendResMenu(GetMenuHandle(kAppleMenu), 'DRVR');
 	DrawMenuBar();
 
-	memset(&gConfig, 0, sizeof(gConfig));
-	strcpy(gConfig.hister, SHIORI_PROBE_HISTER);
-	strcpy(gConfig.kura, SHIORI_PROBE_KURA);
-	strcpy(gConfig.roomToken, SHIORI_PROBE_TOKEN);
-	FetchInit(&gFetch);
-
-	SetRect(&r, 8, 44, 504, 334);
-	gWindow = NewWindow(NULL, &r, "\pShiori Probe", true, documentProc, (WindowPtr) -1L, true, 0);
-	sprintf(line, "Shiori %s probe. Cmd-R: searches. Cmd-E: error probes. Cmd-. stops.", SHIORI_VERSION);
-	AddLine(line);
-	AddLine("Hister " SHIORI_PROBE_HISTER "   Kura " SHIORI_PROBE_KURA);
+	memset(config, 0, sizeof(*config));
+	strcpy(config->hister, SHIORI_DEFAULT_HISTER);
+	strcpy(config->kura, SHIORI_DEFAULT_KURA);
+	shiori_checked_room_token(SHIORI_DEFAULT_TOKEN, config->roomToken, (long) sizeof(config->roomToken));
+	(void) NetInit();
 }
 
 int main(void)
 {
 	EventRecord e;
+	ShioriConfig config;
 
-	Setup();
+	Setup(&config);
+	SearchWindowOpen(&config);
 	while (!gQuit) {
-		Boolean busy = gSteps != NULL;
-		if (GetEvent(&e, busy ? 0 : 30)) {
+		Boolean busy = SearchWindowBusy();
+		if (GetEvent(&e, busy ? 0 : (gInBackground ? 30 : 10))) {
 			switch (e.what) {
 			case mouseDown:
 				DoMouseDown(&e);
 				break;
 			case keyDown:
 			case autoKey:
-				if ((e.modifiers & cmdKey) && (e.message & charCodeMask) == '.')
-					FetchCancel(&gFetch);
-				else if (e.modifiers & cmdKey)
-					DoMenu(MenuKey((char) (e.message & charCodeMask)));
+				DoKey(&e);
 				break;
 			case updateEvt:
-				DoUpdate((WindowPtr) e.message);
+				if (IsSearchWindow((WindowPtr) e.message))
+					SearchWindowUpdate();
+				break;
+			case activateEvt:
+				if (IsSearchWindow((WindowPtr) e.message))
+					SearchWindowActivate((e.modifiers & activeFlag) != 0);
+				break;
+			case osEvt:
+				if (((e.message >> 24) & 0xFF) == kSuspendResumeMessage) {
+					gInBackground = (e.message & kResumeFlag) == 0;
+					if (IsSearchWindow(FrontWindow()))
+						SearchWindowActivate(!gInBackground);
+				}
 				break;
 			}
+		} else if (!gInBackground) {
+			SearchWindowIdle();
 		}
-		if (gSteps != NULL && !FetchPoll(&gFetch))
-			StepDone();
+		SearchWindowCursor(e.where);
+		SearchWindowPoll();
 	}
-	FetchReset(&gFetch);
 	return 0;
 }

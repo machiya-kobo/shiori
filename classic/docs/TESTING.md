@@ -45,13 +45,13 @@ This creates `classic/diskimages/` (gitignored), with:
 - `basilisk_prefs`: the hub's Basilisk II prefs with `ether slirp`
   (user-mode networking; see Basilisk II below).
 
-Then put the probe's settings in `classic/local.env` (gitignored; the
+Then put the default settings in `classic/local.env` (gitignored; the
 build reads it):
 
 ```sh
-SHIORI_PROBE_HISTER=http://<this machine's LAN address>:8070/
-SHIORI_PROBE_KURA=http://<this machine's LAN address>:8071/
-SHIORI_PROBE_TOKEN=mht_KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
+SHIORI_DEFAULT_HISTER=http://<this machine's LAN address>:8070/
+SHIORI_DEFAULT_KURA=http://<this machine's LAN address>:8071/
+SHIORI_DEFAULT_TOKEN=mht_KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 ```
 
 The token is the fake house's (43 K's), not a real one.
@@ -100,7 +100,8 @@ Drive it with `classic/tests/snow_session.py`. For example:
 
 ```sh
 classic/tests/snow_session.py open-app shot:launched probe shot:probe
-classic/tests/snow_session.py cmd:e wait:5 stop wait:25 shot:errors   # error probes, ⌘-. on the slow one
+classic/tests/snow_session.py type:heavy return wait:25 shot:search   # a search
+classic/tests/snow_session.py tab return shot:opened                   # into the list, open the first
 classic/tests/snow_session.py da shot:da
 ```
 
@@ -123,6 +124,13 @@ What we learned setting it up:
   pointer and Snow's mouse stays broken until restart.
 - The XTEST library has no keysym named ".": ⌘-. is `cmd_key("period")`
   (the `stop` step).
+- **Snow's keyboard has no arrow keys** (it's the original M0110), and
+  ⌘ with a digit never reaches the Mac. In Snow, use Tab to move into the
+  list and the Search menu for the pills. The Mac Plus's own M0110A has
+  arrows, and ⌘1–⌘4 work there.
+- Menu items sit 16 pixels apart from y = 28 (item 1); the menus' x in
+  Shiori: Apple 23, File 54, Edit 87, Search 136. Coordinates near the
+  window's right edge are a few pixels off after calibration: aim inside.
 
 ### Basilisk II (System 7.6.1)
 

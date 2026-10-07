@@ -9,6 +9,9 @@ Steps, run in order (coordinates are the Mac's 512×342 screen, calibrated each 
     da            Apple menu > Shiori Search (the desk accessory)
     cmd:K         Command-K (a letter; "period" for ⌘-., which stops a request)
     stop          ⌘-. (Escape on a Mac Plus keyboard)
+    type:TEXT     types plain text (letters, digits, spaces)
+    return        the Return key; down: the down arrow; tab: Tab
+    click:X,Y     a click at Mac coordinates; dclick:X,Y a double-click
     close         close the front window (⌘W is not wired in the probe: clicks the go-away box)
     shot:NAME     a screenshot of the whole display, /tmp/shiori/NAME.png
     wait:SECONDS  sleep
@@ -68,6 +71,16 @@ def main(steps):
             time.sleep(0.5)
         elif step == "stop":
             snow.cmd_key("period")          # XK has no keysym named "."
+            time.sleep(0.5)
+        elif step.startswith("type:"):
+            snow.type_text(step[5:])
+            time.sleep(0.5)
+        elif step in ("return", "down", "up", "tab"):
+            snow.key_sym_press({"return": "Return", "down": "Down", "up": "Up", "tab": "Tab"}[step])
+            time.sleep(0.5)
+        elif step.startswith("click:") or step.startswith("dclick:"):
+            x, y = (int(v) for v in step.split(":", 1)[1].split(","))
+            at(snow, (x, y), double=step.startswith("dclick:"))
             time.sleep(0.5)
         elif step == "da":
             snow.menu_select(APPLE_MENU_X, DA_ITEM_Y)
