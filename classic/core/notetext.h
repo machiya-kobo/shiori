@@ -54,6 +54,11 @@ int shiori_kura_note_target(const char *path, const char *vault, char *out, long
 /* Hister's readable copy, relative to the Hister base: api/preview?url=…. */
 int shiori_hister_preview_target(const char *url, char *out, long cap);
 
+/* Which vault a note's address names: <base>/v/<vault>/n/… gives the vault,
+   anything else (the default vault's /n/…) "". As search-core's noteVault: the
+   address decides, never a reply's vault field (Kura names the default too). */
+void shiori_url_vault(const char *url, char *out, long cap);
+
 /* Whether href is a wikilink to another note on the same Kura as noteURL
    (the note being read): <base>/n/<slug> or <base>/v/<vault>/n/<slug>, a
    #fragment dropped. Then path is the slug percent-decoded plus ".md", and

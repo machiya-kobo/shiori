@@ -515,6 +515,16 @@ static void test_note_text(void)
 		CHECK(!shiori_json_member("{\"error\": \"not found\"}", 22, "html", &raw, &rawLen));
 	}
 
+	/* the vault is the address's */
+	shiori_url_vault("https://kura.example/n/Projects/x", vault, sizeof(vault));
+	CHECK(vault[0] == '\0');
+	shiori_url_vault("https://kura.example/v/work/n/x", vault, sizeof(vault));
+	CHECK(strcmp(vault, "work") == 0);
+	shiori_url_vault("https://kura.example/v/Work/n/x", vault, sizeof(vault));
+	CHECK(vault[0] == '\0');
+	shiori_url_vault("https://kura.example/v/work/t/x", vault, sizeof(vault));
+	CHECK(vault[0] == '\0');
+
 	/* wikilinks open notes: same base, the slug decoded, ".md" */
 	CHECK(shiori_note_link("https://kura.example/n/Projects/Be%20Box#Specs", "https://kura.example/n/Retro/x",
 		path, sizeof(path), vault, sizeof(vault)) && strcmp(path, "Projects/Be Box.md") == 0 && vault[0] == '\0');

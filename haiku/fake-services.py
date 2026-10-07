@@ -124,6 +124,13 @@ class Hister(Base):
             return self.reply(200, {"ok": True, "hister": "ok"})
         if not self.authorized():
             return self.reply(403)
+        if url.path == "/api/preview":
+            # Hister's readable copy of a page, for Classic's reader.
+            page = params.get("url", [""])[0]
+            body = "".join(f"<p>Section {k} of the readable copy of {page}: Hister kept this text when the "
+                           f"page was saved, so a Mac Plus can read it without a browser.</p>" for k in range(15))
+            return self.reply(200, {"title": "A page from Hister", "content": "<h1>A saved page</h1>" + body,
+                                    "added": 1790000000, "updated": 1790500000})
         if url.path != "/search":
             return self.reply(404, {"error": "not found"})
         q = json.loads(params.get("query", ["{}"])[0] or "{}")
@@ -250,6 +257,26 @@ class Kura(Base):
             "q=" + params.get("q", [""])[0])
         if url.path == "/api/note":
             path = params.get("path", [""])[0]
+            # Classic's reader: the "many" notes are long, with every kind of
+            # markup Kura's sanitized HTML has, and a wikilink to the next note.
+            if path.startswith("Many/") and path.endswith(".md"):
+                n = path[5:-3]
+                nxt = str(int(n) + 1) if n.isdigit() else "0"
+                base = f"http://127.0.0.1:{KURA_PORT}"
+                body = "".join(
+                    f"<p>Paragraph {k}: the <strong>Mac Plus</strong> reads this note from Kura through the bridge, "
+                    f"with <em>italics</em>, <code>code</code> and caf\u00e9 \u2014 Ch\u014dchin text that wraps "
+                    f"across lines on a 512-pixel screen.</p>" for k in range(12))
+                html = (f"<h1>Many note {n}</h1><p>See <a class=\"wikilink\" href=\"{base}/n/Many/{nxt}\">Many note {nxt}</a> "
+                        f"and <a href=\"https://example.com/elsewhere\">a page elsewhere</a>.</p>"
+                        "<h2>A list</h2><ul><li>First <strong>point</strong></li><li>Second<ul><li>Nested</li></ul></li></ul>"
+                        "<ol><li>one</li><li>two</li></ol>"
+                        "<blockquote><p><strong>Note:</strong> a callout, as Kura sends one.</p></blockquote>"
+                        "<pre><code>int main(void)\n{\n    return 0;\n}</code></pre>"
+                        "<table><tr><th>Model</th><th>CPU</th></tr><tr><td>Plus</td><td>68000</td></tr></table>"
+                        "<p><img src=\"/a/x.png\" alt=\"a diagram\"></p><hr>" + body)
+                return self.reply(200, {"path": path, "title": f"Many note {n}", "url": f"{base}/n/Many/{n}",
+                                        "html": html, "markdown": "(the body again, as Kura sends it)"})
             for npath, folder, title, summary in NOTES:
                 if npath == path:
                     html = (f"<h1>{title}</h1><p>{summary}</p><ul><li>One <strong>point</strong></li></ul>"

@@ -19,6 +19,7 @@
 
 #include "../core/config.h"
 #include "net.h"
+#include "reader.h"
 #include "searchwin.h"
 
 /* The bridge and the Mac's room token until Preferences has them. Builds take
@@ -37,7 +38,8 @@ enum { kAppleMenu = 128, kFileMenu = 129, kEditMenu = 130, kSearchMenu = 131 };
 enum { kAboutItem = 1 };
 enum { kOpenItem = 1, kCloseItem = 2, kPrefsItem = 4, kQuitItem = 6 };
 enum { kUndoItem = 1, kCutItem = 3, kCopyItem = 4, kPasteItem = 5, kClearItem = 6, kSelectAllItem = 7, kCopyLinkItem = 9 };
-enum { kFindItem = 1, kAllItem = 3, kPagesItem = 4, kNotesItem = 5, kCodeItem = 6, kMoreItem = 8, kStopItem = 9 };
+enum { kFindItem = 1, kFindAgainItem = 2, kAllItem = 4, kPagesItem = 5, kNotesItem = 6, kCodeItem = 7, kMoreItem = 9,
+	kStopItem = 10 };
 enum { kAboutAlert = 128 };
 /* osEvt's suspend/resume (Inside Macintosh VI; not in Multiversal) */
 enum { kSuspendResumeMessage = 1, kResumeFlag = 1 };
@@ -45,6 +47,7 @@ enum { kSuspendResumeMessage = 1, kResumeFlag = 1 };
 static Boolean gQuit;
 static Boolean gHasWNE;
 static Boolean gInBackground;
+static Boolean gReadersBusy;
 
 static void Enable(MenuHandle m, short item, Boolean on)
 {
@@ -59,19 +62,23 @@ static void AdjustMenus(void)
 {
 	WindowPtr front = FrontWindow();
 	Boolean ours = IsSearchWindow(front);
+	Boolean reader = IsReaderWindow(front);
 	Boolean da = front != NULL && ((WindowPeek) front)->windowKind < 0;
 	MenuHandle file = GetMenuHandle(kFileMenu), edit = GetMenuHandle(kEditMenu), search = GetMenuHandle(kSearchMenu);
 	short i;
 
 	Enable(file, kOpenItem, ours && SearchWindowHasSelection());
-	Enable(file, kCloseItem, da);
+	Enable(file, kCloseItem, da || reader);
 	Enable(file, kPrefsItem, false);              /* phase 5 */
 	Enable(edit, kUndoItem, da);
 	for (i = kCutItem; i <= kSelectAllItem; i++)
 		Enable(edit, i, ours || da);
-	Enable(edit, kCopyLinkItem, ours && SearchWindowHasSelection());
+	Enable(edit, kCopyItem, ours || da || reader);
+	Enable(edit, kCopyLinkItem, (ours && SearchWindowHasSelection()) || reader);
 	for (i = kFindItem; i <= kStopItem; i++)
 		Enable(search, i, ours);
+	Enable(search, kFindItem, ours || reader);
+	Enable(search, kFindAgainItem, reader && ReaderCanFindAgain(front));
 	Enable(search, kMoreItem, ours && SearchWindowHasMore());
 	Enable(search, kStopItem, ours && SearchWindowBusy());
 }
@@ -95,7 +102,9 @@ static void DoMenu(long choice)
 			SearchWindowOpenSelected();
 		} else if (item == kCloseItem) {
 			WindowPtr front = FrontWindow();
-			if (front != NULL && ((WindowPeek) front)->windowKind < 0)
+			if (IsReaderWindow(front))
+				ReaderClose(front);
+			else if (front != NULL && ((WindowPeek) front)->windowKind < 0)
 				CloseDeskAcc(((WindowPeek) front)->windowKind);
 		} else if (item == kQuitItem) {
 			gQuit = true;
@@ -104,12 +113,25 @@ static void DoMenu(long choice)
 	case kEditMenu:
 		if (SystemEdit((short) (item - 1)))
 			break;
-		if (item == kCopyLinkItem)
+		if (IsReaderWindow(FrontWindow())) {
+			if (item == kCopyLinkItem)
+				ReaderCopyLink(FrontWindow());
+			else if (item == kCopyItem)
+				ReaderCopy(FrontWindow());
+		} else if (item == kCopyLinkItem) {
 			SearchWindowCopyLink();
-		else
+		} else {
 			SearchWindowEdit((short) (item - 1));
+		}
 		break;
 	case kSearchMenu:
+		if (IsReaderWindow(FrontWindow())) {
+			if (item == kFindItem)
+				ReaderFind(FrontWindow());
+			else if (item == kFindAgainItem)
+				ReaderFindAgain(FrontWindow());
+			break;
+		}
 		switch (item) {
 		case kFindItem: SearchWindowFind(); break;
 		case kAllItem: case kPagesItem: case kNotesItem: case kCodeItem:
@@ -145,21 +167,31 @@ static void DoMouseDown(EventRecord *e)
 	case inGrow:
 		if (IsSearchWindow(w))
 			SearchWindowGrow(e->where);
+		else if (IsReaderWindow(w))
+			ReaderGrow(w, e->where);
 		break;
 	case inZoomIn:
 	case inZoomOut:
 		if (IsSearchWindow(w))
 			SearchWindowZoom(e->where, part);
+		else if (IsReaderWindow(w))
+			ReaderZoom(w, e->where, part);
 		break;
 	case inGoAway:
-		if (TrackGoAway(w, e->where))
-			gQuit = true;               /* one window: closing it quits, as the Haiku app does */
+		if (TrackGoAway(w, e->where)) {
+			if (IsReaderWindow(w))
+				ReaderClose(w);
+			else
+				gQuit = true;           /* the search window: closing it quits, as the Haiku app's does */
+		}
 		break;
 	case inContent:
 		if (w != FrontWindow())
 			SelectWindow(w);
 		else if (IsSearchWindow(w))
 			SearchWindowClick(e);
+		else if (IsReaderWindow(w))
+			ReaderClick(w, e);
 		break;
 	}
 }
@@ -170,7 +202,10 @@ static void DoKey(EventRecord *e)
 
 	if (e->modifiers & cmdKey) {
 		if (c == '.') {
-			SearchWindowStop();
+			if (IsReaderWindow(FrontWindow()))
+				ReaderStop(FrontWindow());
+			else
+				SearchWindowStop();
 			return;
 		}
 		AdjustMenus();
@@ -179,6 +214,8 @@ static void DoKey(EventRecord *e)
 	}
 	if (IsSearchWindow(FrontWindow()))
 		SearchWindowKey(e);
+	else if (IsReaderWindow(FrontWindow()))
+		ReaderKey(FrontWindow(), e);
 }
 
 static Boolean GetEvent(EventRecord *e, long sleep)
@@ -223,7 +260,7 @@ int main(void)
 	Setup(&config);
 	SearchWindowOpen(&config);
 	while (!gQuit) {
-		Boolean busy = SearchWindowBusy();
+		Boolean busy = SearchWindowBusy() || gReadersBusy;
 		if (GetEvent(&e, busy ? 0 : (gInBackground ? 30 : 10))) {
 			switch (e.what) {
 			case mouseDown:
@@ -236,16 +273,22 @@ int main(void)
 			case updateEvt:
 				if (IsSearchWindow((WindowPtr) e.message))
 					SearchWindowUpdate();
+				else if (IsReaderWindow((WindowPtr) e.message))
+					ReaderUpdate((WindowPtr) e.message);
 				break;
 			case activateEvt:
 				if (IsSearchWindow((WindowPtr) e.message))
 					SearchWindowActivate((e.modifiers & activeFlag) != 0);
+				else if (IsReaderWindow((WindowPtr) e.message))
+					ReaderActivate((WindowPtr) e.message, (e.modifiers & activeFlag) != 0);
 				break;
 			case osEvt:
 				if (((e.message >> 24) & 0xFF) == kSuspendResumeMessage) {
 					gInBackground = (e.message & kResumeFlag) == 0;
 					if (IsSearchWindow(FrontWindow()))
 						SearchWindowActivate(!gInBackground);
+					else if (IsReaderWindow(FrontWindow()))
+						ReaderActivate(FrontWindow(), !gInBackground);
 				}
 				break;
 			}
@@ -254,6 +297,8 @@ int main(void)
 		}
 		SearchWindowCursor(e.where);
 		SearchWindowPoll();
+		gReadersBusy = ReaderPollAll();
 	}
+	ReaderCloseAll();
 	return 0;
 }

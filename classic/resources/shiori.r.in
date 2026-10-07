@@ -48,6 +48,7 @@ resource 'MENU' (131) {
 	131, textMenuProc, 0x7FFFFFFF, enabled, "Search",
 	{
 		"Find\311", noIcon, "F", noMark, plain;
+		"Find Again", noIcon, "G", noMark, plain;
 		"-", noIcon, noKey, noMark, plain;
 		"All", noIcon, "1", noMark, plain;
 		"Pages", noIcon, "2", noMark, plain;
@@ -77,6 +78,20 @@ resource 'DITL' (128, purgeable) {
 			"Shiori for Classic Macintosh\r"
 			"Version @SHIORI_VERSION@\r\r"
 			"Search your pages in Hister and your notes in Kura." };
+	}
+};
+
+/* Find (a reader's text) */
+resource 'DLOG' (129, purgeable) {
+	{ 80, 100, 170, 400 }, dBoxProc, visible, noGoAway, 0, 129, "", alertPositionMainScreen
+};
+
+resource 'DITL' (129, purgeable) {
+	{
+		{ 60, 210, 80, 280 }, Button { enabled, "Find" };
+		{ 60, 120, 80, 190 }, Button { enabled, "Cancel" };
+		{ 14, 14, 30, 60 }, StaticText { disabled, "Find:" };
+		{ 14, 66, 30, 284 }, EditText { enabled, "" };
 	}
 };
 

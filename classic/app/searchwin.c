@@ -6,11 +6,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../core/notetext.h"
 #include "../core/query.h"
 #include "../core/results.h"
 #include "../core/roman.h"
 #include "draw.h"
 #include "fetch.h"
+#include "reader.h"
 #include "resultlist.h"
 #include "searchwin.h"
 
@@ -252,7 +254,8 @@ static void AddRow(void *ctx, const ShioriRow *r)
 	strncpy(row->snippet, snippet, sizeof(row->snippet) - 1);
 	strncpy(row->url, r->url, sizeof(row->url) - 1);
 	strncpy(row->path, r->path, sizeof(row->path) - 1);
-	strncpy(row->vault, r->vault, sizeof(row->vault) - 1);
+	/* the vault is the address's: Kura names the default vault in its replies too */
+	shiori_url_vault(r->url, row->vault, (long) sizeof(row->vault));
 }
 
 static void ShowTotals(void)
@@ -659,14 +662,11 @@ void SearchWindowCopyLink(void)
 void SearchWindowOpenSelected(void)
 {
 	ListRow row;
-	char s[200];
 
 	if (!ListGet(&gList, ListSelected(&gList), &row) || row.url[0] == '\0')
 		return;
-	/* the reader comes with phase 4; until then, where it would go */
-	sprintf(s, "%s: %.150s", row.kind == LROW_NOTE ? "Note" : "Page", row.url);
-	roman_from_utf8(s);
-	SetStatus(s);
+	if (!ReaderOpen(&gConfig, &row))
+		SetStatus("Three readers are open: close one first.");
 }
 
 void SearchWindowEdit(short item)

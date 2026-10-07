@@ -542,6 +542,24 @@ static long base_length(const char *url)
 	return p == NULL ? -1 : (long) (p - url);
 }
 
+void shiori_url_vault(const char *url, char *out, long cap)
+{
+	const char *v = strstr(url, "/v/"), *name, *slash, *c;
+
+	out[0] = '\0';
+	if (v == NULL)
+		return;
+	name = v + 3;
+	slash = strchr(name, '/');
+	if (slash == NULL || strncmp(slash, "/n/", 3) != 0 || slash == name || slash - name >= cap)
+		return;
+	for (c = name; c < slash; c++)
+		if (!((*c >= 'a' && *c <= 'z') || (*c >= '0' && *c <= '9') || *c == '-'))
+			return;
+	memcpy(out, name, (size_t) (slash - name));
+	out[slash - name] = '\0';
+}
+
 int shiori_note_link(const char *href, const char *noteURL, char *path, long pathCap, char *vault, long vaultCap)
 {
 	long base = base_length(noteURL), n, k;

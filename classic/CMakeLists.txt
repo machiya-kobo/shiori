@@ -19,6 +19,7 @@ set(SHIORI_SOURCES
     app/draw.c
     app/resultlist.c
     app/searchwin.c
+    app/reader.c
     core/json.c
     core/http.c
     core/query.c
