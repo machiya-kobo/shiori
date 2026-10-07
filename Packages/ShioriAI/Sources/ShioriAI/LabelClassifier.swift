@@ -200,9 +200,7 @@ public struct LabelClassifier: Sendable {
     /// `<page>` and `</page>` in the page's own words, any case or spacing,
     /// lose their angle brackets: only Shiori's tags delimit the page.
     static func fenced(_ text: String) -> String {
-        text.replacing(/(?i)<\s*\/?\s*page\s*>/) { match in
-            String(match.output).replacingOccurrences(of: "<", with: "‹").replacingOccurrences(of: ">", with: "›")
-        }
+        PromptFence.text(text, tags: ["page"])
     }
 
     /// The answer, checked: labels only from the list (a model that strays

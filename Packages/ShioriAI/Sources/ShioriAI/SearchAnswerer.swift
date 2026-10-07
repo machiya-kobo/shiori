@@ -138,7 +138,8 @@ public struct SearchAnswerer: Sendable {
     static func user(query: String, sources: [AnswerSource], budget: Int) -> String {
         let perResult = max(120, min(snippetLimit, (max(budget, 2_000) - 400) / max(sources.count, 1) - titleLimit / 2))
         let body = sources.map { source in
-            "[\(source.n)] \(source.title)\n\(source.url)\n\(PageText.prefix(source.snippet, limit: perResult).text)"
+            // Results are the web's words: fenced, so none closes the block.
+            PromptFence.text("[\(source.n)] \(source.title)\n\(source.url)\n\(PageText.prefix(source.snippet, limit: perResult).text)", tags: ["results"])
         }
         .joined(separator: "\n\n")
         return "Search: \(query)\n<results>\n\(body)\n</results>"
