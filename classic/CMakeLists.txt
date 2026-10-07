@@ -11,6 +11,8 @@ set(SHIORI_DEFAULT_KURA "" CACHE STRING "the bridge's Kura address, http://host:
 set(SHIORI_DEFAULT_TOKEN "" CACHE STRING "the Mac's room token")
 
 configure_file(resources/shiori.r.in ${CMAKE_CURRENT_BINARY_DIR}/shiori.r @ONLY)
+configure_file(resources/balloons.r ${CMAKE_CURRENT_BINARY_DIR}/balloons.r COPYONLY)
+list(APPEND REZ_INCLUDE_PATH ${CMAKE_CURRENT_BINARY_DIR})
 
 set(SHIORI_SOURCES
     app/main.c
@@ -21,6 +23,8 @@ set(SHIORI_SOURCES
     app/searchwin.c
     app/reader.c
     app/prefs.c
+    app/theme.c
+    app/ae.c
     core/json.c
     core/http.c
     core/query.c
@@ -38,7 +42,7 @@ set_target_properties(ShioriDA PROPERTIES OUTPUT_NAME ShioriDA.flt LINK_FLAGS "-
 target_compile_options(ShioriDA PRIVATE -m68000 -Os -Wall -Wno-unused-parameter)
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ShioriDA.rsrc.bin
-    COMMAND ${REZ} ${CMAKE_CURRENT_SOURCE_DIR}/da/ShioriDA.r -I${REZ_INCLUDE_PATH} -o ShioriDA.rsrc.bin
+    COMMAND ${REZ} ${CMAKE_CURRENT_SOURCE_DIR}/da/ShioriDA.r -o ShioriDA.rsrc.bin
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ShioriDA ${CMAKE_CURRENT_SOURCE_DIR}/da/ShioriDA.r)
 

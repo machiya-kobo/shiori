@@ -42,8 +42,12 @@ This creates `classic/diskimages/` (gitignored), with:
   second row without scrolling. The hub's disk is never written.
 - `shiori.snoww`: its Snow workspace (a Mac Plus ROM, the disk on SCSI 0,
   DaynaPORT Ethernet on SCSI 3, 4 MB).
-- `basilisk_prefs`: the hub's Basilisk II prefs with `ether slirp`
-  (user-mode networking; see Basilisk II below).
+- `shiori-sys761.hda`: a copy of the hub's System 7.6.1 disk, so its
+  MacTCP can be set for slirp without touching the disk Flynn and Geomys
+  share. Once, in Basilisk: Control Panels > MacTCP > More…, Obtain
+  Address: Server, OK, then restart.
+- `basilisk_prefs`: the hub's Basilisk II prefs, with that disk and
+  `ether slirp` (user-mode networking; see Basilisk II below).
 
 Then put the default settings in `classic/local.env` (gitignored; the
 build reads it):
@@ -91,7 +95,7 @@ your own shell's command line, and over SSH it kills the session.
 ```sh
 classic/scripts/build.sh                      # classic/build/Shiori.{bin,dsk}
 classic/scripts/deploy.sh snow --launch       # onto Snow's disk, then start Snow
-classic/scripts/deploy.sh basilisk --launch 8 # into Basilisk's shared folder; 1, 2, 4 or 8 bits
+classic/scripts/deploy.sh basilisk --launch   # into Basilisk's Unix disk; no network (below)
 ```
 
 ### Snow (System 6.0.8)
@@ -153,37 +157,69 @@ worked:
 
 ### Basilisk II (System 7.6.1)
 
-Drive it with `classic/tests/basilisk_session.py` (Mac coordinates, 1:1).
-For example:
+Drive it with `classic/tests/basilisk_session.py`. Its coordinates are
+the Mac's, 1:1: a screenshot's less the Mac screen's origin (about 65, 59
+here; the driver prints it). For example:
 
 ```sh
 classic/tests/basilisk_session.py dclick:983,107 wait:4 shot:unix   # open the Unix disk
 classic/tests/basilisk_session.py menu:53,30 wait:45 shot:probe     # File > Run Probe
-classic/tests/basilisk_session.py menu:53,62 shutdown               # Quit, then Shut Down
+classic/tests/basilisk_session.py menu:53,106 click:800,400 shutdown  # Quit, the Finder, Shut Down
 ```
 
+Opening Shiori: `dclick:983,107` (the Unix disk), `dclick:58,218` (its
+Shiori folder), `dclick:39,90` (the app), then wait 15 s. The menus' x in
+Shiori: Apple 23, File 53, Edit 87, Search 138, Help 966. Menu items from
+y = 26, 16 apart, with separators.
+
 - **Always shut down from Special > Shut Down** (`shutdown`). Hard-killing
-  Basilisk corrupts the shared System 7 disk. The hub's recovery is in
+  Basilisk can corrupt the System 7 disk (Shiori's copy). The hub's recovery is in
   `~/emulators/docs/TESTING.md`.
 - **Command keys sent by XTEST don't reach Basilisk** on this setup: use
   the menus.
 - **Never click outside the emulator's window.** A press on WindowMaker's
   root starts a grab, and if its release never comes, every X client
   (scrot included) hangs. The driver refuses to click until it has found
-  the Mac's screen. To recover, `sudo systemctl restart sddm`, then
+  the Mac's screen, and refuses any point off it (a screenshot's
+  coordinates passed as the Mac's did this once). To recover, `sudo systemctl restart sddm`, then
   `DISPLAY=:0 XAUTHORITY=~/.Xauthority xhost +local:` and
   `xset s off -dpms s noblank`.
-- **Networking:**
+- **Networking:** none, for now. `deploy.sh` starts Basilisk without
+  Ethernet unless `SHIORI_BASILISK_NET=1`.
   - The hub's prefs bridge Basilisk onto the LAN through the `sheep_net`
     kernel module, which must be built for the running kernel. After a
-    kernel update it's gone, and `modprobe sheep_net` fails.
-  - Shiori's prefs use `ether slirp` instead (no module). But the shared
-    System 7 disk's TCP/IP is configured for the bridged LAN, so on slirp
-    the Mac can't reach the fake house yet (connections time out,
-    -23016).
-  - Until `sheep_net` is rebuilt, System 7 runs are UI-only.
-- The color depth comes from `deploy.sh basilisk --launch DEPTH`. Check
-  every screen at 1 bit, 4 bits (16 grays) and 8 bits (256 colors).
+    kernel update it's gone (asked of services).
+  - Shiori's prefs use `ether slirp` instead, and the Mac gets an address
+    from it (MacTCP set to Server, above). But this Basilisk build's slirp
+    crashes the emulator on the first TCP close (`tcp_close`, `tcp_reass`:
+    the old 32-bit pointers in its reassembly queue, on a 64-bit host). The
+    request reaches the fake house; then Basilisk hangs with "Caught
+    SIGSEGV" in its log.
+  - Without a network, MacTCP set to Server waits about a minute for an
+    address on the first request, and the whole Mac waits with it (System
+    7 is cooperative): nothing else can be clicked until "MacTCP has no
+    address" shows.
+  - So System 7 runs are UI-only: the windows, the menus, Balloon Help,
+    the Apple events, the colours. Results and readers in colour wait for
+    a working network.
+- **The depth is the Mac's own**: Control Panels > Monitors (Grays or
+  Colors, then a depth; it applies when Monitors closes, and stays in
+  Basilisk's PRAM across runs). `screen win/1024/768` offers every depth,
+  so the prefs' `displaycolordepth` does nothing. Monitors opens at Mac
+  (205, 147); its Grays radio is (153, 193), Colors (153, 209); the list's
+  Black & White, 4, 16, 256 and Millions are at y = 190, 201, 212, 223,
+  234 (x 235); its close box (152, 155). Check black and white, 16 colors,
+  256 colors, 16 and 256 grays, and Millions.
+- Basilisk draws grays lighter than asked (#444444 shows as #656565): the
+  grays in `app/theme.c` are darker than the contrast needs for that
+  reason.
+- Balloon Help stays on across restarts once turned on (Help menu, Show
+  Balloons). A balloon shows after the pointer rests a moment: `move:X,Y`
+  then `wait:3`. A menu item's balloon: `subpeek:MENU_X,ITEM_Y` holds the
+  menu open on that item for the screenshot.
+- **Snow emulates a Mac II too** (model `MacII`), which would give colour
+  over Snow's working DaynaPORT, but it needs the Macintosh II Video
+  Card's ROM, which the hub doesn't have.
 
 ### The Mac Plus
 

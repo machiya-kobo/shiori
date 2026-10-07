@@ -13,7 +13,11 @@
 #                                         lists Shiori without scrolling
 #   classic/diskimages/shiori.snoww       its workspace: Mac Plus ROM, that
 #                                         disk on SCSI 0, Ethernet on SCSI 3
-# Basilisk II (System 7.6.1): the hub's disk and ROM, with Shiori's own prefs:
+# Basilisk II (System 7.6.1): the hub's ROM, a copy of its disk, Shiori's own prefs:
+#   classic/diskimages/shiori-sys761.hda  a copy of the hub's System 7 disk, so its
+#                                         TCP/IP can be set for slirp (DHCP)
+#                                         without touching the disk Flynn and
+#                                         Geomys share
 #   classic/diskimages/basilisk_prefs     the hub's, with user-mode networking
 #                                         (ether slirp: no sheep_net kernel
 #                                         module, which must match the running
@@ -80,7 +84,17 @@ JSON
 echo "setup-emulators: wrote $out/shiori.snoww"
 hubprefs="$EMU/basilisk/basilisk_ii_prefs"
 [ -f "$hubprefs" ] || { echo "setup-emulators: no Basilisk II prefs at $hubprefs" >&2; exit 1; }
-sed -e 's/^ether .*/ether slirp/' "$hubprefs" > "$out/basilisk_prefs"
+src7=${SHIORI_SYS7_IMAGE:-$EMU/disks/system7.hda}
+img7="$out/shiori-sys761.hda"
+if pgrep -x BasiliskII >/dev/null; then
+    echo "setup-emulators: Basilisk II is running; quit it first" >&2; exit 1
+fi
+if [ ! -f "$img7" ] || [ $force = 1 ]; then
+    [ -f "$src7" ] || { echo "setup-emulators: no System 7 disk at $src7 (set SHIORI_SYS7_IMAGE)" >&2; exit 1; }
+    cp "$src7" "$img7"
+    echo "setup-emulators: made $img7 (set its TCP/IP to DHCP once: docs/TESTING.md)"
+fi
+sed -e 's/^ether .*/ether slirp/' -e "s#^disk .*#disk $img7#" "$hubprefs" > "$out/basilisk_prefs"
 grep -q '^ether slirp' "$out/basilisk_prefs" || echo "ether slirp" >> "$out/basilisk_prefs"
 echo "setup-emulators: wrote $out/basilisk_prefs (ether slirp)"
 mkdir -p "$EMU/unix/Shiori"

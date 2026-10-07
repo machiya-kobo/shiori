@@ -15,6 +15,7 @@
 #include "reader.h"
 #include "resultlist.h"
 #include "searchwin.h"
+#include "theme.h"
 
 #define MARGIN 8
 #define FIELD_TOP 6
@@ -127,6 +128,7 @@ static void Layout(void)
 static void DrawPills(void)
 {
 	short i;
+	int kind = ThemeKind();
 
 	TextFont(systemFont);
 	TextSize(12);
@@ -134,16 +136,23 @@ static void DrawPills(void)
 		Rect r = gPillRects[i];
 		short w = TextWidth((Ptr) kPillLabels[i], 0, (short) strlen(kPillLabels[i]));
 		EraseRoundRect(&r, PILL_H, PILL_H);
+		ThemeFore(ThemePillRole(i));
 		if (i == gPill) {
 			PaintRoundRect(&r, PILL_H, PILL_H);
-			TextMode(srcBic);
+			if (kind == THEME_MONO) {
+				TextMode(srcBic);
+			} else {
+				RGBColor white = {0xFFFF, 0xFFFF, 0xFFFF};
+				RGBForeColor(&white);
+			}
 		} else {
 			FrameRoundRect(&r, PILL_H, PILL_H);
 		}
 		MoveTo((short) (r.left + (r.right - r.left - w) / 2), (short) (r.bottom - 5));
 		DrawC(kPillLabels[i]);
 		TextMode(srcOr);
-		if (!gActive && i != gPill) {
+		ThemeNormal();
+		if (!gActive && i != gPill && kind == THEME_MONO) {
 			/* inactive: the pills are dimmed, as a window's controls are */
 			PenPat(&qd.gray);
 			PenMode(patBic);
@@ -184,6 +193,7 @@ static void DrawVault(void)
 	if (w > r.right - r.left)
 		w = (short) (r.right - r.left);
 	SetRect(&box, (short) (r.right - w), (short) (r.top + 1), r.right, (short) (r.bottom - 1));
+	ThemeFore(ROLE_NOTES);
 	FrameRect(&box);
 	MoveTo((short) (box.right), (short) (box.top + 2));
 	LineTo((short) (box.right), (short) (box.bottom));
@@ -198,6 +208,7 @@ static void DrawVault(void)
 	ClosePoly();
 	PaintPoly(tri);
 	KillPoly(tri);
+	ThemeNormal();
 	gVaultBox = box;
 }
 
@@ -208,8 +219,10 @@ static void DrawStatus(void)
 	EraseRect(&r);
 	TextFont(kFontIDGeneva);
 	TextSize(9);
+	ThemeFore(ROLE_SECONDARY);
 	MoveTo(MARGIN, (short) (r.bottom - 4));
 	DrawFitted(gStatus, (short) (r.right - r.left - 2 * MARGIN));
+	ThemeNormal();
 }
 
 static void SetStatus(const char *s)
@@ -546,7 +559,18 @@ void SearchWindowOpen(Prefs *prefs)
 	gPrefs = prefs;
 	gConfig = *config;
 	SetRect(&r, 4, 42, 508, 338);
-	gWin = NewWindow(NULL, &r, "\pShiori", true, 8 /* documentProc + zoom box */, (WindowPtr) -1L, true, 0);
+	/* a larger screen: a larger window, up to 640 by 460 */
+	{
+		Rect s = qd.screenBits.bounds;
+		short w = (short) (s.right - s.left - 8), h = (short) (s.bottom - s.top - 50);
+		if (w > 640)
+			w = 640;
+		if (h > 460)
+			h = 460;
+		if (w > r.right - r.left)
+			SetRect(&r, (short) (s.left + 20), (short) (s.top + 44), (short) (s.left + 20 + w), (short) (s.top + 44 + h));
+	}
+	gWin = ThemeNewWindow(&r, "\pShiori", 8 /* documentProc + zoom box */);
 	SetPort(gWin);
 	TextFont(systemFont);
 	TextSize(12);
@@ -779,6 +803,59 @@ void SearchWindowPill(int pill)
 	DrawVault();
 	SetPort(old);
 	Search();
+}
+
+void SearchWindowSearchFor(const char *macRoman)
+{
+	GrafPtr old;
+
+	GetPort(&old);
+	SetPort(gWin);
+	SelectWindow(gWin);
+	Focus(false);
+	TESetText((Ptr) macRoman, (long) strlen(macRoman), gField);
+	TESetSelect(0, 32767, gField);
+	InvalRect(&gFieldRect);
+	SetPort(old);
+	Search();
+}
+
+const char *SearchWindowBalloon(Point where, Rect *hot)
+{
+	Point p = where;
+	short i;
+
+	if (FrontWindow() != gWin)
+		return NULL;
+	SetPort(gWin);
+	GlobalToLocal(&p);
+	if (PtInRect(p, &gFieldRect)) {
+		*hot = gFieldRect;
+		return "Type words, then press Return to search your pages in Hister and your notes in Kura.";
+	}
+	for (i = 0; i < 4; i++)
+		if (PtInRect(p, &gPillRects[i])) {
+			static const char *const tips[4] = {
+				"All: your top notes from Kura, then your pages from Hister.",
+				"Pages: the web pages you saved in Hister.",
+				"Notes: your notes from Kura, in the vault the menu beside shows.",
+				"Code: your repositories' pages in Hister: READMEs, issues, releases."};
+			*hot = gPillRects[i];
+			return tips[i];
+		}
+	if (gPill == PILL_NOTES && PtInRect(p, &gVaultBox)) {
+		*hot = gVaultBox;
+		return "Which of Kura's vaults Notes searches. Private vaults are never offered here.";
+	}
+	if (PtInRect(p, &gList.frame)) {
+		*hot = gList.frame;
+		return "Results. Double-click one, or select it and press Return, to read it. Copy Link copies its address.";
+	}
+	if (PtInRect(p, &gStatusRect)) {
+		*hot = gStatusRect;
+		return "What the last search found, or what went wrong.";
+	}
+	return NULL;
 }
 
 void SearchWindowFind(void)

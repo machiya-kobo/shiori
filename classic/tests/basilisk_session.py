@@ -8,8 +8,11 @@ content origin is found from the bright menu bar on each run).
     click:X,Y  dclick:X,Y   a click or double-click
     menu:X,Y                press on the menu title at X, drag to the item at Y, release
     peek:X                  hold the menu at X open, screenshot it (/tmp/shiori/peek.png), let go
+    move:X,Y                move there (balloons)
+    sub:X,Y,X2,Y2           a submenu: press the menu at X, move to its item at Y, then to X2,Y2, release
+    subpeek:X,Y             press the menu at X, rest on its item at Y (a submenu opens), screenshot, let go
     cmd:K                   Command-K (Basilisk maps the Super key to Command)
-    type:TEXT               type plain text
+    type:TEXT               type plain text; return, tab: those keys
     shot:NAME               /tmp/shiori/NAME.png
     wait:SECONDS
     shutdown                Special > Shut Down (never hard-kill Basilisk: it corrupts the disk)
@@ -30,6 +33,7 @@ SPECIAL_X, SHUT_DOWN_Y = 232, 139   # the Finder must be frontmost (quit Shiori 
 D = display.Display(os.environ.get("DISPLAY", ":0"))
 ROOT = D.screen().root
 ORIGIN = [0, 0]
+SIZE = [0, 0]           # the Mac screen's width and height (from the window), once calibrated
 
 
 def shot(name):
@@ -71,12 +75,17 @@ def calibrate():
     for y in range(max(1, by - 40), min(h, by + 60)):
         if bright(y) and not bright(y - 1):
             ORIGIN[0], ORIGIN[1] = bx, y
-            print("Basilisk calibrated: origin", ORIGIN, flush=True)
+            SIZE[0], SIZE[1] = bw, box[3] - (y - by)
+            print("Basilisk calibrated: origin", ORIGIN, "screen", SIZE, flush=True)
             return
     print("Basilisk calibration failed; origin stays", ORIGIN, flush=True)
 
 
 def move(mx, my):
+    """Mac screen coordinates (a screenshot's minus ORIGIN). Never outside the Mac screen:
+    a press or release on the window manager's root starts a grab that hangs the display."""
+    if not (0 <= mx < SIZE[0] - 2 and 0 <= my < SIZE[1] - 2):
+        sys.exit("basilisk_session: (%d, %d) is off the Mac screen %r; refusing" % (mx, my, SIZE))
     x, y = ORIGIN[0] + mx, ORIGIN[1] + my
     p = ROOT.query_pointer()
     for i in range(1, 16):
@@ -122,7 +131,7 @@ def menu(mx, item_y, peek=False):
     time.sleep(0.6)
     if peek:
         shot("peek")
-        move(mx + 300, 10)
+        move(mx, 2)             # let go on the title: nothing chosen
     else:
         move(mx, item_y)
         time.sleep(0.3)
@@ -139,7 +148,7 @@ def main(steps):
     except subprocess.TimeoutExpired:
         pass
     calibrate()
-    if ORIGIN == [0, 0] and any(s.split(":")[0] in ("click", "dclick", "menu", "peek", "shutdown") for s in steps):
+    if ORIGIN == [0, 0] and any(s.split(":")[0] in ("click", "dclick", "menu", "move", "peek", "sub", "subpeek", "shutdown") for s in steps):
         sys.exit("basilisk_session: not calibrated; refusing to click")
     for step in steps:
         print("step", step, flush=True)
@@ -150,6 +159,25 @@ def main(steps):
         elif name == "menu":
             x, y = (int(v) for v in arg.split(","))
             menu(x, y)
+        elif name == "move":
+            x, y = (int(v) for v in arg.split(","))
+            move(x, y)
+        elif name in ("sub", "subpeek"):
+            v = [int(n) for n in arg.split(",")]
+            move(v[0], 10)
+            button(True)
+            time.sleep(0.6)
+            move(v[0] + 20, v[1])
+            time.sleep(1.0)
+            if name == "subpeek":
+                shot("peek")
+                move(v[0], 2)
+            else:
+                move(v[0] + 200, v[1])      # across into the submenu at the item's height
+                move(v[2], v[3])
+                time.sleep(0.5)
+            button(False)
+            time.sleep(0.5)
         elif name == "peek":
             menu(int(arg), 0, peek=True)
         elif name == "cmd":
@@ -158,6 +186,8 @@ def main(steps):
             for ch in arg:
                 sym = XK.XK_space if ch == " " else XK.string_to_keysym(ch)
                 key(sym, *( [XK.XK_Shift_L] if ch.isupper() else []))
+        elif name in ("return", "tab"):
+            key(XK.XK_Return if name == "return" else XK.XK_Tab)
         elif name == "shot":
             print("shot", shot(arg))
         elif name == "wait":

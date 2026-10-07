@@ -35,6 +35,11 @@ void SearchWindowIdle(void);
 Boolean SearchWindowPoll(void);
 void SearchWindowCursor(Point where);
 
+/* Searches for text (Mac Roman), as the Shiori Search desk accessory asks. */
+void SearchWindowSearchFor(const char *macRoman);
+/* A Balloon Help tip for the point (global) and its area, or NULL. */
+const char *SearchWindowBalloon(Point where, Rect *hot);
+
 /* Commands (menus). */
 void SearchWindowPill(int pill);
 void SearchWindowFind(void);

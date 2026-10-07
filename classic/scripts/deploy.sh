@@ -1,7 +1,7 @@
 #!/bin/bash
 # Puts the last build (classic/build/Shiori.bin) where an emulator finds it.
 #   classic/scripts/deploy.sh snow [--launch]   # onto shiori-sys608.img's top level
-#   classic/scripts/deploy.sh basilisk [--launch [DEPTH]]
+#   classic/scripts/deploy.sh basilisk [--launch]       # depth: the Mac's Monitors control panel
 #                                                # into Basilisk II's shared folder;
 #                                                # DEPTH 1, 2, 4 or 8 bits (8: 256 colors)
 # Snow must not be running while its disk changes: this stops it first (by PID,
@@ -53,11 +53,12 @@ basilisk)
         [ -f "$prefs" ] || { echo "deploy: no $prefs (classic/scripts/setup-emulators.sh)" >&2; exit 1; }
         pgrep -x snowemu >/dev/null && { echo "deploy: Snow is running; quit it first" >&2; exit 1; }
         pgrep -x BasiliskII >/dev/null && { echo "deploy: Basilisk II is already running" >&2; exit 0; }
-        depth=${3:-8}
-        sed -i -e "s/^displaycolordepth .*/displaycolordepth $depth/" "$prefs"
-        grep -q '^displaycolordepth' "$prefs" || echo "displaycolordepth $depth" >> "$prefs"
-        DISPLAY=:0 BasiliskII --config "$prefs" >/tmp/shiori-basilisk.log 2>&1 </dev/null &
-        echo "deploy: Basilisk II running at $depth bits (PID $!), log /tmp/shiori-basilisk.log"
+        # No network unless SHIORI_BASILISK_NET=1: this build's slirp crashes the emulator on
+        # every TCP close (tcp_close, tcp_reass: 32-bit pointers on a 64-bit host; docs/TESTING.md).
+        run="$here/diskimages/basilisk_prefs.run"
+        if [ "${SHIORI_BASILISK_NET:-0}" = 1 ]; then cp "$prefs" "$run"; else grep -v '^ether ' "$prefs" > "$run"; fi
+        DISPLAY=:0 BasiliskII --config "$run" >/tmp/shiori-basilisk.log 2>&1 </dev/null &
+        echo "deploy: Basilisk II running (PID $!, network $([ "${SHIORI_BASILISK_NET:-0}" = 1 ] && echo slirp || echo off)), log /tmp/shiori-basilisk.log"
     fi
     ;;
 *)

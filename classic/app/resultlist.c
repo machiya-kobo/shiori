@@ -6,6 +6,7 @@
 
 #include "draw.h"
 #include "resultlist.h"
+#include "theme.h"
 
 #define HEADER_H 18
 #define RESULT_H 44
@@ -160,14 +161,18 @@ static void DrawRow(const ResultList *l, const ListRow *row, short index, short 
 	short width = (short) (l->frame.right - l->frame.left - 2 * INSET);
 	short x = (short) (l->frame.left + INSET);
 	Boolean selected = index == l->selected;
+	Boolean tinted = selected && l->focused && l->active && ThemeKind() != THEME_MONO;
 
 	SetRect(&r, l->frame.left, y, l->frame.right, (short) (y + RowHeight(row->kind)));
+	if (tinted)
+		ThemeBack(ROLE_SELECTED_BG);    /* inverting coloured text makes its complement: tint instead */
 	EraseRect(&r);
 	switch (row->kind) {
 	case LROW_HEADER:
 		TextFont(kFontIDGeneva);
 		TextSize(9);
 		TextFace(bold);
+		ThemeFore(ROLE_SECONDARY);
 		MoveTo(x, (short) (y + 13));
 		DrawC(row->title);
 		TextFace(0);
@@ -175,12 +180,15 @@ static void DrawRow(const ResultList *l, const ListRow *row, short index, short 
 		PenPat(&qd.gray);
 		LineTo((short) (l->frame.right - INSET), (short) (y + HEADER_H - 2));
 		PenNormal();
+		ThemeNormal();
 		return;
 	case LROW_MORE:
 		TextFont(kFontIDGeneva);
 		TextSize(10);
+		ThemeFore(ROLE_ACCENT);
 		MoveTo((short) (x + (width - TextWidth((Ptr) row->title, 0, (short) strlen(row->title))) / 2), (short) (y + 15));
 		DrawC(row->title);
+		ThemeNormal();
 		break;
 	default: {
 		const char *tag = row->kind == LROW_NOTE ? "Note" : row->kind == LROW_CODE ? "Code" : NULL;
@@ -189,6 +197,7 @@ static void DrawRow(const ResultList *l, const ListRow *row, short index, short 
 		TextSize(9);
 		if (tag != NULL) {
 			Rect t;
+			ThemeFore(tinted ? ROLE_TEXT : row->kind == LROW_NOTE ? ROLE_NOTES : ROLE_CODE);
 			tagWidth = (short) (TextWidth((Ptr) tag, 0, (short) strlen(tag)) + 8);
 			SetRect(&t, (short) (x + width - tagWidth), (short) (y + 4), (short) (x + width), (short) (y + 16));
 			FrameRoundRect(&t, 6, 6);
@@ -198,23 +207,30 @@ static void DrawRow(const ResultList *l, const ListRow *row, short index, short 
 		}
 		TextSize(12);
 		TextFace(bold);
+		ThemeFore(ROLE_ACCENT);
 		MoveTo(x, (short) (y + 14));
 		DrawFitted(row->title, (short) (width - tagWidth));
 		TextFace(0);
 		TextSize(9);
+		ThemeFore(tinted ? ROLE_TEXT : ROLE_SECONDARY);
 		MoveTo(x, (short) (y + 26));
 		DrawFitted(row->place, width);
+		ThemeFore(ROLE_TEXT);
 		MoveTo(x, (short) (y + 38));
 		DrawSnippet(row->snippet, width);
 		break;
 	}
 	}
+	ThemeNormal();
 	if (selected) {
 		if (l->focused && l->active) {
-			InvertRect(&r);
+			if (!tinted)
+				InvertRect(&r);
 		} else {
 			InsetRect(&r, 1, 1);
+			ThemeFore(ROLE_ACCENT);
 			FrameRect(&r);
+			ThemeNormal();
 		}
 	}
 }

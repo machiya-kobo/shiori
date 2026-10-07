@@ -13,6 +13,7 @@
 #include "draw.h"
 #include "fetch.h"
 #include "reader.h"
+#include "theme.h"
 
 #define MAX_READERS 3
 #define MAX_REPLY (192L * 1024L)
@@ -263,10 +264,12 @@ static void DrawLine(Reader *r, long index, short y)
 		if (i + 1 < r->runCount && Runs(r)[i + 1].offset < stop)
 			stop = Runs(r)[i + 1].offset;
 		UseStyle(run.style);
+		ThemeFore((run.style & STYLE_LINK) ? ROLE_ACCENT : ROLE_TEXT);
 		DrawText(text, (short) at, (short) (stop - at));
 		at = stop;
 		i++;
 	}
+	ThemeNormal();
 	if ((Runs(r)[RunAt(r, line.start, 0)].style & STYLE_QUOTE) && line.indent > 0) {
 		/* a quote's bar */
 		PenNormal();
@@ -282,7 +285,7 @@ static void DrawLine(Reader *r, long index, short y)
 		short left = (short) (x + (s > line.start ? SpanWidth(r, line.start, s, &hint) : 0));
 		short right = (short) (left + SpanWidth(r, s, e, &hint));
 		SetRect(&hit, left, y, right, (short) (y + line.height));
-		InvertRect(&hit);
+		ThemeHilite(&hit);
 	}
 	TextFace(0);
 }
@@ -330,7 +333,9 @@ static void DrawHead(Reader *r)
 	TextFace(0);
 	TextSize(9);
 	MoveTo(MARGIN, 28);
+	ThemeFore(ROLE_SECONDARY);
 	DrawFitted(r->place, width);
+	ThemeNormal();
 	MoveTo(0, (short) (HEAD_H - 1));
 	LineTo(r->win->portRect.right, (short) (HEAD_H - 1));
 }
@@ -346,7 +351,9 @@ static void DrawStatus(Reader *r)
 	TextSize(9);
 	TextFace(0);
 	MoveTo(MARGIN, (short) (s.bottom - 4));
+	ThemeFore(ROLE_SECONDARY);
 	DrawFitted(r->status, (short) (s.right - s.left - 2 * MARGIN));
+	ThemeNormal();
 	MoveTo(0, (short) (s.top - 1));
 	LineTo((short) (r->win->portRect.right - 15), (short) (s.top - 1));
 }
@@ -620,7 +627,7 @@ Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
 		n = 63;
 	title[0] = (unsigned char) n;
 	memcpy(title + 1, row->title, n);
-	r->win = NewWindow(NULL, &bounds, title, true, 8 /* documentProc + zoom box */, (WindowPtr) -1L, true, 0);
+	r->win = ThemeNewWindow(&bounds, title, 8 /* documentProc + zoom box */);
 	if (r->win == NULL || r->lines == NULL) {
 		if (r->win)
 			DisposeWindow(r->win);

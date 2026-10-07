@@ -15,9 +15,11 @@
 #include <ToolUtils.h>
 #include <Memory.h>
 #include <Traps.h>
+#include <Gestalt.h>
 #include <string.h>
 
 #include "../core/config.h"
+#include "ae.h"
 #include "net.h"
 #include "prefs.h"
 #include "reader.h"
@@ -49,6 +51,7 @@ static Boolean gQuit;
 static Boolean gHasWNE;
 static Boolean gInBackground;
 static Boolean gReadersBusy;
+static Boolean gHaveHelp;               /* System 7's Help Manager: window balloons */
 static Prefs gPrefs;
 
 static void Enable(MenuHandle m, short item, Boolean on)
@@ -225,6 +228,38 @@ static void DoKey(EventRecord *e)
 		ReaderKey(FrontWindow(), e);
 }
 
+static void QuitApp(void)
+{
+	gQuit = true;
+}
+
+/* Balloons for the window's parts while Show Balloons is on (System 7). */
+static void Balloons(Point where)
+{
+	static const char *shown;
+	Rect hot;
+	const char *tip;
+	HMMessageRecord msg;
+	size_t n;
+
+	if (!gHaveHelp || !HMGetBalloons())
+		return;
+	tip = SearchWindowBalloon(where, &hot);
+	if (tip == shown && (tip == NULL || HMIsBalloon()))
+		return;
+	shown = tip;
+	if (tip == NULL)
+		return;
+	memset(&msg, 0, sizeof(msg));
+	msg.hmmHelpType = 1;                /* khmmString */
+	n = strlen(tip) > 255 ? 255 : strlen(tip);
+	msg.u.hmmString[0] = (unsigned char) n;
+	memcpy(msg.u.hmmString + 1, tip, n);
+	LocalToGlobal((Point *) &hot.top);
+	LocalToGlobal((Point *) &hot.bottom);
+	(void) HMShowBalloon(&msg, where, &hot, NULL, 0, 0, 0);
+}
+
 static Boolean GetEvent(EventRecord *e, long sleep)
 {
 	if (gHasWNE)
@@ -262,6 +297,12 @@ static void Setup(Prefs *prefs)
 	prefs->vault[0] = '\0';
 	PrefsLoad(prefs);
 	(void) NetInit();
+	{
+		long response;
+		gHaveHelp = NGetTrapAddress(_Gestalt, kToolboxTrapType) != NGetTrapAddress(_Unimplemented, kToolboxTrapType)
+			&& Gestalt(gestaltHelpMgrAttr, &response) == noErr && (response & 1);
+	}
+	AppleEventsInit(QuitApp, SearchWindowSearchFor);
 }
 
 int main(void)
@@ -299,6 +340,9 @@ int main(void)
 				else if (IsReaderWindow((WindowPtr) e.message))
 					ReaderActivate((WindowPtr) e.message, (e.modifiers & activeFlag) != 0);
 				break;
+			case kHighLevelEvent:
+				AppleEventsHandle(&e);
+				break;
 			case osEvt:
 				if (((e.message >> 24) & 0xFF) == kSuspendResumeMessage) {
 					gInBackground = (e.message & kResumeFlag) == 0;
@@ -313,6 +357,7 @@ int main(void)
 			SearchWindowIdle();
 		}
 		SearchWindowCursor(e.where);
+		Balloons(e.where);
 		SearchWindowPoll();
 		gReadersBusy = ReaderPollAll();
 	}

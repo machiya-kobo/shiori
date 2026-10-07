@@ -278,7 +278,9 @@ void FetchProblem(const Fetch *f, const char *who, char *out, long cap)
 		case openFailed: case connectionTerminated: case commandTimeout:
 			sprintf(msg, "Can't reach the bridge (%d): is it on, and this Mac on the network?", f->err); break;
 		default:
-			if (f->err <= ipBadLapErr && f->err >= ipLoadErr)
+			if (f->err == ipBadAddr)
+				sprintf(msg, "MacTCP has no address (%d): is this Mac on the network?", f->err);
+			else if (f->err <= ipBadLapErr && f->err >= ipLoadErr)
 				sprintf(msg, "MacTCP isn't set up (%d): check the MacTCP control panel.", f->err);
 			else
 				sprintf(msg, "Can't reach %s (%d).", who, f->err);

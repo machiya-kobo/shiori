@@ -3,6 +3,7 @@
 #include "Menus.r"
 #include "Windows.r"
 #include "Dialogs.r"
+#include "balloons.r"
 
 resource 'MBAR' (128) {
 	{ 128, 129, 130, 131 };
@@ -164,7 +165,7 @@ resource 'SIZE' (-1) {
 	dontGetFrontClicks,
 	ignoreChildDiedEvents,
 	is32BitCompatible,
-	notHighLevelEventAware,
+	isHighLevelEventAware,
 	onlyLocalHLEvents,
 	notStationeryAware,
 	dontUseTextEditServices,
@@ -173,4 +174,70 @@ resource 'SIZE' (-1) {
 	reserved,
 	1024 * 1024,
 	640 * 1024
+};
+
+/* Balloon Help for the menus (System 7): each entry names the STR# strings
+   for its enabled and dimmed states (balloons.r) */
+#define B(id, on, off) HMStringResItem { id, on, id, off, 0, 0, 0, 0 }
+#define B1(id, on) HMStringResItem { id, on, 0, 0, 0, 0, 0, 0 }
+
+resource 'hmnu' (129, "File") {
+	HelpMgrVersion, hmDefaultOptions, 0, 0,
+	HMSkipItem { },
+	{
+		B1(129, 1);
+		B(129, 2, 3);
+		B(129, 4, 5);
+		HMSkipItem { };
+		B1(129, 6);
+		HMSkipItem { };
+		B1(129, 7);
+	}
+};
+
+resource 'STR#' (129, "File balloons") {
+	{
+		"File: open a result, close a reader, Preferences, Quit.";
+		"Opens the selected result in a reader.";
+		"Opens the selected result in a reader. Select a result first.";
+		"Closes the front reader or desk accessory.";
+		"Closes the front reader. There's no reader in front.";
+		"The bridge's addresses, this Mac's room token, the reader's text size.";
+		"Quits Shiori.";
+	}
+};
+
+resource 'hmnu' (131, "Search") {
+	HelpMgrVersion, hmDefaultOptions, 0, 0,
+	HMSkipItem { },
+	{
+		B1(131, 1);
+		B1(131, 2);
+		B(131, 3, 4);
+		HMSkipItem { };
+		B1(131, 5);
+		B1(131, 6);
+		B1(131, 7);
+		B1(131, 8);
+		HMSkipItem { };
+		B(131, 9, 10);
+		B(131, 11, 12);
+	}
+};
+
+resource 'STR#' (131, "Search balloons") {
+	{
+		"Search: find, the four pills, Show More, Stop.";
+		"Selects the search field, or finds words in the front reader.";
+		"Finds the same words again in the reader.";
+		"Finds the same words again. Find something first.";
+		"All: your top notes from Kura, then your pages from Hister.";
+		"Pages: the web pages you saved in Hister.";
+		"Notes: your notes from Kura.";
+		"Code: your repositories' pages in Hister.";
+		"Asks for the next page of results.";
+		"Asks for the next page of results. There's no next page.";
+		"Stops the search under way (Command-period).";
+		"Stops the search under way. Nothing is under way.";
+	}
 };
