@@ -127,6 +127,8 @@ A Flatpak around the web app, with Cinnamon's menu search, a quick-search hotkey
 
 A native app on the Be API, installed with `pkgman` or built with `make`: [docs/haiku.md](docs/haiku.md).
 
+<p align="center"><a href="docs/screenshots/shiori-haiku-search.png"><img src="docs/screenshots/shiori-haiku-search.png" alt="Shiori on Haiku in the default theme: a search for lantern lists sample notes from Kura (Lantern festival kit, Chōchin build log, Washi offcuts) above sample pages from Hister, with the All, Pages, Notes and Code buttons above them" width="73%"></a><br>Native on Haiku</p>
+
 ## Classic Macintosh
 
 A native Hister client for 68k Macs, from a Mac Plus on System 6 to color on System 7, with a quick-search desk accessory. It talks to Hister directly over plain HTTP on your LAN, or through a small read-only bridge when Hister is HTTPS-only: [docs/classic.md](docs/classic.md), which also covers serving Hister to any client without TLS, and what that exposes.
