@@ -1464,7 +1464,6 @@ function viewList(params) {
     placeholder: `Search in ${title}`, autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false',
     'aria-label': `Search in ${title}`,
   });
-  selectOnFocus(field);
   const load = () => {
     const words = field.value.trim();
     const c = listChoices(params, { search: !!words });
@@ -2564,26 +2563,12 @@ async function allResults(list) {
   return out.slice(0, 1000);
 }
 
-// Tapping or clicking into a search field selects what's in it, so typing
-// replaces it at once. The select waits for the pointer's own mouseup,
-// which would otherwise drop the selection back to a caret.
-function selectOnFocus(input) {
-  let fromPointer = false;
-  input.addEventListener('pointerdown', () => {
-    fromPointer = document.activeElement !== input;
-  });
-  input.addEventListener('focus', () => {
-    if (!input.value) return;
-    input.select();
-    // iOS Safari ignores select() in focus; set the range explicitly too.
-    setTimeout(() => { if (document.activeElement === input) input.setSelectionRange(0, input.value.length); }, 0);
-  });
-  input.addEventListener('mouseup', (e) => {
-    if (fromPointer) {
-      e.preventDefault();
-      fromPointer = false;
-    }
-  });
+// A shortcut's focus leaves the caret at the end, as a click does: the
+// field never selects its text by itself.
+function caretToEnd(input) {
+  input.focus();
+  const n = input.value.length;
+  input.setSelectionRange(n, n);
 }
 
 // --- Search field: at the top of the Library, as in the apps ---------------------
@@ -2688,7 +2673,6 @@ searchInput.addEventListener('keydown', (e) => {
   clearTimeout(liveTimer);
   searchTo(searchInput.value, { record: true });
 });
-selectOnFocus(searchInput);
 // The X and, on a phone, the magnifier (submits, as Return does).
 const searchButtons = S.fieldButtons(searchInput, () => {
   clearTimeout(liveTimer);
@@ -2910,8 +2894,7 @@ const keyboard = (() => {
       case 'delete': if (!doc || S.isLocalFile(doc.url) || S.isCodeDoc(doc)) return; mark(null); deleteWithUndo(doc); break;
       case 'focusSearch':
         if ($('search-top').hidden) return;
-        searchInput.focus();
-        searchInput.select();
+        caretToEnd(searchInput);
         break;
       case 'help': toggleHelp(); break;
       case 'escape':

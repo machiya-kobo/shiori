@@ -409,8 +409,9 @@ void SearchWindow::MessageReceived(BMessage* message)
 			StartSearch();
 			break;
 		case kMsgFocusQuery:
+			// The caret at the end: the field never selects its text by itself.
 			fQuery->MakeFocus(true);
-			fQuery->TextView()->SelectAll();
+			fQuery->TextView()->Select(fQuery->TextView()->TextLength(), fQuery->TextView()->TextLength());
 			break;
 		case kMsgPill:
 			SetPill(Pill(message->GetInt32("pill", 0)));

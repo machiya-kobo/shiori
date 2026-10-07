@@ -844,7 +844,7 @@ void SearchWindowSearchFor(const char *macRoman)
 	SelectWindow(gWin);
 	Focus(false);
 	TESetText((Ptr) macRoman, (long) strlen(macRoman), gField);
-	TESetSelect(0, 32767, gField);
+	TESetSelect(32767, 32767, gField);
 	InvalRect(&gFieldRect);
 	SetPort(old);
 	Search();
@@ -892,7 +892,8 @@ void SearchWindowFind(void)
 {
 	SetPort(gWin);
 	Focus(false);
-	TESetSelect(0, 32767, gField);
+	/* the caret at the end: the field never selects its text by itself */
+	TESetSelect(32767, 32767, gField);
 }
 
 void SearchWindowShowMore(void)

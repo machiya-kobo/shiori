@@ -19,7 +19,6 @@ struct ShioriApp: App {
                 #if os(macOS)
                 .onAppear { MacAppIcon.apply() }
                 #endif
-                .onAppear { SearchFieldSelect.install() }
                 .onOpenURL { url in
                     if url.scheme == "shiori", url.host() == "settings" { app.settingsRequests += 1 }
                     if let target = SaveLinksTarget(url: url) { app.saveLinksRequest = target }

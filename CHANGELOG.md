@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.17.1 (2026-10-07)
+
+### Changed
+
+- **The search field no longer selects its text** when you tap or click
+  into it, in the apps, the web app and the search page: the caret goes
+  where you tap. The `/` key, Haiku's Find and the classic Mac's Find
+  leave the caret at the end.
+
 ## 0.17.0 (2026-10-07)
 
 ### Added

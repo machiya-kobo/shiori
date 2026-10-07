@@ -964,7 +964,7 @@
         case 'open': if (!card) return; open(card); break;
         case 'preview': if (!card) return; preview(card); break;
         case 'copy': if (!card) return; copy(card); break;
-        case 'focusSearch': $('q').focus(); $('q').select(); break;
+        case 'focusSearch': caretToEnd($('q')); break;
         case 'help': toggleHelp(); break;
         case 'escape':
           if (help) toggleHelp();
@@ -1361,7 +1361,6 @@
     if (event.target === $('settings')) $('settings').close();
   });
 
-  selectOnFocus($('q'));
   $('q').addEventListener('focus', () => {
     drawRecent();
     if ($('q').value.trim() && $('q').value.trim() !== q) scheduleSuggest();
@@ -1513,26 +1512,12 @@
     return node;
   }
 
-  // Tapping or clicking into a search field selects what's in it, so typing
-  // replaces it at once. The select waits for the pointer's own mouseup,
-  // which would otherwise drop the selection back to a caret.
-  function selectOnFocus(input) {
-    let fromPointer = false;
-    input.addEventListener('pointerdown', () => {
-      fromPointer = document.activeElement !== input;
-    });
-    input.addEventListener('focus', () => {
-      if (!input.value) return;
-      input.select();
-      // iOS Safari ignores select() in focus; set the range explicitly too.
-      setTimeout(() => { if (document.activeElement === input) input.setSelectionRange(0, input.value.length); }, 0);
-    });
-    input.addEventListener('mouseup', (e) => {
-      if (fromPointer) {
-        e.preventDefault();
-        fromPointer = false;
-      }
-    });
+  // A shortcut's focus leaves the caret at the end, as a click does: the
+  // field never selects its text by itself.
+  function caretToEnd(input) {
+    input.focus();
+    const n = input.value.length;
+    input.setSelectionRange(n, n);
   }
 
   // `room`: Kura or Konbini, which may want the Machiya sign-in (roomInit).
