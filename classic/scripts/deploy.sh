@@ -53,11 +53,12 @@ basilisk)
         [ -f "$prefs" ] || { echo "deploy: no $prefs (classic/scripts/setup-emulators.sh)" >&2; exit 1; }
         pgrep -x snowemu >/dev/null && { echo "deploy: Snow is running; quit it first" >&2; exit 1; }
         pgrep -x BasiliskII >/dev/null && { echo "deploy: Basilisk II is already running" >&2; exit 0; }
-        # No network unless SHIORI_BASILISK_NET=1: this build's slirp crashes the emulator on
-        # every TCP close (tcp_close, tcp_reass: 32-bit pointers on a 64-bit host; docs/TESTING.md).
+        # No network unless SHIORI_BASILISK_NET=1: the hub's build's slirp crashes the emulator on
+        # every TCP close. With the network, run a current build: SHIORI_BASILISK=<its path>
+        # (docs/TESTING.md).
         run="$here/diskimages/basilisk_prefs.run"
         if [ "${SHIORI_BASILISK_NET:-0}" = 1 ]; then cp "$prefs" "$run"; else grep -v '^ether ' "$prefs" > "$run"; fi
-        DISPLAY=:0 BasiliskII --config "$run" >/tmp/shiori-basilisk.log 2>&1 </dev/null &
+        DISPLAY=:0 "${SHIORI_BASILISK:-BasiliskII}" --config "$run" >/tmp/shiori-basilisk.log 2>&1 </dev/null &
         echo "deploy: Basilisk II running (PID $!, network $([ "${SHIORI_BASILISK_NET:-0}" = 1 ] && echo slirp || echo off)), log /tmp/shiori-basilisk.log"
     fi
     ;;

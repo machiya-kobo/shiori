@@ -123,6 +123,14 @@ What we learned setting it up:
   has no window position, and the Finder opened it off-screen.
 - The Mac Plus keyboard has no Escape or Control key: ⌘-. is Escape. Snow
   maps Right Alt to Command.
+- **Installing the DA in the System file** (what Font/DA Mover does; no
+  disk here has Font/DA Mover). With Snow stopped, on a backup of
+  `shiori-sys608.img`: `hcopy -m ":System Folder:System" System.bin`,
+  append the DA under a free number with Rez
+  (`data 'DRVR' (19, "\0x00Shiori Search", purgeable) { $$read("…/ShioriDA.flt") };`,
+  `Rez install.r -a -t ZSYS -c MACS -o System.bin`), `hcopy -m` it back,
+  `hattrib -t ZSYS -c MACS`. Then the Finder's Apple menu has it
+  (`menu:23,172`) with Shiori not running. Restore the backup after.
 - The Apple menu lists the System's DAs first; Shiori Search comes last
   (`da` opens it). On System 6 Return on a result copies its link; check it
   by pasting into Shiori's field. Close it (its close box, Mac 53, 40) and
@@ -187,24 +195,37 @@ y = 26, 16 apart, with separators.
   coordinates passed as the Mac's did this once). To recover, `sudo systemctl restart sddm`, then
   `DISPLAY=:0 XAUTHORITY=~/.Xauthority xhost +local:` and
   `xset s off -dpms s noblank`.
-- **Networking:** none, for now. `deploy.sh` starts Basilisk without
-  Ethernet unless `SHIORI_BASILISK_NET=1`.
-  - The hub's prefs bridge Basilisk onto the LAN through the `sheep_net`
-    kernel module, which must be built for the running kernel. After a
-    kernel update it's gone (asked of services).
-  - Shiori's prefs use `ether slirp` instead, and the Mac gets an address
-    from it (MacTCP set to Server, above). But this Basilisk build's slirp
-    crashes the emulator on the first TCP close (`tcp_close`, `tcp_reass`:
-    the old 32-bit pointers in its reassembly queue, on a 64-bit host). The
-    request reaches the fake house; then Basilisk hangs with "Caught
-    SIGSEGV" in its log.
+- **Networking: use a Basilisk II built from current source.** The hub's
+  `/usr/local/bin/BasiliskII` crashes on the first TCP close over slirp
+  ("Caught SIGSEGV", in `tcp_close`/`tcp_reass`), and the hub's bridged
+  prefs need the `sheep_net` module, which isn't built for the running
+  kernel. A build of kanjitalk755/macemu's current source has a working
+  slirp. Once, in your own folder (the hub's binary is left alone):
+
+  ```sh
+  git clone --depth 1 https://github.com/kanjitalk755/macemu ~/build/macemu
+  cd ~/build/macemu/BasiliskII/src/Unix
+  NO_CONFIGURE=1 ./autogen.sh
+  ./configure --enable-sdl-video --enable-sdl-audio --with-bincue=no \
+      --with-vdeplug=no --disable-jit-compiler
+  make -j"$(nproc)"
+  ```
+
+  Then run it with the network on:
+
+  ```sh
+  SHIORI_BASILISK=~/build/macemu/BasiliskII/src/Unix/BasiliskII SHIORI_BASILISK_NET=1 \
+      classic/scripts/deploy.sh basilisk --launch
+  ```
+
+  Without `SHIORI_BASILISK_NET=1`, `deploy.sh` starts Basilisk with no
+  Ethernet (the hub's binary would crash). This build places its window
+  differently: the driver calibrates either way, but a screenshot's
+  coordinates are the Mac's plus a different origin (about 129, 42).
   - Without a network, MacTCP set to Server waits about a minute for an
     address on the first request, and the whole Mac waits with it (System
-    7 is cooperative): nothing else can be clicked until "MacTCP has no
-    address" shows.
-  - So System 7 runs are UI-only: the windows, the menus, Balloon Help,
-    the Apple events, the colours. Results and readers in colour wait for
-    a working network.
+    7 is cooperative). The desk accessory opens MacTCP on its first
+    search, not with its window, for that reason.
 - **The depth is the Mac's own**: Control Panels > Monitors (Grays or
   Colors, then a depth; it applies when Monitors closes, and stays in
   Basilisk's PRAM across runs). `screen win/1024/768` offers every depth,
