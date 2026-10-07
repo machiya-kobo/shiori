@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.14.4 (2026-10-07)
+
+### Fixed
+
+- **"N New Items" counts only what's new at the top**: it counted older
+  results the Library's All hadn't placed yet, and imported ones (NewsBlur's
+  stories) dated below the top, so tapping it showed nothing new.
+
 ## 0.14.3 (2026-10-06)
 
 ### Changed
