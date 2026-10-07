@@ -3,9 +3,11 @@
 Shiori is a search client for a [Hister](https://github.com/asciimoo/hister)
 server: native apps for iPhone, iPad and Mac with a Safari extension (the
 upstream Hister extension, patched at build time), a search page and a web
-app, and a small Linux app. README covers what it is and how to build it;
-docs/ai.md, docs/linux.md and docs/smallweb.md cover those parts. This file
-holds the rules and the traps the code can't tell you.
+app, and a small Linux app. README covers what it is and a short
+Quickstart; docs/ has the rest (quickstart.md, the tested walkthrough;
+build.md, extension.md, signing-in.md, ai.md, linux.md, haiku.md,
+smallweb.md). This file holds the rules and the traps the code can't tell
+you.
 
 ## Rules
 

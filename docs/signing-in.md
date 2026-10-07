@@ -10,6 +10,33 @@ Two sign-ins can apply, each only when the server side has it on:
 
 With neither, Shiori sends nothing more than before, and none of this shows.
 
+## Sign in to Hister
+
+No sign-in while Hister has no users (the default). When it has them (`app.user_handling`, v0.20.0+, with Machiya's sign-in helper on Hister's host), sign in once on each:
+
+- **iPhone, iPad and Mac:** Settings → Account → Sign in to Hister, shown only while Hister has users. Pick **Sign In with Tailscale** when Hister offers its OIDC sign-in, else **Sign In with Saved Password** (Hister's page, where your saved password is offered), or type a name and password. The app keeps the sign-in in the Keychain.
+- **Safari's extension:** paste your Hister user's token into the app (Settings → Account → Safari Extension Token) on each device with the extension.
+- **The hosted pages** send you to Hister's sign-in and back.
+- **Linux:** `shiori sign-in` (a small window) and `shiori sign-out`, or `"histerToken"` in config.json.
+- **Haiku:** Settings → Sign In…, or `"histerToken"` in config.json.
+
+The session goes only to your Hister. When you're signed in, Kura and Konbini get an opaque id, else the token, so they know who's asking. [Hister's users](#histers-users) has the details.
+
+## Sign in to Machiya
+
+No sign-in unless Machiya's identity file is on (off by default). Then Kura and Konbini ask who's calling, and each Shiori signs in once:
+
+- **With a pairing code** (easiest): on the server, `python3 -m vaultkit.identity pair <you> --label iPhone` shows a one-time code for ten minutes. Type it into Shiori, which trades it with Kura for a device token.
+- **Or with a token** from `python3 -m vaultkit.identity token mint <you> --label iPhone`, pasted in.
+
+Where to enter it:
+
+- **iPhone, iPad and Mac:** Settings → Account → Sign in to Machiya. The app keeps it in the Keychain; Safari's extension asks the app.
+- **Linux:** `"machiyaToken"` in `~/.config/shiori/config.json`. `shiori pair <code>` prints it.
+- **The hosted pages** use Kura's own `/signin` cookie.
+
+The token goes only to the configured Kura and Konbini, never to Hister or SearXNG. Sign Out deletes it from the device; revoke it on the server. [Signing in to Machiya](#signing-in-to-machiya) has the details, and [Machiya's identity guide](https://github.com/machiya-kobo/machiya/blob/main/docs/identity.md) sets up the server side.
+
 ## Hister's users
 
 Hister keeps **one access token per user** (making a new one breaks every

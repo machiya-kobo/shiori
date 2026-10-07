@@ -19,6 +19,27 @@ page can't do:
 
 No AI, no rule editor, nothing the web view already does.
 
+## Install
+
+Build the Flatpak on the GNOME 49 runtime, then add the desktop pieces. You need `flatpak` and `flatpak-builder`.
+
+```bash
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install --user flathub org.gnome.Platform//49 org.gnome.Sdk//49
+linux/flatpak/build.sh                 # builds, installs for you, and writes a single-file bundle
+linux/install-desktop.sh               # the `shiori` launcher, Cinnamon's menu search, Ctrl+Alt+Space
+```
+
+Then point it at your servers in `~/.config/shiori/config.json`:
+
+```json
+{"webApp": "https://<your Shiori web app>/", "server": "https://<your Hister>/", "kura": "https://<your Kura>/"}
+```
+
+- `linux/install-desktop.sh --remove` undoes the desktop pieces.
+- A bundle someone built for you installs with `flatpak install --user shiori.flatpak`.
+- [The Quickstart](quickstart.md#a-standalone-with-sample-pages) builds and checks it against a Hister with sample pages.
+
 ## Shape
 
 **GJS on GTK4 + libadwaita, as a Flatpak on the GNOME 49 runtime** (older
@@ -152,7 +173,7 @@ a private vault is never cached, exported or sent to Hister.
 
 ## The app ID
 
-The Flatpak is `io.github.machiya_kobo.Shiori` (the GitHub organisation, `machiya-kobo`, with its hyphen as an underscore, as Flatpak IDs need), and the
+The Flatpak is `io.github.machiya_kobo.Shiori` (the GitHub organization, `machiya-kobo`, with its hyphen as an underscore, as Flatpak IDs need), and the
 GApplication takes its ID from `FLATPAK_ID`. The Cinnamon menu provider's
 uuid is `shiori@machiya-kobo.github.io` (it was another `shiori@…` before
 0.5.5: re-run `linux/install-desktop.sh`, which removes the old provider

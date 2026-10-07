@@ -10,12 +10,16 @@ part you're changing.
 
 ## Building
 
-- **Apple apps:** see README → Build. You need `local.yml` (from
-  `local.yml.example`) with your own `SHIORI_BUNDLE_PREFIX` and team.
+- **Apple apps:** see [docs/build.md](docs/build.md). You need `local.yml`
+  (from `local.yml.example`) with your own `SHIORI_BUNDLE_PREFIX` and team.
 - **Web pages:** `scripts/build-web.sh` and `scripts/build-pwa.sh`;
   `web/dev-server.py` serves them locally with the same routing as a real
   host (web/README.md).
 - **Linux:** see docs/linux.md; `linux/flatpak/build.sh` builds the Flatpak.
+- **The Quickstart:** `tools/quickstart-test` runs the blocks in
+  docs/quickstart.md (the README's short Quickstart copies some of them,
+  and must match). `--worktree --only pages` tests your changes without a
+  container engine.
 
 ## Tests
 
@@ -40,7 +44,7 @@ are fine: `HISTER_LIVE_URL` and `KURA_LIVE_URL` turn them on.
 
 ## Rules
 
-- Never modify `vendor/hister/`: Safari behaviour lives in `patches/`,
+- Never modify `vendor/hister/`: Safari behavior lives in `patches/`,
   applied to the built extension. To upgrade, move the submodule to an
   upstream tag.
 - Never edit the generated `Shiori.xcodeproj/` or
