@@ -164,7 +164,9 @@ Boolean PrefsLoad(Prefs *p)
 			shiori_checked_room_token(eq + 1, p->config.roomToken, (long) sizeof(p->config.roomToken));
 		else if (strcmp(line, "textSize") == 0) {
 			int size = 0;
-			sscanf(eq + 1, "%d", &size);
+			const char *c;
+			for (c = eq + 1; *c >= '0' && *c <= '9' && size < 100; c++)
+				size = size * 10 + (*c - '0');      /* no strtol: errno brings 1 KB into the DA */
 			if (size == 10 || size == 12 || size == 14)
 				p->textSize = (short) size;
 		} else if (strcmp(line, "vault") == 0)

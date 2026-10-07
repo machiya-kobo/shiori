@@ -1,5 +1,4 @@
 /* query.c: see query.h. A line-for-line port of haiku/core/Query.cpp. */
-#include <stdio.h>
 #include <string.h>
 
 #include "query.h"
@@ -40,6 +39,23 @@ static void b_addn(Buf *b, const char *p, long n)
 static void b_add(Buf *b, const char *p)
 {
 	b_addn(b, p, (long) strlen(p));
+}
+
+/* n in decimal at the end of b (no printf: the desk accessory can't afford it). */
+static void b_add_num(Buf *b, long n)
+{
+	char digits[12];
+	int i = (int) sizeof(digits) - 1;
+	unsigned long u = n < 0 ? (unsigned long) -n : (unsigned long) n;
+
+	digits[i] = '\0';
+	do {
+		digits[--i] = (char) ('0' + u % 10);
+		u /= 10;
+	} while (u != 0 && i > 1);
+	if (n < 0)
+		digits[--i] = '-';
+	b_add(b, digits + i);
 }
 
 static int b_set(char *out, long cap, const char *p, long n)
@@ -452,7 +468,7 @@ static void json_string_to(Buf *b, const char *s)
 int shiori_hister_search_target(const char *typed, int pill, int limit, const char *pageKey, char *out, long cap)
 {
 	char t[SHIORI_MAX_TEXT + 1], words[SHIORI_MAX_TEXT + 32], text[2 * SHIORI_MAX_TEXT + 96];
-	char json[2 * SHIORI_MAX_TEXT + 256], num[16];
+	char json[2 * SHIORI_MAX_TEXT + 256];
 	int newest;
 	Buf j, b;
 
@@ -470,9 +486,8 @@ int shiori_hister_search_target(const char *typed, int pill, int limit, const ch
 	b_init(&j, json, (long) sizeof(json));
 	b_add(&j, "{\"text\":");
 	json_string_to(&j, text);
-	sprintf(num, "%d", limit);
 	b_add(&j, ",\"highlight\":\"HTML\",\"limit\":");
-	b_add(&j, num);
+	b_add_num(&j, limit);
 	if (newest)
 		b_add(&j, ",\"sort\":\"date\"");
 	if (pageKey != NULL && pageKey[0]) {
@@ -491,7 +506,7 @@ int shiori_hister_search_target(const char *typed, int pill, int limit, const ch
 
 int shiori_kura_search_target(const char *typed, int limit, long offset, const char *vault, char *out, long cap)
 {
-	char text[SHIORI_MAX_TEXT + 8], num[48];
+	char text[SHIORI_MAX_TEXT + 8];
 	Buf b;
 	long n;
 
@@ -499,8 +514,10 @@ int shiori_kura_search_target(const char *typed, int limit, long offset, const c
 		return 0;
 	b_init(&b, out, cap);
 	b_add(&b, text[0] ? "api/search?" : "api/recent?");
-	sprintf(num, "limit=%d&offset=%ld", limit, offset);
-	b_add(&b, num);
+	b_add(&b, "limit=");
+	b_add_num(&b, limit);
+	b_add(&b, "&offset=");
+	b_add_num(&b, offset);
 	if (vault != NULL && vault[0]) {
 		b_add(&b, "&vault=");
 		if (!b.ok || !shiori_form_encode(vault, out + b.len, cap - b.len))

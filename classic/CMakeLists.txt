@@ -35,19 +35,38 @@ set(SHIORI_SOURCES
 )
 
 # The desk accessory: a flat code resource (its DRVR header comes first, in
-# .rsrcheader), then a 'DRVR' resource. No -gc-sections: nothing references
-# the header, and the linker would drop it.
-add_executable(ShioriDA da/ShioriDA.c)
-set_target_properties(ShioriDA PROPERTIES OUTPUT_NAME ShioriDA.flt LINK_FLAGS "-Wl,--mac-flat")
-target_compile_options(ShioriDA PRIVATE -m68000 -Os -Wall -Wno-unused-parameter)
+# .rsrcheader), then a 'DRVR' resource. It shares the core and the app's
+# fetch, MacTCP, preferences, drawing and theme code; -gc-sections keeps only
+# what it calls (its _start names the header, so the header stays). A DA must
+# stay under 32 KB.
+add_executable(ShioriDA da/ShioriDA.c da/sendread.c
+    core/json.c core/http.c core/query.c core/results.c core/config.c core/roman.c core/notetext.c
+    app/fetch.c app/net.c app/prefs.c app/draw.c app/theme.c)
+set_target_properties(ShioriDA PROPERTIES OUTPUT_NAME ShioriDA.flt LINK_FLAGS "-Wl,--mac-flat -Wl,-gc-sections -Wl,--undefined=da_header")
+target_compile_options(ShioriDA PRIVATE -m68000 -Os -Wall -Wno-unused-parameter -ffunction-sections -fdata-sections)
+foreach(v SHIORI_DEFAULT_HISTER SHIORI_DEFAULT_KURA SHIORI_DEFAULT_TOKEN)
+    if(${v})
+        target_compile_definitions(ShioriDA PRIVATE ${v}="${${v}}")
+    endif()
+endforeach()
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ShioriDA.rsrc.bin
     COMMAND ${REZ} ${CMAKE_CURRENT_SOURCE_DIR}/da/ShioriDA.r -o ShioriDA.rsrc.bin
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ShioriDA ${CMAKE_CURRENT_SOURCE_DIR}/da/ShioriDA.r)
 
-# Phase 0 carries the DA in the app's own resources, so the app's Apple menu
-# opens it (installing it in the System comes with phase 7).
+# The DA on its own, to install: a Font/DA Mover suitcase ('dfil', 'DMOV').
+# System 6 installs it with Font/DA Mover; System 7's Finder opens it, and the
+# DA can be dragged out to the System Folder (it then shows in every Apple menu).
+add_custom_command(
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Shiori Search.bin"
+    COMMAND ${REZ} ${CMAKE_CURRENT_SOURCE_DIR}/da/ShioriDA.r -t dfil -c DMOV -o "Shiori Search.bin"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ShioriDA ${CMAKE_CURRENT_SOURCE_DIR}/da/ShioriDA.r)
+add_custom_target(ShioriSearchSuitcase ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/Shiori Search.bin")
+
+# The app carries the DA in its own resources too, so Shiori's Apple menu
+# opens it without installing anything.
 add_application(Shiori CREATOR "SHIO" ${SHIORI_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/shiori.r
     ${CMAKE_CURRENT_BINARY_DIR}/ShioriDA.rsrc.bin)
 
@@ -62,3 +81,8 @@ endforeach()
 target_compile_options(Shiori PRIVATE -m68000 -Os -Wall -Wextra -Wno-unused-parameter
     -ffunction-sections -fdata-sections)
 set_target_properties(Shiori PROPERTIES LINK_FLAGS "-Wl,-gc-sections")
+
+# A System 7 test tool, never shipped: sends Shiori SHIO/read through the
+# desk accessory's code (tests/aesend.c).
+add_application(ShioriAESend tests/aesend.c da/sendread.c tests/aesend.r)
+target_compile_options(ShioriAESend PRIVATE -m68000 -Os -Wall)

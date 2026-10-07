@@ -20,22 +20,11 @@
 
 #include "../core/config.h"
 #include "ae.h"
+#include "defaults.h"
 #include "net.h"
 #include "prefs.h"
 #include "reader.h"
 #include "searchwin.h"
-
-/* The bridge and the Mac's room token until Preferences has them. Builds take
-   them from classic/local.env (gitignored); these neutral defaults reach nothing. */
-#ifndef SHIORI_DEFAULT_HISTER
-#define SHIORI_DEFAULT_HISTER "http://192.0.2.1:8070/"
-#endif
-#ifndef SHIORI_DEFAULT_KURA
-#define SHIORI_DEFAULT_KURA "http://192.0.2.1:8071/"
-#endif
-#ifndef SHIORI_DEFAULT_TOKEN
-#define SHIORI_DEFAULT_TOKEN ""
-#endif
 
 enum { kAppleMenu = 128, kFileMenu = 129, kEditMenu = 130, kSearchMenu = 131 };
 enum { kAboutItem = 1 };
@@ -228,6 +217,13 @@ static void DoKey(EventRecord *e)
 		ReaderKey(FrontWindow(), e);
 }
 
+/* A row the Shiori Search desk accessory asks to read (SHIO/read). */
+static void ReadRow(const ListRow *row)
+{
+	if (!ReaderOpen(&gPrefs.config, row))
+		SysBeep(10);
+}
+
 static void QuitApp(void)
 {
 	gQuit = true;
@@ -302,7 +298,7 @@ static void Setup(Prefs *prefs)
 		gHaveHelp = NGetTrapAddress(_Gestalt, kToolboxTrapType) != NGetTrapAddress(_Unimplemented, kToolboxTrapType)
 			&& Gestalt(gestaltHelpMgrAttr, &response) == noErr && (response & 1);
 	}
-	AppleEventsInit(QuitApp, SearchWindowSearchFor);
+	AppleEventsInit(QuitApp, SearchWindowSearchFor, ReadRow);
 }
 
 int main(void)

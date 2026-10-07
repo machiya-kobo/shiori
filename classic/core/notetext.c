@@ -536,7 +536,7 @@ static int hexval(int c)
 /* the note's base: everything before "/n/" or "/v/" in its address */
 static long base_length(const char *url)
 {
-	const char *n = strstr(url, "/n/"), *v = strstr(url, "/v/"), *p;
+	const char *n = shiori_strstr(url, "/n/"), *v = shiori_strstr(url, "/v/"), *p;
 
 	p = n == NULL ? v : (v == NULL ? n : (n < v ? n : v));
 	return p == NULL ? -1 : (long) (p - url);
@@ -544,7 +544,7 @@ static long base_length(const char *url)
 
 void shiori_url_vault(const char *url, char *out, long cap)
 {
-	const char *v = strstr(url, "/v/"), *name, *slash, *c;
+	const char *v = shiori_strstr(url, "/v/"), *name, *slash, *c;
 
 	out[0] = '\0';
 	if (v == NULL)
@@ -605,7 +605,7 @@ int shiori_note_link(const char *href, const char *noteURL, char *path, long pat
 	path[n] = '\0';
 	/* never out of the vault: no "." or ".." segment, no leading slash */
 	if (path[0] == '/' || strcmp(path, "..") == 0 || strcmp(path, ".") == 0 || strncmp(path, "../", 3) == 0
-			|| strncmp(path, "./", 2) == 0 || strstr(path, "/../") != NULL || strstr(path, "/./") != NULL
+			|| strncmp(path, "./", 2) == 0 || shiori_strstr(path, "/../") != NULL || shiori_strstr(path, "/./") != NULL
 			|| (n >= 3 && strcmp(path + n - 3, "/..") == 0) || (n >= 2 && strcmp(path + n - 2, "/.") == 0)) {
 		path[0] = vault[0] = '\0';
 		return 0;

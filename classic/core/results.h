@@ -46,6 +46,10 @@ typedef struct ShioriVault {
 /* Kura's /api/vaults: {vaults: [{name, title, default, private}]}; how many were written. */
 int shiori_parse_vaults(const char *buf, long len, ShioriVault *out, int max);
 
+/* strstr, short and plain: the library's is large for a desk accessory, and
+   these needles are a few bytes. */
+const char *shiori_strstr(const char *s, const char *needle);
+
 /* The host of an http(s) URL, lowercased, without "www." or the port; "" otherwise. */
 void shiori_host_of(const char *url, char *out, long cap);
 int shiori_is_web_url(const char *url);

@@ -19,3 +19,7 @@ cmake -S "$here" -B "$build" -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_T
     -DSHIORI_DEFAULT_TOKEN="${SHIORI_DEFAULT_TOKEN:-}" >/dev/null
 cmake --build "$build" -- -j"$(nproc 2>/dev/null || echo 2)"
 ls -l "$build/Shiori.bin" "$build/Shiori.dsk"
+# A desk accessory's DRVR must stay under 32 KB (its offsets are 16-bit).
+da_size=$(wc -c < "$build/ShioriDA.flt")
+echo "build.sh: Shiori Search (the DA) is $da_size bytes of 32768"
+[ "$da_size" -lt 32768 ] || { echo "build.sh: the desk accessory is over 32 KB" >&2; exit 1; }

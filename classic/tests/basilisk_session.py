@@ -9,6 +9,7 @@ content origin is found from the bright menu bar on each run).
     menu:X,Y                press on the menu title at X, drag to the item at Y, release
     peek:X                  hold the menu at X open, screenshot it (/tmp/shiori/peek.png), let go
     move:X,Y                move there (balloons)
+    drag:X1,Y1,X2,Y2        press at one point, release at the other (a Finder copy)
     sub:X,Y,X2,Y2           a submenu: press the menu at X, move to its item at Y, then to X2,Y2, release
     subpeek:X,Y             press the menu at X, rest on its item at Y (a submenu opens), screenshot, let go
     cmd:K                   Command-K (Basilisk maps the Super key to Command)
@@ -148,7 +149,7 @@ def main(steps):
     except subprocess.TimeoutExpired:
         pass
     calibrate()
-    if ORIGIN == [0, 0] and any(s.split(":")[0] in ("click", "dclick", "menu", "move", "peek", "sub", "subpeek", "shutdown") for s in steps):
+    if ORIGIN == [0, 0] and any(s.split(":")[0] in ("click", "dclick", "menu", "move", "drag", "peek", "sub", "subpeek", "shutdown") for s in steps):
         sys.exit("basilisk_session: not calibrated; refusing to click")
     for step in steps:
         print("step", step, flush=True)
@@ -159,6 +160,15 @@ def main(steps):
         elif name == "menu":
             x, y = (int(v) for v in arg.split(","))
             menu(x, y)
+        elif name == "drag":
+            x1, y1, x2, y2 = (int(v) for v in arg.split(","))
+            move(x1, y1)
+            button(True)
+            time.sleep(0.4)
+            move(x2, y2)
+            time.sleep(0.6)
+            button(False)
+            time.sleep(0.5)
         elif name == "move":
             x, y = (int(v) for v in arg.split(","))
             move(x, y)

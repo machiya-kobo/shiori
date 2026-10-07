@@ -622,6 +622,11 @@ Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
 		(short) (qd.screenBits.bounds.right - 20 + slot * 4), (short) (qd.screenBits.bounds.bottom - 12));
 	if (bounds.right > qd.screenBits.bounds.right - 4)
 		bounds.right = (short) (qd.screenBits.bounds.right - 4);
+	/* a larger screen: a page's width and a comfortable height, not the whole screen */
+	if (bounds.right - bounds.left > 600)
+		bounds.right = (short) (bounds.left + 600);
+	if (bounds.bottom - bounds.top > 520)
+		bounds.bottom = (short) (bounds.top + 520);
 	n = strlen(row->title);
 	if (n > 63)
 		n = 63;

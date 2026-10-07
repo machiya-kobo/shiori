@@ -123,7 +123,10 @@ What we learned setting it up:
   has no window position, and the Finder opened it off-screen.
 - The Mac Plus keyboard has no Escape or Control key: ⌘-. is Escape. Snow
   maps Right Alt to Command.
-- The Apple menu lists the System's DAs first; Shiori Search comes last.
+- The Apple menu lists the System's DAs first; Shiori Search comes last
+  (`da` opens it). On System 6 Return on a result copies its link; check it
+  by pasting into Shiori's field. Close it (its close box, Mac 53, 40) and
+  open it again: each entry relocates the code, so a second open must work.
 - Screenshots: `scrot` only, never ImageMagick's `import`: it grabs the
   pointer and Snow's mouse stays broken until restart.
 - The XTEST library has no keysym named ".": ⌘-. is `cmd_key("period")`
@@ -217,6 +220,21 @@ y = 26, 16 apart, with separators.
   Balloons). A balloon shows after the pointer rests a moment: `move:X,Y`
   then `wait:3`. A menu item's balloon: `subpeek:MENU_X,ITEM_Y` holds the
   menu open on that item for the screenshot.
+- **The desk accessory's Apple events** (System 7): `ShioriAESend.bin`
+  (tests/aesend.c, built with the app, never shipped) sends Shiori three
+  `SHIO/read` events through the DA's own code (da/sendread.c): a page and
+  a default-vault note open readers, another vault's note is refused. Its
+  window shows each send's result. Put it beside Shiori with
+  `python3 ~/emulators/basilisk/macbin_to_extfs.py classic/build/ShioriAESend.bin ~/emulators/unix/Shiori "AE Send"`.
+  - With Shiori running, the events go straight to it.
+  - With Shiori not running, it's found by its creator in a volume's
+    desktop database and launched with the event. The Unix disk (extfs) has
+    no desktop database: copy Shiori onto Macintosh HD with the Finder
+    first (`drag:103,91,983,51`), which registers it.
+  - A process that sends Apple events needs `isHighLevelEventAware` in its
+    own SIZE (the tool's first build had none, and nothing arrived). The
+    DA sends from whatever process it runs in: Shiori's, or System 7's DA
+    Handler.
 - **Snow emulates a Mac II too** (model `MacII`), which would give colour
   over Snow's working DaynaPORT, but it needs the Macintosh II Video
   Card's ROM, which the hub doesn't have.

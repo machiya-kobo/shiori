@@ -5,6 +5,16 @@
 #include "json.h"
 #include "results.h"
 
+const char *shiori_strstr(const char *s, const char *needle)
+{
+	size_t n = strlen(needle);
+
+	for (; *s; s++)
+		if (*s == *needle && strncmp(s, needle, n) == 0)
+			return s;
+	return n == 0 ? s : NULL;
+}
+
 #define COPY(field, r) json_string(r, field, (long) sizeof(field))
 
 static int lower(int c)
@@ -39,7 +49,7 @@ void shiori_host_of(const char *url, char *out, long cap)
 	out[0] = '\0';
 	if (cap <= 0 || !shiori_is_web_url(url))
 		return;
-	start = strstr(url, "://") + 3;
+	start = shiori_strstr(url, "://") + 3;
 	end = start + strcspn(start, "/?#");
 	at = NULL;
 	for (p = start; p < end; p++)
