@@ -320,6 +320,12 @@ you.
   `.plainHTTP`, everything else `.unreachable`.
 - HisterKit's types are `Sendable` and nonisolated; keep
   `NonisolatedNonsendingByDefault` off (it crashed the network tests).
+- **The app targets run on the main actor unless code says otherwise**
+  (`SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor` with approachable
+  concurrency): a `nonisolated async` function there runs on its caller's
+  actor, usually main, not in the background. Work that must leave the main
+  thread says so: `@concurrent`, a background queue (as `OfflineStore`), or
+  the packages, which keep Swift's standard rule.
 - Replies that don't decode are logged by field names, never content.
 - **Keys** (`AIKeychain`): on the Mac the login keychain (the data-protection
   one needs an entitlement a free team's build lacks; writes fail, reads say
