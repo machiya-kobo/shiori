@@ -44,6 +44,28 @@ NOTES = [
     ("Projects/Machiya.md", "Projects", "Machiya", "Machiya is the stack of Kura, Shiori, Niwa and Konbini."),
 ]
 
+# Machiya's invented sample pages and notes (tools/sampledata.py), for screenshots: "lantern",
+# "washi", "kyoto"... find them. Optional: a copy of haiku/ alone runs without them.
+SAMPLE_PAGES, SAMPLE_NOTES, SAMPLE_HTML = [], [], {}
+try:
+    import os as _os
+    sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "tools"))
+    import html as _html
+    import sampledata as _sample
+    for _url, _title, _label, _text, _days in _sample.PAGES:
+        SAMPLE_PAGES.append((_url, _title, urllib.parse.urlsplit(_url).hostname, _text, _label,
+                             _sample.NOW - _days * _sample.DAY))
+    for _path, _tags, _days, _summary, _items in _sample.NOTES:
+        _folder, _, _name = _path.rpartition("/")
+        SAMPLE_NOTES.append((_path + ".md", _folder, _name, _summary))
+        SAMPLE_HTML[_path + ".md"] = (
+            f"<h1>{_html.escape(_name)}</h1><p>{_html.escape(_summary)}</p><ul>"
+            + "".join(f"<li>{_html.escape(i)}</li>" for i in _items) + "</ul><p>"
+            + " ".join(f'<a class="tag" href="/t/{t}">#{t}</a>' for t in _tags) + "</p>")
+except ImportError:
+    pass
+NOTES += SAMPLE_NOTES
+
 LOCK = threading.Lock()
 
 # The sign-in's state: the live session and id (one user, alex).
@@ -127,6 +149,11 @@ class Hister(Base):
         if url.path == "/api/preview":
             # Hister's readable copy of a page, for Classic's reader.
             page = params.get("url", [""])[0]
+            for purl, title, domain, text, label, added in SAMPLE_PAGES:
+                if purl == page:
+                    content = (f"<h1>{title}</h1><p>{text}</p><p>Saved from <a href=\"{purl}\">{domain}</a>, "
+                               f"labelled <strong>{label}</strong>.</p>")
+                    return self.reply(200, {"title": title, "content": content, "added": added, "updated": added})
             body = "".join(f"<p>Section {k} of the readable copy of {page}: Hister kept this text when the "
                            f"page was saved, so a Mac Plus can read it without a browser.</p>" for k in range(15))
             return self.reply(200, {"title": "A page from Hister", "content": "<h1>A saved page</h1>" + body,
@@ -166,6 +193,11 @@ class Hister(Base):
                 continue
             docs.append({"url": purl, "title": title, "domain": domain, "label": "tech", "added": 1790000000,
                          "text": mark(body, words), "metadata": {"source": source}})
+        if not code:
+            for purl, title, domain, body, label, added in SAMPLE_PAGES:
+                if words and all(w in (title + " " + body).lower() for w in words):
+                    docs.append({"url": purl, "title": title, "domain": domain, "label": label, "added": added,
+                                 "updated": added, "text": mark(body, words), "metadata": {"source": "shiori"}})
         self.reply(200, {"total": len(docs), "documents": docs, "page_key": ""})
 
     def do_POST(self):
@@ -277,6 +309,10 @@ class Kura(Base):
                         "<p><img src=\"/a/x.png\" alt=\"a diagram\"></p><hr>" + body)
                 return self.reply(200, {"path": path, "title": f"Many note {n}", "url": f"{base}/n/Many/{n}",
                                         "html": html, "markdown": "(the body again, as Kura sends it)"})
+            if path in SAMPLE_HTML:
+                folder, _, name = path[:-3].rpartition("/")
+                return self.reply(200, {"path": path, "title": name, "html": SAMPLE_HTML[path],
+                                        "url": f"http://127.0.0.1:{KURA_PORT}/n/{urllib.parse.quote(path[:-3])}"})
             for npath, folder, title, summary in NOTES:
                 if npath == path:
                     html = (f"<h1>{title}</h1><p>{summary}</p><ul><li>One <strong>point</strong></li></ul>"

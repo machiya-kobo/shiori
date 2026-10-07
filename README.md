@@ -131,6 +131,13 @@ A native app on the Be API, installed with `pkgman` or built with `make`: [docs/
 
 A native app for 68k Macs, from a Mac Plus on System 6 to color on System 7, with a quick-search desk accessory. It reaches Hister and Kura through a small bridge on your LAN: [docs/classic.md](docs/classic.md).
 
+<table>
+  <tr>
+    <td align="center" width="50%"><a href="docs/screenshots/shiori-classic-system6-search.png"><img src="docs/screenshots/shiori-classic-system6-search.png" alt="Shiori on a Mac Plus in System 6, in black and white: a search for lantern lists sample notes from Kura (Lantern festival kit, Chochin build log, Washi offcuts, Kyoto trip plan) above sample pages from Hister, with the All, Pages, Notes and Code pills above them" width="100%"></a><br>A Mac Plus on System 6</td>
+    <td align="center" width="50%"><a href="docs/screenshots/shiori-classic-system7-color.png"><img src="docs/screenshots/shiori-classic-system7-color.png" alt="Shiori in color on System 7: the same search for lantern with blue titles and colored pills, and the Lantern festival kit note open in a reader window beside it, showing its checklist" width="100%"></a><br>Color on System 7</td>
+  </tr>
+</table>
+
 ## Hosting the web pages
 
 Serve the search page and the web app from one host that routes to Hister, SearXNG and Kura, reachable only by you: [web/README.md](web/README.md).

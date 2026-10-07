@@ -81,6 +81,9 @@ one does. Search words:
 
 - `heavy` (Hister): 20 rows shaped like a real reply, about 16 KB.
 - `many` (Hister 45 pages; Kura 45 notes).
+- `lantern`, `washi`, `kyoto`…: Machiya's invented sample pages and notes
+  (`tools/sampledata.py`, the same as the README's other screenshots), for
+  screenshots.
 - Kura's error words: `redirect` (a 302), `slow` (12 s), `big` (300 KB,
   over the Mac's cap) and `huge` (600 KB, over the bridge's: a 413).
 
@@ -259,6 +262,24 @@ y = 26, 16 apart, with separators.
 - **Snow emulates a Mac II too** (model `MacII`), which would give colour
   over Snow's working DaynaPORT, but it needs the Macintosh II Video
   Card's ROM, which the hub doesn't have.
+
+### Screenshots
+
+`docs/screenshots/shiori-classic-*.png`, from the sample data (search
+`lantern`, the note *Lantern festival kit*, `washi` in the desk accessory):
+
+- **System 6** (Snow, the usual workspace): park the pointer with
+  `move:509,339`, take `shot:NAME`, then
+  `classic/tests/mac_shot.py snow /tmp/shiori/NAME.png OUT.png`. Snow scales
+  the screen by a fraction; the tool finds the scale where every Mac pixel
+  is a uniform block and reads the 512×342 screen back exactly, doubled.
+  (A 2× workspace doesn't fit this display, and at 1× Snow's driver can't
+  calibrate.)
+- **System 7** (the networked Basilisk, millions of colors): arrange the
+  windows (`drag:` by a title bar), close the Finder's windows, then
+  `classic/tests/mac_shot.py basilisk IN.png OUT.png --origin X,Y --crop 0,0,1024,660`
+  (the origin as `basilisk_session.py` prints it; the display cuts the
+  screen's bottom rows).
 
 ### The Mac Plus
 

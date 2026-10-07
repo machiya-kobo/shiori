@@ -11,6 +11,7 @@ must never write to a real index. Stdlib only.
 """
 
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -21,37 +22,8 @@ URL = (sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:4433/").rstrip("/
 if urllib.parse.urlsplit(URL).hostname not in ("127.0.0.1", "localhost", "::1"):
     sys.exit(f"seed-hister: {URL} isn't on this machine; it only fills a local test Hister.")
 
-DAY = 86400
-NOW = int(time.time()) // DAY * DAY
-# (url, title, label, text, days ago): the paper-lantern workshop and the
-# Kyoto trip of Machiya's sample vault.
-PAGES = [
-    ("https://lanterns.example/chochin-folding", "Folding a chōchin lantern", "lanterns",
-     "A chōchin collapses flat: a spiral bamboo rib under washi, folded along each turn of the spiral.", 0),
-    ("https://lanterns.example/bamboo-frames", "Bending bamboo frames with steam", "lanterns",
-     "Steam the split bamboo for ten minutes, bend it round a jig, and let it set overnight.", 1),
-    ("https://washi.example/making", "How washi paper is made", "paper",
-     "Kozo bark is soaked, beaten and spread on a screen; the long fibres make the paper strong.", 1),
-    ("https://washi.example/kinds", "Kozo, mitsumata and gampi", "paper",
-     "Three plants give washi its character: kozo is tough, mitsumata smooth, gampi glossy.", 2),
-    ("https://paste.example/nori", "Nori paste for paper and bamboo", "workshop",
-     "Wheat-starch nori paste holds washi to bamboo and stays reversible with a damp brush.", 3),
-    ("https://light.example/candle-vs-led", "Candle or LED inside a paper lantern?", "lanterns",
-     "A candle gives a warm flicker but scorches washi; a warm-white LED runs cool and safe.", 4),
-    ("https://bamboo.example/sourcing", "Sourcing bamboo for craft work", "workshop",
-     "Cut madake in winter, when the culms hold less sugar and resist beetles.", 5),
-    ("https://kyoto.example/lantern-festival", "Kyoto's summer lantern festival", "travel",
-     "Thousands of lanterns line the lanes after dark; arrive early and walk up from the river.", 6),
-    ("https://kyoto.example/machiya", "Staying in a Kyoto machiya townhouse", "travel",
-     "Machiya are narrow wooden townhouses with a shop at the front and a small garden at the back.", 8),
-    ("https://travel.example/packing-japan", "Packing light for two weeks in Japan", "travel",
-     "One carry-on, layers, slip-on shoes for temples, and a small towel for the trains.", 10),
-    ("https://workbench.example/layout", "Laying out a small craft workbench", "workshop",
-     "Keep cutting on the left, gluing on the right, and drying racks above the bench.", 12),
-    ("https://lanterns.example/restoring", "Restoring an old paper lantern", "lanterns",
-     "Strip the torn washi, re-glue loose ribs with nori, and re-cover one panel at a time.", 15),
-]
-
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from sampledata import DAY, NOW, PAGES  # noqa: E402
 
 # Two collections ("@"-aliases over labels), so the sidebars have some.
 COLLECTIONS = {"@crafts": "label:(lanterns|paper|workshop)", "@travel": "label:travel"}

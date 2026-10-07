@@ -13,6 +13,7 @@ Steps, run in order (coordinates are the Mac's 512×342 screen, calibrated each 
     return        the Return key; down: the down arrow; tab: Tab
     click:X,Y     a click at Mac coordinates; dclick:X,Y a double-click
     close         close the front window (⌘W is not wired in the probe: clicks the go-away box)
+    move:X,Y      move the pointer there (out of a screenshot's way: 509,339)
     menu:X,Y      the menu at X, its item at Y (items 16 apart from y = 28)
     shot:NAME     a screenshot of the whole display, /tmp/shiori/NAME.png
     wait:SECONDS  sleep
@@ -82,6 +83,10 @@ def main(steps):
         elif step.startswith("click:") or step.startswith("dclick:"):
             x, y = (int(v) for v in step.split(":", 1)[1].split(","))
             at(snow, (x, y), double=step.startswith("dclick:"))
+            time.sleep(0.5)
+        elif step.startswith("move:"):
+            x, y = (int(v) for v in step[5:].split(","))
+            snow.move_to_mac(x, y)
             time.sleep(0.5)
         elif step.startswith("menu:"):
             x, y = (int(v) for v in step[5:].split(","))

@@ -114,25 +114,7 @@ def stand_in_searxng():
 
 # A stand-in Kura for the shots (without --kura): a few invented notes from the sample vault's paper-lantern workshop
 # and Kyoto trip, answering the calls Shiori makes (api/search, api/recent, api/vaults, api/note).
-NOTES = [
-    ("Projects/Lantern festival kit", ["lanterns", "festival"], 1,
-     "Everything for the summer lantern festival stall: six folded chōchin, warm-white LED inserts, spare washi, "
-     "a jar of nori paste and the folding stand.",
-     ["Six chōchin, folded flat in the long box", "Twelve LED inserts and spare batteries",
-      "Kozo washi offcuts for repairs", "Nori paste and a soft brush", "The folding stand and its pegs"]),
-    ("Workshop/Chōchin build log", ["lanterns", "workshop"], 2,
-     "Day three: the spiral rib held its shape after steaming, and the lantern took its washi in four panels.",
-     ["Steam the rib for ten minutes", "Bend it round the jig", "Paste the panels top to bottom"]),
-    ("Workshop/Washi offcuts", ["paper"], 4,
-     "Keep kozo offcuts for patching torn lantern panels; gampi is too glossy to take the paste.",
-     ["Kozo: patches and new panels", "Mitsumata: labels", "Gampi: not for lanterns"]),
-    ("Travel/Kyoto trip plan", ["travel"], 7,
-     "Two nights in a machiya near the river, with the lantern festival on the second evening.",
-     ["Day 1: arrive, walk the river", "Day 2: the lantern festival after dark", "Day 3: the washi shops"]),
-    ("Workshop/Nori paste recipe", ["workshop"], 9,
-     "One part wheat starch to five of water, cooked slowly until it turns clear.",
-     ["Stir all the way", "Strain it while warm", "Keep it a week in the cold"]),
-]
+from sampledata import NOTES  # noqa: E402  (tools/sampledata.py)
 
 
 def stand_in_kura():

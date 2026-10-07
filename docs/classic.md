@@ -6,6 +6,8 @@ result in its own window, and quick-search from the Apple menu. Written in
 C with [Retro68](https://github.com/autc04/Retro68); the code is in
 [`classic/`](../classic).
 
+<p align="center"><img src="screenshots/shiori-classic-system6-search.png" alt="Shiori on a Mac Plus in System 6: a search for lantern lists sample notes from Kura above sample pages from Hister" width="49%"> <img src="screenshots/shiori-classic-system7-color.png" alt="Shiori in color on System 7: the same search, and the Lantern festival kit note open in a reader beside it" width="49%"></p>
+
 ## What it does
 
 - **Search** (Return, or a pill): **All** (Kura's top notes, then your
@@ -20,6 +22,9 @@ C with [Retro68](https://github.com/autc04/Retro68); the code is in
   shows its address, and Copy Link copies it (there's no browser).
   Find (⌘F) and Find Again (⌘G) search the text.
 - **Copy Link** (Edit menu): the selected result's or reader's address.
+
+<p align="center"><img src="screenshots/shiori-classic-system6-reader.png" alt="A note in its reader on System 6: Lantern festival kit, with its summary, a checklist of five items and its tags" width="49%"> <img src="screenshots/shiori-classic-system6-desk-accessory.png" alt="Shiori Search, the desk accessory, over Shiori on System 6: a search for washi lists three notes and six pages" width="49%"></p>
+
 - **Shiori Search**, the desk accessory: a small window in the Apple menu,
   over any application. Return searches (three notes, then your pages);
   Return or a double-click on a result opens it in Shiori's reader on
