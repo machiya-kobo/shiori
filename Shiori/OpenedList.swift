@@ -194,12 +194,11 @@ struct OpenedListView: View {
         .resultSeparator(app.searchPage.resultStyle)
         .task { await model.loadMoreIfNeeded(after: entry, using: app.client) }
         .contextMenu {
-            // What a click doesn't do, first.
-            if original { PreviewButton(document: page) } else { OpenOriginalButton(document: page) }
+            OpenChoices(document: page)
             Divider()
             Button("Forget for This Search", systemImage: "eye.slash") { forget(entry) }
             Divider()
-            DocumentLinks(document: page, skipOriginal: !original)
+            DocumentLinks(document: page, skipOriginal: true)
         }
         .swipeActions(edge: .trailing) {
             Button("Forget", systemImage: "eye.slash") { forget(entry) }

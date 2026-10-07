@@ -388,22 +388,26 @@ struct PreviewButton: View {
     }
 }
 
-/// A page's menu: what a click doesn't do first (Shiori's preview, or the
-/// original), then label and delete (the swipe actions, as the HIG asks),
-/// then open, share and copy.
+/// Both ways to open a result, for the top of its menu whatever a click
+/// does (Click Opens): Shiori's preview, then the original.
+struct OpenChoices: View {
+    let document: StoredPage
+
+    var body: some View {
+        PreviewButton(document: document)
+        OpenOriginalButton(document: document)
+    }
+}
+
+/// A page's menu: Preview and the original (`OpenChoices`), then label and
+/// delete (the swipe actions, as the HIG asks), then share and copy.
 struct DocumentMenu: View {
     let document: StoredPage
     @Environment(\.resultActions) private var actions
-    @Environment(\.previewSelection) private var selection
     @Environment(AppState.self) private var app
 
     var body: some View {
-        let original = app.searchPage.clickOpensOriginal(pane: selection != nil)
-        if original {
-            PreviewButton(document: document)
-        } else {
-            OpenOriginalButton(document: document)
-        }
+        OpenChoices(document: document)
         Divider()
         // Not for a note: its label must stay "vault" (see Swipes). Neither
         // for a file: Hister watches its folder, and the file stays as it is.
@@ -429,8 +433,8 @@ struct DocumentMenu: View {
             }
             Divider()
         }
-        // The original is already at the top when a click previews.
-        DocumentLinks(document: document, skipOriginal: !original)
+        // The original is already at the top.
+        DocumentLinks(document: document, skipOriginal: true)
     }
 }
 

@@ -445,7 +445,7 @@ struct SettingsView: View {
     #endif
 
     private var openingFooter: String {
-        "\(Self.clickOpensTitle) picks what a result opens; the other choice is in its menu. Preview Pane shows a page beside the results on a wide screen; both stay on this device. Images in Previews loads pictures from the page's own site; off, previews reach only your Hister."
+        "\(Self.clickOpensTitle) and Preview Pane stay on this device; a result's menu always has both ways to open it. Off, Images in Previews keeps previews to your Hister."
     }
 
     /// An http:// address sends pages and searches unencrypted (only a

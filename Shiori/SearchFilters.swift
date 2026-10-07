@@ -427,12 +427,11 @@ struct OpenedSection: View {
                                      palette: palette, style: app.searchPage.resultStyle))
         .resultSeparator(app.searchPage.resultStyle)
         .contextMenu {
-            // What a click doesn't do, first.
-            if original { PreviewButton(document: page) } else { OpenOriginalButton(document: page) }
+            OpenChoices(document: page)
             Divider()
             Button("Forget for This Search", systemImage: "eye.slash") { forget(opened) }
             Divider()
-            DocumentLinks(document: page, skipOriginal: !original)
+            DocumentLinks(document: page, skipOriginal: true)
         }
         .swipeActions(edge: .trailing) {
             Button("Forget", systemImage: "eye.slash") { forget(opened) }
