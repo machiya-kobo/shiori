@@ -183,8 +183,11 @@ you.
   section to CHANGELOG.md (minor for features, patch for fixes; a test
   holds all three), commit, then tag `vX.Y.Z` on main and push the tag to
   both forges. The hosted builds are made from the tag, and serve
-  `/_shiori/status.json` and `/_shiori/CHANGELOG.md`. 1.0.0 marks the
-  public release.
+  `/_shiori/status.json` and `/_shiori/CHANGELOG.md`. The tag's GitHub
+  release carries the Mac `.dmg`, the Flatpak, the `.hpkg` and the classic
+  `.dsk`/`.sit`/`.sit.hqx` (docs/build.md, Release files): each built
+  from the tag with neutral defaults and searched for personal details
+  before upload. 1.0.0 marks the public release.
 - **The background order matters** (`BACKGROUND` in `build-extension.sh`,
   held by tests): `safari-shims`, `host-native`, `core`, `search-core`,
   `badge`, `menus`.
