@@ -79,6 +79,11 @@ void shiori_checked_room_token(const char *raw, char *out, long cap)
 	strcpy(out, t);
 }
 
+int shiori_notes_from_hister(const ShioriConfig *c)
+{
+	return strcmp(shiori_notes_source(c->notesSource, c->kura[0] != '\0'), "hister") == 0;
+}
+
 int shiori_is_configured_origin(const ShioriConfig *c, const char *url)
 {
 	char want[160], h[160], k[160];

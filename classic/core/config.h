@@ -20,6 +20,7 @@ typedef struct ShioriConfig {
 	char roomToken[48];     /* mht_ and 43 base64url characters */
 	char histerToken[128];  /* Hister's own access token (direct only) */
 	char direct;            /* 1: directly to Hister; 0: through mac-bridge */
+	char notesSource[8];    /* notes from "kura" or "hister"; "" until chosen (shiori_notes_source) */
 } ShioriConfig;
 
 /* "scheme://host[:port]" lowercased, the default port dropped; "" for anything
@@ -30,6 +31,8 @@ void shiori_checked_room_token(const char *raw, char *out, long cap);
 /* Hister's access token: 8 to 127 printable ASCII characters, trimmed; else ""
    (haiku/core/Config's CheckedHisterToken, with a Mac's smaller cap). */
 void shiori_checked_hister_token(const char *raw, char *out, long cap);
+/* Whether notes come from Hister (scripts/notes-source-cases.json): chosen, or no Kura set up. */
+int shiori_notes_from_hister(const ShioriConfig *c);
 /* Whether the app may call url at all: its origin is one of the two bridge addresses. */
 int shiori_is_configured_origin(const ShioriConfig *c, const char *url);
 /* The one credential header a request to url gets, or "": "Authorization: Bearer mht_…"

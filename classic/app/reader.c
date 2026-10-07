@@ -38,6 +38,7 @@ typedef struct Reader {
 	Fetch fetch;            /* stays put: the reader is a non-relocatable block */
 	Boolean loading;
 	char kind;              /* LROW_NOTE or LROW_PAGE */
+	Boolean fromKura;       /* a note read from Kura's /api/note; else Hister's readable copy */
 	char title[100];        /* Mac Roman */
 	char place[64];
 	char url[256];          /* the note's or page's own address (UTF-8) */
@@ -463,16 +464,17 @@ static void Loaded(Reader *r)
 	r->loading = false;
 	if (r->fetch.state != FETCH_DONE || r->fetch.head.status != 200) {
 		char problem[160];
-		FetchProblem(&r->fetch, r->kind == LROW_NOTE ? "Kura" : "Hister", problem, (long) sizeof(problem));
+		FetchProblem(&r->fetch, r->fromKura ? "Kura" : "Hister", problem, (long) sizeof(problem));
 		FetchReset(&r->fetch);
 		SetStatus(r, problem);
 		InvalRect(&r->textRect);
 		return;
 	}
 	body = FetchBody(&r->fetch, &len);
-	if (!shiori_json_member(body, len, r->kind == LROW_NOTE ? "html" : "content", &raw, &rawLen)) {
+	if (!shiori_json_member(body, len, r->fromKura ? "html" : "content", &raw, &rawLen)) {
 		FetchReset(&r->fetch);
-		SetStatus(r, r->kind == LROW_NOTE ? "Kura's answer had no note." : "Hister has no readable copy of this page.");
+		SetStatus(r, r->fromKura ? "Kura's answer had no note." : r->kind == LROW_NOTE ? "Hister has no readable copy of this note."
+			: "Hister has no readable copy of this page.");
 		InvalRect(&r->textRect);
 		return;
 	}
@@ -493,7 +495,7 @@ static void Loaded(Reader *r)
 				SetWTitle(r->win, wt);
 			}
 		}
-		if (r->kind == LROW_NOTE && shiori_json_member(body, len, "path", &field, &fieldLen) && fieldLen > 0) {
+		if (r->fromKura && shiori_json_member(body, len, "path", &field, &fieldLen) && fieldLen > 0) {
 			char *slash;
 			json_decode(field, fieldLen, buf, (long) sizeof(buf));
 			slash = strrchr(buf, '/');
@@ -518,7 +520,7 @@ static void Loaded(Reader *r)
 	}
 	HLock(html);
 	body = FetchBody(&r->fetch, &len);
-	shiori_json_member(body, len, r->kind == LROW_NOTE ? "html" : "content", &raw, &rawLen);
+	shiori_json_member(body, len, r->fromKura ? "html" : "content", &raw, &rawLen);
 	htmlLen = json_decode(raw, rawLen, *html, rawLen + 1);
 	FetchReset(&r->fetch);
 
@@ -579,17 +581,17 @@ static Boolean Start(Reader *r, const char *path, const char *vault, const char 
 	char target[700];
 	int ok;
 
-	if (r->kind == LROW_NOTE)
+	if (r->fromKura)
 		ok = shiori_kura_note_target(path, vault, target, (long) sizeof(target));
 	else
 		ok = shiori_hister_preview_target(url, target, (long) sizeof(target));
 	if (!ok)
 		return false;
-	FetchStart(&r->fetch, &gConfig, r->kind == LROW_NOTE ? gConfig.kura : gConfig.hister, target, MAX_REPLY, 0);
+	FetchStart(&r->fetch, &gConfig, r->fromKura ? gConfig.kura : gConfig.hister, target, MAX_REPLY, 0);
 	r->loading = r->fetch.state != FETCH_FAILED;
 	if (!r->loading) {
 		char problem[160];
-		FetchProblem(&r->fetch, r->kind == LROW_NOTE ? "Kura" : "Hister", problem, (long) sizeof(problem));
+		FetchProblem(&r->fetch, r->fromKura ? "Kura" : "Hister", problem, (long) sizeof(problem));
 		strcpy(r->status, problem);
 	} else {
 		strcpy(r->status, "Loading\311");
@@ -614,6 +616,8 @@ Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
 	if (r == NULL)
 		return false;
 	r->kind = row->kind == LROW_NOTE ? LROW_NOTE : LROW_PAGE;
+	/* notes from Hister (no Kura, or the person's choice): its readable copy, as a page's */
+	r->fromKura = r->kind == LROW_NOTE && !shiori_notes_from_hister(&gConfig);
 	strcpy(r->title, row->title);
 	strcpy(r->place, row->place);
 	strncpy(r->url, row->url, sizeof(r->url) - 1);

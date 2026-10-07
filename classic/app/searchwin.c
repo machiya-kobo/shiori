@@ -125,6 +125,12 @@ static void Layout(void)
 		ListInit(&gList, gWin, &list, MAX_ROWS);
 }
 
+/* Notes from Hister (no Kura set up, or the person's choice): scripts/notes-source-cases.json */
+static Boolean NotesFromHister(void)
+{
+	return shiori_notes_from_hister(&gConfig) != 0;
+}
+
 static void DrawPills(void)
 {
 	short i;
@@ -188,7 +194,7 @@ static void DrawVault(void)
 		EraseRect(&e);
 	}
 	SetRect(&gVaultBox, 0, 0, 0, 0);
-	if (gPill != PILL_NOTES || !gConfig.kura[0] || r.right - r.left < 80)
+	if (gPill != PILL_NOTES || NotesFromHister() || r.right - r.left < 80)
 		return;
 	TextFont(kFontIDGeneva);
 	TextSize(10);
@@ -346,11 +352,8 @@ static void ShowTotals(void)
 	}
 	switch (gPill) {
 	case PILL_ALL:
-		if (!gConfig.kura[0])
-			sprintf(s, "%ld page%s", gTotalPages, gTotalPages == 1 ? "" : "s");
-		else
-			sprintf(s, "%ld page%s \245 %ld note%s", gTotalPages, gTotalPages == 1 ? "" : "s", gTotalNotes,
-				gTotalNotes == 1 ? "" : "s");
+		sprintf(s, "%ld page%s \245 %ld note%s", gTotalPages, gTotalPages == 1 ? "" : "s", gTotalNotes,
+			gTotalNotes == 1 ? "" : "s");
 		break;
 	case PILL_PAGES: sprintf(s, "%ld page%s", gTotalPages, gTotalPages == 1 ? "" : "s"); break;
 	case PILL_NOTES: sprintf(s, "%ld note%s", gTotalNotes, gTotalNotes == 1 ? "" : "s"); break;
@@ -370,13 +373,25 @@ static void Request(int stage)
 	gStage = stage;
 	switch (stage) {
 	case STAGE_ALL_NOTES:
-		ok = shiori_kura_search_target(gQuery, ALL_NOTES, 0, "", target, (long) sizeof(target));
-		base = gConfig.kura;
+		if (NotesFromHister()) {
+			ok = shiori_hister_search_target(gQuery, PILL_NOTES, ALL_NOTES, "", target, (long) sizeof(target));
+			base = gConfig.hister;
+		} else {
+			ok = shiori_kura_search_target(gQuery, ALL_NOTES, 0, "", target, (long) sizeof(target));
+			base = gConfig.kura;
+		}
 		break;
 	case STAGE_NOTES:
-		ok = shiori_kura_search_target(gQuery, PAGE_ROWS, gAppending ? gMoreOffset : 0, gVault, target,
-			(long) sizeof(target));
-		base = gConfig.kura;
+		if (NotesFromHister()) {
+			/* the default vault's notes only: no vault menu */
+			ok = shiori_hister_search_target(gQuery, PILL_NOTES, PAGE_ROWS, gAppending ? gMoreKey : "", target,
+				(long) sizeof(target));
+			base = gConfig.hister;
+		} else {
+			ok = shiori_kura_search_target(gQuery, PAGE_ROWS, gAppending ? gMoreOffset : 0, gVault, target,
+				(long) sizeof(target));
+			base = gConfig.kura;
+		}
 		break;
 	case STAGE_CODE:
 		ok = shiori_hister_search_target(gQuery, PILL_CODE, PAGE_ROWS, gAppending ? gMoreKey : "", target,
@@ -457,7 +472,9 @@ static void VaultsAnswered(void)
 static void Answered(void)
 {
 	int stage = gStage;
-	Boolean kura = stage == STAGE_ALL_NOTES || stage == STAGE_NOTES;
+	Boolean notes = stage == STAGE_ALL_NOTES || stage == STAGE_NOTES;
+	Boolean fromHister = notes && NotesFromHister();
+	Boolean kura = notes && !fromHister;
 	ShioriPage page;
 	long len;
 	const char *body;
@@ -475,6 +492,8 @@ static void Answered(void)
 		gHeaderDone = gAppending;
 		if (kura)
 			shiori_parse_kura(body, len, &page, AddRow, NULL);
+		else if (fromHister)
+			shiori_parse_hister_notes(body, len, &page, AddRow, NULL);
 		else
 			shiori_parse_hister(body, len, &page, AddRow, NULL);
 		if (!page.ok && !gProblem[0])
@@ -482,6 +501,9 @@ static void Answered(void)
 		if (kura) {
 			gTotalNotes = page.total;
 			gMoreOffset = (gAppending ? gMoreOffset : 0) + page.received;
+		} else if (fromHister) {
+			gTotalNotes = page.total;
+			strcpy(gMoreKey, page.next);
 		} else {
 			gTotalPages = page.total;
 			strcpy(gMoreKey, page.next);
@@ -503,7 +525,7 @@ static void Answered(void)
 			AddMore(stage == STAGE_ALL_PAGES ? STAGE_PAGES : stage);
 		break;
 	case STAGE_NOTES:
-		if (page.ok && gMoreOffset < page.total && page.received > 0)
+		if (page.ok && (fromHister ? page.next[0] != '\0' : gMoreOffset < page.total && page.received > 0))
 			AddMore(STAGE_NOTES);
 		break;
 	}
@@ -511,7 +533,7 @@ static void Answered(void)
 	ListChanged(&gList);
 	ShowTotals();
 	/* Notes' vault menu: read Kura's vaults now and then (ten minutes) */
-	if (stage == STAGE_NOTES && (gVaultsAt == 0 || TickCount() - gVaultsAt > VAULTS_STALE))
+	if (stage == STAGE_NOTES && kura && (gVaultsAt == 0 || TickCount() - gVaultsAt > VAULTS_STALE))
 		Request(STAGE_VAULTS);
 }
 
@@ -537,15 +559,9 @@ static void Search(void)
 	gAppending = false;
 	gProblem[0] = '\0';
 	switch (gPill) {
-	case PILL_ALL: Request(gConfig.kura[0] ? STAGE_ALL_NOTES : STAGE_ALL_PAGES); break;   /* no Kura: pages only */
+	case PILL_ALL: Request(STAGE_ALL_NOTES); break;
 	case PILL_PAGES: Request(STAGE_PAGES); break;
-	case PILL_NOTES:
-		if (!gConfig.kura[0]) {
-			SetStatus("Notes come from Kura: add its address in Preferences.");
-			break;
-		}
-		Request(STAGE_NOTES);
-		break;
+	case PILL_NOTES: Request(STAGE_NOTES); break;
 	default: Request(STAGE_CODE); break;
 	}
 }
@@ -656,7 +672,7 @@ void SearchWindowClick(EventRecord *e)
 			return;
 		}
 	}
-	if (gPill == PILL_NOTES && gConfig.kura[0] && PtInRect(p, &gVaultBox)) {
+	if (gPill == PILL_NOTES && !NotesFromHister() && PtInRect(p, &gVaultBox)) {
 		long choice;
 		Point at;
 		int current = 0, k;
@@ -857,7 +873,7 @@ const char *SearchWindowBalloon(Point where, Rect *hot)
 			*hot = gPillRects[i];
 			return tips[i];
 		}
-	if (gPill == PILL_NOTES && gConfig.kura[0] && PtInRect(p, &gVaultBox)) {
+	if (gPill == PILL_NOTES && !NotesFromHister() && PtInRect(p, &gVaultBox)) {
 		*hot = gVaultBox;
 		return "Which of Kura's vaults Notes searches. Private vaults are never offered here.";
 	}

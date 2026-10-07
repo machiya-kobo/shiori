@@ -569,44 +569,63 @@ static int double_dot(const char *s, long n)
 		|| (n == 6 && lower_eq(s, "%2e%2e", 6));
 }
 
-typedef struct Segs {
-	char *buf;          /* the joined path, "/a/b" */
-	long len, cap;
-	int ok;
-} Segs;
-
-static void segs_pop(Segs *p)
-{
-	while (p->len > 0 && p->buf[p->len - 1] != '/')
-		p->len--;
-	if (p->len > 0)
-		p->len--;               /* the '/' before the last segment */
-	p->buf[p->len] = '\0';
-}
-
-static void segs_push(Segs *p, const char *s, long n)
-{
-	if (p->len + 1 + n >= p->cap) {
-		p->ok = 0;
-		return;
-	}
-	p->buf[p->len++] = '/';
-	memcpy(p->buf + p->len, s, (size_t) n);
-	p->len += n;
-	p->buf[p->len] = '\0';
-}
-
 static int hex_value(char c)
 {
 	return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
 }
 
+/* Joins in's segments into out, "." and ".." resolved. url: the URL standard's
+   reading (separators / and \\, %2e dots, a trailing dot keeps a trailing
+   slash); else Kura's (only /, plain dots, leading slashes folded). */
+static int resolve_dots(const char *in, const char *end, int url, char *out, long cap)
+{
+	long len = 0, n;
+	const char *seg;
+	int last;
+
+	if (url && in < end && (*in == '/' || *in == '\\'))
+		in++;
+	while (!url && *in == '/')
+		in++;
+	for (;;) {
+		seg = in;
+		while (in < end && *in != '/' && !(url && *in == '\\'))
+			in++;
+		n = (long) (in - seg);
+		last = in >= end;
+		if (url ? double_dot(seg, n) : (n == 2 && seg[0] == '.' && seg[1] == '.')) {
+			while (len > 0 && out[len - 1] != '/')
+				len--;
+			if (len > 0)
+				len--;
+			n = -1;                 /* a trailing ".." still ends in a slash */
+		} else if (url ? single_dot(seg, n) : (n == 1 && seg[0] == '.')) {
+			n = -1;
+		}
+		if (n >= 0 || (url && last && n < 0)) {
+			if (n < 0)
+				n = 0;
+			if (len + 1 + n >= cap)
+				return 0;
+			out[len++] = '/';
+			memcpy(out + len, seg, (size_t) n);
+			len += n;
+		}
+		if (last)
+			break;
+		in++;
+	}
+	if (len == 0)
+		out[len++] = '/';
+	out[len] = '\0';
+	return len < cap;
+}
+
 int shiori_kura_path(const char *url, char *out, long cap)
 {
 	char one[600], decoded[600];
-	const char *p, *end, *seg;
+	const char *p;
 	long n, k;
-	Segs a, b;
 
 	out[0] = '\0';
 	if (lower_eq(url, "https://", 8))
@@ -616,40 +635,8 @@ int shiori_kura_path(const char *url, char *out, long cap)
 	else
 		return 0;
 	p += strcspn(p, "/\\?#");             /* past the host */
-	end = p + strcspn(p, "?#");
-	/* the URL standard's path: separators / and \, dot segments resolved */
-	a.buf = one;
-	a.len = 0;
-	a.cap = (long) sizeof(one);
-	a.ok = 1;
-	one[0] = '\0';
-	if (p < end && (*p == '/' || *p == '\\'))
-		p++;
-	for (;;) {
-		int last;
-		seg = p;
-		while (p < end && *p != '/' && *p != '\\')
-			p++;
-		n = (long) (p - seg);
-		last = p >= end;
-		if (double_dot(seg, n)) {
-			segs_pop(&a);
-			if (last)
-				segs_push(&a, "", 0);
-		} else if (single_dot(seg, n)) {
-			if (last)
-				segs_push(&a, "", 0);
-		} else {
-			segs_push(&a, seg, n);
-		}
-		if (last)
-			break;
-		p++;
-	}
-	if (!a.ok)
+	if (!resolve_dots(p, p + strcspn(p, "?#"), 1, one, (long) sizeof(one)))
 		return 0;
-	if (a.len == 0)
-		strcpy(one, "/");
 	/* ASCII escapes decoded once, as Kura does */
 	for (n = 0, k = 0; one[n] && k < (long) sizeof(decoded) - 1; n++) {
 		int hi = one[n] == '%' ? hex_value(one[n + 1]) : -1, lo = hi >= 0 ? hex_value(one[n + 2]) : -1;
@@ -663,34 +650,7 @@ int shiori_kura_path(const char *url, char *out, long cap)
 	if (one[n])
 		return 0;
 	decoded[k] = '\0';
-	/* leading slashes folded, then . and .. resolved again */
-	b.buf = out;
-	b.len = 0;
-	b.cap = cap;
-	b.ok = 1;
-	p = decoded;
-	while (*p == '/')
-		p++;
-	for (;;) {
-		seg = p;
-		p += strcspn(p, "/");
-		n = (long) (p - seg);
-		if (n == 2 && seg[0] == '.' && seg[1] == '.')
-			segs_pop(&b);
-		else if (!(n == 1 && seg[0] == '.'))
-			segs_push(&b, seg, n);
-		if (*p == '\0')
-			break;
-		p++;
-	}
-	if (!b.ok)
-		return 0;
-	if (b.len == 0) {
-		if (cap < 2)
-			return 0;
-		strcpy(out, "/");
-	}
-	return 1;
+	return resolve_dots(decoded, decoded + k, 0, out, cap);
 }
 
 int shiori_note_vault(const char *url, char *out, long cap)

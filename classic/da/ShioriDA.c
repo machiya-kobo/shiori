@@ -1,8 +1,8 @@
 /*
  * Shiori Search, the desk accessory: a quick search from the Apple menu, the
  * classic counterpart of the Haiku Deskbar item and Linux's --quick. A field
- * and up to eight rows: your notes from Kura (the default vault only), then
- * your pages from Hister. Return searches; Return on a row (or a double-click)
+ * and up to eight rows: your notes (the default vault only: from Kura, or from
+ * Hister when there's no Kura or you chose it), then your pages from Hister. Return searches; Return on a row (or a double-click)
  * opens it in Shiori's reader on System 7 (SHIO/read, launching Shiori when
  * it isn't running), and copies its link on System 6, which has no Apple
  * events. Copy copies the selected row's link.
@@ -145,6 +145,8 @@ typedef struct DA {
 	short lastRow;
 } DA;
 
+static const char kNoAddress[] = "MacTCP has no address: is this Mac on the network?";
+
 static void Cat(char *s, const char *t)
 {
 	strncat(s, t, 99 - strlen(s));
@@ -165,37 +167,23 @@ static void CatNum(char *s, long n)
 static void Problem(DA *d, const char *who, char *s)
 {
 	Fetch *f = &d->fetch;
+	long code = f->state == FETCH_DONE ? f->head.status : f->err;
 
 	s[0] = '\0';
-	if (f->state == FETCH_DONE) {
-		if (f->head.status == 401) {
-			Cat(s, "Set this Mac's room token in Shiori's Preferences.");
-		} else {
-			Cat(s, who);
-			Cat(s, " answered ");
-			CatNum(s, f->head.status);
-			Cat(s, ".");
-		}
+	if (code == 401 || code == 403) {
+		Cat(s, "Check the token in Shiori's Preferences.");
 	} else if (f->err == fetchBadAddress) {
 		Cat(s, "Set the address in Shiori's Preferences.");
-	} else if (f->err == fetchTooLong) {
-		Cat(s, "That search is too long to send.");
 	} else if (f->err == fetchCancelled) {
 		Cat(s, "Stopped.");
-	} else if (f->err == fetchTimedOut) {
-		Cat(s, who);
-		Cat(s, " didn't answer in time.");
-	} else if (f->err == fetchTooLarge || f->err == fetchBadReply) {
-		Cat(s, who);
-		Cat(s, "'s answer couldn't be read.");
-	} else if (f->err == ipBadAddr) {
-		Cat(s, "MacTCP has no address: is this Mac on the network?");
+	} else if (f->err <= ipBadLapErr && f->err >= ipBadAddr) {
+		Cat(s, kNoAddress);
 	} else {
-		Cat(s, "Can't reach ");
+		Cat(s, f->state == FETCH_DONE ? "" : "Can't reach ");
 		Cat(s, who);
-		Cat(s, " (");
-		CatNum(s, f->err);
-		Cat(s, ").");
+		Cat(s, f->state == FETCH_DONE ? " answered " : " (");
+		CatNum(s, code);
+		Cat(s, f->state == FETCH_DONE ? "." : ").");
 	}
 }
 
@@ -369,14 +357,20 @@ static Boolean StartStage(DA *d, short stage)
 	int ok;
 	Boolean kura = stage == STAGE_NOTES;
 
-	if (kura)
+	/* notes from Hister when there's no Kura or the person chose it (the default vault's alone) */
+	Boolean fromHister = kura && shiori_notes_from_hister(&d->prefs.config);
+
+	if (fromHister)
+		ok = shiori_hister_search_target(d->query, PILL_NOTES, NOTE_ROWS, "", target, (long) sizeof(target));
+	else if (kura)
 		ok = shiori_kura_search_target(d->query, NOTE_ROWS, 0, "", target, (long) sizeof(target));
 	else
 		ok = shiori_hister_search_target(d->query, PILL_PAGES, ROWS - d->count, "", target, (long) sizeof(target));
 	if (!ok)
 		return false;
 	d->stage = stage;
-	FetchStart(&d->fetch, &d->prefs.config, kura ? d->prefs.config.kura : d->prefs.config.hister, target, MAX_REPLY, 0);
+	FetchStart(&d->fetch, &d->prefs.config, kura && !fromHister ? d->prefs.config.kura : d->prefs.config.hister, target,
+		MAX_REPLY, 0);
 	return true;
 }
 
@@ -393,14 +387,10 @@ static void ShowEnd(DA *d)
 		return;
 	}
 	s[0] = '\0';
-	if (d->prefs.config.kura[0]) {
-		CatNum(s, d->notes);
-		Cat(s, d->notes == 1 ? " note \245 " : " notes \245 ");
-	}
+	CatNum(s, d->notes);
+	Cat(s, d->notes == 1 ? " note \245 " : " notes \245 ");
 	CatNum(s, d->pages);
 	Cat(s, d->pages == 1 ? " page" : " pages");
-	if (d->problem[0])
-		Cat(s, " (Kura didn't answer)");
 	SetStatus(d, s);
 }
 
@@ -416,7 +406,9 @@ static void StageDone(DA *d, DCtlPtr dce)
 	memset(&page, 0, sizeof(page));
 	if (d->fetch.state == FETCH_DONE && d->fetch.head.status == 200) {
 		body = FetchBody(&d->fetch, &len);
-		if (kura)
+		if (kura && shiori_notes_from_hister(&d->prefs.config))
+			shiori_parse_hister_notes(body, len, &page, AddRow, d);
+		else if (kura)
 			shiori_parse_kura(body, len, &page, AddRow, d);
 		else
 			shiori_parse_hister(body, len, &page, AddRow, d);
@@ -425,7 +417,7 @@ static void StageDone(DA *d, DCtlPtr dce)
 		else
 			d->pages = page.total;
 	} else if (!d->problem[0]) {
-		Problem(d, kura ? "Kura" : "Hister", d->problem);
+		Problem(d, kura && !shiori_notes_from_hister(&d->prefs.config) ? "Kura" : "Hister", d->problem);
 	}
 	FetchReset(&d->fetch);
 	SetPort(d->w);
@@ -459,8 +451,7 @@ static void Search(DA *d, DCtlPtr dce)
 	if (!d->netOpen) {
 		OSErr err = NetInit();
 		if (err != noErr) {
-			SetStatus(d, err == ipBadAddr ? "MacTCP has no address: is this Mac on the network?"
-				: err <= ipBadLapErr && err >= ipBadAddr ? "MacTCP isn't set up: check its control panel."
+			SetStatus(d, err <= ipBadLapErr && err >= ipBadAddr ? kNoAddress
 				: "MacTCP isn't installed.");
 			return;
 		}
@@ -474,8 +465,7 @@ static void Search(DA *d, DCtlPtr dce)
 	Draw(d);
 	SetStatus(d, "Searching\311");
 	Idle(d, 1, dce);
-	/* no Kura: pages only */
-	if (!(d->prefs.config.kura[0] && StartStage(d, STAGE_NOTES)) && !StartStage(d, STAGE_PAGES)) {
+	if (!StartStage(d, STAGE_NOTES) && !StartStage(d, STAGE_PAGES)) {
 		Idle(d, 30, dce);
 		SetStatus(d, "Type words, then press Return.");
 	}
@@ -743,7 +733,7 @@ short DAOpen(ParmBlkPtr pb, DCtlPtr dce)
 	strcpy(d->prefs.config.kura, SHIORI_DEFAULT_KURA);
 	shiori_checked_room_token(SHIORI_DEFAULT_TOKEN, d->prefs.config.roomToken, (long) sizeof(d->prefs.config.roomToken));
 	if (!PrefsLoad(&d->prefs) && SHIORI_DEFAULT_TOKEN[0] == '\0')
-		strcpy(d->status, "Open Shiori first, to set up Hister's address.");
+		strcpy(d->status, "Set up Shiori first.");
 	else
 		strcpy(d->status, "Type, then Return: your notes and pages.");
 	FetchInit(&d->fetch);

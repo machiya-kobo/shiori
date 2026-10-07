@@ -467,6 +467,17 @@ static void test_credentials(void)
 	shiori_credential_header(&c, "http://192.168.1.10:4433/api/search", h, sizeof(h));
 	CHECK(strstr(h, "mht_") == NULL);
 
+	/* where notes come from */
+	memset(&c, 0, sizeof(c));
+	CHECK(shiori_notes_from_hister(&c));                    /* no Kura: Hister */
+	strcpy(c.kura, "http://192.168.1.11:8080/");
+	CHECK(!shiori_notes_from_hister(&c));                   /* Kura set up: Kura, until chosen */
+	strcpy(c.notesSource, "hister");
+	CHECK(shiori_notes_from_hister(&c));
+	strcpy(c.notesSource, "kura");
+	c.kura[0] = '\0';
+	CHECK(shiori_notes_from_hister(&c));                    /* Kura chosen, none set up */
+
 	shiori_checked_hister_token("  ABCDEFGH \r\n", tok, sizeof(tok));
 	CHECK(strcmp(tok, "ABCDEFGH") == 0);
 	shiori_checked_hister_token("short", tok, sizeof(tok));

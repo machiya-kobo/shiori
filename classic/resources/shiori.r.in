@@ -118,11 +118,14 @@ resource 'DITL' (130, purgeable) {
 		{ 160, 16, 176, 128 }, StaticText { disabled, "Hister's token:" };
 		{ 160, 128, 176, 310 }, StaticText { disabled, "" };
 		{ 156, 320, 176, 410 }, Button { enabled, "Change\311" };
-		{ 188, 16, 204, 220 }, StaticText { disabled, "Reader text size:" };
-		{ 208, 20, 224, 100 }, RadioButton { enabled, "Small" };
-		{ 208, 110, 224, 200 }, RadioButton { enabled, "Medium" };
-		{ 208, 210, 224, 290 }, RadioButton { enabled, "Large" };
-		{ 232, 16, 264, 416 }, StaticText { disabled,
+		{ 188, 16, 204, 120 }, StaticText { disabled, "Notes from:" };
+		{ 188, 120, 204, 200 }, RadioButton { enabled, "Kura" };
+		{ 188, 204, 204, 300 }, RadioButton { enabled, "Hister" };
+		{ 212, 16, 228, 120 }, StaticText { disabled, "Text size:" };
+		{ 212, 120, 228, 190 }, RadioButton { enabled, "Small" };
+		{ 212, 194, 228, 280 }, RadioButton { enabled, "Medium" };
+		{ 212, 284, 228, 360 }, RadioButton { enabled, "Large" };
+		{ 236, 16, 268, 416 }, StaticText { disabled,
 			"Addresses look like http://192.168.1.5:8070/. Tokens go only to them, unencrypted." };
 		{ 268, 336, 296, 414 }, UserItem { disabled };
 	}

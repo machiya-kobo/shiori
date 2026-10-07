@@ -19,7 +19,7 @@
 enum {
 	iOK = 1, iCancel = 2, iBridge = 4, iDirect = 5, iHister = 7, iKura = 9, iTokenState = 11, iChangeToken = 12,
 	iHisterTokenLabel = 13, iHisterTokenState = 14, iChangeHisterToken = 15,
-	iSmall = 17, iMedium = 18, iLarge = 19, iOutline = 21
+	iNotesKura = 17, iNotesHister = 18, iSmall = 20, iMedium = 21, iLarge = 22, iOutline = 24
 };
 
 static const unsigned char kName[] = "\pShiori Preferences";
@@ -167,6 +167,8 @@ Boolean PrefsLoad(Prefs *p)
 			shiori_checked_hister_token(eq + 1, p->config.histerToken, (long) sizeof(p->config.histerToken));
 		else if (strcmp(line, "mode") == 0)
 			p->config.direct = strcmp(eq + 1, "direct") == 0;
+		else if (strcmp(line, "notesSource") == 0)
+			Set(p->config.notesSource, (long) sizeof(p->config.notesSource), eq + 1);   /* anything but hister or kura: unchosen */
 		else if (strcmp(line, "textSize") == 0) {
 			int size = 0;
 			const char *c;
@@ -190,9 +192,9 @@ Boolean PrefsSave(const Prefs *p)
 
 	if (PrefsFolder(&vRef, &dirID) != noErr)
 		return false;
-	sprintf(buf, "mode=%s\rhister=%s\rkura=%s\rtoken=%s\rhisterToken=%s\rtextSize=%d\rvault=%s\r",
+	sprintf(buf, "mode=%s\rhister=%s\rkura=%s\rtoken=%s\rhisterToken=%s\rnotesSource=%s\rtextSize=%d\rvault=%s\r",
 		p->config.direct ? "direct" : "bridge", p->config.hister, p->config.kura, p->config.roomToken,
-		p->config.histerToken, p->textSize, p->vault);
+		p->config.histerToken, p->config.notesSource, p->textSize, p->vault);
 	err = PrefOpen(vRef, dirID, fsRdWrPerm, &ref);
 	if (err == fnfErr) {
 		if (PrefCreate(vRef, dirID) != noErr)
@@ -353,6 +355,8 @@ Boolean PrefsDialog(Prefs *p)
 	TokenState(edit.config.histerToken, state);
 	SetItemText(d, iHisterTokenState, state);
 	ShowMode(d, edit.config.direct);
+	SetRadio(d, iNotesKura, !shiori_notes_from_hister(&edit.config));
+	SetRadio(d, iNotesHister, shiori_notes_from_hister(&edit.config));
 	SetRadio(d, iSmall, edit.textSize == 10);
 	SetRadio(d, iMedium, edit.textSize == 12);
 	SetRadio(d, iLarge, edit.textSize == 14);
@@ -375,6 +379,19 @@ Boolean PrefsDialog(Prefs *p)
 				SetItemText(d, iHisterTokenState, state);
 			}
 			SetPort(d);
+			continue;
+		}
+		if (item == iKura && !edit.config.notesSource[0]) {
+			/* unchosen: the radios show where notes would come from as Kura's address changes */
+			ItemText(d, iKura, edit.config.kura, (long) sizeof(edit.config.kura));
+			SetRadio(d, iNotesKura, !shiori_notes_from_hister(&edit.config));
+			SetRadio(d, iNotesHister, shiori_notes_from_hister(&edit.config));
+			continue;
+		}
+		if (item == iNotesKura || item == iNotesHister) {
+			strcpy(edit.config.notesSource, item == iNotesHister ? "hister" : "kura");
+			SetRadio(d, iNotesKura, item == iNotesKura);
+			SetRadio(d, iNotesHister, item == iNotesHister);
 			continue;
 		}
 		if (item == iBridge || item == iDirect) {
