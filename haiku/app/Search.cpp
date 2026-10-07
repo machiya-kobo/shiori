@@ -35,14 +35,19 @@ void RunSearch(BMessenger target, int32 generation, SearchRequest request, Confi
 	Pill pill = request.pill;
 	bool hasKura = !Trim(config.kura).empty();
 	bool hasHister = !Trim(config.server).empty();
+	// Where notes come from (Settings: Notes From): Kura, or Hister, which holds
+	// the default vault's notes (ParseHisterNotes keeps those alone).
+	bool fromHister = NotesFromHister(config);
+	bool hasNotes = fromHister ? hasHister : hasKura;
+	outcome->notesFromHister = fromHister;
 	bool wantNotes, wantPages;
 	if (request.more) {
-		wantNotes = pill == Pill::Notes && hasKura;
+		wantNotes = pill == Pill::Notes && hasNotes;
 		wantPages = pill != Pill::Notes && hasHister;
 	} else {
-		// No words is the newest, as every Shiori shows an empty field: Kura's
-		// recent notes (/api/recent), Hister's newest pages (or code).
-		wantNotes = hasKura && (pill == Pill::Notes || pill == Pill::All);
+		// No words is the newest, as every Shiori shows an empty field: the
+		// recent notes, Hister's newest pages (or code).
+		wantNotes = hasNotes && (pill == Pill::Notes || pill == Pill::All);
 		wantPages = pill != Pill::Notes && hasHister;
 	}
 
@@ -50,10 +55,21 @@ void RunSearch(BMessenger target, int32 generation, SearchRequest request, Confi
 	// other: the slower of the two, not the sum, before the list shows.
 	std::thread notesThread;
 	SearchOutcome* out = outcome.get();
-	auto fetchNotes = [&config, &request, out, pill, trimmed]() {
+	auto fetchNotes = [&config, &request, out, pill, trimmed, fromHister]() {
 		bool notesPill = pill == Pill::Notes;
+		int limit = notesPill ? kPageSize : (trimmed.empty() ? kAllRecentNotes : kAllNotes);
+		if (fromHister) {
+			// Hister's label:vault, sent with Hister's credentials only (by origin).
+			std::string url = HisterSearchURL(config.server, request.query, Pill::Notes, limit,
+				notesPill && request.more ? request.histerKey : std::string());
+			HttpReply reply = HttpRequestJSON(config, "GET", url, std::string(), true);
+			if (reply.status >= 200 && reply.status <= 299)
+				out->notes = ParseHisterNotes(reply.body);
+			out->notesProblem = Problem("Hister", reply, out->notes, !CredentialHeaders(config, url).empty());
+			return;
+		}
 		std::string url = KuraSearchURL(config.kura, request.query,
-			notesPill ? kPageSize : (trimmed.empty() ? kAllRecentNotes : kAllNotes), out->kuraOffset, notesPill ? request.vault : std::string());
+			limit, out->kuraOffset, notesPill ? request.vault : std::string());
 		HttpReply reply = HttpRequestJSON(config, "GET", url);
 		if (reply.status >= 200 && reply.status <= 299)
 			out->notes = ParseKura(reply.body);
@@ -61,8 +77,8 @@ void RunSearch(BMessenger target, int32 generation, SearchRequest request, Confi
 	};
 	if (wantNotes) {
 		outcome->askedNotes = true;
-		// Other vaults only on the Notes pill; All asks for the default vault.
-		outcome->kuraOffset = request.more ? request.kuraOffset : 0;
+		// Other vaults only on the Notes pill from Kura; All asks for the default vault.
+		outcome->kuraOffset = request.more && !fromHister ? request.kuraOffset : 0;
 		if (wantPages)
 			notesThread = std::thread(fetchNotes);
 		else

@@ -180,6 +180,22 @@ class Hister(Base):
                      "score": 12.5 - i / 10, "text": filler,
                      "metadata": {"source": "shiori", "client": "shiori", "client_version": "1.2.3"}} for i in range(20)]
             return self.reply(200, {"total": 230, "documents": docs, "page_key": "p2", "query_suggestion": ""})
+        # Notes from Hister ("label:vault": Shiori's Notes From set to Hister): the
+        # notes as Kura pushes them, at Kura's addresses, and one from another
+        # vault that a client must never show.
+        if "label:vault" in text.split():
+            words = [w for w in words_of(text) if w != "label:vault"]
+            notes = list(NOTES) + [("Work/Plan.md", "Work", "Another vault's plan", "haiku in another vault")]
+            docs = []
+            for path, folder, title, summary in notes:
+                if words and not all(w in (title + " " + summary).lower() for w in words):
+                    continue
+                slug = urllib.parse.quote(path[:-3])
+                url = (f"http://127.0.0.1:{KURA_PORT}/v/work/n/{slug}" if path.startswith("Work/")
+                       else f"http://127.0.0.1:{KURA_PORT}/n/{slug}")
+                docs.append({"url": url, "title": title, "label": "vault", "added": 1790000000,
+                             "text": mark(summary, words), "metadata": {"source": "vault", "vault_path": path}})
+            return self.reply(200, {"total": len(docs), "documents": docs, "page_key": ""})
         code = "metadata.source:code" in text.split()
         words = words_of(text)
         docs = []

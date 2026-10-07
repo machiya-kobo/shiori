@@ -1,6 +1,7 @@
-// A note's preview, from Kura's /api/note (never Hister's copy, never
-// cached): the note as styled text, its links opening in the browser, and
-// Open in Kura.
+// A note's preview, from Kura's /api/note, or from Hister's readable copy
+// (/api/preview) when notes come from Hister (Settings: Notes From; the
+// default vault's notes alone reach a list then). Never cached: the note as
+// styled text, its links opening in the browser, and Open in Kura.
 #pragma once
 
 #include <Window.h>

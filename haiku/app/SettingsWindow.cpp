@@ -8,6 +8,9 @@
 #include <Button.h>
 #include <CheckBox.h>
 #include <LayoutBuilder.h>
+#include <MenuField.h>
+#include <MenuItem.h>
+#include <PopUpMenu.h>
 #include <StringView.h>
 #include <TextControl.h>
 
@@ -24,6 +27,7 @@ using namespace shiori;
 namespace {
 
 const uint32 kMsgAvailability = 'Savl';
+const uint32 kMsgNotesFrom = 'Snfr';
 
 std::string Base(const std::string& server)
 {
@@ -95,6 +99,23 @@ SettingsWindow::SettingsWindow()
 	if (mode >= 0 && (mode & 077) != 0)
 		where << " (others can read it: Save sets it to 0600)";
 	fStatus = new BStringView("status", where.String());
+	// Notes From: Kura, or Hister (the default vault's notes, as Kura pushes
+	// them). It shows the source in use: Kura when one is set up, until the
+	// person picks.
+	BPopUpMenu* notesMenu = new BPopUpMenu("notesFrom");
+	bool fromHister = NotesFromHister(config);
+	const char* const kSources[] = {"kura", "hister"};
+	const char* const kLabels[] = {"Kura", "Hister"};
+	for (int i = 0; i < 2; i++) {
+		BMessage* pick = new BMessage(kMsgNotesFrom);
+		pick->AddString("source", kSources[i]);
+		BMenuItem* item = new BMenuItem(kLabels[i], pick);
+		item->SetMarked((i == 1) == fromHister);
+		notesMenu->AddItem(item);
+	}
+	fNotesFrom = new BMenuField("notesFrom", "Notes from:", notesMenu);
+	BStringView* notesHint = new BStringView("notesHint",
+		"From Hister: your default vault's notes only.");
 	BStringView* hint = new BStringView("hint",
 		"Hister's token goes only to Hister. Kura takes the sign-in or a room token (mht_" B_UTF8_ELLIPSIS "), never Hister's.");
 	fAccount = new BStringView("account", "");
@@ -112,7 +133,9 @@ SettingsWindow::SettingsWindow()
 			.AddTextControl(fHisterToken, 0, 1)
 			.AddTextControl(fKura, 0, 2)
 			.AddTextControl(fRoomToken, 0, 3)
+			.AddMenuField(fNotesFrom, 0, 4)
 		.End()
+		.Add(notesHint)
 		.Add(hint)
 		.AddGroup(B_HORIZONTAL)
 			.Add(fAccount)
@@ -161,6 +184,15 @@ void SettingsWindow::Store()
 	config.histerToken = Trim(fHisterToken->Text());
 	config.kura = Trim(fKura->Text());
 	config.roomToken = Trim(fRoomToken->Text());
+	// Saved as a choice only once picked here; until then it follows Kura's address.
+	config.notesSource = CurrentConfig().notesSource;
+	if (fNotesChosen) {
+		BMenuItem* marked = fNotesFrom->Menu()->FindMarked();
+		const char* source = nullptr;
+		if (marked != nullptr && marked->Message() != nullptr
+			&& marked->Message()->FindString("source", &source) == B_OK && source != nullptr)
+			config.notesSource = source;
+	}
 	if (!config.server.empty() && OriginOf(config.server).empty()) {
 		fStatus->SetText("Hister's address must start with http:// or https://.");
 		return;
@@ -204,6 +236,9 @@ void SettingsWindow::MessageReceived(BMessage* message)
 			}
 			break;
 		}
+		case kMsgNotesFrom:
+			fNotesChosen = true;
+			break;
 		case kMsgAvailability:
 			fSignInOffered = message->GetBool("offered", false);
 			ShowAccount();

@@ -1,7 +1,8 @@
-// A search, run on its own thread (Hister's pages and Kura's notes for a
-// pill, or the next page of one), its outcome posted back as kMsgResults
-// with a "generation" and an "outcome" (a SearchOutcome* the receiver
-// owns). Shared by the search window and the quick search.
+// A search, run on its own thread (Hister's pages and the notes for a pill,
+// from Kura or, as Settings says, from Hister; or the next page of one), its
+// outcome posted back as kMsgResults with a "generation" and an "outcome" (a
+// SearchOutcome* the receiver owns). Shared by the search window and the
+// quick search.
 #pragma once
 
 #include <string>
@@ -21,13 +22,14 @@ struct SearchRequest {
 	std::string query;
 	std::string vault;       // the Notes pill's
 	bool more = false;
-	std::string histerKey;   // more: Hister's page_key
+	std::string histerKey;   // more: Hister's page_key (the notes' too, when they come from Hister)
 	int kuraOffset = 0;      // more: Kura's offset
 };
 
 struct SearchOutcome {
 	bool more = false;
 	bool askedNotes = false, askedPages = false;
+	bool notesFromHister = false;   // the notes came from Hister (paged by page_key, not offset)
 	int kuraOffset = 0;
 	shiori::ResultPage notes, pages;
 	std::string notesProblem, pagesProblem;

@@ -1,5 +1,5 @@
 // Shiori's settings on Haiku: ~/config/settings/Shiori/config.json, mode
-// 0600, with Linux's keys (server, histerToken, kura, roomToken), and the
+// 0600, with Linux's keys (server, histerToken, kura, roomToken, notesSource), and the
 // rules for which request carries which credential (linux/src/hister.js,
 // linux/src/machiya.js):
 // - Hister's token goes only to the configured Hister origin, as X-Access-Token.
@@ -22,6 +22,8 @@ struct Config {
 	std::string histerToken;  // Hister's access token
 	std::string kura;         // Kura, e.g. https://kura.example.ts.net/
 	std::string roomToken;    // mht_… (Kura only)
+	// Where notes come from: '' until chosen, "kura" or "hister" (NotesSource).
+	std::string notesSource;
 	// Not in config.json: sign-in.json's (LoadSignIn), for this server.
 	SignIn signIn;
 };
@@ -41,6 +43,10 @@ std::string CheckedRoomToken(const std::string& raw);
 bool IsConfiguredOrigin(const Config& config, const std::string& url);
 // The credential headers a request to `url` gets (none, or exactly one).
 Headers CredentialHeaders(const Config& config, const std::string& url);
+
+// Whether notes come from Hister (the default vault's, Kura's push): chosen,
+// or no Kura to ask (NotesSource, scripts/notes-source-cases.json).
+bool NotesFromHister(const Config& config);
 
 // config.json's content and back. Unknown keys are dropped.
 std::string ConfigToJSON(const Config& config);

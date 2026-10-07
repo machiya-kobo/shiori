@@ -140,8 +140,13 @@ bool OpenInBrowser(const std::string& url)
 
 bool OpenResult(const shiori::Result& result)
 {
-	if (result.kind == shiori::Result::Note && !result.path.empty()
-		&& !shiori::Trim(CurrentConfig().kura).empty()) {
+	// A note opens its preview: from Kura (by its path), or from Hister's
+	// readable copy when notes come from Hister (by its address).
+	shiori::Config config = CurrentConfig();
+	bool fromHister = shiori::NotesFromHister(config);
+	if (result.kind == shiori::Result::Note
+		&& (fromHister ? !shiori::Trim(config.server).empty()
+			: !result.path.empty() && !shiori::Trim(config.kura).empty())) {
 		NoteWindow* window = new NoteWindow(result);
 		window->Show();
 		return true;

@@ -318,6 +318,41 @@ sleep 2
 [ "$(items)" = 45 ] && ok "Show More works again once Hister is back" || bad "rows after the retry: $(items)"
 hey Shiori quit >/dev/null 2>&1
 
+# 15. Notes from Hister (Settings: Notes From): the Notes pill asks Hister
+# for label:vault, never Kura; another vault's note never shows; a note's
+# preview is Hister's readable copy.
+python3 - "$CONFIG" <<'PY'
+import json, sys
+c = json.load(open(sys.argv[1]))
+c["notesSource"] = "hister"
+open(sys.argv[1], "w").write(json.dumps(c, indent=2))
+PY
+"$APP" >/boot/home/mh/app.log 2>&1 &
+sleep 2
+msg Spil of Window Shiori with 'pill=int32(2)'
+sleep 1.5
+kura_before=$(grep -c 'kura GET /api/search\|kura GET /api/recent\|kura GET /api/note' "$LOG")
+cleartext Shiori query
+settext Shiori query "haiku"
+msg Sqgo of Window Shiori
+shot 31-notes-from-hister 2
+grep 'hister GET /search' "$LOG" | tail -1 | grep -qF '(haiku|haiku*) label:vault' && ok "Notes asked Hister for label:vault" || bad "no label:vault search"
+[ "$(items)" = 3 ] && ok "the default vault's notes only (3)" || bad "notes from Hister: $(items) rows"
+previews_before=$(grep -c 'hister GET /api/preview' "$LOG")
+send do Item 0 of View results of Window Shiori
+shot 32-note-from-hister 2
+[ "$(grep -c 'hister GET /api/preview' "$LOG")" -gt "$previews_before" ] && ok "the preview asked Hister's /api/preview" || bad "no Hister preview"
+[ "$(grep -c 'kura GET /api/search\|kura GET /api/recent\|kura GET /api/note' "$LOG")" = "$kura_before" ] \
+	&& ok "Kura wasn't asked for notes" || bad "Kura was asked for notes"
+msg Sset
+sleep 1
+shot 33-settings-notes-from 0.5
+send quit of Window "Shiori settings"
+hey Shiori quit >/dev/null 2>&1
+cp /boot/home/mh/config.good "$CONFIG"
+chmod 600 "$CONFIG"
+grep -q LEAK "$LOG" && bad "a credential went where it mustn't: $(grep LEAK "$LOG" | head -1)" || ok "no credential leaked (notes from Hister)"
+
 echo "--- fake services log"
 cat "$LOG"
 exit $fail

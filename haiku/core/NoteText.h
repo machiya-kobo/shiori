@@ -1,7 +1,10 @@
 // A note's preview (Kura's /api/note: {html, …}, sanitized HTML) as styled
 // text for a BTextView: headings, bold, italic, code, quotes, lists and links,
 // every other tag dropped and its text kept. Notes come only from Kura, and
-// a preview is never cached. Portable: no Be headers.
+// a preview is never cached. Notes come from Kura, or from Hister when the
+// setting says so (Config's NotesFromHister: the default vault's notes, as
+// Kura pushed them; their preview is Hister's readable copy, /api/preview).
+// Portable: no Be headers.
 #pragma once
 
 #include <cstdint>
@@ -41,5 +44,9 @@ StyledText NoteHTMLToText(const std::string& html);
 std::string KuraNoteURL(const std::string& kura, const std::string& path, const std::string& vault);
 // The reply's html; false for anything else.
 bool ParseKuraNote(const std::string& body, std::string& html);
+// GET <hister>api/preview?url=… (a note from Hister: its readable copy).
+std::string HisterPreviewURL(const std::string& hister, const std::string& url);
+// The reply's content (Hister's readable HTML); false for anything else.
+bool ParseHisterPreview(const std::string& body, std::string& html);
 
 }  // namespace shiori

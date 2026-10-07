@@ -75,6 +75,28 @@ static void TestVectors()
 		+ (np.results.size() == 2 ? np.results[0].path + "|" + np.results[0].host + "|" + std::to_string(int(np.results[1].updated))
 			+ "|" + (np.results[1].kind == Result::Note ? "note" : "page") : ""),
 		"2 2 Projects/Lantern festival kit.md|Projects|1789900000|note");
+	// Notes From: the config key, and the source it gives.
+	{
+		Config c;
+		CheckTrue("notesSource read", ConfigFromJSON("{\"server\":\"https://h.example/\",\"notesSource\":\"hister\"}", c)
+			&& c.notesSource == "hister");
+		Config back;
+		CheckTrue("notesSource round trip", ConfigFromJSON(ConfigToJSON(c), back) && back.notesSource == "hister");
+		CheckTrue("notesSource junk is unset", ConfigFromJSON("{\"notesSource\":\"sometimes\"}", back) && back.notesSource.empty());
+		Config none;
+		CheckTrue("no Kura: notes from Hister", NotesFromHister(none));
+		none.kura = "https://kura.example/";
+		CheckTrue("Kura set up, unchosen: Kura", !NotesFromHister(none));
+		none.notesSource = "hister";
+		CheckTrue("Hister chosen: Hister", NotesFromHister(none));
+		none.notesSource = "kura";
+		CheckTrue("Kura chosen: Kura", !NotesFromHister(none));
+		Check("Hister preview URL", HisterPreviewURL("https://h.example", "https://kura.example/n/A%20b"),
+			"https://h.example/api/preview?url=" + FormEncode("https://kura.example/n/A%20b"));
+		std::string html;
+		CheckTrue("Hister preview content", ParseHisterPreview("{\"title\":\"A\",\"content\":\"<p>x</p>\"}", html) && html == "<p>x</p>");
+		CheckTrue("not a preview", !ParseHisterPreview("{\"title\":\"A\"}", html));
+	}
 	// Idempotent, as search-core's tests check.
 	Check("histerText twice", HisterText(HisterText("x")), HisterText("x"));
 	Check("kuraURL recent", KuraSearchURL("https://kura.example", "", 20), "https://kura.example/api/recent?limit=20&offset=0");

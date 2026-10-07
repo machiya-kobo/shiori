@@ -197,8 +197,9 @@ void SearchWindow::SetPill(Pill pill)
 	fPill = pill;
 	for (int i = 0; i < 4; i++)
 		fPills[i]->SetValue(kPills[i] == pill ? B_CONTROL_ON : B_CONTROL_OFF);
-	// The vault choice is the Notes pill's, and only with more than one vault.
-	bool show = pill == Pill::Notes && fVaults.size() > 1;
+	// The vault choice is the Notes pill's, only with more than one vault, and
+	// only from Kura (notes from Hister are the default vault's alone).
+	bool show = pill == Pill::Notes && fVaults.size() > 1 && !NotesFromHister(CurrentConfig());
 	if (fVaultField->IsHidden(fVaultField) == show) {
 		if (show)
 			fVaultField->Show();
@@ -271,8 +272,9 @@ void SearchWindow::LoadMore()
 {
 	if (fLoadingMore)
 		return;
-	bool notes = fShownPill == Pill::Notes;
-	if ((notes && fKuraNext <= 0) || (!notes && fHisterNext.empty()))
+	// Kura's notes page by offset; Hister's pages, and its notes, by page_key.
+	bool byOffset = fShownPill == Pill::Notes && !NotesFromHister(CurrentConfig());
+	if ((byOffset && fKuraNext <= 0) || (!byOffset && fHisterNext.empty()))
 		return;
 	fLoadingMore = true;
 	if (MoreItem* more = dynamic_cast<MoreItem*>(fList->LastItem())) {
@@ -328,9 +330,18 @@ void SearchWindow::ShowResults(BMessage* message)
 	if (outcome->askedNotes && outcome->notesProblem.empty()) {
 		fNotesTotal = outcome->notes.total;
 		fNotesShown += int(outcome->notes.results.size());
-		int next = outcome->kuraOffset + outcome->notes.received;
-		fKuraNext = fShownPill == Pill::Notes && outcome->notes.received > 0 && next < outcome->notes.total
-			? next : 0;
+		if (outcome->notesFromHister) {
+			// From Hister: paged by its page_key, as pages are (the Notes pill only).
+			fKuraNext = 0;
+			if (fShownPill == Pill::Notes)
+				fHisterNext = outcome->notes.received >= kPageSize ? outcome->notes.next : std::string();
+		} else {
+			int next = outcome->kuraOffset + outcome->notes.received;
+			fKuraNext = fShownPill == Pill::Notes && outcome->notes.received > 0 && next < outcome->notes.total
+				? next : 0;
+		}
+	} else if (outcome->askedNotes && outcome->notesFromHister && fShownPill == Pill::Notes && !outcome->more) {
+		fHisterNext.clear();
 	}
 	if (outcome->askedPages && outcome->pagesProblem.empty()) {
 		fPagesTotal = outcome->pages.total;
@@ -341,7 +352,8 @@ void SearchWindow::ShowResults(BMessage* message)
 	}
 	// A next page that failed keeps its place: Show More comes back to try
 	// again, the problem in the status line.
-	bool more = fShownPill == Pill::Notes ? fKuraNext > 0 : !fHisterNext.empty();
+	bool byOffset = fShownPill == Pill::Notes && !outcome->notesFromHister;
+	bool more = byOffset ? fKuraNext > 0 : !fHisterNext.empty();
 	if (more)
 		fList->AddItem(new MoreItem());
 

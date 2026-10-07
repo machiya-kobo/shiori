@@ -130,6 +130,11 @@ Headers CredentialHeaders(const Config& config, const std::string& url)
 	return headers;
 }
 
+bool NotesFromHister(const Config& config)
+{
+	return NotesSource(config.notesSource, !Trim(config.kura).empty()) == "hister";
+}
+
 std::string ConfigToJSON(const Config& config)
 {
 	// Pretty enough to edit by hand, keys in a fixed order.
@@ -137,7 +142,8 @@ std::string ConfigToJSON(const Config& config)
 		+ "  \"server\": " + json::Quote(Trim(config.server)) + ",\n"
 		+ "  \"histerToken\": " + json::Quote(Trim(config.histerToken)) + ",\n"
 		+ "  \"kura\": " + json::Quote(Trim(config.kura)) + ",\n"
-		+ "  \"roomToken\": " + json::Quote(Trim(config.roomToken)) + "\n"
+		+ "  \"roomToken\": " + json::Quote(Trim(config.roomToken)) + ",\n"
+		+ "  \"notesSource\": " + json::Quote(Trim(config.notesSource)) + "\n"
 		+ "}\n";
 }
 
@@ -150,6 +156,9 @@ bool ConfigFromJSON(const std::string& text, Config& config)
 	config.histerToken = v["histerToken"].Str();
 	config.kura = v["kura"].Str();
 	config.roomToken = v["roomToken"].Str();
+	// Only the two choices count; anything else is "not chosen yet".
+	std::string source = Trim(v["notesSource"].Str());
+	config.notesSource = source == "kura" || source == "hister" ? source : std::string();
 	return true;
 }
 

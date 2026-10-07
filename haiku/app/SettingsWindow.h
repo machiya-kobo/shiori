@@ -6,6 +6,7 @@
 
 class BButton;
 class BCheckBox;
+class BMenuField;
 class BStringView;
 class BTextControl;
 
@@ -26,5 +27,7 @@ private:
 	BTextControl* fHisterToken;
 	BTextControl* fKura;
 	BTextControl* fRoomToken;
+	BMenuField* fNotesFrom;
+	bool fNotesChosen = false;   // the person picked one: saved as their choice
 	BStringView* fStatus;
 };

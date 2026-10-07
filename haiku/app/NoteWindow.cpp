@@ -16,6 +16,7 @@
 
 #include "../core/NoteText.h"
 #include "../core/Query.h"
+#include "../core/Results.h"
 #include "Http.h"
 #include "Shiori.h"
 
@@ -31,21 +32,31 @@ struct Loaded {
 	std::string problem;
 };
 
-void RunLoad(BMessenger target, Config config, std::string path, std::string vault)
+void RunLoad(BMessenger target, Config config, std::string url, std::string path, std::string vault)
 {
 	auto loaded = std::make_unique<Loaded>();
-	HttpReply reply = HttpRequestJSON(config, "GET", KuraNoteURL(config.kura, path, vault));
+	// From Hister (Settings: Notes From): its readable copy, by the note's
+	// address, and only a note it may show (the default vault's).
+	bool fromHister = NotesFromHister(config);
+	const char* who = fromHister ? "Hister" : "Kura";
+	HttpReply reply;
+	if (fromHister && !HisterNoteShown(url))
+		reply.status = 404;
+	else if (fromHister)
+		reply = HttpRequestJSON(config, "GET", HisterPreviewURL(config.server, url), std::string(), true);
+	else
+		reply = HttpRequestJSON(config, "GET", KuraNoteURL(config.kura, path, vault));
 	std::string html;
 	if (reply.status == 0)
-		loaded->problem = TransportProblem("Kura", reply.error);
+		loaded->problem = TransportProblem(who, reply.error);
 	else if (reply.status == 401 || reply.status == 403)
-		loaded->problem = "Kura wants you signed in: sign in to Hister in Settings.";
+		loaded->problem = std::string(who) + " wants you signed in: sign in to Hister in Settings.";
 	else if (reply.status == 404)
-		loaded->problem = "Kura has no such note any more.";
+		loaded->problem = std::string(who) + " has no such note any more.";
 	else if (reply.status < 200 || reply.status > 299)
-		loaded->problem = "Kura answered " + std::to_string(reply.status) + ".";
-	else if (!ParseKuraNote(reply.body, html))
-		loaded->problem = "Kura sent something that isn't a note.";
+		loaded->problem = std::string(who) + " answered " + std::to_string(reply.status) + ".";
+	else if (!(fromHister ? ParseHisterPreview(reply.body, html) : ParseKuraNote(reply.body, html)))
+		loaded->problem = std::string(who) + " sent something that isn't a note.";
 	else
 		loaded->text = NoteHTMLToText(html);
 	BMessage done(kMsgNoteLoaded);
@@ -172,7 +183,7 @@ NoteWindow::NoteWindow(const Result& note)
 void NoteWindow::Load()
 {
 	Config config = CurrentConfig();
-	std::thread(RunLoad, BMessenger(this), config, fNote.path, fNote.vault).detach();
+	std::thread(RunLoad, BMessenger(this), config, fNote.url, fNote.path, fNote.vault).detach();
 }
 
 void NoteWindow::ShowNote(BMessage* message)

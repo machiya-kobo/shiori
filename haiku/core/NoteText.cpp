@@ -325,4 +325,18 @@ bool ParseKuraNote(const std::string& body, std::string& html)
 	return true;
 }
 
+std::string HisterPreviewURL(const std::string& hister, const std::string& url)
+{
+	return WithSlash(hister) + "api/preview?url=" + FormEncode(url);
+}
+
+bool ParseHisterPreview(const std::string& body, std::string& html)
+{
+	json::Value v;
+	if (!json::Parse(body, v) || !v.IsObject() || !v["content"].IsString())
+		return false;
+	html = v["content"].Str();
+	return true;
+}
+
 }  // namespace shiori
