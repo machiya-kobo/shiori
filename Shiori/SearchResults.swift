@@ -605,7 +605,8 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
                                 ForEach(choices) { pill($0).id($0.id) }
                             }
                             .padding(.horizontal)
-                            .padding(.vertical, 6)
+                            .padding(.top, 8)
+                            .padding(.bottom, 6)
                         }
                         .fadesOverflow()
                         .onAppear { proxy.scrollTo(selection.wrappedValue.id) }

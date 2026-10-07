@@ -516,6 +516,9 @@ struct TabSearchField: View {
     var submit: () -> Void = {}
     @Environment(\.palette) private var palette
     @State private var selection: TextSelection?
+    /// The system's search field height (iOS 26's glass field), growing
+    /// with the text size.
+    @ScaledMetric(relativeTo: .body) private var height: CGFloat = 48
 
     var body: some View {
         HStack(spacing: 4) {
@@ -534,11 +537,13 @@ struct TabSearchField: View {
             fieldButton("Search", systemImage: "magnifyingglass", action: go)
         }
         .padding(.leading, 16)
-        .padding(.trailing, 4)
-        .padding(.vertical, 2)
+        .padding(.trailing, 6)
+        .frame(minHeight: height)
         .modifier(SearchFieldShape())
         .padding(.horizontal)
         .padding(.top, 6)
+        // Room before the pills, as Apple's apps leave under a search field.
+        .padding(.bottom, 6)
         .topBarBackground()
         .onChange(of: focus.wrappedValue) { _, focused in
             guard focused, !text.isEmpty else { return }

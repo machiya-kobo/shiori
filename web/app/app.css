@@ -219,7 +219,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
   font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
 }
 
-.searchfield { margin: 0 12px 8px; position: relative; }
+.searchfield { margin: 0 12px 14px; position: relative; }
 /* Type-ahead: the typed text again, invisible, then the rest in grey, laid
    over the field in its own type and padding. Only the grey takes a tap. */
 .searchfield .ghost { position: absolute; inset: 0; display: block; white-space: pre; overflow: hidden; pointer-events: none; }
@@ -250,7 +250,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
 /* No line between Sort · Group · Filter and the results: the cards start
    below them on their own. */
 /* Sort · Group · Filter: plain secondary text, the accent while one is on. */
-.controls { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: -2px 12px 6px; }
+.controls { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 12px 10px; }
 .controls .quiet {
   display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 4px 0; cursor: pointer;
   font-size: 0.9375rem; font-weight: 500; color: var(--secondary);
@@ -275,7 +275,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .link-button:disabled { color: var(--secondary); cursor: default; }
 .searchfield input {
   width: 100%; font-family: inherit; font-size: 1.0625rem; color: var(--text); background: var(--card);
-  border: 1px solid var(--line2); border-radius: 12px; padding: 10px 12px;
+  border: 1px solid var(--line2); border-radius: 12px; padding: 13px 14px; min-height: 48px;
 }
 
 /* Rows */
@@ -461,6 +461,8 @@ body.phone-preview #tabs { display: none; }
 .menu-list {
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; min-width: 220px; padding: 4px;
   background: var(--card); border: 1px solid var(--line2); border-radius: 12px; box-shadow: 0 10px 28px rgb(0 0 0 / 0.3);
+  /* A long one (Filter's labels) scrolls inside the window. */
+  max-height: min(70vh, 520px); overflow-y: auto;
 }
 .menu-list button, .menu-list a {
   display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 12px; border-radius: 8px;

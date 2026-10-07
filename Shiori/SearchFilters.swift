@@ -133,7 +133,8 @@ struct ListControls: View {
                 }
             }
             .padding(.horizontal)
-            .padding(.vertical, 4)
+            .padding(.top, 6)
+            .padding(.bottom, 8)
         }
         .fadesOverflow()
     }
@@ -162,6 +163,12 @@ struct ListControls: View {
         Menu {
             dateMenu
             termMenu("Site", facet: "domains", field: "domain", excludable: true)
+            // Your labels and collections (Hister has no label facet, so
+            // from the server's rules, without counts). Not for notes: Kura
+            // reads none of Hister's filters.
+            if model.source != .notes, !app.rules.labels.isEmpty {
+                labelMenu
+            }
             termMenu("Visits", facet: "visits", field: "visits")
             if (model.facets?.terms["languages"]?.terms.count ?? 0) > 1 {
                 termMenu("Language", facet: "languages", field: "language")
@@ -282,9 +289,35 @@ struct ListControls: View {
                 }
             }
         } label: {
-            Label(name, systemImage: facet == "domains" ? "globe" : facet == "visits" ? "eye" : "tag")
+            Label(name, systemImage: facet == "domains" ? "globe" : facet == "visits" ? "eye" : facet == "languages" ? "character.bubble" : "doc")
         }
         .disabled(terms.isEmpty)
+    }
+
+    /// Collections (their `@` keyword, which Hister expands), then labels,
+    /// then Hide for a label.
+    private var labelMenu: some View {
+        Menu {
+            if !app.rules.collections.isEmpty {
+                Section("Collections") {
+                    ForEach(app.rules.collections, id: \.name) { collection in
+                        Button(CollectionIcon.title(for: collection.name)) { change { model.toggleFilter(collection.name) } }
+                    }
+                }
+            }
+            Section("Labels") {
+                ForEach(app.rules.labels, id: \.self) { label in
+                    Button(label) { change { model.toggleFilter("label:\(label)") } }
+                }
+            }
+            Menu("Hide") {
+                ForEach(app.rules.labels, id: \.self) { label in
+                    Button(label) { change { model.toggleFilter("-label:\(label)") } }
+                }
+            }
+        } label: {
+            Label("Label", systemImage: "tag")
+        }
     }
 
     private func title(_ name: String, count: Int?) -> String {
@@ -310,6 +343,8 @@ struct ListControls: View {
     /// A filter word in words: "Site: github.com", "Not github.com", "Past Week".
     static func describe(_ word: String) -> String {
         if let date = dates.first(where: { $0.word == word }) { return date.title }
+        // A collection: its name without the "@".
+        if Rules.isCollectionKeyword(word) { return CollectionIcon.title(for: word) }
         let negated = word.hasPrefix("-")
         let body = negated ? String(word.dropFirst()) : word
         guard let colon = body.firstIndex(of: ":") else { return word }
@@ -317,7 +352,7 @@ struct ListControls: View {
         let value = String(body[body.index(after: colon)...])
         if negated { return "Not \(value)" }
         switch field {
-        case "domain": return value
+        case "domain", "label": return value
         case "visits": return "Visits: \(value.replacingOccurrences(of: "..", with: "–"))"
         case "language": return "Language: \(value)"
         case "type": return "Type: \(value)"

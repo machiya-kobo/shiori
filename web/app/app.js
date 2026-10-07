@@ -1151,7 +1151,11 @@ function listChoices(params, { search = false } = {}) {
   const group = params.get('g') || '';
   // Day and month groups follow the date order.
   if ((group === 'day' || group === 'month') && sort !== 'newest' && sort !== 'oldest') sort = 'newest';
-  return { sort, group, word: params.get('w') || '', hister: (SORTS.find((x) => x[0] === sort) || SORTS[1])[2] };
+  // Filters: a date range (`w`) and a label or collection (`l`), searched as
+  // query words together.
+  const date = params.get('w') || '';
+  const label = /^(?:-?label:[A-Za-z0-9_-]+|@[A-Za-z0-9_-]+)$/.test(params.get('l') || '') ? params.get('l') : '';
+  return { sort, group, date, label, word: [date, label].filter(Boolean).join(' '), hister: (SORTS.find((x) => x[0] === sort) || SORTS[1])[2] };
 }
 
 function controls(view, params, { search = false, notes = false } = {}) {
@@ -1165,7 +1169,8 @@ function controls(view, params, { search = false, notes = false } = {}) {
   const sorts = SORTS.filter(([k]) => search || k !== 'best');
   const sortName = (sorts.find(([k]) => k === c.sort) || sorts[0])[1];
   const groupName = c.group ? (GROUPS.find(([k]) => k === c.group) || GROUPS[0])[1] : 'Group';
-  const dateName = (DATES.find(([w]) => w === c.word) || [])[1];
+  const dateName = (DATES.find(([w]) => w === c.date) || [])[1];
+  const labelName = c.label ? (c.label.startsWith('@') ? S.collectionTitle(c.label) : c.label.replace(/^-?label:/, (m) => (m.startsWith('-') ? 'Not ' : ''))) : '';
   return h(
     'div',
     { class: 'controls' },
@@ -1175,9 +1180,20 @@ function controls(view, params, { search = false, notes = false } = {}) {
     ),
     settings.searchFilters === false
       ? null
-      : dropMenu(quiet('filter', dateName || 'Filter', !!c.word), () => [
-          { text: 'Any Time', checked: !c.word, pick: () => set({ w: '' }) },
-          ...DATES.map(([w, t]) => ({ text: t, checked: w === c.word, pick: () => set({ w }) })),
+      : dropMenu(quiet('filter', [dateName, labelName].filter(Boolean).join(' · ') || 'Filter', !!c.word), () => [
+          { text: 'Any Time', checked: !c.date, pick: () => set({ w: '' }) },
+          ...DATES.map(([w, t]) => ({ text: t, checked: w === c.date, pick: () => set({ w }) })),
+          // Your collections and labels (from the server's rules; Hister
+          // counts no labels). Not for notes: Kura reads no Hister filters.
+          ...(notes || !labels.length
+            ? []
+            : [
+                '-',
+                { text: 'Any Label', checked: !c.label, pick: () => set({ l: '' }) },
+                ...collections.map((col) => ({ text: S.collectionTitle(col.name), checked: c.label === col.name, pick: () => set({ l: col.name }) })),
+                ...(collections.length ? ['-'] : []),
+                ...labels.map((name) => ({ text: name, checked: c.label === `label:${name}`, pick: () => set({ l: `label:${name}` }) })),
+              ]),
         ]),
     // A Notes list: which of Kura's vaults (All, or one; work vaults are
     // searchable in Notes wherever Shiori runs).
