@@ -1065,6 +1065,18 @@
   }
 
   /**
+   * What a newest-first list's "↑ N New Items" counts: results not on
+   * screen that are newer than the newest one shown (`newestShown`, unix
+   * seconds; 0 for none). Unseen alone isn't enough: All holds back first-
+   * page results it can't place yet, and an import can add older ones
+   * below the top; neither is new at the top. HisterKit's NewItems
+   * (Shiori/Core) is the twin, with the same cases.
+   */
+  function newItemsCount(candidates, seen, newestShown) {
+    return (candidates || []).filter((d) => !seen.has(d.url) && (!newestShown || (Number(d.updated) || 0) > newestShown)).length;
+  }
+
+  /**
    * Two lists that each come newest first, a page at a time, as one (the
    * web app's Library All: pages from Hister, notes from Kura). A result is
    * placed only once the other list's next one is known, or it has ended.
@@ -2808,6 +2820,7 @@
     localFilePath,
     typedQuery,
     newestFirstMerge,
+    newItemsCount,
     newsBlurSubscribeURL,
     labelChipIndex,
     countText,

@@ -830,6 +830,8 @@ function resultsList(container, options) {
   const list = h('ul', { class: 'rows' });
   const sentinel = h('div', {});
   const seen = new Set();
+  // The newest result on screen (unix seconds), for S.newItemsCount.
+  let newestShown = 0;
   let firstTotal = 0;
   const groups = new Map(); // title → folder
   const plain = folder(list);
@@ -882,6 +884,7 @@ function resultsList(container, options) {
       for (const doc of reply.documents) {
         if (seen.has(doc.url)) continue;
         seen.add(doc.url);
+        newestShown = Math.max(newestShown, Number(doc.updated) || 0);
         into(doc).add(doc);
         added++;
       }
@@ -927,11 +930,11 @@ function resultsList(container, options) {
       if (merging) {
         const [pages, notes] = await Promise.all([api.search(query, { sort }).catch(() => null), api.kura('*', { sort: 'date' }).catch(() => null)]);
         if (!pages) return null;
-        return [...pages.documents, ...((notes && notes.documents) || [])].filter((d) => !seen.has(d.url)).length;
+        return S.newItemsCount([...pages.documents, ...((notes && notes.documents) || [])], seen, newestShown);
       }
       if (sort === 'date' && !group) {
         const reply = source === 'notes' ? await api.kura(query, { sort, vault: settings.notesVault || 'all' }) : await api.search(query, { sort });
-        return reply.documents.filter((d) => !seen.has(d.url)).length;
+        return S.newItemsCount(reply.documents, seen, newestShown);
       }
       const reply = source === 'notes' ? await api.kura(query, { sort, limit: 1, vault: settings.notesVault || 'all' }) : await api.search(query, { sort, limit: 1 });
       return Math.max(0, (reply.total || 0) - firstTotal);

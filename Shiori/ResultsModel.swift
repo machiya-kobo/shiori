@@ -495,10 +495,10 @@ final class ResultsModel {
             async let notesPage = try? kura.search(query, sort: .newest)
             guard let pages = try? await client.search(query, sort: .newest, options: plain) else { return }
             let notes = await notesPage
-            count = (pages.documents + (notes?.documents ?? [])).filter { !seen.contains($0.url) }.count
+            count = NewItems.count(pages.documents + (notes?.documents ?? []), seen: seen, newestShown: newestShown)
         } else if order == .newest, !loadsAll {
             guard let page = try? await search(client, query, sort: sort, options: plain) else { return }
-            count = page.documents.filter { !seen.contains($0.url) }.count
+            count = NewItems.count(page.documents, seen: seen, newestShown: newestShown)
         } else {
             guard let page = try? await search(client, query, sort: sort, limit: 1, options: plain) else { return }
             count = max(0, page.total - total)
@@ -506,6 +506,9 @@ final class ResultsModel {
         guard mine == generation else { return }
         newCount = count
     }
+
+    /// The newest result on screen (a newest-first list's top), for `NewItems`.
+    private var newestShown: Date? { documents.map(\.updated).max() }
 
     /// Fetches the next page when `document` is near the end of the list.
     func loadMoreIfNeeded(after document: StoredPage, using client: HisterClient?, tries: Int = 0) async {

@@ -1259,3 +1259,14 @@ test("pull to refresh: the rooms' gesture, step by step (S.pullStep)", () => {
   assert.equal(run([start, move(0, 200), { type: 'cancel' }]).phase, 'idle');
   assert.equal(S.pullStep({ phase: 'reload', d: 70 }, start).phase, 'reload');
 });
+
+test('New Items counts only results newer than the top (NewItemsTests, the twin)', () => {
+  const doc = (path, minutesAgo) => ({ url: `https://example.com/${path}`, updated: 1_800_000_000 - minutesAgo * 60 });
+  const shown = [doc('a', 10), doc('b', 20)];
+  const seen = new Set(shown.map((d) => d.url));
+  const top = Math.max(...shown.map((d) => d.updated));
+  // c and d are older ones All held back (or an import added below the top); e is new.
+  assert.equal(S.newItemsCount([doc('e', 1), doc('a', 10), doc('b', 20), doc('c', 30), doc('d', 40)], seen, top), 1);
+  assert.equal(S.newItemsCount([doc('a', 10), doc('b', 20), doc('c', 30)], seen, top), 0);
+  assert.equal(S.newItemsCount([doc('a', 1), doc('b', 2)], new Set(), 0), 2);
+});
