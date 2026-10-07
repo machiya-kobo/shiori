@@ -1,8 +1,8 @@
 #!/bin/bash
 # The release files for Shiori for Classic Macintosh, in classic/build-release/:
-#   Shiori-<version>-classic-m68k.dsk   an 800K HFS floppy image
-#   Shiori-<version>-classic-m68k.sit   StuffIt 1.5
-#   Shiori-<version>-classic-m68k.hqx   that archive in BinHex
+#   Shiori-<version>-mac68k.dsk   an 800K HFS floppy image
+#   Shiori-<version>-mac68k.sit   StuffIt 1.5
+#   Shiori-<version>-mac68k.hqx   that archive in BinHex
 # (named as the other release files are; the .sit's name, inside the .hqx,
 # fits HFS's 31 characters)
 # Each holds Shiori, Shiori Search (the desk accessory's suitcase) and About Shiori.
@@ -22,7 +22,7 @@ done
 SHIORI_RELEASE=1 "$here/scripts/build.sh" >/dev/null
 out="$here/build-release"
 version=$(sed -nE 's/^ *MARKETING_VERSION: *"?([0-9.]+)"?.*/\1/p' "$root/project.yml" | head -1)
-name="Shiori-$version-classic-m68k"
+name="Shiori-$version-mac68k"
 [ $(( ${#name} + 4 )) -le 31 ] || { echo "package.sh: $name.sit is longer than an HFS name (31)" >&2; exit 1; }
 
 # Nothing private goes out: the neutral defaults are in, and no token or LAN
