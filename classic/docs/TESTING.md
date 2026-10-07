@@ -132,6 +132,25 @@ What we learned setting it up:
   Shiori: Apple 23, File 54, Edit 87, Search 136. Coordinates near the
   window's right edge are a few pixels off after calibration: aim inside.
 
+### When the Mac bombs
+
+A bomb ("address error", "illegal instruction") says little, and Snow's
+trap history fills with the error handler's own calls at once. What
+worked:
+
+- **Bisect with alerts.** A build whose suspect path stops at each step
+  with an alert naming it (`ParamText` and `NoteAlert(132, NULL)` around
+  each call, compiled in for that build only). Press Return through them
+  with `snow_session.py`, screenshot after each, and the last alert
+  before the bomb names the step.
+- **Don't use Retro68's File Manager glue** (`HOpen`, `HCreate`, `FSRead`,
+  `FSWrite`, `SetEOF`, `FSClose`, `FlushVol`). It fills its parameter
+  blocks only partly, leaving `ioCompletion` and the version byte as stack
+  garbage, and on a Mac Plus `FSWrite` died with an address error. Call
+  `PBH…Sync` and `PB…Sync` with a block you've zeroed (app/prefs.c).
+- Any parameter block Shiori hands to the system is zeroed first (the
+  MacTCP ones in net.c too).
+
 ### Basilisk II (System 7.6.1)
 
 Drive it with `classic/tests/basilisk_session.py` (Mac coordinates, 1:1).

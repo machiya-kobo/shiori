@@ -95,6 +95,65 @@ resource 'DITL' (129, purgeable) {
 	}
 };
 
+/* Preferences */
+resource 'DLOG' (130, purgeable) {
+	{ 40, 40, 300, 472 }, dBoxProc, visible, noGoAway, 0, 130, "", alertPositionMainScreen
+};
+
+resource 'DITL' (130, purgeable) {
+	{
+		{ 228, 340, 248, 410 }, Button { enabled, "OK" };
+		{ 228, 250, 248, 320 }, Button { enabled, "Cancel" };
+		{ 12, 16, 28, 410 }, StaticText { disabled, "Hister, through the bridge:" };
+		{ 32, 20, 48, 410 }, EditText { enabled, "" };
+		{ 60, 16, 76, 410 }, StaticText { disabled, "Kura, through the bridge:" };
+		{ 80, 20, 96, 410 }, EditText { enabled, "" };
+		{ 108, 16, 124, 110 }, StaticText { disabled, "Room token:" };
+		{ 108, 112, 124, 310 }, StaticText { disabled, "" };
+		{ 104, 320, 124, 410 }, Button { enabled, "Change\311" };
+		{ 140, 16, 156, 220 }, StaticText { disabled, "Reader text size:" };
+		{ 160, 20, 176, 100 }, RadioButton { enabled, "Small" };
+		{ 160, 110, 176, 200 }, RadioButton { enabled, "Medium" };
+		{ 160, 210, 176, 290 }, RadioButton { enabled, "Large" };
+		{ 186, 16, 218, 416 }, StaticText { disabled,
+			"Addresses look like http://192.168.1.5:8070/. The token goes only to these two." };
+		{ 224, 336, 252, 414 }, UserItem { disabled };
+	}
+};
+
+/* The room token: typed or pasted once, never shown again */
+resource 'DLOG' (131, purgeable) {
+	{ 100, 60, 200, 452 }, dBoxProc, visible, noGoAway, 0, 131, "", alertPositionMainScreen
+};
+
+resource 'DITL' (131, purgeable) {
+	{
+		{ 70, 300, 90, 370 }, Button { enabled, "OK" };
+		{ 70, 210, 90, 280 }, Button { enabled, "Cancel" };
+		{ 10, 14, 26, 380 }, StaticText { disabled, "This Mac's room token (mht_\311):" };
+		{ 34, 16, 50, 376 }, EditText { enabled, "" };
+	}
+};
+
+/* A problem, in words (ParamText ^0) */
+resource 'ALRT' (132, purgeable) {
+	{ 80, 80, 180, 432 }, 132,
+	{
+		OK, visible, sound1;
+		OK, visible, sound1;
+		OK, visible, sound1;
+		OK, visible, sound1;
+	},
+	alertPositionMainScreen
+};
+
+resource 'DITL' (132, purgeable) {
+	{
+		{ 70, 270, 90, 340 }, Button { enabled, "OK" };
+		{ 10, 60, 64, 340 }, StaticText { disabled, "^0" };
+	}
+};
+
 resource 'SIZE' (-1) {
 	reserved,
 	acceptSuspendResumeEvents,

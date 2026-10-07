@@ -37,5 +37,7 @@ void ReaderCopyLink(WindowPtr w);
 void ReaderCopy(WindowPtr w);
 Boolean ReaderCanFindAgain(WindowPtr w);
 void ReaderCloseAll(void);
+/* The body text's size (10, 12 or 14): open readers lay out again. */
+void ReaderSetTextSize(short size);
 
 #endif

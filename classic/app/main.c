@@ -19,6 +19,7 @@
 
 #include "../core/config.h"
 #include "net.h"
+#include "prefs.h"
 #include "reader.h"
 #include "searchwin.h"
 
@@ -48,6 +49,7 @@ static Boolean gQuit;
 static Boolean gHasWNE;
 static Boolean gInBackground;
 static Boolean gReadersBusy;
+static Prefs gPrefs;
 
 static void Enable(MenuHandle m, short item, Boolean on)
 {
@@ -69,7 +71,7 @@ static void AdjustMenus(void)
 
 	Enable(file, kOpenItem, ours && SearchWindowHasSelection());
 	Enable(file, kCloseItem, da || reader);
-	Enable(file, kPrefsItem, false);              /* phase 5 */
+	Enable(file, kPrefsItem, !da);
 	Enable(edit, kUndoItem, da);
 	for (i = kCutItem; i <= kSelectAllItem; i++)
 		Enable(edit, i, ours || da);
@@ -106,6 +108,11 @@ static void DoMenu(long choice)
 				ReaderClose(front);
 			else if (front != NULL && ((WindowPeek) front)->windowKind < 0)
 				CloseDeskAcc(((WindowPeek) front)->windowKind);
+		} else if (item == kPrefsItem) {
+			if (PrefsDialog(&gPrefs)) {
+				SearchWindowConfigChanged();
+				ReaderSetTextSize(gPrefs.textSize);
+			}
 		} else if (item == kQuitItem) {
 			gQuit = true;
 		}
@@ -226,8 +233,10 @@ static Boolean GetEvent(EventRecord *e, long sleep)
 	return GetNextEvent(everyEvent, e);
 }
 
-static void Setup(ShioriConfig *config)
+static void Setup(Prefs *prefs)
 {
+	ShioriConfig *config = &prefs->config;
+
 	InitGraf(&qd.thePort);
 	InitFonts();
 	FlushEvents(everyEvent, 0);
@@ -249,16 +258,24 @@ static void Setup(ShioriConfig *config)
 	strcpy(config->hister, SHIORI_DEFAULT_HISTER);
 	strcpy(config->kura, SHIORI_DEFAULT_KURA);
 	shiori_checked_room_token(SHIORI_DEFAULT_TOKEN, config->roomToken, (long) sizeof(config->roomToken));
+	prefs->textSize = 12;
+	prefs->vault[0] = '\0';
+	PrefsLoad(prefs);
 	(void) NetInit();
 }
 
 int main(void)
 {
 	EventRecord e;
-	ShioriConfig config;
 
-	Setup(&config);
-	SearchWindowOpen(&config);
+	Setup(&gPrefs);
+	ReaderSetTextSize(gPrefs.textSize);
+	SearchWindowOpen(&gPrefs);
+	/* the first run, or a bridge that can't be reached as set: Preferences first */
+	if (!gPrefs.config.roomToken[0] || strstr(gPrefs.config.hister, "192.0.2.") != NULL) {
+		if (PrefsDialog(&gPrefs))
+			SearchWindowConfigChanged();
+	}
 	while (!gQuit) {
 		Boolean busy = SearchWindowBusy() || gReadersBusy;
 		if (GetEvent(&e, busy ? 0 : (gInBackground ? 30 : 10))) {

@@ -66,6 +66,7 @@ def main():
         "BRIDGE_AUTH_URL": "http://127.0.0.1:%d" % fl, "BRIDGE_PUBLIC_URL": public,
         "BRIDGE_HISTER_USERS": "alex", "BRIDGE_HISTER_TOKEN_FILE": token.name,
         "BRIDGE_HISTER_PORT": str(args.hister_port), "BRIDGE_KURA_PORT": str(args.kura_port),
+        "BRIDGE_VAULTS": "shared",       # fake Kura's shared vault (its "work" is private: refused)
     }
     try:
         config = bridge.Config(env)

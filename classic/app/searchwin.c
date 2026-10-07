@@ -32,10 +32,21 @@
 enum { kReturn = 0x0D, kEnter = 0x03, kTab = 0x09, kDownArrow = 0x1F, kUpArrow = 0x1E, kBackspace = 0x08 };
 
 /* What the request under way is for. */
-enum { STAGE_NONE, STAGE_ALL_NOTES, STAGE_ALL_PAGES, STAGE_PAGES, STAGE_NOTES, STAGE_CODE };
+enum { STAGE_NONE, STAGE_ALL_NOTES, STAGE_ALL_PAGES, STAGE_PAGES, STAGE_NOTES, STAGE_CODE, STAGE_VAULTS };
+
+#define MAX_VAULTS 8
+#define VAULT_MENU 200
+#define VAULTS_STALE (10L * 60L * 60L)  /* ten minutes, in ticks: re-read after */
 
 static WindowPtr gWin;
+static Prefs *gPrefs;
 static ShioriConfig gConfig;
+static ShioriVault gVaults[MAX_VAULTS];         /* the default and shared ones (never a private one) */
+static int gVaultCount;
+static unsigned long gVaultsAt;                 /* TickCount of the last answer; 0: never */
+static MenuHandle gVaultMenu;
+static Rect gVaultRect;                         /* where the menu may go */
+static Rect gVaultBox;                          /* the menu as drawn (clicks) */
 static TEHandle gField;
 static ResultList gList;
 static Rect gFieldRect, gPillRects[4], gStatusRect;
@@ -44,7 +55,7 @@ static char gStatus[200];
 static Fetch gFetch;
 static int gStage = STAGE_NONE;
 static char gQuery[SHIORI_MAX_TEXT + 1];        /* the search under way or shown (UTF-8) */
-static char gVault[48];                         /* Notes' vault: "" the default */
+static char gVault[48];                         /* Notes' vault, as sent: "" the default */
 static Boolean gFocusList;
 static Boolean gActive = true;
 static long gTotalPages, gTotalNotes;
@@ -104,6 +115,7 @@ static void Layout(void)
 		SetRect(&gPillRects[i], x, PILLS_TOP, (short) (x + w), (short) (PILLS_TOP + PILL_H));
 		x = (short) (x + w + 6);
 	}
+	SetRect(&gVaultRect, (short) (x + 8), PILLS_TOP, (short) (port.right - MARGIN), (short) (PILLS_TOP + PILL_H));
 	SetRect(&gStatusRect, 0, (short) (port.bottom - STATUS_H + 1), (short) (port.right - 15), port.bottom);
 	SetRect(&list, 0, LIST_TOP, (short) (port.right - 15), (short) (port.bottom - STATUS_H));
 	if (gList.window != NULL)
@@ -140,6 +152,53 @@ static void DrawPills(void)
 			FrameRoundRect(&r, PILL_H, PILL_H);
 		}
 	}
+}
+
+/* The vault's title as shown: the chosen one, else the default's. */
+static const char *VaultTitle(void)
+{
+	int i;
+	for (i = 0; i < gVaultCount; i++)
+		if ((gVault[0] && strcmp(gVaults[i].name, gVault) == 0) || (!gVault[0] && gVaults[i].isDefault))
+			return gVaults[i].title;
+	return "Default";
+}
+
+/* Notes' vault menu: a box with the vault and a triangle, as System 7's pop-ups look. */
+static void DrawVault(void)
+{
+	Rect r = gVaultRect, box;
+	char label[80];
+	short w;
+	PolyHandle tri;
+
+	EraseRect(&r);
+	SetRect(&gVaultBox, 0, 0, 0, 0);
+	if (gPill != PILL_NOTES || r.right - r.left < 80)
+		return;
+	TextFont(kFontIDGeneva);
+	TextSize(10);
+	sprintf(label, "Vault: %s", VaultTitle());
+	roman_from_utf8(label);
+	w = (short) (TextWidth(label, 0, (short) strlen(label)) + 26);
+	if (w > r.right - r.left)
+		w = (short) (r.right - r.left);
+	SetRect(&box, (short) (r.right - w), (short) (r.top + 1), r.right, (short) (r.bottom - 1));
+	FrameRect(&box);
+	MoveTo((short) (box.right), (short) (box.top + 2));
+	LineTo((short) (box.right), (short) (box.bottom));
+	LineTo((short) (box.left + 2), (short) (box.bottom));
+	MoveTo((short) (box.left + 6), (short) (box.bottom - 5));
+	DrawFitted(label, (short) (w - 26));
+	tri = OpenPoly();
+	MoveTo((short) (box.right - 15), (short) (box.top + 6));
+	LineTo((short) (box.right - 7), (short) (box.top + 6));
+	LineTo((short) (box.right - 11), (short) (box.top + 10));
+	LineTo((short) (box.right - 15), (short) (box.top + 6));
+	ClosePoly();
+	PaintPoly(tri);
+	KillPoly(tri);
+	gVaultBox = box;
 }
 
 static void DrawStatus(void)
@@ -192,6 +251,7 @@ static void DrawAll(void)
 	TextSize(12);
 	TEUpdate(&gWin->portRect, gField);
 	DrawPills();
+	DrawVault();
 	MoveTo(0, (short) (LIST_TOP - 1));
 	LineTo(gWin->portRect.right, (short) (LIST_TOP - 1));
 	ListDraw(&gList);
@@ -302,6 +362,11 @@ static void Request(int stage)
 			(long) sizeof(target));
 		base = gConfig.hister;
 		break;
+	case STAGE_VAULTS:
+		strcpy(target, "api/vaults");
+		ok = 1;
+		base = gConfig.kura;
+		break;
 	default:
 		ok = shiori_hister_search_target(gQuery, PILL_PAGES, PAGE_ROWS, gAppending ? gMoreKey : "", target,
 			(long) sizeof(target));
@@ -314,7 +379,57 @@ static void Request(int stage)
 		return;
 	}
 	FetchStart(&gFetch, &gConfig, base, target, MAX_REPLY, ++gTag);
-	SetStatus("Searching\311");
+	if (stage != STAGE_VAULTS)
+		SetStatus("Searching\311");
+}
+
+/* Kura's vaults: the default and the shared ones go in the menu; a private
+   vault never does (its notes would cross the LAN in clear, and the bridge
+   refuses it anyway). The saved choice counts once Kura says it's shared. */
+static void VaultsAnswered(void)
+{
+	ShioriVault all[MAX_VAULTS * 2];
+	long len;
+	const char *body;
+	int n, i;
+	GrafPtr old;
+
+	if (gFetch.state != FETCH_DONE || gFetch.head.status != 200)
+		return;
+	body = FetchBody(&gFetch, &len);
+	n = shiori_parse_vaults(body, len, all, MAX_VAULTS * 2);
+	gVaultCount = 0;
+	for (i = 0; i < n && gVaultCount < MAX_VAULTS; i++)
+		if (all[i].isDefault || !all[i].isPrivate)
+			gVaults[gVaultCount++] = all[i];
+	gVaultsAt = TickCount();
+	if (gVaultMenu != NULL) {
+		DeleteMenu(VAULT_MENU);
+		DisposeMenu(gVaultMenu);
+	}
+	gVaultMenu = NewMenu(VAULT_MENU, "\pVault");
+	for (i = 0; i < gVaultCount; i++) {
+		unsigned char item[64];
+		char title[64];
+		size_t k;
+		strcpy(title, gVaults[i].title);
+		roman_from_utf8(title);
+		k = strlen(title) > 63 ? 63 : strlen(title);
+		item[0] = (unsigned char) k;
+		memcpy(item + 1, title, k);
+		AppendMenu(gVaultMenu, "\px");
+		SetMenuItemText(gVaultMenu, (short) (i + 1), item);   /* never read as menu metacharacters */
+	}
+	InsertMenu(gVaultMenu, -1);
+	/* the saved vault, if Kura offers it */
+	gVault[0] = '\0';
+	for (i = 0; i < gVaultCount; i++)
+		if (gPrefs->vault[0] && strcmp(gVaults[i].name, gPrefs->vault) == 0 && !gVaults[i].isDefault)
+			strcpy(gVault, gVaults[i].name);
+	GetPort(&old);
+	SetPort(gWin);
+	DrawVault();
+	SetPort(old);
 }
 
 /* A reply came (or failed): rows in, then the next stage or the end. */
@@ -328,6 +443,11 @@ static void Answered(void)
 
 	gStage = STAGE_NONE;
 	memset(&page, 0, sizeof(page));
+	if (stage == STAGE_VAULTS) {
+		VaultsAnswered();
+		FetchReset(&gFetch);
+		return;
+	}
 	if (gFetch.state == FETCH_DONE && gFetch.head.status == 200) {
 		body = FetchBody(&gFetch, &len);
 		gSection = stage;
@@ -369,6 +489,9 @@ static void Answered(void)
 	gAppending = false;
 	ListChanged(&gList);
 	ShowTotals();
+	/* Notes' vault menu: read Kura's vaults now and then (ten minutes) */
+	if (stage == STAGE_NOTES && (gVaultsAt == 0 || TickCount() - gVaultsAt > VAULTS_STALE))
+		Request(STAGE_VAULTS);
 }
 
 static void Search(void)
@@ -402,10 +525,25 @@ static void Search(void)
 
 /* -- the window -------------------------------------------------------------------------- */
 
-void SearchWindowOpen(const ShioriConfig *config)
+void SearchWindowConfigChanged(void)
+{
+	gConfig = gPrefs->config;
+	gVaultsAt = 0;
+	gVaultCount = 0;
+	gVault[0] = '\0';
+	if (gWin != NULL) {
+		SetPort(gWin);
+		InvalRect(&gWin->portRect);
+		SetStatus(gConfig.roomToken[0] ? "Type, then Return, to search Hister and Kura." : "No room token yet: Preferences\311");
+	}
+}
+
+void SearchWindowOpen(Prefs *prefs)
 {
 	Rect r, view;
+	const ShioriConfig *config = &prefs->config;
 
+	gPrefs = prefs;
 	gConfig = *config;
 	SetRect(&r, 4, 42, 508, 338);
 	gWin = NewWindow(NULL, &r, "\pShiori", true, 8 /* documentProc + zoom box */, (WindowPtr) -1L, true, 0);
@@ -479,6 +617,33 @@ void SearchWindowClick(EventRecord *e)
 			SearchWindowPill(i);
 			return;
 		}
+	}
+	if (gPill == PILL_NOTES && PtInRect(p, &gVaultBox)) {
+		long choice;
+		Point at;
+		int current = 0, k;
+		if (gVaultMenu == NULL || gVaultCount == 0) {
+			SetStatus("Search Notes once, and Kura's vaults appear here.");
+			return;
+		}
+		for (k = 0; k < gVaultCount; k++)
+			if ((gVault[0] && strcmp(gVaults[k].name, gVault) == 0) || (!gVault[0] && gVaults[k].isDefault))
+				current = k;
+		for (k = 0; k < gVaultCount; k++)
+			CheckItem(gVaultMenu, (short) (k + 1), k == current);
+		at.h = gVaultBox.left;
+		at.v = gVaultBox.top;
+		LocalToGlobal(&at);
+		choice = PopUpMenuSelect(gVaultMenu, at.v, at.h, (short) (current + 1));
+		if (LoWord(choice) > 0) {
+			ShioriVault *v = &gVaults[LoWord(choice) - 1];
+			strcpy(gVault, v->isDefault ? "" : v->name);
+			strcpy(gPrefs->vault, gVault);
+			PrefsSave(gPrefs);
+			DrawVault();
+			Search();
+		}
+		return;
 	}
 	{
 		Rect listAndBar = gList.frame;
@@ -611,6 +776,7 @@ void SearchWindowPill(int pill)
 	SetPort(gWin);
 	gPill = pill;
 	DrawPills();
+	DrawVault();
 	SetPort(old);
 	Search();
 }

@@ -60,6 +60,7 @@ static Reader *gReaders[MAX_READERS];
 static ShioriConfig gConfig;
 static char gFind[64];                  /* the last Find's text (Mac Roman) */
 static Reader *gTracking;
+static short gTextSize = 12;
 
 static Reader *Find(WindowPtr w)
 {
@@ -83,10 +84,10 @@ static void UseStyle(unsigned char style)
 
 	if (style & STYLE_CODE) {
 		TextFont(kFontIDMonaco);
-		TextSize(9);
+		TextSize(gTextSize >= 14 ? 12 : 9);
 	} else {
 		TextFont(kFontIDGeneva);
-		TextSize((style & STYLE_HEADING) ? 14 : 12);
+		TextSize((short) ((style & STYLE_HEADING) ? gTextSize + 2 : gTextSize));
 	}
 	if (style & (STYLE_BOLD | STYLE_HEADING | STYLE_SUBHEADING))
 		face |= bold;
@@ -992,4 +993,19 @@ void ReaderCopy(WindowPtr w)
 	PutScrap(r->textLen < 32000 ? r->textLen : 32000, 'TEXT', *r->text);
 	HUnlock(r->text);
 	SetStatus(r, r->textLen < 32000 ? "Copied the text." : "Copied the first 32,000 characters.");
+}
+
+void ReaderSetTextSize(short size)
+{
+	int i;
+
+	gTextSize = size;
+	for (i = 0; i < MAX_READERS; i++) {
+		Reader *r = gReaders[i];
+		if (r == NULL)
+			continue;
+		SetPort(r->win);
+		Relayout(r);
+		InvalRect(&r->win->portRect);
+	}
 }

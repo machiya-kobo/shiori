@@ -61,3 +61,4 @@ haiku/Version.rdef
 /classic/local.env
 /classic/tests/test_core
 /classic/tests/test_core.dSYM/
+/classic/build-trace/

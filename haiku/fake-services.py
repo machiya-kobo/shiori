@@ -285,7 +285,8 @@ class Kura(Base):
             return self.reply(404, {"error": "not found"})
         if url.path == "/api/vaults":
             return self.reply(200, {"vaults": [{"name": "personal", "title": "Personal", "default": True},
-                                               {"name": "work", "title": "Work", "private": True}]})
+                                               {"name": "work", "title": "Work", "private": True},
+                                               {"name": "shared", "title": "Shared", "private": False}]})
         words = words_of(params.get("q", [""])[0]) if url.path == "/api/search" else []
         if url.path not in ("/api/search", "/api/recent"):
             return self.reply(404, {"error": "not found"})

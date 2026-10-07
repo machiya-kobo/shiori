@@ -15,9 +15,12 @@
 #include <Events.h>
 #include <Windows.h>
 
-#include "../core/config.h"
+#include "prefs.h"
 
-void SearchWindowOpen(const ShioriConfig *config);
+/* The window keeps prefs (a pointer): Notes' vault is saved there. */
+void SearchWindowOpen(Prefs *prefs);
+/* After Preferences changed the bridge or the token. */
+void SearchWindowConfigChanged(void);
 Boolean IsSearchWindow(WindowPtr w);
 
 /* Events the app passes on when the window is in front (or for it). */
