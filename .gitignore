@@ -57,6 +57,7 @@ haiku/Version.rdef
 
 # Shiori for Classic Macintosh: builds, emulator disks, local settings
 /classic/build/
+/classic/build-release/
 /classic/diskimages/
 /classic/local.env
 /classic/tests/test_core

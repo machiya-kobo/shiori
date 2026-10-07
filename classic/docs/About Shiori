@@ -1,0 +1,18 @@
+Shiori for Classic Macintosh
+Version @VERSION@
+
+Search your pages in Hister and your notes in Kura from a Mac Plus or later, on System 6.0.8 or System 7.
+
+What you need
+- MacTCP 2.0.6 or later, on Ethernet.
+- The bridge (mac-bridge) running on your network, next to Hister.
+- A room token for this Mac, from the sign-in helper's sessions page.
+
+Installing
+- Shiori: copy it anywhere.
+- Shiori Search, the desk accessory: on System 6, install it with Font/DA Mover. On System 7, open it and drag Shiori Search to the System Folder.
+
+First run
+Preferences opens: enter the bridge's two addresses (http://<IP address>:<port>/) and the room token. They stay on this Mac, in Shiori Preferences. Keep that file off shared disks: the token is in it.
+
+Shiori is free software under the GNU Affero General Public License, version 3 or later. Source and documentation: https://github.com/machiya-kobo/shiori (docs/classic.md).

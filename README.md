@@ -2,10 +2,10 @@
 
 [Machiya](https://github.com/machiya-kobo/machiya) is a set of small self-hosted apps for finding what you've read: your pages ([Hister](https://github.com/asciimoo/hister)), the web ([SearXNG](https://github.com/searxng/searxng)), your notes ([Obsidian](https://obsidian.md)) and your code ([Forgejo](https://forgejo.org) or [GitHub](https://github.com)).
 
-Shiori (栞, "bookmark") is the search app for Machiya and searches Hister and SearXNG from an iPhone, iPad, Mac, Linux, Haiku or the web. It's also a Hister extension for Safari on macOS and iOS, or you can use Hister's [official](https://hister.org/docs/browser-extension) or [community](https://github.com/nburns/hister-safari) extensions.
+Shiori (栞, "bookmark") is the search app for Machiya and searches Hister and SearXNG from an iPhone, iPad, Mac, Linux, Haiku, a classic 68k Mac or the web. It's also a Hister extension for Safari on macOS and iOS, or you can use Hister's [official](https://hister.org/docs/browser-extension) or [community](https://github.com/nburns/hister-safari) extensions.
 
 <p align="center">
-<a href="https://machiya-kobo.github.io/">Machiya</a> · <a href="#what-it-does">Features</a> · <a href="#quickstart">Quickstart</a> · <a href="docs/signing-in.md">Sign In</a> · <a href="docs/extension.md">Safari</a> · <a href="docs/build.md">Build</a> · <a href="docs/linux.md">Linux</a> · <a href="docs/haiku.md">Haiku</a> · <a href="web/README.md">Hosting</a> · <a href="#credits-and-license">License</a>
+<a href="https://machiya-kobo.github.io/">Machiya</a> · <a href="#what-it-does">Features</a> · <a href="#quickstart">Quickstart</a> · <a href="docs/signing-in.md">Sign In</a> · <a href="docs/extension.md">Safari</a> · <a href="docs/build.md">Build</a> · <a href="docs/linux.md">Linux</a> · <a href="docs/haiku.md">Haiku</a> · <a href="docs/classic.md">Classic Mac</a> · <a href="web/README.md">Hosting</a> · <a href="#credits-and-license">License</a>
 </p>
 
 <p align="center"><a href="docs/screenshots/shiori-search-dark.png"><img src="docs/screenshots/shiori-search-dark.png" alt="Shiori searching for lantern in the dark theme: invented web results with a sample page marked Your page and a sample note marked Your note among them, the Pages 5 and Notes 4 tabs above, and an Info card about paper lanterns on the right" width="100%"></a><br>Everything everywhere all at once</p>
@@ -22,7 +22,7 @@ Shiori (栞, "bookmark") is the search app for Machiya and searches Hister and S
 
 ## What it does
 
-[Hister](https://github.com/asciimoo/hister) is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server. Shiori searches it. Native apps for iPhone, iPad, Mac, Linux and Haiku, and web apps for everything else. No Electron.
+[Hister](https://github.com/asciimoo/hister) is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server. Shiori searches it. Native apps for iPhone, iPad, Mac, Linux, Haiku and classic 68k Macs, and web apps for everything else. No Electron.
 
 > **Unofficial.** Shiori is not affiliated with or endorsed by the Hister project.
 
@@ -126,6 +126,10 @@ A Flatpak around the web app, with Cinnamon's menu search, a quick-search hotkey
 ## Haiku
 
 A native app on the Be API, installed with `pkgman` or built with `make`: [docs/haiku.md](docs/haiku.md).
+
+## Classic Macintosh
+
+A native app for 68k Macs, from a Mac Plus on System 6 to color on System 7, with a quick-search desk accessory. It reaches Hister and Kura through a small bridge on your LAN: [docs/classic.md](docs/classic.md).
 
 ## Hosting the web pages
 

@@ -5,6 +5,21 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.15.0 (2026-10-07)
+
+### Added
+
+- **Shiori for Classic Macintosh** (docs/classic.md): a native app for 68k
+  Macs, from a Mac Plus on System 6 to a color Mac on System 7. Search your
+  pages and notes, read a result in its own window with Find, and copy its
+  link. On System 7 it has Balloon Help and color.
+- **Shiori Search**, its desk accessory: a quick search from the Apple
+  menu. On System 7 a result opens in Shiori; on System 6 its link is
+  copied.
+- **mac-bridge**: the small LAN proxy the classic Mac reaches Hister and
+  Kura through, since MacTCP has no TLS. It holds Hister's token; the Mac
+  holds only a room token.
+
 ## 0.14.4 (2026-10-07)
 
 ### Fixed

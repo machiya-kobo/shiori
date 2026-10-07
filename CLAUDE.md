@@ -6,7 +6,7 @@ upstream Hister extension, patched at build time), a search page and a web
 app, and a small Linux app. README covers what it is and a short
 Quickstart; docs/ has the rest (quickstart.md, the tested walkthrough;
 build.md, extension.md, signing-in.md, ai.md, linux.md, haiku.md,
-smallweb.md). This file holds the rules and the traps the code can't tell
+classic.md, smallweb.md). This file holds the rules and the traps the code can't tell
 you.
 
 ## Rules
@@ -40,8 +40,9 @@ you.
   text size, as the rooms keep them). NewsBlur, status pages, the Wayback Machine and archive.is
   copies and the build's privacy front ends (`SHIORI_FRONTENDS`, Redlib,
   Invidious…: `Elsewhere`) are only ever opened as links.
-  `gemini://`/`gopher://` links are handed to the system, never fetched. No
-  analytics. AI providers only when the user switches AI on, and only from
+  `gemini://`/`gopher://` links are handed to the system, never fetched.
+  The classic Mac reaches Hister and Kura only through its LAN bridge
+  (`classic/bridge/`, `mac-bridge`). No analytics. AI providers only when the user switches AI on, and only from
   the app.
 - **Never re-add the `cookies` permission.** The extensions use Hister's
   token (`X-Access-Token`), never a session or a cookie.
@@ -558,3 +559,36 @@ you.
   on the heap, never deletes it, and retires it when a request passes its
   20 s deadline. TLS failures are `ErrorCode() == B_NOT_ALLOWED`, no detail.
 
+
+## Shiori for Classic Macintosh (`classic/`, docs/classic.md)
+
+- C on Retro68 for the 68000, System 6.0.8 to 7.x, MacTCP. `classic/core/`
+  is portable C89 (`node --test scripts/classic.test.mjs` runs it, the
+  bridge's tests and the vectors' drift check): **its queries are
+  search-core's twins**, so regenerate `classic/tests/vectors.h`
+  (`node haiku/tests/gen-vectors.mjs --c`) after changing search-core.
+- **The bridge** (`classic/bridge/bridge.py`, stdlib, GET only, exact
+  paths) is the Mac's only way out: MacTCP has no TLS. The Mac holds one
+  room token (`mht_`), sent only to the two bridge origins; the bridge
+  swaps it for Hister's token, which never reaches the LAN. Its log never
+  has a query, a header or a body.
+- A note's vault comes from its address; private vaults are never offered,
+  and Shiori refuses a `SHIO/read` Apple event for any vault but the
+  default (the desk accessory searches only that).
+- **Release files come from `classic/scripts/package.sh`** (neutral
+  defaults, `SHIORI_RELEASE=1`): a normal build bakes in
+  `classic/local.env`'s test addresses and token.
+- **The desk accessory must stay under 32 KB** (`build.sh` fails past it):
+  nothing on its path may use `sprintf`, `sscanf`, `strtol` or the
+  library's `strstr` (each pulls in kilobytes), and it calls
+  `RETRO68_RELOCATE()` at every entry.
+- Retro68's File Manager glue (`HOpen`, `FSWrite`…) leaves parameter-block
+  fields as garbage (an address error on a Mac Plus): zero a block and call
+  `PB…Sync`. Multiversal lacks some names (`Scrap.h`, `TEToScrap`…): use
+  the low-memory accessors or local constants, never a new header.
+- Windows are `NewCWindow` where Color QuickDraw is (`ThemeNewWindow`): an
+  old-style port snaps every color to QuickDraw's eight.
+- Test in Snow (System 6) and Basilisk II (System 7) on the claude VM, as
+  `classic/docs/TESTING.md` says, against the fake house only. Never hard-kill
+  Basilisk, never point its driver off the Mac's screen (it hangs X), and
+  never write Snow's disk while Snow runs.
