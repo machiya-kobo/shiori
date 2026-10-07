@@ -104,7 +104,7 @@ struct ListControls: View {
                     groupMenu
                 }
                 // A notes list: which of Kura's vaults (All, or one).
-                if model.source == .notes, app.kuraVaults.count > 1 {
+                if model.source == .notes, app.notesFrom == .kura, app.kuraVaults.count > 1 {
                     vaultMenu
                 }
                 // Beside Sort and Group, and looking like them, everywhere:
@@ -641,9 +641,12 @@ extension AppState {
     /// A list's feed: a notes list's is Kura's own
     /// (`feed.xml`), the Library's All Hister's (`*`, pages and notes),
     /// and every other one the server's feed service without the
-    /// notes (`exclude_label=vault`).
+    /// notes (`exclude_label=vault`). Notes from Hister have no feed: the
+    /// feed service can't leave other vaults out by address, as the lists do.
     func feedURL(query: String, title: String, source: ResultsModel.Source = .pages) -> URL? {
-        if source == .notes { return KuraClient.feedURL(serverURL: searchPage.niwaURL, text: query) }
+        if source == .notes {
+            return notesFrom == .kura ? KuraClient.feedURL(serverURL: searchPage.niwaURL, text: query) : nil
+        }
         guard let client else { return nil }
         if source == .all, query.trimmingCharacters(in: .whitespaces) == "*" { return client.newPagesFeedURL }
         return Export.feedURL(base: client.baseURL, query: query, title: title, excludeLabel: Notes.label)

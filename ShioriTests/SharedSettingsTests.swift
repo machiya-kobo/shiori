@@ -83,6 +83,26 @@ struct SharedSettingsTests {
         #expect(defaults.string(forKey: SharedSettings.Key.smallWebOpen) == "direct")
     }
 
+    @Test func notesComeFromKuraOrHisterOnly() {
+        SharedSettings.applyFromPage(["notesSource": "hister"], to: defaults)
+        #expect(defaults.string(forKey: SharedSettings.Key.notesSource) == "hister")
+        SharedSettings.applyFromPage(["notesSource": "somewhere"], to: defaults)
+        #expect(defaults.string(forKey: SharedSettings.Key.notesSource) == "hister")
+        SharedSettings.applyFromPage(["notesSource": true], to: defaults)
+        #expect(defaults.string(forKey: SharedSettings.Key.notesSource) == "hister")
+        // "" puts it back to the default (Kura when one is set up).
+        SharedSettings.applyFromPage(["notesSource": ""], to: defaults)
+        #expect(defaults.string(forKey: SharedSettings.Key.notesSource) == "")
+        SharedSettings.applyFromPage(["notesSource": "kura"], to: defaults)
+        #expect(SharedSettings.extensionPayload(from: defaults)[SharedSettings.Key.notesSource] as? String == "kura")
+    }
+
+    @Test func whereNotesComeFromStaysOnThisDevice() {
+        // Never one of the settings that follow the person to the account.
+        #expect(PrefsSync.shioriKeys[SharedSettings.Key.notesSource] == nil)
+        #expect(PrefsSync.accountValues([SharedSettings.Key.notesSource: "hister"]).isEmpty)
+    }
+
     @Test func turningHistoryOffClearsIt() {
         SharedSettings.recordSearch("rust", in: defaults)
         #expect(SharedSettings.recentSearches(in: defaults) == ["rust"])

@@ -24,7 +24,7 @@ struct ResultsList<Empty: View>: View {
     var body: some View {
         content
             // Again when the Kura address changes, for a notes list.
-            .task(id: "\(app.serverURL)|\(app.searchPage.niwaURL)|\(model.source == .notes ? app.notesVault : "")") { await load() }
+            .task(id: "\(app.serverURL)|\(app.searchPage.niwaURL)|\(app.notesFrom.rawValue)|\(model.source == .notes ? app.notesVault : "")") { await load() }
             .pullToRefresh { await load() }
             // Every minute while the app is in front and the list is up:
             // anything new shows as a banner, never by redrawing the list
@@ -65,10 +65,12 @@ struct ResultsList<Empty: View>: View {
         model.wantsFacets = app.searchPage.searchFilters
         model.semantic = app.semanticOn
         model.webSuggestions = { [app] in await app.webSuggestions(for: $0) }
-        // Notes come from Kura (a notes list, and the Library's All); a
-        // notes list searches the vaults picked in its filter.
-        model.kura = app.notesKura
-        model.vaults = model.source == .notes ? app.notesVault : nil
+        // Notes come from Kura or from Hister (Settings → Notes → Notes
+        // From); from Kura, a notes list searches the vaults picked in its
+        // filter, from Hister the default vault alone.
+        model.kura = app.notesKuraInUse
+        model.notesFromHister = app.notesFrom == .hister
+        model.vaults = model.source == .notes && app.notesFrom == .kura ? app.notesVault : nil
         model.offlineOrigin = OfflineStore.origin(server: app.serverURL, kura: app.searchPage.niwaURL)
         await model.load(using: app.client)
     }

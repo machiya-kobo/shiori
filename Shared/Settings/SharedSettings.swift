@@ -78,6 +78,11 @@ nonisolated enum SharedSettings {
         static let obsidianVault = "obsidianVault"
         static let niwaURL = "niwaURL"
         static let konbiniURL = "konbiniURL"
+        /// Where notes come from: "kura" or "hister" ("" or unset until the
+        /// person picks: Kura when one is set up, else Hister;
+        /// HisterKit's `NotesSource`). This device's own, never sent to
+        /// the account.
+        static let notesSource = "notesSource"
         /// The small-web gateway (Gemini and Gopher search,
         /// docs/smallweb.md), its tab, and where a result opens:
         /// "gateway" (its HTML page) or "direct" (the gemini:// or gopher://
@@ -123,6 +128,7 @@ nonisolated enum SharedSettings {
     static let resultStyles = ["tint", "solid", "bar", "none"]
     static let smallWebOpens = ["gateway", "direct"]
     static let clickOpensChoices = ["auto", "original", "preview"]
+    static let notesSources = ["", "kura", "hister"]
     /// The rooms' theme keys, `AppPalette.all`'s (here because the Safari
     /// extension doesn't link HisterKit; tests keep the three lists alike).
     static let palettes = [
@@ -158,6 +164,7 @@ nonisolated enum SharedSettings {
         if let value = values[Key.palette] as? String, palettes.contains(value) { set(value, Key.palette) }
         if let value = values[Key.resultStyle] as? String, resultStyles.contains(value) { set(value, Key.resultStyle) }
         if let value = values[Key.smallWebOpen] as? String, smallWebOpens.contains(value) { set(value, Key.smallWebOpen) }
+        if let value = values[Key.notesSource] as? String, notesSources.contains(value) { set(value, Key.notesSource) }
         if let value = values[Key.pills] as? [Any], value.isEmpty || !PillOrder.clean(value).isEmpty {
             set(PillOrder.clean(value), Key.pills)
         }
@@ -225,7 +232,7 @@ nonisolated enum SharedSettings {
         // The Hister server too, so the extension follows the app's.
         for key in [
             Key.obsidianVault, Key.niwaURL, Key.konbiniURL, Key.textSize, Key.serverURL, Key.resultStyle,
-            Key.smallwebURL, Key.smallWebOpen, Key.palette,
+            Key.smallwebURL, Key.smallWebOpen, Key.palette, Key.notesSource,
         ] {
             if let value = defaults.string(forKey: key) { payload[key] = value }
         }

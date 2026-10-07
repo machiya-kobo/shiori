@@ -55,7 +55,7 @@ struct AllResults: View {
 
     var body: some View {
         content
-            .task(id: "\(query)|\(app.searchPage.niwaURL)") { await load() }
+            .task(id: "\(query)|\(app.searchPage.niwaURL)|\(app.notesFrom.rawValue)") { await load() }
             // Return after typing: the web joins what's already shown.
             .task(id: webOn) {
                 if webOn, web.phase == .idle { await web.load(searx: app.searx, hister: app.client) }
@@ -85,7 +85,8 @@ struct AllResults: View {
         pages.semantic = app.semanticOn
         pages.webSuggestions = { [app] in await app.webSuggestions(for: $0) }
         notes.webSuggestions = { [app] in await app.webSuggestions(for: $0) }
-        notes.kura = app.notesKura
+        notes.kura = app.notesKuraInUse
+        notes.notesFromHister = app.notesFrom == .hister
         async let mine: Void = pages.load(using: app.client)
         async let vault: Void = notes.load(using: app.client)
         // The Code pill's count: Hister's own index, nothing spent.

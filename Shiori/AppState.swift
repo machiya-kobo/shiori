@@ -205,6 +205,16 @@ final class AppState {
         KuraClient(serverURL: searchPage.niwaURL, signIn: machiyaSignIn)
     }
 
+    /// Where notes come from (Settings → Notes → Notes From): the person's
+    /// choice, else Kura when one is set up, else Hister (`NotesSource`).
+    /// From Hister, only the default vault's notes (`Notes.histerNoteShown`).
+    var notesFrom: NotesSource {
+        NotesSource.effective(choice: searchPage.notesSource, kuraConfigured: notesKura != nil)
+    }
+
+    /// Kura, when notes come from it; nil when they come from Hister.
+    var notesKuraInUse: KuraClient? { notesFrom == .kura ? notesKura : nil }
+
     // MARK: Hister's token
 
     /// Hister's access token (Settings → Account), from the Keychain
@@ -954,6 +964,9 @@ struct SearchPageOptions: Equatable {
     var obsidianVault = ""
     var niwaURL = ""
     var konbiniURL = ""
+    /// Where notes come from: "kura", "hister", or "" until the person
+    /// picks (`AppState.notesFrom`). This device's own.
+    var notesSource = ""
     /// The small-web gateway (Gemini and Gopher search), its tab, and
     /// where a result opens: "gateway" (its HTML page, the default) or
     /// "direct" (the gemini:// link, for an app such as Lagrange).
@@ -1011,6 +1024,7 @@ struct SearchPageOptions: Equatable {
         if let v = defaults.string(forKey: K.obsidianVault), !v.isEmpty { obsidianVault = v }
         if let v = defaults.string(forKey: K.niwaURL) { niwaURL = v }
         if let v = defaults.string(forKey: K.konbiniURL) { konbiniURL = v }
+        if let v = defaults.string(forKey: K.notesSource), SharedSettings.notesSources.contains(v) { notesSource = v }
         if let v = defaults.string(forKey: K.smallwebURL), !v.isEmpty { smallwebURL = v }
         flag(K.smallWebTab, &smallWebTab)
         if let v = defaults.string(forKey: K.smallWebOpen), SharedSettings.smallWebOpens.contains(v) { smallWebOpen = v }
@@ -1046,6 +1060,7 @@ struct SearchPageOptions: Equatable {
         defaults.set(obsidianVault, forKey: K.obsidianVault)
         defaults.set(niwaURL, forKey: K.niwaURL)
         defaults.set(konbiniURL, forKey: K.konbiniURL)
+        defaults.set(notesSource, forKey: K.notesSource)
         defaults.set(smallwebURL, forKey: K.smallwebURL)
         defaults.set(smallWebTab, forKey: K.smallWebTab)
         defaults.set(smallWebOpen, forKey: K.smallWebOpen)

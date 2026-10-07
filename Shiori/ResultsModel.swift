@@ -122,6 +122,11 @@ final class ResultsModel {
     /// address in Settings → Search → Notes: then there are no notes). Set by the
     /// list before it loads.
     var kura: KuraClient?
+    /// Notes from Hister instead (`AppState.notesFrom`): the default vault's
+    /// alone (`HisterClient.searchNotes`). Set by the list before it loads.
+    var notesFromHister = false
+    /// Whether this list has notes to show at all.
+    private var hasNotes: Bool { notesFromHister || kura != nil }
     /// Which of Kura's vaults a notes list searches ("all", or a name);
     /// nil for the default only. Set by the list (`AppState.notesVault`).
     var vaults: String?
@@ -273,7 +278,18 @@ final class ResultsModel {
         guard source == .notes else {
             return try await client.search(text, sort: sort, pageKey: pageKey, limit: limit, options: options)
         }
-        guard let kura else { return SearchPage(total: 0, documents: [], nextPageKey: nil, suggestion: nil) }
+        return try await fetchNotes(client, text, sort: sort, pageKey: pageKey, limit: limit, vaults: vaults)
+            ?? SearchPage(total: 0, documents: [], nextPageKey: nil, suggestion: nil)
+    }
+
+    /// A page of notes from wherever they come from: Hister (the default
+    /// vault's alone; `vaults` doesn't apply) or Kura; nil with neither.
+    private func fetchNotes(
+        _ client: HisterClient, _ text: String, sort: SearchSort, pageKey: String? = nil, limit: Int = 30,
+        vaults: String? = nil
+    ) async throws(HisterError) -> SearchPage? {
+        if notesFromHister { return try await client.searchNotes(text, sort: sort, pageKey: pageKey, limit: limit) }
+        guard let kura else { return nil }
         return try await kura.search(text, sort: sort, pageKey: pageKey, limit: limit, vaults: vaults)
     }
 
@@ -281,13 +297,13 @@ final class ResultsModel {
     /// unfiltered: Kura has no visits, sites or Hister's filter words, so
     /// any other order, a filter, or a whole-list sort shows your pages.
     private var merges: Bool {
-        source == .all && kura != nil && order == .newest && filters.isEmpty && dateRange == nil && !loadsAll
+        source == .all && hasNotes && order == .newest && filters.isEmpty && dateRange == nil && !loadsAll
     }
 
     /// The Library's All, first page: a page of each, placed by date.
-    private func loadMerged(using client: HisterClient, kura: KuraClient, generation mine: Int) async {
+    private func loadMerged(using client: HisterClient, generation mine: Int) async {
         do {
-            async let notesPage = try? kura.search(query, sort: .newest)
+            async let notesPage = try? fetchNotes(client, query, sort: .newest)
             let pages = try await client.search(query, sort: .newest, options: options)
             let notes = await notesPage
             guard mine == generation else { return }
@@ -315,7 +331,7 @@ final class ResultsModel {
     /// The Library's All, on scrolling: the next page of whichever list
     /// ran out, until something can be placed (a few tries at most).
     private func loadMoreMerged(using client: HisterClient) async {
-        guard var merge, let kura, !isLoadingMore else { return }
+        guard var merge, hasNotes, !isLoadingMore else { return }
         isLoadingMore = true
         defer { isLoadingMore = false }
         let mine = generation
@@ -325,7 +341,7 @@ final class ResultsModel {
                 merge.add(pages: page.documents, next: page.nextPageKey)
             }
             if merge.needsNotes, let key = merge.notesKey {
-                if let page = try? await kura.search(query, sort: .newest, pageKey: key) {
+                if let page = try? await fetchNotes(client, query, sort: .newest, pageKey: key) {
                     merge.add(notes: page.documents, next: page.nextPageKey)
                 } else {
                     merge.endNotes()
@@ -422,8 +438,8 @@ final class ResultsModel {
         let mine = generation
         if documents.isEmpty { phase = .loading }
         merge = nil
-        if merges, let kura {
-            await loadMerged(using: client, kura: kura, generation: mine)
+        if merges {
+            await loadMerged(using: client, generation: mine)
             return
         }
         if loadsAll {
@@ -491,8 +507,8 @@ final class ResultsModel {
         let mine = generation
         let plain = SearchOptions(dateFrom: dateRange?.lowerBound, dateTo: dateRange?.upperBound, semantic: semantic)
         var count = 0
-        if merge != nil, let kura {
-            async let notesPage = try? kura.search(query, sort: .newest)
+        if merge != nil, hasNotes {
+            async let notesPage = try? fetchNotes(client, query, sort: .newest)
             guard let pages = try? await client.search(query, sort: .newest, options: plain) else { return }
             let notes = await notesPage
             count = NewItems.count(pages.documents + (notes?.documents ?? []), seen: seen, newestShown: newestShown)

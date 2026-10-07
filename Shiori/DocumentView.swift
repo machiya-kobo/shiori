@@ -246,8 +246,9 @@ struct DocumentView: View {
                         .disabled(preview == nil || summary == .working)
                 }
                 // Save This Note's Links: the default vault's notes only
-                // (Kura gives a work note none, and it's never offered).
-                if note != nil, !workNote, let path = Notes.path(of: document.url, cards: app.konbiniCards) {
+                // (Kura gives a work note none, and it's never offered), and
+                // only with a Kura address: the links are Kura's, wherever notes come from.
+                if note != nil, !workNote, app.notesKura != nil, let path = Notes.path(of: document.url, cards: app.konbiniCards) {
                     Button("Save Links to Hister…", systemImage: "link.badge.plus") {
                         app.saveLinksRequest = .note(path)
                     }
@@ -321,11 +322,20 @@ struct DocumentView: View {
     }
 
     private func load() async {
-        if app.noteLinks(for: document) != nil || Notes.otherVault(of: document.url) != nil {
-            // Every note from Kura, its sanitized HTML (notes come only from
-            // Kura; Hister may not hold one). A private vault's is never kept
-            // (`OfflineStore.keepable`); the default vault's may be, for
-            // reading offline.
+        let isNote = app.noteLinks(for: document) != nil || Notes.otherVault(of: document.url) != nil
+        if isNote, app.notesFrom == .hister, !Notes.histerNoteShown(document.url) {
+            // Notes from Hister: the default vault's alone. Another vault's
+            // (shared or private: without Kura they can't be told apart) is
+            // never asked of Hister.
+            error = .notFound
+            return
+        }
+        if isNote, app.notesFrom == .kura {
+            // Every note from Kura, its sanitized HTML (Hister may not hold
+            // one). A private vault's is never kept (`OfflineStore.keepable`);
+            // the default vault's may be, for reading offline. From Hister
+            // (Settings → Notes → Notes From), the default vault's note is
+            // Hister's readable copy, below.
             let vault = Notes.otherVault(of: document.url) ?? ""
             guard let kura = app.notesKura, let path = Notes.path(of: document.url, cards: []) else {
                 error = .unreachable

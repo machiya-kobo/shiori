@@ -233,6 +233,15 @@ struct SettingsView: View {
             .listRowBackground(palette.surface)
 
             Section {
+                // Where notes come from: shows the one in use (Kura when one
+                // is set up, until a choice is made); picking one keeps it.
+                Picker("Notes From", selection: Binding(
+                    get: { app.notesFrom.rawValue },
+                    set: { app.searchPage.notesSource = $0 }
+                )) {
+                    Text("Kura").tag(NotesSource.kura.rawValue)
+                    Text("Hister").tag(NotesSource.hister.rawValue)
+                }
                 // Each field in a labelled row with its own label hidden: a
                 // Mac Form shows a TextField's label as well (it read twice).
                 LabeledContent("Obsidian Vault") {
@@ -271,7 +280,7 @@ struct SettingsView: View {
             } header: {
                 Text("Notes")
             } footer: {
-                Text("Notes open in this Obsidian vault, with their Kura page and Konbini card linked beside them.")
+                Text("Notes open in this Obsidian vault, with their Kura page and Konbini card linked beside them. From Hister, only your default vault's notes.")
             }
             .listRowBackground(palette.surface)
 

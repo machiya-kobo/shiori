@@ -422,8 +422,9 @@ struct DocumentMenu: View {
         Divider()
         // Save This Note's Links: the default vault's notes only, shared vaults
         // included in that "not": Kura's /api/note is asked by path alone,
-        // which it reads in the default vault.
-        if app.noteLinks(for: document) != nil, Notes.otherVault(of: document.url) == nil,
+        // which it reads in the default vault. Only with a Kura address: the
+        // links are Kura's, wherever notes come from.
+        if app.noteLinks(for: document) != nil, Notes.otherVault(of: document.url) == nil, app.notesKura != nil,
             let path = Notes.path(of: document.url, cards: app.konbiniCards)
         {
             Button("Save Links to Hister…", systemImage: "link.badge.plus") { app.saveLinksRequest = .note(path) }
