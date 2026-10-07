@@ -47,11 +47,11 @@ struct ListControls: View {
     let reload: () -> Void
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
-    @State private var customRange = false
+    @State private var filteringSheet = false
     @State private var file: ExportFile?
     @State private var failure: String?
 
-    private static let dates: [(word: String, title: String, bucket: String)] = [
+    static let dates: [(word: String, title: String, bucket: String)] = [
         ("updated:<24h", "Past 24 Hours", "last_24h"),
         ("updated:<7d", "Past Week", "last_7d"),
         ("updated:<30d", "Past Month", "last_30d"),
@@ -77,10 +77,8 @@ struct ListControls: View {
             }
         }
         .listActions(listExport)
-        .sheet(isPresented: $customRange) {
-            DateRangeSheet(initial: model.dateRange) { range in
-                change { model.setDateRange(range) }
-            }
+        .sheet(isPresented: $filteringSheet) {
+            FilterSheet(model: model, dates: Self.dates, reload: reload)
         }
         .fileExporter(
             isPresented: Binding(get: { file != nil }, set: { if !$0 { file = nil } }),
@@ -159,31 +157,16 @@ struct ListControls: View {
     }
 
     /// Date, Site, Visits (and Language, Type) as submenus of one icon.
+    /// Filter opens a sheet (`FilterSheet`), as Mail's and Photos' filters
+    /// do: no submenus, which iOS stacks as cards over the menu.
     private var filterMenu: some View {
-        Menu {
-            dateMenu
-            termMenu("Site", facet: "domains", field: "domain", excludable: true)
-            // Your labels and collections (Hister has no label facet, so
-            // from the server's rules, without counts). Not for notes: Kura
-            // reads none of Hister's filters.
-            if model.source != .notes, !app.rules.labels.isEmpty {
-                labelMenu
-            }
-            termMenu("Visits", facet: "visits", field: "visits")
-            if (model.facets?.terms["languages"]?.terms.count ?? 0) > 1 {
-                termMenu("Language", facet: "languages", field: "language")
-            }
-            if (model.facets?.terms["types"]?.terms.count ?? 0) > 1 {
-                termMenu("Type", facet: "types", field: "type")
-            }
-            if filtering {
-                Divider()
-                Button("Clear Filters", systemImage: "xmark.circle") { change { model.clearFilters() } }
-            }
+        Button {
+            filteringSheet = true
         } label: {
             Label(filtering ? "Filtered" : "Filter", systemImage: filtering
                 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
         }
+        .buttonStyle(.borderless)
         .help("Filter")
         .accessibilityLabel(filtering ? "Filter, filters on" : "Filter")
     }
@@ -253,73 +236,6 @@ struct ListControls: View {
         }
     }
 
-    private var dateMenu: some View {
-        Menu {
-            Button("Any Time") { change { model.setFilter(nil, replacing: "updated:"); model.setDateRange(nil) } }
-            ForEach(Self.dates, id: \.word) { date in
-                Button {
-                    change { model.setFilter(date.word, replacing: "updated:") }
-                } label: {
-                    Text(title(date.title, count: model.facets?.dates.first { $0.name == date.bucket }?.count))
-                }
-            }
-            Divider()
-            Button("Custom Range…") { customRange = true }
-        } label: {
-            Label("Date", systemImage: "calendar")
-        }
-    }
-
-    private func termMenu(_ name: String, facet: String, field: String, excludable: Bool = false) -> some View {
-        let terms = model.facets?.terms[facet]?.terms ?? []
-        return Menu {
-            if terms.isEmpty {
-                Text("Nothing to filter by")
-            }
-            ForEach(terms, id: \.term) { term in
-                Button(title(term.label ?? term.term, count: term.count)) {
-                    change { model.toggleFilter("\(field):\(term.term)") }
-                }
-            }
-            if excludable, !terms.isEmpty {
-                Menu("Hide") {
-                    ForEach(terms, id: \.term) { term in
-                        Button(term.label ?? term.term) { change { model.toggleFilter("-\(field):\(term.term)") } }
-                    }
-                }
-            }
-        } label: {
-            Label(name, systemImage: facet == "domains" ? "globe" : facet == "visits" ? "eye" : facet == "languages" ? "character.bubble" : "doc")
-        }
-        .disabled(terms.isEmpty)
-    }
-
-    /// Collections (their `@` keyword, which Hister expands), then labels,
-    /// then Hide for a label.
-    private var labelMenu: some View {
-        Menu {
-            if !app.rules.collections.isEmpty {
-                Section("Collections") {
-                    ForEach(app.rules.collections, id: \.name) { collection in
-                        Button(CollectionIcon.title(for: collection.name)) { change { model.toggleFilter(collection.name) } }
-                    }
-                }
-            }
-            Section("Labels") {
-                ForEach(app.rules.labels, id: \.self) { label in
-                    Button(label) { change { model.toggleFilter("label:\(label)") } }
-                }
-            }
-            Menu("Hide") {
-                ForEach(app.rules.labels, id: \.self) { label in
-                    Button(label) { change { model.toggleFilter("-label:\(label)") } }
-                }
-            }
-        } label: {
-            Label("Label", systemImage: "tag")
-        }
-    }
-
     private func title(_ name: String, count: Int?) -> String {
         guard let count else { return name }
         return "\(name) (\(count))"
@@ -357,6 +273,207 @@ struct ListControls: View {
         case "language": return "Language: \(value)"
         case "type": return "Type: \(value)"
         default: return word
+        }
+    }
+}
+
+/// Filter: every filter in one sheet, as Mail's and Photos' do, with no
+/// submenus. Date (one at a time, or a custom range), then Site, Label,
+/// Visits, Language and Type (when there's a choice), each with its count
+/// where Hister gives one (not for labels: from the server's rules). A tap
+/// applies or removes a filter at once and the list behind follows; Site
+/// and Label rows also Hide (a swipe, or the context menu). The search
+/// narrows sites and labels, the long lists. Done closes it.
+private struct FilterSheet: View {
+    let model: ResultsModel
+    let dates: [(word: String, title: String, bucket: String)]
+    let reload: () -> Void
+    @Environment(AppState.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.palette) private var palette
+    @State private var search = ""
+    @State private var customRange = false
+
+    private var text: String { search.trimmingCharacters(in: .whitespaces).lowercased() }
+    private func matches(_ name: String) -> Bool { text.isEmpty || name.lowercased().contains(text) }
+    private func terms(_ facet: String) -> [Facets.Term] { model.facets?.terms[facet]?.terms ?? [] }
+    private var filtering: Bool { !model.filters.isEmpty || model.dateRange != nil }
+
+    private func edit(_ change: () -> Void) {
+        change()
+        reload()
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                #if os(macOS)
+                // A plain field on the Mac, as the label picker's: a sheet's
+                // .searchable joined the window's toolbar search.
+                TextField("Find a Site or Label", text: $search, prompt: Text("Find a Site or Label"))
+                    .textFieldStyle(.roundedBorder)
+                    .labelsHidden()
+                #endif
+                if text.isEmpty { dateSection }
+                termSection("Site", facet: "domains", field: "domain", hideable: true)
+                labelSection
+                if text.isEmpty {
+                    termSection("Visits", facet: "visits", field: "visits")
+                    if terms("languages").count > 1 { termSection("Language", facet: "languages", field: "language") }
+                    if terms("types").count > 1 { termSection("Type", facet: "types", field: "type") }
+                }
+            }
+            .themedBackground()
+            #if os(iOS)
+            // No .searchSuggestions(.hidden, for: .content): on iOS 27 it
+            // blanked a sheet (CLAUDE.md).
+            .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Find a Site or Label")
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .navigationTitle("Filter")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+                if filtering {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Clear") { edit { model.clearFilters() } }
+                    }
+                }
+            }
+            .sheet(isPresented: $customRange) {
+                DateRangeSheet(initial: model.dateRange) { range in edit { model.setDateRange(range) } }
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 380, minHeight: 520)
+        #endif
+        .presentationDetents([.medium, .large])
+    }
+
+    private var dateSection: some View {
+        let chosen = model.filters.first { $0.hasPrefix("updated:") }
+        return Section("Date") {
+            row("Any Time", on: chosen == nil && model.dateRange == nil) {
+                edit {
+                    model.setFilter(nil, replacing: "updated:")
+                    model.setDateRange(nil)
+                }
+            }
+            ForEach(dates, id: \.word) { date in
+                row(date.title, count: model.facets?.dates.first { $0.name == date.bucket }?.count, on: chosen == date.word) {
+                    edit { model.setFilter(chosen == date.word ? nil : date.word, replacing: "updated:") }
+                }
+            }
+            row(model.dateRange.map { $0.lowerBound.formatted(date: .abbreviated, time: .omitted) + " – " + $0.upperBound.formatted(date: .abbreviated, time: .omitted) } ?? "Custom Range…",
+                on: model.dateRange != nil) { customRange = true }
+        }
+    }
+
+    @ViewBuilder
+    private func termSection(_ name: String, facet: String, field: String, hideable: Bool = false) -> some View {
+        let shown = terms(facet).filter { matches($0.label ?? $0.term) }
+        if !shown.isEmpty {
+            Section(name) {
+                ForEach(shown, id: \.term) { term in
+                    let word = "\(field):\(term.term)"
+                    row(term.label ?? term.term, count: term.count, on: model.filters.contains(word), hidden: model.filters.contains("-" + word)) {
+                        edit { model.toggleFilter(word) }
+                    }
+                    .modifier(HideAction(enabled: hideable) { edit { model.toggleFilter("-" + word) } })
+                }
+            }
+        }
+    }
+
+    /// Collections (their `@` keyword, which Hister expands), then labels.
+    /// Not for notes: Kura reads none of Hister's filters.
+    @ViewBuilder private var labelSection: some View {
+        if model.source != .notes {
+            let collections = app.rules.collections.filter { matches(CollectionIcon.title(for: $0.name)) }
+            let labels = app.rules.labels.filter(matches)
+            if !collections.isEmpty || !labels.isEmpty {
+                Section("Label") {
+                    ForEach(collections, id: \.name) { collection in
+                        row(on: model.filters.contains(collection.name)) {
+                            edit { model.toggleFilter(collection.name) }
+                        } label: {
+                            CollectionLabel(name: collection.name)
+                        }
+                    }
+                    ForEach(labels, id: \.self) { label in
+                        let word = "label:\(label)"
+                        row(on: model.filters.contains(word), hidden: model.filters.contains("-" + word)) {
+                            edit { model.toggleFilter(word) }
+                        } label: {
+                            LabelChip(label: label)
+                        }
+                        .modifier(HideAction(enabled: true) { edit { model.toggleFilter("-" + word) } })
+                    }
+                }
+            }
+        }
+        if !text.isEmpty, terms("domains").filter({ matches($0.label ?? $0.term) }).isEmpty,
+           app.rules.labels.filter(matches).isEmpty, app.rules.collections.filter({ matches(CollectionIcon.title(for: $0.name)) }).isEmpty {
+            Text("No sites or labels match “\(search)”.")
+                .foregroundStyle(palette.secondaryText)
+        }
+    }
+
+    private func row(_ title: String, count: Int? = nil, on: Bool, hidden: Bool = false, action: @escaping () -> Void) -> some View {
+        row(on: on, hidden: hidden, action: action) {
+            HStack {
+                Text(title)
+                Spacer()
+                if let count {
+                    Text(count.formatted())
+                        .foregroundStyle(palette.secondaryText)
+                        .monospacedDigit()
+                }
+            }
+        }
+    }
+
+    /// A tap applies (or removes) it; a tick says it's on, a struck eye that it's hidden.
+    private func row(on: Bool, hidden: Bool = false, action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
+        Button(action: action) {
+            HStack {
+                label()
+                if on {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(palette.accent)
+                        .accessibilityLabel("Applied")
+                } else if hidden {
+                    Image(systemName: "eye.slash")
+                        .foregroundStyle(palette.secondaryText)
+                        .accessibilityLabel("Hidden")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Hide for a site or label row: a swipe on iOS, the context menu everywhere.
+private struct HideAction: ViewModifier {
+    let enabled: Bool
+    let hide: () -> Void
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .swipeActions(edge: .trailing) {
+                    Button("Hide", systemImage: "eye.slash", action: hide)
+                }
+                .contextMenu {
+                    Button("Hide These Pages", systemImage: "eye.slash", action: hide)
+                }
+        } else {
+            content
         }
     }
 }

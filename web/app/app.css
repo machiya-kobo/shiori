@@ -259,6 +259,11 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .controls .quiet.active { color: var(--accent); }
 .controls .menu-list { left: 0; right: auto; }
 .menu-list .check { display: inline-block; width: 1.2em; color: var(--accent); }
+/* A menu's own search (Filter's labels): it narrows the items under it. */
+.menu-list .menu-find {
+  display: block; width: calc(100% - 8px); margin: 4px; padding: 8px 10px; font: inherit; font-size: 0.9375rem;
+  color: var(--text); background: var(--bg); border: 1px solid var(--line2); border-radius: 8px;
+}
 /* A folded run of one site (Fold Repeated Sites), as the apps' row. */
 .fold-row { list-style: none; border-bottom: 1px solid var(--line); }
 .fold-more {

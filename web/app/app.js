@@ -962,12 +962,29 @@ const DATES = [['updated:<24h', 'Past 24 Hours'], ['updated:<7d', 'Past Week'], 
 function dropMenu(button, items) {
   const wrap = h('div', { class: 'menu' });
   const listEl = h('div', { class: 'menu-list', hidden: true, role: 'menu' });
-  const fillItems = () =>
-    fill(listEl, ...(typeof items === 'function' ? items() : items).map((it) =>
+  // `{ find: 'Prompt' }` among the items is a field that narrows the
+  // items marked `findable` (a long list: Filter's labels) as you type.
+  const fillItems = () => {
+    const els = (typeof items === 'function' ? items() : items).map((it) =>
       it === '-'
         ? h('hr')
-        : h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': it.checked ? 'true' : 'false', class: it.danger ? 'danger' : undefined, onclick: () => ((listEl.hidden = true), it.pick()) }, h('span', { class: 'check' }, it.checked ? '✓' : ''), it.text),
-    ));
+        : it.find
+          ? h('input', { type: 'search', class: 'menu-find', placeholder: it.find, 'aria-label': it.find, autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false' })
+          : Object.assign(
+              h('button', { type: 'button', role: 'menuitemradio', 'aria-checked': it.checked ? 'true' : 'false', class: it.danger ? 'danger' : undefined, onclick: () => ((listEl.hidden = true), it.pick()) }, h('span', { class: 'check' }, it.checked ? '✓' : ''), it.text),
+              { _find: it.findable ? String(it.text).toLowerCase() : null },
+            ),
+    );
+    fill(listEl, ...els);
+    const field = els.find((el) => el.classList && el.classList.contains('menu-find'));
+    if (field) {
+      field.addEventListener('input', () => {
+        const text = field.value.trim().toLowerCase();
+        for (const el of els) if (el._find != null) el.hidden = !!text && !el._find.includes(text);
+      });
+      field.addEventListener('keydown', (e) => e.stopPropagation());
+    }
+  };
   button.addEventListener('click', (e) => {
     e.stopPropagation();
     const opening = listEl.hidden;
@@ -1189,10 +1206,11 @@ function controls(view, params, { search = false, notes = false } = {}) {
             ? []
             : [
                 '-',
+                { find: 'Find a Label' },
                 { text: 'Any Label', checked: !c.label, pick: () => set({ l: '' }) },
-                ...collections.map((col) => ({ text: S.collectionTitle(col.name), checked: c.label === col.name, pick: () => set({ l: col.name }) })),
+                ...collections.map((col) => ({ text: S.collectionTitle(col.name), findable: true, checked: c.label === col.name, pick: () => set({ l: col.name }) })),
                 ...(collections.length ? ['-'] : []),
-                ...labels.map((name) => ({ text: name, checked: c.label === `label:${name}`, pick: () => set({ l: `label:${name}` }) })),
+                ...labels.map((name) => ({ text: name, findable: true, checked: c.label === `label:${name}`, pick: () => set({ l: `label:${name}` }) })),
               ]),
         ]),
     // A Notes list: which of Kura's vaults (All, or one; work vaults are
