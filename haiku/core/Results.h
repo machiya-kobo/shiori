@@ -40,6 +40,20 @@ struct Vault {
 	bool isDefault = false;
 };
 
+// search-core's kuraPath: an http(s) address's path as Kura reads it (the URL
+// standard's dot segments, with \ and %2e; ASCII escapes decoded once; leading
+// slashes folded; dot segments again). ok false when it isn't http(s).
+std::string KuraPath(const std::string& url, bool* ok);
+// search-core's noteVault: the vault an address is under (/v/<name>/), or ''.
+std::string NoteVault(const std::string& url);
+// search-core's histerNoteShown: one of Hister's notes a client may show, the
+// default vault's alone (another vault, shared or private, never).
+bool HisterNoteShown(const std::string& url);
+// search-core's histerNoteDocuments: Hister's reply to a notes search as notes,
+// the default vault's alone, their path from Kura's metadata.vault_path and
+// their folder as host; total less what was dropped.
+ResultPage ParseHisterNotes(const std::string& body);
+
 // The host of an http(s) URL, lowercased, without "www." or the port; ''.
 std::string HostOf(const std::string& url);
 

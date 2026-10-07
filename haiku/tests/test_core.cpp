@@ -52,9 +52,29 @@ static void TestVectors()
 		else if (fn == "kuraURL") got = KuraSearchURL("https://kura.example/", in, 5);
 		else if (fn == "kuraURLVault") got = KuraSearchURL("https://kura.example/", in, 30, 30, "all");
 		else if (fn == "histerSearchURL") got = HisterSearchURL("https://h.example", in, Pill::Pages);
+		else if (fn == "histerNotesText") got = HisterNotesText(in);
+		else if (fn == "histerNotesSearchURL") got = HisterSearchURL("https://h.example", in, Pill::Notes);
+		else if (fn == "histerNoteShown") got = HisterNoteShown(in) ? "true" : "false";
+		else if (fn == "notesSource") {
+			size_t bar = in.rfind('|');
+			got = NotesSource(in.substr(0, bar), bar != std::string::npos && in.substr(bar + 1) == "1");
+		}
 		else got = "(unknown function)";
 		Check(fn + "(" + in + ")", got, v.want);
 	}
+	// Notes from Hister: scripts/notes-source-cases.json's "documents".
+	ResultPage np = ParseHisterNotes("{\"total\":4,\"documents\":["
+		"{\"url\":\"https://kura.example/n/Projects/Lantern%20festival%20kit\",\"title\":\"Lantern festival kit\","
+		"\"label\":\"vault\",\"added\":1790000000,\"updated\":1790500000,"
+		"\"metadata\":{\"source\":\"vault\",\"vault_path\":\"Projects/Lantern festival kit.md\"}},"
+		"{\"url\":\"https://kura.example/v/work/n/Secret%20plan\",\"title\":\"Secret plan\",\"label\":\"vault\"},"
+		"{\"url\":\"https://kura.example/n/Workshop/Chochin%20build%20log\",\"title\":\"Ch\\u014dchin build log\","
+		"\"label\":\"vault\",\"added\":1789900000},"
+		"{\"url\":\"javascript:alert(1)\",\"title\":\"Not a note\",\"label\":\"vault\"}]}");
+	Check("notes from Hister", std::to_string(np.total) + " " + std::to_string(np.results.size()) + " "
+		+ (np.results.size() == 2 ? np.results[0].path + "|" + np.results[0].host + "|" + std::to_string(int(np.results[1].updated))
+			+ "|" + (np.results[1].kind == Result::Note ? "note" : "page") : ""),
+		"2 2 Projects/Lantern festival kit.md|Projects|1789900000|note");
 	// Idempotent, as search-core's tests check.
 	Check("histerText twice", HisterText(HisterText("x")), HisterText("x"));
 	Check("kuraURL recent", KuraSearchURL("https://kura.example", "", 20), "https://kura.example/api/recent?limit=20&offset=0");

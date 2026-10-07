@@ -30,6 +30,12 @@ std::string ExcludingNotes(const std::string& text);
 // search-core: a Hister search as sent (the last word a prefix, never the
 // notes, and never the files or code unless it asks).
 std::string HisterText(const std::string& text);
+// search-core's notesSource (scripts/notes-source-cases.json): "hister" when chosen,
+// else "kura" when one is set up, else "hister". choice: the setting ('' until chosen).
+std::string NotesSource(const std::string& choice, bool kuraConfigured);
+// search-core's histerNotesText: the words (the last a prefix), "*" for the
+// newest, and label:vault (notes from Hister).
+std::string HisterNotesText(const std::string& text);
 // search-core: the Code pill's query (no filters in v0.1).
 std::string CodeQuery(const std::string& typed);
 // search-core: the Files tab's query.

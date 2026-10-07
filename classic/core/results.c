@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "json.h"
+#include "notetext.h"
 #include "results.h"
 
 const char *shiori_strstr(const char *s, const char *needle)
@@ -239,6 +240,14 @@ static int read_hister_doc(JsonReader *r, ShioriRow *row)
 							if (json_skip(r, t) == JSON_ERROR)
 								return 0;
 						}
+					} else if (json_is(r, "vault_path")) {
+						/* Kura's push: the note's path in its vault (notes from Hister) */
+						if ((t = json_next(r)) == JSON_STRING) {
+							COPY(row->path, r);
+						} else if (t == JSON_OBJECT || t == JSON_ARRAY) {
+							if (json_skip(r, t) == JSON_ERROR)
+								return 0;
+						}
 					} else if (json_skip(r, JSON_KEY) == JSON_ERROR) {
 						return 0;
 					}
@@ -364,11 +373,32 @@ static int read_kura_note(JsonReader *r, ShioriRow *row)
 	return 1;
 }
 
-static int parse_reply(const char *buf, long len, ShioriPage *page, ShioriRowFn fn, void *ctx, int kura)
+enum { FROM_HISTER, FROM_KURA, FROM_HISTER_NOTES };
+
+/* A note from Hister as a row: the default vault's alone; its folder as its place. */
+static int hister_note_row(ShioriRow *row)
+{
+	char *slash;
+
+	if (!shiori_hister_note_shown(row->url))
+		return 0;
+	row->kind = ROW_NOTE;
+	row->vault[0] = '\0';
+	row->host[0] = '\0';
+	slash = strrchr(row->path, '/');
+	if (slash != NULL && slash - row->path < (long) sizeof(row->host)) {
+		memcpy(row->host, row->path, (size_t) (slash - row->path));
+		row->host[slash - row->path] = '\0';
+	}
+	return 1;
+}
+
+static int parse_reply(const char *buf, long len, ShioriPage *page, ShioriRowFn fn, void *ctx, int from)
 {
 	JsonReader r;
 	ShioriRow row;
-	int t, sawList = 0, haveTotal = 0;
+	int t, sawList = 0, haveTotal = 0, kura = from == FROM_KURA;
+	long dropped = 0;
 
 	memset(page, 0, sizeof(*page));
 	json_init(&r, buf, len);
@@ -387,6 +417,10 @@ static int parse_reply(const char *buf, long len, ShioriPage *page, ShioriRowFn 
 					if (!(kura ? read_kura_note(&r, &row) : read_hister_doc(&r, &row)))
 						return 0;
 					page->received++;
+					if (from == FROM_HISTER_NOTES && !hister_note_row(&row)) {
+						dropped++;          /* another vault's, or not an address */
+						continue;
+					}
 					if (shiori_is_web_url(row.url) && fn != NULL)
 						fn(ctx, &row);
 				} else if (t == JSON_ARRAY) {
@@ -424,18 +458,25 @@ static int parse_reply(const char *buf, long len, ShioriPage *page, ShioriRowFn 
 	(void) sawList;
 	if (!haveTotal)
 		page->total = page->received;
+	/* Hister can't leave other vaults out itself: its total, less what this page dropped */
+	page->total = page->total > dropped ? page->total - dropped : 0;
 	page->ok = 1;
 	return 1;
 }
 
 int shiori_parse_hister(const char *buf, long len, ShioriPage *page, ShioriRowFn fn, void *ctx)
 {
-	return parse_reply(buf, len, page, fn, ctx, 0);
+	return parse_reply(buf, len, page, fn, ctx, FROM_HISTER);
+}
+
+int shiori_parse_hister_notes(const char *buf, long len, ShioriPage *page, ShioriRowFn fn, void *ctx)
+{
+	return parse_reply(buf, len, page, fn, ctx, FROM_HISTER_NOTES);
 }
 
 int shiori_parse_kura(const char *buf, long len, ShioriPage *page, ShioriRowFn fn, void *ctx)
 {
-	return parse_reply(buf, len, page, fn, ctx, 1);
+	return parse_reply(buf, len, page, fn, ctx, FROM_KURA);
 }
 
 int shiori_parse_vaults(const char *buf, long len, ShioriVault *out, int max)

@@ -229,6 +229,20 @@ static void test_vectors(void)
 		} else if (strcmp(fn, "histerSearchURL") == 0) {
 			strcpy(got, "https://h.example/");
 			shiori_hister_search_target(v->in, PILL_ALL, 30, "", got + strlen(got), sizeof(got) - strlen(got));
+		} else if (strcmp(fn, "histerNotesText") == 0) {
+			shiori_hister_notes_text(v->in, got, sizeof(got));
+		} else if (strcmp(fn, "histerNotesSearchURL") == 0) {
+			strcpy(got, "https://h.example/");
+			shiori_hister_search_target(v->in, PILL_NOTES, 30, "", got + strlen(got), sizeof(got) - strlen(got));
+		} else if (strcmp(fn, "histerNoteShown") == 0) {
+			strcpy(got, shiori_hister_note_shown(v->in) ? "true" : "false");
+		} else if (strcmp(fn, "notesSource") == 0) {
+			const char *bar = strrchr(v->in, '|');
+			char choice[64];
+			long n = bar != NULL ? (long) (bar - v->in) : 0;
+			memcpy(choice, v->in, (size_t) n);
+			choice[n] = '\0';
+			strcpy(got, shiori_notes_source(choice, bar != NULL && bar[1] == '1'));
 		} else {
 			printf("FAIL unknown vector function %s\n", fn);
 			failed++;
@@ -461,6 +475,53 @@ static void test_credentials(void)
 	CHECK(tok[0] == '\0');
 }
 
+/* -- notes from Hister (scripts/notes-source-cases.json's "documents") -------------------- */
+
+static int gNotes;
+static ShioriRow gNoteRows[4];
+
+static void keep_note(void *ctx, const ShioriRow *row)
+{
+	(void) ctx;
+	if (gNotes < 4)
+		gNoteRows[gNotes] = *row;
+	gNotes++;
+}
+
+static void test_hister_notes(void)
+{
+	/* in pieces: C89 allows a string literal 509 characters */
+	static const char *const parts[] = {
+		"{\"total\": 4, \"documents\": [",
+		"{\"url\": \"https://kura.example/n/Projects/Lantern%20festival%20kit\", \"title\": \"Lantern festival kit\","
+		" \"text\": \"Everything for the summer <mark>lantern</mark> festival stall\", \"label\": \"vault\",",
+		" \"added\": 1790000000, \"updated\": 1790500000, \"metadata\": {\"source\": \"vault\","
+		" \"tags\": [\"lanterns\", \"festival\"], \"vault_path\": \"Projects/Lantern festival kit.md\"}},",
+		"{\"url\": \"https://kura.example/v/work/n/Secret%20plan\", \"title\": \"Secret plan\", \"label\": \"vault\","
+		" \"metadata\": {\"source\": \"vault\", \"vault_path\": \"Secret plan.md\"}},",
+		"{\"url\": \"https://kura.example/n/Workshop/Chochin%20build%20log\", \"title\": \"Ch\\u014dchin build log\","
+		" \"label\": \"vault\", \"added\": 1789900000, \"metadata\": {\"source\": \"vault\"}},",
+		"{\"url\": \"javascript:alert(1)\", \"title\": \"Not a note\", \"label\": \"vault\"}]}"
+	};
+	char reply[1400];
+	unsigned int k;
+	ShioriPage page;
+
+	reply[0] = '\0';
+	for (k = 0; k < sizeof(parts) / sizeof(parts[0]); k++)
+		strcat(reply, parts[k]);
+	gNotes = 0;
+	CHECK(shiori_parse_hister_notes(reply, (long) strlen(reply), &page, keep_note, NULL));
+	CHECK(page.total == 2 && gNotes == 2);
+	CHECK(gNoteRows[0].kind == ROW_NOTE && strcmp(gNoteRows[0].path, "Projects/Lantern festival kit.md") == 0);
+	CHECK(strcmp(gNoteRows[0].host, "Projects") == 0 && gNoteRows[0].updated == 1790500000L);
+	CHECK(strcmp(gNoteRows[1].title, "Ch\305\215chin build log") == 0 && gNoteRows[1].updated == 1789900000L);
+	CHECK(gNoteRows[1].host[0] == '\0');   /* no vault_path: no folder */
+	/* the same reply as pages: nothing filtered (the notes query is what asks for notes) */
+	gNotes = 0;
+	CHECK(shiori_parse_hister(reply, (long) strlen(reply), &page, keep_note, NULL) && page.total == 4);
+}
+
 /* -- Hister's page_key, round trip ------------------------------------------------------ */
 
 static void test_page_key(void)
@@ -641,6 +702,7 @@ int main(void)
 	test_hosts();
 	test_credentials();
 	test_page_key();
+	test_hister_notes();
 	test_roman();
 	test_query_bounds();
 	test_json_tokens();

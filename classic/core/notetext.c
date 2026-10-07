@@ -542,6 +542,187 @@ static long base_length(const char *url)
 	return p == NULL ? -1 : (long) (p - url);
 }
 
+/* -- Kura's reading of an address (search-core's kuraPath, noteVault) ---------------- */
+
+static int lower_eq(const char *a, const char *b, long n)
+{
+	long i;
+	for (i = 0; i < n; i++) {
+		char x = a[i], y = b[i];
+		if (x >= 'A' && x <= 'Z')
+			x = (char) (x + 32);
+		if (x != y)
+			return 0;
+	}
+	return 1;
+}
+
+/* "." or its escape, ".." or any mix of escapes: the URL standard's dot segments */
+static int single_dot(const char *s, long n)
+{
+	return (n == 1 && s[0] == '.') || (n == 3 && lower_eq(s, "%2e", 3));
+}
+
+static int double_dot(const char *s, long n)
+{
+	return (n == 2 && s[0] == '.' && s[1] == '.') || (n == 4 && (lower_eq(s, ".%2e", 4) || lower_eq(s, "%2e.", 4)))
+		|| (n == 6 && lower_eq(s, "%2e%2e", 6));
+}
+
+typedef struct Segs {
+	char *buf;          /* the joined path, "/a/b" */
+	long len, cap;
+	int ok;
+} Segs;
+
+static void segs_pop(Segs *p)
+{
+	while (p->len > 0 && p->buf[p->len - 1] != '/')
+		p->len--;
+	if (p->len > 0)
+		p->len--;               /* the '/' before the last segment */
+	p->buf[p->len] = '\0';
+}
+
+static void segs_push(Segs *p, const char *s, long n)
+{
+	if (p->len + 1 + n >= p->cap) {
+		p->ok = 0;
+		return;
+	}
+	p->buf[p->len++] = '/';
+	memcpy(p->buf + p->len, s, (size_t) n);
+	p->len += n;
+	p->buf[p->len] = '\0';
+}
+
+static int hex_value(char c)
+{
+	return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
+}
+
+int shiori_kura_path(const char *url, char *out, long cap)
+{
+	char one[600], decoded[600];
+	const char *p, *end, *seg;
+	long n, k;
+	Segs a, b;
+
+	out[0] = '\0';
+	if (lower_eq(url, "https://", 8))
+		p = url + 8;
+	else if (lower_eq(url, "http://", 7))
+		p = url + 7;
+	else
+		return 0;
+	p += strcspn(p, "/\\?#");             /* past the host */
+	end = p + strcspn(p, "?#");
+	/* the URL standard's path: separators / and \, dot segments resolved */
+	a.buf = one;
+	a.len = 0;
+	a.cap = (long) sizeof(one);
+	a.ok = 1;
+	one[0] = '\0';
+	if (p < end && (*p == '/' || *p == '\\'))
+		p++;
+	for (;;) {
+		int last;
+		seg = p;
+		while (p < end && *p != '/' && *p != '\\')
+			p++;
+		n = (long) (p - seg);
+		last = p >= end;
+		if (double_dot(seg, n)) {
+			segs_pop(&a);
+			if (last)
+				segs_push(&a, "", 0);
+		} else if (single_dot(seg, n)) {
+			if (last)
+				segs_push(&a, "", 0);
+		} else {
+			segs_push(&a, seg, n);
+		}
+		if (last)
+			break;
+		p++;
+	}
+	if (!a.ok)
+		return 0;
+	if (a.len == 0)
+		strcpy(one, "/");
+	/* ASCII escapes decoded once, as Kura does */
+	for (n = 0, k = 0; one[n] && k < (long) sizeof(decoded) - 1; n++) {
+		int hi = one[n] == '%' ? hex_value(one[n + 1]) : -1, lo = hi >= 0 ? hex_value(one[n + 2]) : -1;
+		if (hi >= 0 && hi <= 7 && lo >= 0) {
+			decoded[k++] = (char) (hi * 16 + lo);
+			n += 2;
+		} else {
+			decoded[k++] = one[n];
+		}
+	}
+	if (one[n])
+		return 0;
+	decoded[k] = '\0';
+	/* leading slashes folded, then . and .. resolved again */
+	b.buf = out;
+	b.len = 0;
+	b.cap = cap;
+	b.ok = 1;
+	p = decoded;
+	while (*p == '/')
+		p++;
+	for (;;) {
+		seg = p;
+		p += strcspn(p, "/");
+		n = (long) (p - seg);
+		if (n == 2 && seg[0] == '.' && seg[1] == '.')
+			segs_pop(&b);
+		else if (!(n == 1 && seg[0] == '.'))
+			segs_push(&b, seg, n);
+		if (*p == '\0')
+			break;
+		p++;
+	}
+	if (!b.ok)
+		return 0;
+	if (b.len == 0) {
+		if (cap < 2)
+			return 0;
+		strcpy(out, "/");
+	}
+	return 1;
+}
+
+int shiori_note_vault(const char *url, char *out, long cap)
+{
+	char path[600];
+	const char *name, *slash;
+
+	out[0] = '\0';
+	if (!shiori_kura_path(url, path, (long) sizeof(path)) || strncmp(path, "/v/", 3) != 0)
+		return 0;
+	name = path + 3;
+	slash = strchr(name, '/');
+	if (slash == NULL || slash == name)
+		return 0;
+	if (slash - name < cap) {
+		memcpy(out, name, (size_t) (slash - name));
+		out[slash - name] = '\0';
+	}
+	return 1;
+}
+
+int shiori_hister_note_shown(const char *url)
+{
+	char path[600], vault[64];
+
+	if (!lower_eq(url, "http://", 7) && !lower_eq(url, "https://", 8))
+		return 0;
+	if (!shiori_kura_path(url, path, (long) sizeof(path)))
+		return 0;
+	return !shiori_note_vault(url, vault, (long) sizeof(vault));
+}
+
 void shiori_url_vault(const char *url, char *out, long cap)
 {
 	const char *v = shiori_strstr(url, "/v/"), *name, *slash, *c;

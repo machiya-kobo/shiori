@@ -1270,3 +1270,30 @@ test('New Items counts only results newer than the top (NewItemsTests, the twin)
   assert.equal(S.newItemsCount([doc('a', 10), doc('b', 20), doc('c', 30)], seen, top), 0);
   assert.equal(S.newItemsCount([doc('a', 1), doc('b', 2)], new Set(), 0), 2);
 });
+
+// Notes from Kura or from Hister: the twins' shared cases.
+const notesCases = JSON.parse(readFileSync(fileURLToPath(new URL('./notes-source-cases.json', import.meta.url)), 'utf8'));
+
+test('notes come from the chosen source, else Kura when one is set up', () => {
+  for (const c of notesCases.source) assert.equal(S.notesSource(c.choice, c.kura), c.want, JSON.stringify(c));
+});
+
+test("Hister's query for notes: the words, the last a prefix, and label:vault", () => {
+  for (const c of notesCases.text) assert.equal(S.histerNotesText(c.q), c.want, JSON.stringify(c.q));
+});
+
+test("only the default vault's notes are shown from Hister", () => {
+  for (const c of notesCases.keep) assert.equal(S.histerNoteShown(c.url), c.keep, c.url);
+});
+
+test("Hister's notes in Kura's shape, other vaults dropped", () => {
+  const got = S.histerNoteDocuments(notesCases.documents.reply);
+  const want = notesCases.documents.want;
+  assert.equal(got.total, want.total);
+  assert.deepEqual(
+    got.documents.map((d) => ({ url: d.url, title: d.title, text: d.text, path: d.path, added: d.added, updated: d.updated, tags: [...d.metadata.tags] })),
+    want.documents,
+  );
+  assert.ok(got.documents.every((d) => d.label === 'vault' && d.vault === ''));
+  assert.equal(JSON.stringify(S.histerNoteDocuments(null)), JSON.stringify({ total: 0, documents: [] }));
+});

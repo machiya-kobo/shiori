@@ -1792,6 +1792,67 @@
     return `${q} label:vault`.trim();
   }
 
+  // --- Notes from Kura or from Hister (scripts/notes-source-cases.json) -------------------
+  // Kura pushes the default vault's notes (and a shared vault's) into Hister as
+  // label:vault documents, never a private vault's. So notes can be read from
+  // Hister when there's no Kura, or when the person prefers it: the setting
+  // `notesSource` ('kura' | 'hister', '' until chosen). Twins: HisterKit's
+  // NotesSource, haiku/core and classic/core, on the same cases.
+
+  /** Where notes come from: the person's choice, else Kura when one is set up; Hister when Kura can't be. */
+  function notesSource(choice, kuraConfigured) {
+    if (choice === 'hister') return 'hister';
+    return kuraConfigured ? 'kura' : 'hister';
+  }
+
+  /** Hister's query for notes: the words (the last a prefix), `*` for the newest, and label:vault. */
+  function histerNotesText(text) {
+    const t = String(text || '').trim();
+    const words = !t || t === '*' ? '*' : prefixLastWord(closeQuote(t), { union: true });
+    return `${words} label:vault`;
+  }
+
+  /**
+   * Whether a client may show one of Hister's notes: the default vault's
+   * only (the address decides: /v/<vault>/ is another vault's, shared or
+   * private, and without Kura a shared vault can't be told from a private
+   * one), and only an http(s) address that Kura's reading of it accepts.
+   */
+  function histerNoteShown(url) {
+    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return false;
+    return kuraPath(url) !== null && noteVault(url) === null;
+  }
+
+  /**
+   * Hister's reply to histerNotesText as notes, in kuraDocuments' shape: the
+   * default vault's alone (histerNoteShown), their path from Kura's
+   * metadata.vault_path (else the address), their tags. `total` is Hister's
+   * less what this page dropped: Hister can't leave other vaults out itself.
+   */
+  function histerNoteDocuments(reply) {
+    const all = (reply && Array.isArray(reply.documents) && reply.documents) || [];
+    const kept = all.filter((d) => d && histerNoteShown(d.url));
+    return {
+      total: Math.max(0, (Number(reply && reply.total) || all.length) - (all.length - kept.length)),
+      documents: kept.map((d) => {
+        const meta = (d.metadata && typeof d.metadata === 'object' && d.metadata) || {};
+        const added = Number(d.added) || 0;
+        return {
+          url: d.url,
+          title: d.title || d.url,
+          text: d.text || '',
+          label: 'vault',
+          added,
+          updated: Number(d.updated) || added,
+          metadata: { tags: Array.isArray(meta.tags) ? meta.tags.filter((t) => typeof t === 'string') : [] },
+          path: (typeof meta.vault_path === 'string' && meta.vault_path) || notePath(d.url) || '',
+          vault: '',
+          card_url: null,
+        };
+      }),
+    };
+  }
+
   /**
    * Whether a URL is a vault note's: a Niwa page (/n/…) or a Konbini card
    * (/p/…), on the configured hosts or any niwa./konbini. host. For lists
@@ -2737,6 +2798,10 @@
     niwaURL,
     konbiniURL,
     vaultQuery,
+    notesSource,
+    histerNotesText,
+    histerNoteShown,
+    histerNoteDocuments,
     isNoteURL,
     siteOf,
     siteRuns,

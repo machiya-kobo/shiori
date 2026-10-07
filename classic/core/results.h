@@ -33,6 +33,10 @@ typedef void (*ShioriRowFn)(void *ctx, const ShioriRow *row);
 /* Hister's /search: {total, documents: [{url, title, domain, label, text, added, updated, metadata}], page_key}.
    Only http(s) addresses become rows (a stored javascript: or file: link never opens). */
 int shiori_parse_hister(const char *buf, long len, ShioriPage *page, ShioriRowFn fn, void *ctx);
+/* Hister's reply to a notes search (PILL_NOTES): notes from Hister, as ROW_NOTE rows, the
+   default vault's alone (shiori_hister_note_shown), their path from Kura's metadata.vault_path
+   and their folder as host; total less what was dropped (search-core's histerNoteDocuments). */
+int shiori_parse_hister_notes(const char *buf, long len, ShioriPage *page, ShioriRowFn fn, void *ctx);
 /* Kura's /api/search or /api/recent: {total, results: [{url, path, vault, title, folder, snippet, summary, created, changed}]} */
 int shiori_parse_kura(const char *buf, long len, ShioriPage *page, ShioriRowFn fn, void *ctx);
 

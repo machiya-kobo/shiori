@@ -353,6 +353,20 @@ std::string WithSlash(const std::string& base)
 	return b;
 }
 
+std::string NotesSource(const std::string& choice, bool kuraConfigured)
+{
+	if (choice == "hister")
+		return "hister";
+	return kuraConfigured ? "kura" : "hister";
+}
+
+std::string HisterNotesText(const std::string& text)
+{
+	std::string t = Trim(text);
+	std::string words = t.empty() || t == "*" ? "*" : PrefixLastWord(CloseQuote(t), true);
+	return words + " label:vault";
+}
+
 std::string HisterSearchURL(const std::string& server, const std::string& typed, Pill pill,
 	int limit, const std::string& pageKey)
 {
@@ -360,7 +374,9 @@ std::string HisterSearchURL(const std::string& server, const std::string& typed,
 	// Shiori shows when the field is empty.
 	bool newest = Trim(typed).empty();
 	std::string words = newest ? "*" : typed;
-	std::string text = pill == Pill::Code ? HisterText(CodeQuery(words)) : HisterText(words);
+	// Notes from Hister (no Kura, or the person's choice): label:vault.
+	std::string text = pill == Pill::Notes ? HisterNotesText(words)
+		: pill == Pill::Code ? HisterText(CodeQuery(words)) : HisterText(words);
 	json::Value query = json::Value::MakeObject();
 	query.Set("text", json::Value::MakeString(text));
 	query.Set("highlight", json::Value::MakeString("HTML"));

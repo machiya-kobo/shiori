@@ -36,8 +36,13 @@ int shiori_form_encode(const char *s, char *out, long cap);
 int shiori_uri_encode(const char *s, char *out, long cap);
 
 /* Hister's search, relative to the Hister base: search?query=<JSON>. No words:
-   the newest ("*" sorted by date). pageKey: the last reply's page_key, raw as
+   the newest ("*" sorted by date); PILL_NOTES asks Hister for notes (label:vault). pageKey: the last reply's page_key, raw as
    ShioriPage.next keeps it (JSON escapes intact: Hister's holds \u0000), or "". */
+/* Where notes come from (scripts/notes-source-cases.json): "hister" when chosen, else
+   "kura" when one is set up, else "hister". choice: the setting ("" until chosen). */
+const char *shiori_notes_source(const char *choice, int kuraConfigured);
+/* Hister's query for notes: the words (the last a prefix), "*" for the newest, and label:vault. */
+int shiori_hister_notes_text(const char *text, char *out, long cap);
 int shiori_hister_search_target(const char *typed, int pill, int limit, const char *pageKey, char *out, long cap);
 /* Kura's, relative to the Kura base: api/search?… or api/recent?…; vault "" (the
    default vault), a name, or "all" */

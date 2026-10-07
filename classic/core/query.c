@@ -465,6 +465,34 @@ static void json_string_to(Buf *b, const char *s)
 	b_add(b, "\"");
 }
 
+const char *shiori_notes_source(const char *choice, int kuraConfigured)
+{
+	if (choice != NULL && strcmp(choice, "hister") == 0)
+		return "hister";
+	return kuraConfigured ? "kura" : "hister";
+}
+
+int shiori_hister_notes_text(const char *text, char *out, long cap)
+{
+	char a[SHIORI_MAX_TEXT + 8], c[2 * SHIORI_MAX_TEXT + 16];
+	Buf b;
+
+	b_init(&b, out, cap);
+	if (!shiori_trim(text, a, (long) sizeof(a) - 1))
+		return 0;
+	if (a[0] == '\0' || strcmp(a, "*") == 0) {
+		b_add(&b, "* label:vault");
+		return b.ok;
+	}
+	if (quote_count(a) % 2)
+		strcat(a, "\"");
+	if (!shiori_prefix_last_word(a, 1, c, (long) sizeof(c)))
+		return 0;
+	b_add(&b, c);
+	b_add(&b, " label:vault");
+	return b.ok;
+}
+
 int shiori_hister_search_target(const char *typed, int pill, int limit, const char *pageKey, char *out, long cap)
 {
 	char t[SHIORI_MAX_TEXT + 1], words[SHIORI_MAX_TEXT + 32], text[2 * SHIORI_MAX_TEXT + 96];
@@ -475,14 +503,20 @@ int shiori_hister_search_target(const char *typed, int pill, int limit, const ch
 	if (!shiori_trim(typed, t, (long) sizeof(t)))
 		return 0;
 	newest = t[0] == '\0';
-	if (pill == PILL_CODE) {
-		if (!shiori_code_query(newest ? "*" : typed, words, (long) sizeof(words)))
+	if (pill == PILL_NOTES) {
+		/* notes from Hister (no Kura, or the person's choice): label:vault */
+		if (!shiori_hister_notes_text(newest ? "*" : typed, text, (long) sizeof(text)))
 			return 0;
-	} else if (!b_set(words, (long) sizeof(words), newest ? "*" : typed, (long) strlen(newest ? "*" : typed))) {
-		return 0;
+	} else {
+		if (pill == PILL_CODE) {
+			if (!shiori_code_query(newest ? "*" : typed, words, (long) sizeof(words)))
+				return 0;
+		} else if (!b_set(words, (long) sizeof(words), newest ? "*" : typed, (long) strlen(newest ? "*" : typed))) {
+			return 0;
+		}
+		if (!shiori_hister_text(words, text, (long) sizeof(text)))
+			return 0;
 	}
-	if (!shiori_hister_text(words, text, (long) sizeof(text)))
-		return 0;
 	b_init(&j, json, (long) sizeof(json));
 	b_add(&j, "{\"text\":");
 	json_string_to(&j, text);

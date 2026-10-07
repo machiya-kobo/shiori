@@ -61,6 +61,15 @@ for (const s of inputs) {
   const newest = !s.trim();
   const hister = `https://h.example/search?${new URLSearchParams({ query: JSON.stringify({ text: S.histerText(newest ? '*' : s), highlight: 'HTML', limit: 30, ...(newest ? { sort: 'date' } : {}) }) })}`;
   out.push(`  {"histerSearchURL", ${q(s)}, ${q(hister)}},`);
+  // Notes from Hister (no Kura, or the person's choice): label:vault, newest first with no words.
+  out.push(`  {"histerNotesText", ${q(s)}, ${q(S.histerNotesText(s))}},`);
+  const notes = `https://h.example/search?${new URLSearchParams({ query: JSON.stringify({ text: S.histerNotesText(s), highlight: 'HTML', limit: 30, ...(newest ? { sort: 'date' } : {}) }) })}`;
+  out.push(`  {"histerNotesSearchURL", ${q(s)}, ${q(notes)}},`);
 }
+// The shared cases (scripts/notes-source-cases.json): which of Hister's notes may be shown,
+// and where notes come from ("choice|kura").
+const notesCases = JSON.parse(readFileSync(new URL('../../scripts/notes-source-cases.json', import.meta.url), 'utf8'));
+for (const c of notesCases.keep) out.push(`  {"histerNoteShown", ${q(c.url)}, ${q(String(S.histerNoteShown(c.url)))}},`);
+for (const c of notesCases.source) out.push(`  {"notesSource", ${q(`${c.choice}|${c.kura ? 1 : 0}`)}, ${q(S.notesSource(c.choice, c.kura))}},`);
 out.push('};');
 console.log(out.join('\n'));

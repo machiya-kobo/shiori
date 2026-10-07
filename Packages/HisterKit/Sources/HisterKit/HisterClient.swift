@@ -106,7 +106,15 @@ public struct HisterClient: Sendable {
         options: SearchOptions = SearchOptions()
     ) async throws(HisterError) -> SearchPage {
         // The last word a prefix, never the notes (`SearchText.forHister`).
-        var query: [String: any Sendable] = ["text": SearchText.forHister(text), "highlight": "HTML", "limit": limit]
+        try await search(sentText: SearchText.forHister(text), sort: sort, pageKey: pageKey, limit: limit, options: options)
+    }
+
+    /// A search with its text already as sent (`forHister`, or `forHisterNotes`).
+    func search(
+        sentText: String, sort: SearchSort = .relevance, pageKey: String? = nil, limit: Int = 30,
+        options: SearchOptions = SearchOptions()
+    ) async throws(HisterError) -> SearchPage {
+        var query: [String: any Sendable] = ["text": sentText, "highlight": "HTML", "limit": limit]
         if sort != .relevance { query["sort"] = sort.rawValue }
         if let pageKey, !pageKey.isEmpty { query["page_key"] = pageKey }
         if options.facets { query["facets"] = true }

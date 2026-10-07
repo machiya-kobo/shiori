@@ -54,6 +54,17 @@ int shiori_kura_note_target(const char *path, const char *vault, char *out, long
 /* Hister's readable copy, relative to the Hister base: api/preview?url=…. */
 int shiori_hister_preview_target(const char *url, char *out, long cap);
 
+/* Kura's reading of an http(s) address's path (search-core's kuraPath): the URL
+   standard's dot segments (with \\ and %2e), ASCII escapes decoded once, leading
+   slashes folded, dot segments again. 0 when it isn't http(s) or doesn't fit. */
+int shiori_kura_path(const char *url, char *out, long cap);
+/* Whether the address is under another vault, /v/<name>/ as Kura reads it
+   (search-core's noteVault), and its name. */
+int shiori_note_vault(const char *url, char *out, long cap);
+/* Whether one of Hister's notes may be shown (search-core's histerNoteShown): an
+   http(s) address that isn't another vault's, shared or private. */
+int shiori_hister_note_shown(const char *url);
+
 /* Which vault a note's address names: <base>/v/<vault>/n/… gives the vault,
    anything else (the default vault's /n/…) "". As search-core's noteVault: the
    address decides, never a reply's vault field (Kura names the default too). */

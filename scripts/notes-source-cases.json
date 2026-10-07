@@ -1,0 +1,227 @@
+{
+  "_": "Where notes come from, and which of Hister's notes a client may show. search-core's notesSource, histerNotesText and histerNoteDocuments, HisterKit's NotesSource, and the Haiku and classic cores are tested against these cases. choice: the setting ('' until the person picks); kura: whether a Kura address is set up.",
+  "source": [
+    {
+      "choice": "",
+      "kura": false,
+      "want": "hister"
+    },
+    {
+      "choice": "",
+      "kura": true,
+      "want": "kura"
+    },
+    {
+      "choice": "hister",
+      "kura": true,
+      "want": "hister"
+    },
+    {
+      "choice": "hister",
+      "kura": false,
+      "want": "hister"
+    },
+    {
+      "choice": "kura",
+      "kura": true,
+      "want": "kura"
+    },
+    {
+      "choice": "kura",
+      "kura": false,
+      "want": "hister"
+    },
+    {
+      "choice": "something else",
+      "kura": true,
+      "want": "kura"
+    },
+    {
+      "choice": "something else",
+      "kura": false,
+      "want": "hister"
+    }
+  ],
+  "text": [
+    {
+      "q": "lantern",
+      "want": "(lantern|lantern*) label:vault"
+    },
+    {
+      "q": "  paper lan ",
+      "want": "paper (lan|lan*) label:vault"
+    },
+    {
+      "q": "\"festival kit",
+      "want": "\"festival kit\" label:vault"
+    },
+    {
+      "q": "",
+      "want": "* label:vault"
+    },
+    {
+      "q": "*",
+      "want": "* label:vault"
+    },
+    {
+      "q": "label:lanterns kyoto",
+      "want": "label:lanterns (kyoto|kyoto*) label:vault"
+    }
+  ],
+  "keep": [
+    {
+      "url": "https://kura.example/n/Projects/Lantern%20festival%20kit",
+      "keep": true
+    },
+    {
+      "url": "https://kura.example/n/Workshop/Washi%20offcuts",
+      "keep": true
+    },
+    {
+      "url": "https://konbini.example/p/lantern-festival-kit",
+      "keep": true
+    },
+    {
+      "url": "https://kura.example/v/work/n/Secret%20plan",
+      "keep": false
+    },
+    {
+      "url": "https://kura.example/v/shared/n/A%20shared%20note",
+      "keep": false
+    },
+    {
+      "url": "https://kura.example//v/work/n/x",
+      "keep": false
+    },
+    {
+      "url": "https://kura.example/%76/work/n/x",
+      "keep": false
+    },
+    {
+      "url": "https://kura.example/n/../v/work/n/x",
+      "keep": false
+    },
+    {
+      "url": "https://kura.example/v/work/",
+      "keep": false
+    },
+    {
+      "url": "not an address",
+      "keep": false
+    },
+    {
+      "url": "javascript:alert(1)",
+      "keep": false
+    },
+    {
+      "url": "file:///home/someone/notes/x.md",
+      "keep": false
+    },
+    {
+      "url": "https://kura.example/n/%2e%2e/v/work/n/x",
+      "keep": false
+    },
+    {
+      "url": "https://kura.example/n\\..\\v\\work\\n\\x",
+      "keep": false
+    },
+    {
+      "url": "https://kura.example/n/%2E./v/work/n/x",
+      "keep": false
+    },
+    {
+      "url": "HTTPS://Kura.Example/v/Work/n/x",
+      "keep": false
+    },
+    {
+      "url": "https://kura.example/n/x?v=/v/work/n/",
+      "keep": true
+    },
+    {
+      "url": "https://kura.example/n/x#/v/work/",
+      "keep": true
+    },
+    {
+      "url": "https://kura.example/n/a/../b",
+      "keep": true
+    },
+    {
+      "url": "https://kura.example/n/%252e%252e/v/w/n/x",
+      "keep": true
+    }
+  ],
+  "documents": {
+    "reply": {
+      "total": 4,
+      "documents": [
+        {
+          "url": "https://kura.example/n/Projects/Lantern%20festival%20kit",
+          "title": "Lantern festival kit",
+          "text": "Everything for the summer <mark>lantern</mark> festival stall",
+          "label": "vault",
+          "added": 1790000000,
+          "updated": 1790500000,
+          "metadata": {
+            "source": "vault",
+            "tags": [
+              "lanterns",
+              "festival"
+            ],
+            "vault_path": "Projects/Lantern festival kit.md"
+          }
+        },
+        {
+          "url": "https://kura.example/v/work/n/Secret%20plan",
+          "title": "Secret plan",
+          "text": "a <mark>lantern</mark> in another vault",
+          "label": "vault",
+          "metadata": {
+            "source": "vault",
+            "vault_path": "Secret plan.md"
+          }
+        },
+        {
+          "url": "https://kura.example/n/Workshop/Chochin%20build%20log",
+          "title": "Chōchin build log",
+          "text": "the <mark>lantern</mark> took its washi",
+          "label": "vault",
+          "added": 1789900000,
+          "metadata": {
+            "source": "vault"
+          }
+        },
+        {
+          "url": "javascript:alert(1)",
+          "title": "Not a note",
+          "label": "vault"
+        }
+      ]
+    },
+    "want": {
+      "total": 2,
+      "documents": [
+        {
+          "url": "https://kura.example/n/Projects/Lantern%20festival%20kit",
+          "title": "Lantern festival kit",
+          "text": "Everything for the summer <mark>lantern</mark> festival stall",
+          "path": "Projects/Lantern festival kit.md",
+          "added": 1790000000,
+          "updated": 1790500000,
+          "tags": [
+            "lanterns",
+            "festival"
+          ]
+        },
+        {
+          "url": "https://kura.example/n/Workshop/Chochin%20build%20log",
+          "title": "Chōchin build log",
+          "text": "the <mark>lantern</mark> took its washi",
+          "path": "Workshop/Chochin build log.md",
+          "added": 1789900000,
+          "updated": 1789900000,
+          "tags": []
+        }
+      ]
+    }
+  }
+}

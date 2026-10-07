@@ -1,6 +1,8 @@
 #include "Results.h"
 
 #include <cstdlib>
+#include <cstring>
+#include <algorithm>
 
 #include "Json.h"
 #include "Query.h"
@@ -100,6 +102,178 @@ ResultPage ParseHister(const std::string& body)
 		page.results.push_back(std::move(r));
 	}
 	page.received = int(v["documents"].items.size());
+	page.next = v["page_key"].Str();
+	return page;
+}
+
+namespace {
+
+bool StartsWithLower(const std::string& s, const char* prefix)
+{
+	size_t n = std::strlen(prefix);
+	return s.size() >= n && LowerASCII(s.substr(0, n)) == prefix;
+}
+
+bool SingleDot(const std::string& s)
+{
+	return s == "." || LowerASCII(s) == "%2e";
+}
+
+bool DoubleDot(const std::string& s)
+{
+	std::string l = LowerASCII(s);
+	return l == ".." || l == ".%2e" || l == "%2e." || l == "%2e%2e";
+}
+
+int HexValue(char c)
+{
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	if (c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+	if (c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+	return -1;
+}
+
+}  // namespace
+
+std::string KuraPath(const std::string& url, bool* ok)
+{
+	*ok = false;
+	size_t start;
+	if (StartsWithLower(url, "https://"))
+		start = 8;
+	else if (StartsWithLower(url, "http://"))
+		start = 7;
+	else
+		return "";
+	size_t p = url.find_first_of("/\\?#", start);
+	if (p == std::string::npos)
+		p = url.size();
+	size_t end = url.find_first_of("?#", p);
+	if (end == std::string::npos)
+		end = url.size();
+	// The URL standard's path: separators / and \, dot segments resolved.
+	std::vector<std::string> segs;
+	if (p < end && (url[p] == '/' || url[p] == '\\'))
+		p++;
+	for (;;) {
+		size_t q = p;
+		while (q < end && url[q] != '/' && url[q] != '\\')
+			q++;
+		std::string seg = url.substr(p, q - p);
+		bool last = q >= end;
+		if (DoubleDot(seg)) {
+			if (!segs.empty())
+				segs.pop_back();
+			if (last)
+				segs.push_back("");
+		} else if (SingleDot(seg)) {
+			if (last)
+				segs.push_back("");
+		} else {
+			segs.push_back(seg);
+		}
+		if (last)
+			break;
+		p = q + 1;
+	}
+	std::string one;
+	for (const auto& seg : segs)
+		one += "/" + seg;
+	if (one.empty())
+		one = "/";
+	// ASCII escapes decoded once, as Kura does.
+	std::string decoded;
+	for (size_t i = 0; i < one.size(); i++) {
+		int hi = one[i] == '%' && i + 2 < one.size() + 0 ? HexValue(one[i + 1]) : -1;
+		int lo = hi >= 0 ? HexValue(one[i + 2]) : -1;
+		if (hi >= 0 && hi <= 7 && lo >= 0) {
+			decoded += char(hi * 16 + lo);
+			i += 2;
+		} else {
+			decoded += one[i];
+		}
+	}
+	// Leading slashes folded, then . and .. resolved again.
+	size_t i = decoded.find_first_not_of('/');
+	std::string rest = i == std::string::npos ? "" : decoded.substr(i);
+	std::vector<std::string> out;
+	size_t from = 0;
+	for (;;) {
+		size_t slash = rest.find('/', from);
+		std::string seg = rest.substr(from, slash == std::string::npos ? std::string::npos : slash - from);
+		if (seg == "..") {
+			if (!out.empty())
+				out.pop_back();
+		} else if (seg != ".") {
+			out.push_back(seg);
+		}
+		if (slash == std::string::npos)
+			break;
+		from = slash + 1;
+	}
+	std::string path;
+	for (const auto& seg : out)
+		path += "/" + seg;
+	*ok = true;
+	return path.empty() ? "/" : path;
+}
+
+std::string NoteVault(const std::string& url)
+{
+	bool ok;
+	std::string path = KuraPath(url, &ok);
+	if (!ok || path.compare(0, 3, "/v/") != 0)
+		return "";
+	size_t slash = path.find('/', 3);
+	if (slash == std::string::npos || slash == 3)
+		return "";
+	return path.substr(3, slash - 3);
+}
+
+bool HisterNoteShown(const std::string& url)
+{
+	bool ok;
+	KuraPath(url, &ok);
+	return ok && NoteVault(url).empty();
+}
+
+ResultPage ParseHisterNotes(const std::string& body)
+{
+	ResultPage page;
+	json::Value v;
+	if (!json::Parse(body, v, &page.error) || !v.IsObject()) {
+		if (page.error.empty())
+			page.error = "not a JSON object";
+		return page;
+	}
+	page.ok = true;
+	const json::Value& docs = v["documents"];
+	int all = int(docs.items.size()), dropped = 0;
+	for (const auto& d : docs.items) {
+		std::string url = d["url"].Str();
+		if (!HisterNoteShown(url)) {
+			dropped++;  // another vault's, or not an address
+			continue;
+		}
+		Result r;
+		r.kind = Result::Note;
+		r.url = url;
+		r.title = d["title"].Str();
+		if (r.title.empty())
+			r.title = url;
+		r.path = d["metadata"]["vault_path"].Str();
+		r.host = FolderOf(r.path);
+		r.snippet = d["text"].Str();
+		r.label = "vault";
+		r.added = d["added"].Num(0);
+		r.updated = d["updated"].Num(r.added);
+		page.results.push_back(std::move(r));
+	}
+	page.total = std::max(0, int(v["total"].Num(double(all))) - dropped);
+	page.received = all;
 	page.next = v["page_key"].Str();
 	return page;
 }
