@@ -61,7 +61,7 @@ Each tag's GitHub release carries builds anyone can test. Make each one from the
 | `Shiori-X.Y.Z-macOS.dmg` | a Mac | `scripts/release-mac.sh vX.Y.Z` (a fresh worktree, the public bundle prefix only, signed ad hoc) |
 | `Shiori-X.Y.Z-linux-x86_64.flatpak` | Linux with flatpak-builder | from `git archive vX.Y.Z`: `flatpak-builder --repo=repo build linux/flatpak/io.github.machiya_kobo.Shiori.json`, then `flatpak build-bundle repo … io.github.machiya_kobo.Shiori` |
 | `shiori-X.Y.Z-1-x86_64.hpkg` | Haiku | from the archive: `cd haiku && make && ./package.sh` |
-| `Shiori-Classic-X.Y.Z.{dsk,sit,hqx}` | the Retro68 host | from the archive: `SHIORI_RELEASE=1 classic/scripts/package.sh` |
+| `Shiori-X.Y.Z-classic-m68k.{dsk,sit,hqx}` | the Retro68 host | from the archive: `SHIORI_RELEASE=1 classic/scripts/package.sh` |
 
 Before uploading, unpack each file and search it for your own addresses, hostnames, names and team ID. Then attach the files and a `SHA256SUMS` with `gh release create vX.Y.Z …`. iOS has no release file: sideloading needs a paid Apple Developer Program team.
 
