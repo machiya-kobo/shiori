@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.14.3 (2026-10-06)
+
+### Changed
+
+- **Lists stay put when you change a setting**: rows redraw only for the
+  settings they show.
+- **Summarize for code** is offered only where Apple Intelligence can run.
+- Under the hood: Summarize and delete-with-Undo are their own tested
+  pieces, and one tested rule decides what an AI may see.
+
 ## 0.14.2 (2026-10-06)
 
 ### Fixed
