@@ -407,8 +407,11 @@ static int parse_reply(const char *buf, long len, ShioriPage *page, ShioriRowFn 
 			}
 		} else if (!kura && json_is(&r, "page_key")) {
 			t = json_next(&r);
-			if (t == JSON_STRING)
-				json_string(&r, page->next, (long) sizeof(page->next));
+			/* kept raw, its escapes as sent: Hister's key holds \u0000, which a C string can't */
+			if (t == JSON_STRING && r.tokLen < (long) sizeof(page->next)) {
+				memcpy(page->next, r.tok, (size_t) r.tokLen);
+				page->next[r.tokLen] = '\0';
+			}
 			else if (t == JSON_OBJECT || t == JSON_ARRAY)
 				if (json_skip(&r, t) == JSON_ERROR)
 					return 0;

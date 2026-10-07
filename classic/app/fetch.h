@@ -29,7 +29,8 @@ enum {
 	fetchBadReply = -30003,     /* not an HTTP reply */
 	fetchRedirected = -30004,   /* a 3xx: never followed */
 	fetchTimedOut = -30005,     /* a stage's deadline passed */
-	fetchCancelled = -30006
+	fetchCancelled = -30006,
+	fetchTooLong = -30007       /* the request doesn't fit (a long search, Hister's page_key) */
 };
 
 typedef struct Fetch {
@@ -37,7 +38,9 @@ typedef struct Fetch {
 	OSErr err;
 	long tag;               /* the caller's: which request this is (a generation) */
 	NetConn conn;
-	char req[1024];
+	char req[1600];         /* the request: a long search plus Hister's page_key fits */
+	char url[1300];         /* base + target while the request is made (off the stack: a DA has
+	                           only its host application's) */
 	unsigned short reqLen;
 	Handle body;            /* the whole reply as it came, head included */
 	long have, cap;

@@ -2,6 +2,7 @@
 """Fills a local Hister with a dozen invented pages, for the Quickstart.
 
     tools/quickstart/seed-hister.py [HISTER_URL]     (default http://127.0.0.1:4433/)
+    HISTER_TOKEN=… tools/quickstart/seed-hister.py URL   (a test Hister with an access token)
 
 Every page is made up (hosts under .example, the paper-lantern workshop
 and Kyoto trip of Machiya's sample vault), so screenshots and tests never show anyone's real history.
@@ -30,7 +31,10 @@ COLLECTIONS = {"@crafts": "label:(lanterns|paper|workshop)", "@travel": "label:t
 
 
 def call(path, body=None, content_type="application/json"):
-    request = urllib.request.Request(URL + path, data=body, headers={"Origin": "hister://", "Content-Type": content_type})
+    headers = {"Origin": "hister://", "Content-Type": content_type}
+    if os.environ.get("HISTER_TOKEN"):          # a test Hister with app.access_token set
+        headers["X-Access-Token"] = os.environ["HISTER_TOKEN"]
+    request = urllib.request.Request(URL + path, data=body, headers=headers)
     with urllib.request.urlopen(request, timeout=10) as reply:
         return reply.status
 

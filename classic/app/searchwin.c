@@ -61,7 +61,7 @@ static Boolean gFocusList;
 static Boolean gActive = true;
 static long gTotalPages, gTotalNotes;
 static int gMoreStage = STAGE_NONE;             /* what Show More asks for, or STAGE_NONE */
-static char gMoreKey[96];                       /* Hister's page_key */
+static char gMoreKey[256];                      /* Hister's page_key, raw (ShioriPage.next) */
 static long gMoreOffset;                        /* Kura's next offset */
 static Boolean gAppending;                      /* the request is Show More's */
 static long gTag;
@@ -181,9 +181,14 @@ static void DrawVault(void)
 	short w;
 	PolyHandle tri;
 
-	EraseRect(&r);
+	{
+		Rect e = r;             /* the box's shadow falls a pixel outside it */
+		e.right++;
+		e.bottom++;
+		EraseRect(&e);
+	}
 	SetRect(&gVaultBox, 0, 0, 0, 0);
-	if (gPill != PILL_NOTES || r.right - r.left < 80)
+	if (gPill != PILL_NOTES || !gConfig.kura[0] || r.right - r.left < 80)
 		return;
 	TextFont(kFontIDGeneva);
 	TextSize(10);
@@ -341,8 +346,11 @@ static void ShowTotals(void)
 	}
 	switch (gPill) {
 	case PILL_ALL:
-		sprintf(s, "%ld page%s \245 %ld note%s", gTotalPages, gTotalPages == 1 ? "" : "s", gTotalNotes,
-			gTotalNotes == 1 ? "" : "s");
+		if (!gConfig.kura[0])
+			sprintf(s, "%ld page%s", gTotalPages, gTotalPages == 1 ? "" : "s");
+		else
+			sprintf(s, "%ld page%s \245 %ld note%s", gTotalPages, gTotalPages == 1 ? "" : "s", gTotalNotes,
+				gTotalNotes == 1 ? "" : "s");
 		break;
 	case PILL_PAGES: sprintf(s, "%ld page%s", gTotalPages, gTotalPages == 1 ? "" : "s"); break;
 	case PILL_NOTES: sprintf(s, "%ld note%s", gTotalNotes, gTotalNotes == 1 ? "" : "s"); break;
@@ -355,7 +363,7 @@ static void ShowTotals(void)
 
 static void Request(int stage)
 {
-	char target[1100];
+	static char target[1100];           /* static: off the 68000's small stack */
 	const char *base;
 	int ok;
 
@@ -529,9 +537,15 @@ static void Search(void)
 	gAppending = false;
 	gProblem[0] = '\0';
 	switch (gPill) {
-	case PILL_ALL: Request(STAGE_ALL_NOTES); break;
+	case PILL_ALL: Request(gConfig.kura[0] ? STAGE_ALL_NOTES : STAGE_ALL_PAGES); break;   /* no Kura: pages only */
 	case PILL_PAGES: Request(STAGE_PAGES); break;
-	case PILL_NOTES: Request(STAGE_NOTES); break;
+	case PILL_NOTES:
+		if (!gConfig.kura[0]) {
+			SetStatus("Notes come from Kura: add its address in Preferences.");
+			break;
+		}
+		Request(STAGE_NOTES);
+		break;
 	default: Request(STAGE_CODE); break;
 	}
 }
@@ -642,7 +656,7 @@ void SearchWindowClick(EventRecord *e)
 			return;
 		}
 	}
-	if (gPill == PILL_NOTES && PtInRect(p, &gVaultBox)) {
+	if (gPill == PILL_NOTES && gConfig.kura[0] && PtInRect(p, &gVaultBox)) {
 		long choice;
 		Point at;
 		int current = 0, k;
@@ -843,7 +857,7 @@ const char *SearchWindowBalloon(Point where, Rect *hot)
 			*hot = gPillRects[i];
 			return tips[i];
 		}
-	if (gPill == PILL_NOTES && PtInRect(p, &gVaultBox)) {
+	if (gPill == PILL_NOTES && gConfig.kura[0] && PtInRect(p, &gVaultBox)) {
 		*hot = gVaultBox;
 		return "Which of Kura's vaults Notes searches. Private vaults are never offered here.";
 	}

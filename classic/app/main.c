@@ -81,6 +81,7 @@ static void DoMenu(long choice)
 {
 	short menu = HiWord(choice), item = LoWord(choice);
 
+	HiliteMenu(0);                      /* before any dialog or alert the item opens */
 	switch (menu) {
 	case kAppleMenu:
 		if (item == kAboutItem) {
@@ -276,6 +277,16 @@ static void Setup(Prefs *prefs)
 	TEInit();
 	InitDialogs(NULL);
 	InitCursor();
+	/* a 32 KB stack, not the Mac Plus's 8 KB: a search's request and a reply's
+	   parse each want a few kilobytes of it (before MaxApplZone grows the heap up to it) */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"   /* low-memory globals at fixed addresses */
+	{
+		Ptr limit = (Ptr) ((long) LMGetCurStackBase() - 32L * 1024L);
+		if (limit < LMGetApplLimit())
+			SetApplLimit(limit);
+	}
+#pragma GCC diagnostic pop
 	MaxApplZone();
 	MoreMasters();
 	MoreMasters();
@@ -308,8 +319,8 @@ int main(void)
 	Setup(&gPrefs);
 	ReaderSetTextSize(gPrefs.textSize);
 	SearchWindowOpen(&gPrefs);
-	/* the first run, or a bridge that can't be reached as set: Preferences first */
-	if (!gPrefs.config.roomToken[0] || strstr(gPrefs.config.hister, "192.0.2.") != NULL) {
+	/* the first run (the placeholder address), or through the bridge with no room token: Preferences first */
+	if (strstr(gPrefs.config.hister, "192.0.2.") != NULL || (!gPrefs.config.direct && !gPrefs.config.roomToken[0])) {
 		if (PrefsDialog(&gPrefs))
 			SearchWindowConfigChanged();
 	}

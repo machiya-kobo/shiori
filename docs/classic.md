@@ -44,17 +44,60 @@ the original M0110 keyboard has no arrows: use Tab and the Search menu.)
   System 6.0.8 or System 7.x, and MacTCP 2.0.6 or later on Ethernet (a
   Mac Plus works with a BlueSCSI or other DaynaPORT-compatible SCSI
   Ethernet).
-- **The bridge** (`mac-bridge`, [`classic/bridge/`](../classic/bridge)).
-  MacTCP has no TLS and Shiori here resolves no names, so the Mac talks
-  plain HTTP/1.0 to a small proxy on your LAN, by IP address: one port
-  for Hister and one for Kura, a few read-only paths, passed on over HTTPS.
-  Run it next to Hister, published on its LAN address only, and list your
-  Mac's address in `BRIDGE_ALLOW`. Its README covers what it refuses and
-  what passes.
-- **A room token** (`mht_…`) for the Mac, made on the sign-in helper's
-  sessions page (Room Tokens) with two scopes: `kura` and the bridge's.
-  Kura checks it; on the Hister port the bridge checks it with the helper
-  and only then swaps in Hister's own token, which never reaches the LAN.
+- **A way to Hister without TLS.** MacTCP has no TLS and Shiori here looks
+  up no names, so it speaks plain HTTP/1.0, by IP address. Either:
+  - **Directly to Hister**, served over plain HTTP on your LAN (below).
+    The simplest setup: Shiori is then an ordinary Hister client, with or
+    without Hister's access token. Kura is optional (without it there are
+    no notes).
+  - **Through mac-bridge** ([`classic/bridge/`](../classic/bridge)), when
+    your Hister is HTTPS-only or signed in with users. The bridge listens
+    on your LAN, one port for Hister and one for Kura, passes a few
+    read-only paths on over HTTPS, and holds Hister's token itself. The Mac
+    holds only a **room token** (`mht_…`, from the sign-in helper's
+    sessions page, with the scopes `kura` and the bridge's): Kura checks
+    it, and the bridge checks it with the helper before swapping in
+    Hister's own token, which never reaches the LAN. List your Mac's
+    address in `BRIDGE_ALLOW`.
+
+## Hister over plain HTTP
+
+Any client without TLS (this one, or another old machine's) can talk to
+Hister directly once Hister listens on your LAN over plain HTTP. In
+Hister's `config.yml`:
+
+```yaml
+server:
+  address: 192.168.1.10:4433          # your server's LAN address (0.0.0.0: every interface)
+  base_url: http://192.168.1.10:4433/
+app:
+  access_token: "a-long-random-string"  # optional, but see below
+```
+
+(Or `HISTER__SERVER__ADDRESS`, `HISTER__SERVER__BASE_URL` and
+`HISTER__APP__ACCESS_TOKEN` in its environment, as in a container.) A
+client sends `Origin: hister://` and, with an access token set, the token
+as `X-Access-Token` (or `Authorization: Bearer`). In Shiori's Preferences:
+*Directly (HTTP)*, Hister's address, and *Hister's token* when you set one.
+
+**Know what it exposes.** Over plain HTTP everything crosses your network
+unencrypted: your searches, the pages you read and the access token.
+Hister's API also writes: whoever can reach the port (without a token)
+or has seen the token (with one) can read your whole history, add pages
+and delete them.
+
+- Keep it to a network you trust, such as a wired home LAN; never on
+  shared or public Wi-Fi, and never forwarded to the Internet.
+- Set an access token, and limit the port to the old Mac's address with
+  your firewall.
+- Keep the HTTPS address for everything else (a reverse proxy can serve
+  both).
+- If that's more than you want to open, use mac-bridge instead: GET only,
+  three paths, an address allow-list, and Hister's token stays off the LAN.
+
+Tested with Hister 0.20.0: with no token, with `app.access_token`, and
+with users on (`app.user_handling`), where each user's own token works
+the same way (`hister update-user <name> --regen-token` makes one).
 
 ## Installing
 
@@ -72,21 +115,26 @@ Each holds three files:
 
 ## Settings
 
-File → Preferences…: the bridge's two addresses
-(`http://<IP address>:<port>/`), the room token, and the reader's text
-size. On first launch the dialog opens on its own. They're kept in
-*Shiori Preferences* (the Preferences folder on System 7, the System
-Folder on System 6), on this Mac only. The token is in that file in
-clear, since classic Mac OS has no keychain: keep it off shared disks.
-The desk accessory reads the same file.
+File → Preferences…: how to reach Hister (*Through mac-bridge* or
+*Directly (HTTP)*), Hister's and Kura's addresses
+(`http://<IP address>:<port>/`; Kura's may be empty), the room token,
+Hister's token (direct only), and the reader's text size. On first launch
+the dialog opens on its own. They're kept in *Shiori Preferences* (the
+Preferences folder on System 7, the System Folder on System 6), on this
+Mac only. The tokens are in that file in clear, since classic Mac OS has
+no keychain: keep it off shared disks. The desk accessory reads the same
+file.
 
 ## What stays private
 
-- The room token goes only to the two bridge addresses (by origin), never
-  across a redirect (Shiori follows none).
+- Each request carries one credential at most, and only to the two
+  addresses you set (by origin), never across a redirect (Shiori follows
+  none). Through the bridge, the room token goes to both bridge ports and
+  Hister's token is never sent. Directly, Hister's token goes to Hister
+  only (`X-Access-Token`) and the room token to Kura only.
 - A note's vault comes from its address. Notes searches only the default
   vault and vaults Kura marks shared; a private vault is never offered,
-  and the bridge refuses any vault not on its list. The desk accessory
+  and the bridge, when you use one, refuses any vault not on its list. The desk accessory
   searches the default vault only, and Shiori refuses a request (an Apple
   event) to open a note from any other.
 - Replies are capped (256 KB for a search, 192 KB for a reader, 64 KB in

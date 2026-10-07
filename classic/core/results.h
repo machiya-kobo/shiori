@@ -24,7 +24,7 @@ typedef struct ShioriRow {
 typedef struct ShioriPage {
 	int ok;                 /* the reply was a JSON object of the right shape */
 	long total;
-	char next[96];          /* Hister's page_key for the next page ("" at the end) */
+	char next[256];         /* Hister's page_key for the next page, raw: its JSON escapes kept ("" at the end) */
 	int received;           /* rows in the reply, ones dropped as non-web included */
 } ShioriPage;
 

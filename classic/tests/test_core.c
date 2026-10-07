@@ -379,6 +379,21 @@ static void test_credentials(void)
 	CHECK(o[0] == '\0');
 	shiori_origin_of("http://h.example:80x/", o, sizeof(o));
 	CHECK(o[0] == '\0');
+	{
+		/* a request URL far longer than any origin buffer (Show More's page_key) */
+		char longURL[1200];
+		strcpy(longURL, "http://192.168.1.10:4433/search?query=");
+		while (strlen(longURL) < sizeof(longURL) - 4)
+			strcat(longURL, "%7B");
+		shiori_origin_of(longURL, o, sizeof(o));
+		CHECK(strcmp(o, "http://192.168.1.10:4433") == 0);
+		memset(&c, 0, sizeof(c));
+		strcpy(c.hister, "http://192.168.1.10:4433/");
+		CHECK(shiori_is_configured_origin(&c, longURL));
+		longURL[8] = '@';               /* user@host: never an origin, long or not */
+		shiori_origin_of(longURL, o, sizeof(o));
+		CHECK(o[0] == '\0');
+	}
 
 	shiori_checked_room_token("  mht_KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK \n", tok, sizeof(tok));
 	CHECK(strcmp(tok, good) == 0);
@@ -406,6 +421,83 @@ static void test_credentials(void)
 	strcpy(c.roomToken, "mht_short");
 	shiori_credential_header(&c, "http://192.168.1.5:8070/", h, sizeof(h));
 	CHECK(h[0] == '\0');
+
+	/* Through the bridge, Hister's own token is never sent. */
+	strcpy(c.roomToken, good);
+	strcpy(c.histerToken, "HISTERTOKEN0123456789ABCDEF");
+	shiori_credential_header(&c, "http://192.168.1.5:8070/search?query=x", h, sizeof(h));
+	CHECK(strstr(h, "HISTERTOKEN") == NULL && strstr(h, good) != NULL);
+
+	/* Directly to Hister: its token, as X-Access-Token, to Hister only; the room
+	   token to Kura only. */
+	c.direct = 1;
+	strcpy(c.hister, "http://192.168.1.10:4433/");
+	strcpy(c.kura, "http://192.168.1.11:8080/");
+	shiori_credential_header(&c, "http://192.168.1.10:4433/search?query=x", h, sizeof(h));
+	CHECK(strcmp(h, "X-Access-Token: HISTERTOKEN0123456789ABCDEF") == 0);
+	shiori_credential_header(&c, "http://192.168.1.11:8080/api/search?q=x", h, sizeof(h));
+	CHECK(strcmp(h, "Authorization: Bearer mht_KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK") == 0);
+	shiori_credential_header(&c, "http://192.168.1.10:4434/", h, sizeof(h));    /* another port */
+	CHECK(h[0] == '\0');
+	/* Hister with no users: no token, no header */
+	c.histerToken[0] = '\0';
+	shiori_credential_header(&c, "http://192.168.1.10:4433/search?query=x", h, sizeof(h));
+	CHECK(h[0] == '\0');
+	/* no Kura: only Hister may be called */
+	c.kura[0] = '\0';
+	CHECK(shiori_is_configured_origin(&c, "http://192.168.1.10:4433/api/preview?url=x"));
+	CHECK(!shiori_is_configured_origin(&c, "http://192.168.1.11:8080/api/search"));
+	/* Kura sharing Hister's address (one host): Hister's rule, never the room token */
+	strcpy(c.kura, "http://192.168.1.10:4433/");
+	strcpy(c.histerToken, "HISTERTOKEN0123456789ABCDEF");
+	shiori_credential_header(&c, "http://192.168.1.10:4433/api/search", h, sizeof(h));
+	CHECK(strstr(h, "mht_") == NULL);
+
+	shiori_checked_hister_token("  ABCDEFGH \r\n", tok, sizeof(tok));
+	CHECK(strcmp(tok, "ABCDEFGH") == 0);
+	shiori_checked_hister_token("short", tok, sizeof(tok));
+	CHECK(tok[0] == '\0');
+	shiori_checked_hister_token("has a space", tok, sizeof(tok));
+	CHECK(tok[0] == '\0');
+}
+
+/* -- Hister's page_key, round trip ------------------------------------------------------ */
+
+static void test_page_key(void)
+{
+	/* as Hister 0.20 sends it: escapes for \u0001, \u0016 and a NUL, and quoted quotes */
+	const char *reply = "{\"total\": 5, \"documents\": [], \"page_key\": "
+		"\"[\\\"0.656\\\",\\\" \\u0001Am,2K\\u0016\\u0000\\\",\\\"https://kyoto.example/x\\\"]\"}";
+	ShioriPage page;
+	char target[1400], json[700];
+	const char *q;
+
+	memset(&page, 0, sizeof(page));
+	CHECK(shiori_parse_hister(reply, (long) strlen(reply), &page, NULL, NULL));
+	CHECK(strstr(page.next, "\\u0000") != NULL && strlen(page.next) > 40);
+	CHECK(shiori_hister_search_target("lantern", PILL_PAGES, 10, page.next, target, (long) sizeof(target)));
+	/* the key goes back exactly as it came */
+	q = strstr(target, "query=");
+	CHECK(q != NULL);
+	{
+		long n = 0;
+		const char *c;
+		for (c = q + 6; *c && n < (long) sizeof(json) - 1; c++) {
+			if (*c == '%' && c[1] && c[2]) {
+				int hi = c[1] <= '9' ? c[1] - '0' : (c[1] | 32) - 'a' + 10;
+				int lo = c[2] <= '9' ? c[2] - '0' : (c[2] | 32) - 'a' + 10;
+				json[n++] = (char) (hi * 16 + lo);
+				c += 2;
+			} else {
+				json[n++] = *c == '+' ? ' ' : *c;
+			}
+		}
+		json[n] = '\0';
+	}
+	CHECK(strstr(json, page.next) != NULL);
+	/* an unescaped quote can't close the string early */
+	CHECK(!shiori_hister_search_target("lantern", PILL_PAGES, 10, "a\"b", target, (long) sizeof(target)));
+	CHECK(shiori_hister_search_target("lantern", PILL_PAGES, 10, "a\\\"b", target, (long) sizeof(target)));
 }
 
 /* -- Mac Roman ---------------------------------------------------------------------------- */
@@ -548,6 +640,7 @@ int main(void)
 	test_snippets();
 	test_hosts();
 	test_credentials();
+	test_page_key();
 	test_roman();
 	test_query_bounds();
 	test_json_tokens();

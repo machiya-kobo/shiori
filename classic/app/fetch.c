@@ -46,7 +46,8 @@ void FetchStart(Fetch *f, const ShioriConfig *config, const char *base, const ch
 {
 	HttpBase b;
 	ip_addr ip;
-	char url[512], credential[96];
+	char credential[160];
+	char *url = f->url;
 	const char *headers[4];
 	int n = 0;
 	long len;
@@ -57,8 +58,12 @@ void FetchStart(Fetch *f, const ShioriConfig *config, const char *base, const ch
 	f->cap = cap;
 	f->started = TickCount();
 	/* only the configured bridge, by address (no DNS), and only plain http */
-	if (!http_base(base, &b) || !NetParseIP(b.host, &ip) || strlen(base) + strlen(target) >= sizeof(url)) {
+	if (!http_base(base, &b) || !NetParseIP(b.host, &ip) || strlen(b.path) > strlen(base)) {
 		Fail(f, fetchBadAddress);
+		return;
+	}
+	if (strlen(base) + strlen(target) >= sizeof(f->url)) {
+		Fail(f, fetchTooLong);
 		return;
 	}
 	strcpy(url, base);
@@ -73,14 +78,10 @@ void FetchStart(Fetch *f, const ShioriConfig *config, const char *base, const ch
 	if (credential[0])
 		headers[n++] = credential;
 	headers[n] = NULL;
-	{
-		char path[600];
-		strcpy(path, b.path);
-		strcat(path, target);
-		len = http_request(f->req, (long) sizeof(f->req), &b, path, headers);
-	}
+	/* the path is the URL's own tail: base ends with its path, the target follows */
+	len = http_request(f->req, (long) sizeof(f->req), &b, url + strlen(base) - strlen(b.path), headers);
 	if (len < 0) {
-		Fail(f, fetchBadAddress);
+		Fail(f, fetchTooLong);
 		return;
 	}
 	f->reqLen = (unsigned short) len;
@@ -257,26 +258,27 @@ void FetchProblem(const Fetch *f, const char *who, char *out, long cap)
 		if (status == 401)
 			sprintf(msg, "%s wants this Mac's room token: Preferences\311", who);
 		else if (status == 403)
-			sprintf(msg, "%s refused this Mac (403): check the bridge and the room token.", who);
+			sprintf(msg, "%s refused this Mac (403): check its token in Preferences\311", who);
 		else if (status == 413)
 			sprintf(msg, "Too large for this Mac.");
 		else if (status == 502 || status == 504)
-			sprintf(msg, "The bridge can't reach %s (%d).", who, status);
+			sprintf(msg, "%s isn't answering behind the bridge (%d).", who, status);
 		else if (status == 503)
 			sprintf(msg, "%s is busy or sign-in is down (503): try again.", who);
 		else
 			sprintf(msg, "%s answered %d.", who, status);
 	} else {
 		switch (f->err) {
-		case fetchBadAddress: sprintf(msg, "The bridge's address must be http://<IP address>:<port>/ (Preferences\311)."); break;
+		case fetchBadAddress: sprintf(msg, "%s's address must be http://<IP address>:<port>/ (Preferences\311).", who); break;
 		case fetchTooLarge: sprintf(msg, "%s's answer was too large for this Mac.", who); break;
 		case fetchBadReply: sprintf(msg, "%s's answer was cut short or unreadable.", who); break;
 		case fetchRedirected: sprintf(msg, "%s redirected: Shiori never follows a redirect.", who); break;
 		case fetchTimedOut: sprintf(msg, "%s didn't answer in time.", who); break;
 		case fetchCancelled: sprintf(msg, "Stopped."); break;
+		case fetchTooLong: sprintf(msg, "That request is too long for this Mac to send: try fewer words."); break;
 		case memFullErr: sprintf(msg, "Not enough memory for %s's answer.", who); break;
 		case openFailed: case connectionTerminated: case commandTimeout:
-			sprintf(msg, "Can't reach the bridge (%d): is it on, and this Mac on the network?", f->err); break;
+			sprintf(msg, "Can't reach %s (%d): is it on, and this Mac on the network?", who, f->err); break;
 		default:
 			if (f->err == ipBadAddr)
 				sprintf(msg, "MacTCP has no address (%d): is this Mac on the network?", f->err);

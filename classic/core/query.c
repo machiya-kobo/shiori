@@ -491,8 +491,23 @@ int shiori_hister_search_target(const char *typed, int pill, int limit, const ch
 	if (newest)
 		b_add(&j, ",\"sort\":\"date\"");
 	if (pageKey != NULL && pageKey[0]) {
-		b_add(&j, ",\"page_key\":");
-		json_string_to(&j, pageKey);
+		/* raw, as the reply had it (ShioriPage.next): escapes kept, so put back as is */
+		const char *c;
+		for (c = pageKey; *c; c++) {
+			long slashes = 0;
+			const char *b = c;
+			if ((unsigned char) *c < 0x20)
+				return 0;
+			while (b > pageKey && b[-1] == '\\') {
+				slashes++;
+				b--;
+			}
+			if (*c == '"' && slashes % 2 == 0)         /* a quote that would end the string */
+				return 0;
+		}
+		b_add(&j, ",\"page_key\":\"");
+		b_add(&j, pageKey);
+		b_add(&j, "\"");
 	}
 	b_add(&j, "}");
 	if (!j.ok)

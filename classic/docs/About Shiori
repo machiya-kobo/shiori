@@ -5,14 +5,13 @@ Search your pages in Hister and your notes in Kura from a Mac Plus or later, on 
 
 What you need
 - MacTCP 2.0.6 or later, on Ethernet.
-- The bridge (mac-bridge) running on your network, next to Hister.
-- A room token for this Mac, from the sign-in helper's sessions page.
+- Hister served over plain HTTP on your network (MacTCP has no TLS), or the bridge (mac-bridge) next to an HTTPS-only Hister. Plain HTTP sends your searches and Hister's token unencrypted: use it only on a network you trust (docs/classic.md).
 
 Installing
 - Shiori: copy it anywhere.
 - Shiori Search, the desk accessory: on System 6, install it with Font/DA Mover. On System 7, open it and drag Shiori Search to the System Folder.
 
 First run
-Preferences opens: enter the bridge's two addresses (http://<IP address>:<port>/) and the room token. They stay on this Mac, in Shiori Preferences. Keep that file off shared disks: the token is in it.
+Preferences opens: choose Directly (HTTP) or Through mac-bridge, then enter Hister's address (http://<IP address>:<port>/), Kura's if you have one, and the token: Hister's own directly, the room token through the bridge. They stay on this Mac, in Shiori Preferences. Keep that file off shared disks: the tokens are in it.
 
 Shiori is free software under the GNU Affero General Public License, version 3 or later. Source and documentation: https://github.com/machiya-kobo/shiori (docs/classic.md).

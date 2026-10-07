@@ -567,11 +567,19 @@ you.
   bridge's tests and the vectors' drift check): **its queries are
   search-core's twins**, so regenerate `classic/tests/vectors.h`
   (`node haiku/tests/gen-vectors.mjs --c`) after changing search-core.
-- **The bridge** (`classic/bridge/bridge.py`, stdlib, GET only, exact
-  paths) is the Mac's only way out: MacTCP has no TLS. The Mac holds one
-  room token (`mht_`), sent only to the two bridge origins; the bridge
-  swaps it for Hister's token, which never reaches the LAN. Its log never
-  has a query, a header or a body.
+- **Two ways to Hister** (MacTCP has no TLS; `core/config.c`'s rule, one
+  credential a request): **directly**, to a Hister served over plain HTTP
+  (Hister's own token as `X-Access-Token` to Hister's origin only, the
+  room token to Kura's only; Kura optional), or **through mac-bridge**
+  (`classic/bridge/bridge.py`, stdlib, GET only, exact paths: the room
+  token `mht_` to both bridge origins, Hister's token never sent; the
+  bridge swaps in Hister's, which never reaches the LAN, and its log never
+  has a query, a header or a body). docs/classic.md says what plain HTTP
+  exposes; keep that warning wherever direct mode is offered.
+- Hister's `page_key` holds escaped control characters and a NUL: it's
+  kept raw (`ShioriPage.next`) and sent back as it came, never decoded.
+- The 68000's stack is small (the app sets 32 KB; a DA has its host's):
+  big buffers live in structs or statics, never in a request path's frames.
 - A note's vault comes from its address; private vaults are never offered,
   and Shiori refuses a `SHIO/read` Apple event for any vault but the
   default (the desk accessory searches only that).

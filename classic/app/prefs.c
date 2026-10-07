@@ -17,8 +17,9 @@
 #define BAD_ALERT 132
 
 enum {
-	iOK = 1, iCancel = 2, iHister = 4, iKura = 6, iTokenState = 8, iChangeToken = 9,
-	iSmall = 11, iMedium = 12, iLarge = 13, iOutline = 15
+	iOK = 1, iCancel = 2, iBridge = 4, iDirect = 5, iHister = 7, iKura = 9, iTokenState = 11, iChangeToken = 12,
+	iHisterTokenLabel = 13, iHisterTokenState = 14, iChangeHisterToken = 15,
+	iSmall = 17, iMedium = 18, iLarge = 19, iOutline = 21
 };
 
 static const unsigned char kName[] = "\pShiori Preferences";
@@ -162,6 +163,10 @@ Boolean PrefsLoad(Prefs *p)
 			Set(p->config.kura, (long) sizeof(p->config.kura), eq + 1);
 		else if (strcmp(line, "token") == 0)
 			shiori_checked_room_token(eq + 1, p->config.roomToken, (long) sizeof(p->config.roomToken));
+		else if (strcmp(line, "histerToken") == 0)
+			shiori_checked_hister_token(eq + 1, p->config.histerToken, (long) sizeof(p->config.histerToken));
+		else if (strcmp(line, "mode") == 0)
+			p->config.direct = strcmp(eq + 1, "direct") == 0;
 		else if (strcmp(line, "textSize") == 0) {
 			int size = 0;
 			const char *c;
@@ -185,8 +190,9 @@ Boolean PrefsSave(const Prefs *p)
 
 	if (PrefsFolder(&vRef, &dirID) != noErr)
 		return false;
-	sprintf(buf, "hister=%s\rkura=%s\rtoken=%s\rtextSize=%d\rvault=%s\r", p->config.hister, p->config.kura,
-		p->config.roomToken, p->textSize, p->vault);
+	sprintf(buf, "mode=%s\rhister=%s\rkura=%s\rtoken=%s\rhisterToken=%s\rtextSize=%d\rvault=%s\r",
+		p->config.direct ? "direct" : "bridge", p->config.hister, p->config.kura, p->config.roomToken,
+		p->config.histerToken, p->textSize, p->vault);
 	err = PrefOpen(vRef, dirID, fsRdWrPerm, &ref);
 	if (err == fnfErr) {
 		if (PrefCreate(vRef, dirID) != noErr)
@@ -274,13 +280,16 @@ static Boolean BridgeAddressOK(const char *url)
 	return http_base(url, &b) && NetParseIP(b.host, &ip);
 }
 
-/* The token: typed or pasted once, never shown again. */
-static Boolean AskToken(char *token)
+/* A token: typed or pasted once, never shown again. hister: Hister's own token, else the room token. */
+static Boolean AskToken(char *token, long cap, Boolean hister)
 {
-	DialogPtr d = GetNewDialog(TOKEN_DIALOG, NULL, (WindowPtr) -1L);
+	DialogPtr d;
 	short item = 0;
-	char typed[80], checked[48];
+	char typed[200], checked[128];
 
+	ParamText(hister ? "\pHister's access token (its app.access_token, or your user's):"
+		: "\pThis Mac's room token (mht_\311):", "\p", "\p", "\p");
+	d = GetNewDialog(TOKEN_DIALOG, NULL, (WindowPtr) -1L);
 	if (d == NULL)
 		return false;
 	for (;;) {
@@ -290,17 +299,37 @@ static Boolean AskToken(char *token)
 		if (item == iCancel)
 			break;
 		ItemText(d, 4, typed, (long) sizeof(typed));
-		shiori_checked_room_token(typed, checked, (long) sizeof(checked));
-		if (checked[0] || typed[0] == '\0') {
+		if (hister)
+			shiori_checked_hister_token(typed, checked, (long) sizeof(checked));
+		else
+			shiori_checked_room_token(typed, checked, (long) sizeof(checked));
+		if ((checked[0] || typed[0] == '\0') && (long) strlen(checked) < cap) {
 			strcpy(token, checked);
 			break;
 		}
-		ParamText("\pThat isn't a room token: it's mht_ and 43 more letters, digits, - or _, from Hister's sign-in "
-			"helper (Sessions).", "\p", "\p", "\p");
+		if (hister)
+			ParamText("\pThat isn't a Hister token: it's 8 to 127 letters, digits or symbols, with no spaces.",
+				"\p", "\p", "\p");
+		else
+			ParamText("\pThat isn't a room token: it's mht_ and 43 more letters, digits, - or _, from Hister's "
+				"sign-in helper (Sessions).", "\p", "\p", "\p");
 		StopAlert(BAD_ALERT, NULL);
 	}
 	DisposeDialog(d);
 	return item == iOK;
+}
+
+/* The mode's radio buttons, and the Hister token's row only where it's used. */
+static void ShowMode(DialogPtr d, Boolean direct)
+{
+	short type;
+	Handle h;
+	Rect r;
+
+	SetRadio(d, iBridge, !direct);
+	SetRadio(d, iDirect, direct);
+	GetDialogItem(d, iChangeHisterToken, &type, &h, &r);
+	HiliteControl((ControlHandle) h, direct ? 0 : 255);
 }
 
 Boolean PrefsDialog(Prefs *p)
@@ -321,6 +350,9 @@ Boolean PrefsDialog(Prefs *p)
 	SetItemText(d, iKura, edit.config.kura);
 	TokenState(edit.config.roomToken, state);
 	SetItemText(d, iTokenState, state);
+	TokenState(edit.config.histerToken, state);
+	SetItemText(d, iHisterTokenState, state);
+	ShowMode(d, edit.config.direct);
 	SetRadio(d, iSmall, edit.textSize == 10);
 	SetRadio(d, iMedium, edit.textSize == 12);
 	SetRadio(d, iLarge, edit.textSize == 14);
@@ -330,11 +362,24 @@ Boolean PrefsDialog(Prefs *p)
 		if (item == iCancel)
 			break;
 		if (item == iChangeToken) {
-			if (AskToken(edit.config.roomToken)) {
+			if (AskToken(edit.config.roomToken, (long) sizeof(edit.config.roomToken), false)) {
 				TokenState(edit.config.roomToken, state);
 				SetItemText(d, iTokenState, state);
 			}
 			SetPort(d);
+			continue;
+		}
+		if (item == iChangeHisterToken) {
+			if (AskToken(edit.config.histerToken, (long) sizeof(edit.config.histerToken), true)) {
+				TokenState(edit.config.histerToken, state);
+				SetItemText(d, iHisterTokenState, state);
+			}
+			SetPort(d);
+			continue;
+		}
+		if (item == iBridge || item == iDirect) {
+			edit.config.direct = item == iDirect;
+			ShowMode(d, edit.config.direct);
 			continue;
 		}
 		if (item >= iSmall && item <= iLarge) {
@@ -347,9 +392,9 @@ Boolean PrefsDialog(Prefs *p)
 		if (item == iOK) {
 			ItemText(d, iHister, edit.config.hister, (long) sizeof(edit.config.hister));
 			ItemText(d, iKura, edit.config.kura, (long) sizeof(edit.config.kura));
-			if (!BridgeAddressOK(edit.config.hister) || !BridgeAddressOK(edit.config.kura)) {
-				ParamText("\pThe bridge's addresses look like http://192.168.1.5:8070/ (an IP address and a port).",
-					"\p", "\p", "\p");
+			if (!BridgeAddressOK(edit.config.hister) || (edit.config.kura[0] && !BridgeAddressOK(edit.config.kura))) {
+				ParamText("\pAddresses look like http://192.168.1.5:8070/ (an IP address and a port; Shiori here "
+					"looks up no names). Kura's may be empty.", "\p", "\p", "\p");
 				StopAlert(BAD_ALERT, NULL);
 				SetPort(d);
 				continue;

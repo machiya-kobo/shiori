@@ -5,6 +5,26 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.16.0 (2026-10-07)
+
+### Added
+
+- **Shiori for Classic Macintosh talks to Hister directly**: Preferences →
+  *Directly (HTTP)* reaches a Hister served over plain HTTP on your LAN,
+  with or without Hister's access token (or a user's token). Kura is now
+  optional. docs/classic.md covers serving Hister to any client without
+  TLS, and what plain HTTP exposes. mac-bridge stays for an HTTPS-only
+  Hister.
+
+### Fixed
+
+- **Show More against a real Hister** (classic): Hister's paging key holds
+  escaped control characters; it now goes back exactly as it came.
+- **Long requests** (classic): a long search with Show More no longer
+  fails as "a bad address", and no longer overruns a buffer.
+- **The classic app's stack** is 32 KB, so a search can't collide with the
+  heap on a Mac Plus.
+
 ## 0.15.0 (2026-10-07)
 
 ### Added

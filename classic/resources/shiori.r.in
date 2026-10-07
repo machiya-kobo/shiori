@@ -98,31 +98,37 @@ resource 'DITL' (129, purgeable) {
 
 /* Preferences */
 resource 'DLOG' (130, purgeable) {
-	{ 40, 40, 300, 472 }, dBoxProc, visible, noGoAway, 0, 130, "", alertPositionMainScreen
+	{ 28, 40, 332, 472 }, dBoxProc, visible, noGoAway, 0, 130, "", alertPositionMainScreen
 };
 
 resource 'DITL' (130, purgeable) {
 	{
-		{ 228, 340, 248, 410 }, Button { enabled, "OK" };
-		{ 228, 250, 248, 320 }, Button { enabled, "Cancel" };
-		{ 12, 16, 28, 410 }, StaticText { disabled, "Hister, through the bridge:" };
-		{ 32, 20, 48, 410 }, EditText { enabled, "" };
-		{ 60, 16, 76, 410 }, StaticText { disabled, "Kura, through the bridge:" };
-		{ 80, 20, 96, 410 }, EditText { enabled, "" };
-		{ 108, 16, 124, 110 }, StaticText { disabled, "Room token:" };
-		{ 108, 112, 124, 310 }, StaticText { disabled, "" };
-		{ 104, 320, 124, 410 }, Button { enabled, "Change\311" };
-		{ 140, 16, 156, 220 }, StaticText { disabled, "Reader text size:" };
-		{ 160, 20, 176, 100 }, RadioButton { enabled, "Small" };
-		{ 160, 110, 176, 200 }, RadioButton { enabled, "Medium" };
-		{ 160, 210, 176, 290 }, RadioButton { enabled, "Large" };
-		{ 186, 16, 218, 416 }, StaticText { disabled,
-			"Addresses look like http://192.168.1.5:8070/. The token goes only to these two." };
-		{ 224, 336, 252, 414 }, UserItem { disabled };
+		{ 272, 340, 292, 410 }, Button { enabled, "OK" };
+		{ 272, 250, 292, 320 }, Button { enabled, "Cancel" };
+		{ 12, 16, 28, 120 }, StaticText { disabled, "Reach Hister:" };
+		{ 12, 120, 28, 270 }, RadioButton { enabled, "Through mac-bridge" };
+		{ 12, 274, 28, 416 }, RadioButton { enabled, "Directly (HTTP)" };
+		{ 40, 16, 56, 410 }, StaticText { disabled, "Hister's address:" };
+		{ 60, 20, 76, 410 }, EditText { enabled, "" };
+		{ 88, 16, 104, 410 }, StaticText { disabled, "Kura's address, for notes (or leave it empty):" };
+		{ 108, 20, 124, 410 }, EditText { enabled, "" };
+		{ 136, 16, 152, 128 }, StaticText { disabled, "Room token:" };
+		{ 136, 128, 152, 310 }, StaticText { disabled, "" };
+		{ 132, 320, 152, 410 }, Button { enabled, "Change\311" };
+		{ 160, 16, 176, 128 }, StaticText { disabled, "Hister's token:" };
+		{ 160, 128, 176, 310 }, StaticText { disabled, "" };
+		{ 156, 320, 176, 410 }, Button { enabled, "Change\311" };
+		{ 188, 16, 204, 220 }, StaticText { disabled, "Reader text size:" };
+		{ 208, 20, 224, 100 }, RadioButton { enabled, "Small" };
+		{ 208, 110, 224, 200 }, RadioButton { enabled, "Medium" };
+		{ 208, 210, 224, 290 }, RadioButton { enabled, "Large" };
+		{ 232, 16, 264, 416 }, StaticText { disabled,
+			"Addresses look like http://192.168.1.5:8070/. Tokens go only to them, unencrypted." };
+		{ 268, 336, 296, 414 }, UserItem { disabled };
 	}
 };
 
-/* The room token: typed or pasted once, never shown again */
+/* A token: typed or pasted once, never shown again (^0: which one) */
 resource 'DLOG' (131, purgeable) {
 	{ 100, 60, 200, 452 }, dBoxProc, visible, noGoAway, 0, 131, "", alertPositionMainScreen
 };
@@ -131,7 +137,7 @@ resource 'DITL' (131, purgeable) {
 	{
 		{ 70, 300, 90, 370 }, Button { enabled, "OK" };
 		{ 70, 210, 90, 280 }, Button { enabled, "Cancel" };
-		{ 10, 14, 26, 380 }, StaticText { disabled, "This Mac's room token (mht_\311):" };
+		{ 10, 14, 26, 380 }, StaticText { disabled, "^0" };
 		{ 34, 16, 50, 376 }, EditText { enabled, "" };
 	}
 };

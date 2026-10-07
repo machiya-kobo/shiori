@@ -129,7 +129,7 @@ A native app on the Be API, installed with `pkgman` or built with `make`: [docs/
 
 ## Classic Macintosh
 
-A native app for 68k Macs, from a Mac Plus on System 6 to color on System 7, with a quick-search desk accessory. It reaches Hister and Kura through a small bridge on your LAN: [docs/classic.md](docs/classic.md).
+A native Hister client for 68k Macs, from a Mac Plus on System 6 to color on System 7, with a quick-search desk accessory. It talks to Hister directly over plain HTTP on your LAN, or through a small read-only bridge when Hister is HTTPS-only: [docs/classic.md](docs/classic.md), which also covers serving Hister to any client without TLS, and what that exposes.
 
 <table>
   <tr>

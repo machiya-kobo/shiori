@@ -7,7 +7,7 @@
  * it isn't running), and copies its link on System 6, which has no Apple
  * events. Copy copies the selected row's link.
  *
- * It reads the bridge's addresses and the room token from Shiori
+ * It reads Hister's and Kura's addresses and the tokens from Shiori
  * Preferences and opens its own MacTCP stream, through the same core and
  * fetch code as the app, so the credential rule is the same. Its state hangs
  * from dCtlStorage; it has no resources of its own (Font/DA Mover renumbers
@@ -177,7 +177,9 @@ static void Problem(DA *d, const char *who, char *s)
 			Cat(s, ".");
 		}
 	} else if (f->err == fetchBadAddress) {
-		Cat(s, "Set the bridge's address in Shiori's Preferences.");
+		Cat(s, "Set the address in Shiori's Preferences.");
+	} else if (f->err == fetchTooLong) {
+		Cat(s, "That search is too long to send.");
 	} else if (f->err == fetchCancelled) {
 		Cat(s, "Stopped.");
 	} else if (f->err == fetchTimedOut) {
@@ -391,8 +393,10 @@ static void ShowEnd(DA *d)
 		return;
 	}
 	s[0] = '\0';
-	CatNum(s, d->notes);
-	Cat(s, d->notes == 1 ? " note \245 " : " notes \245 ");
+	if (d->prefs.config.kura[0]) {
+		CatNum(s, d->notes);
+		Cat(s, d->notes == 1 ? " note \245 " : " notes \245 ");
+	}
 	CatNum(s, d->pages);
 	Cat(s, d->pages == 1 ? " page" : " pages");
 	if (d->problem[0])
@@ -470,7 +474,8 @@ static void Search(DA *d, DCtlPtr dce)
 	Draw(d);
 	SetStatus(d, "Searching\311");
 	Idle(d, 1, dce);
-	if (!StartStage(d, STAGE_NOTES) && !StartStage(d, STAGE_PAGES)) {
+	/* no Kura: pages only */
+	if (!(d->prefs.config.kura[0] && StartStage(d, STAGE_NOTES)) && !StartStage(d, STAGE_PAGES)) {
 		Idle(d, 30, dce);
 		SetStatus(d, "Type words, then press Return.");
 	}
@@ -738,7 +743,7 @@ short DAOpen(ParmBlkPtr pb, DCtlPtr dce)
 	strcpy(d->prefs.config.kura, SHIORI_DEFAULT_KURA);
 	shiori_checked_room_token(SHIORI_DEFAULT_TOKEN, d->prefs.config.roomToken, (long) sizeof(d->prefs.config.roomToken));
 	if (!PrefsLoad(&d->prefs) && SHIORI_DEFAULT_TOKEN[0] == '\0')
-		strcpy(d->status, "Open Shiori first, to set up the bridge.");
+		strcpy(d->status, "Open Shiori first, to set up Hister's address.");
 	else
 		strcpy(d->status, "Type, then Return: your notes and pages.");
 	FetchInit(&d->fetch);

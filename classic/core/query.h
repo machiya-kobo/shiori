@@ -36,7 +36,8 @@ int shiori_form_encode(const char *s, char *out, long cap);
 int shiori_uri_encode(const char *s, char *out, long cap);
 
 /* Hister's search, relative to the Hister base: search?query=<JSON>. No words:
-   the newest ("*" sorted by date). pageKey: the last reply's page_key, or "". */
+   the newest ("*" sorted by date). pageKey: the last reply's page_key, raw as
+   ShioriPage.next keeps it (JSON escapes intact: Hister's holds \u0000), or "". */
 int shiori_hister_search_target(const char *typed, int pill, int limit, const char *pageKey, char *out, long cap);
 /* Kura's, relative to the Kura base: api/search?… or api/recent?…; vault "" (the
    default vault), a name, or "all" */

@@ -17,8 +17,16 @@ void shiori_origin_of(const char *raw, char *out, long cap)
 	int https;
 
 	out[0] = '\0';
-	if (!shiori_trim(raw, url, (long) sizeof(url)))
-		return;
+	if (!shiori_trim(raw, url, (long) sizeof(url))) {
+		/* longer than the buffer (a request with a long query): only the scheme and the
+		   host decide, and they come first */
+		while (*raw == ' ' || *raw == '\t' || *raw == '\r' || *raw == '\n')
+			raw++;
+		if (strlen(raw) < sizeof(url))
+			return;
+		memcpy(url, raw, sizeof(url) - 1);
+		url[sizeof(url) - 1] = '\0';
+	}
 	for (n = 0; n < 8 && url[n]; n++)
 		auth[n] = (char) lower((unsigned char) url[n]);
 	auth[n] = '\0';
@@ -83,16 +91,51 @@ int shiori_is_configured_origin(const ShioriConfig *c, const char *url)
 	return (h[0] && strcmp(want, h) == 0) || (k[0] && strcmp(want, k) == 0);
 }
 
-void shiori_credential_header(const ShioriConfig *c, const char *url, char *out, long cap)
+void shiori_checked_hister_token(const char *raw, char *out, long cap)
 {
-	char token[48];
+	char t[160];
+	const char *c;
+	size_t n;
 
 	out[0] = '\0';
-	if (!shiori_is_configured_origin(c, url))
+	if (!shiori_trim(raw, t, (long) sizeof(t)))
 		return;
-	shiori_checked_room_token(c->roomToken, token, (long) sizeof(token));
-	if (token[0] == '\0' || cap < (long) (sizeof("Authorization: Bearer ") + strlen(token)))
+	n = strlen(t);
+	if (n < 8 || n > 127 || (long) n >= cap)
 		return;
-	strcpy(out, "Authorization: Bearer ");
+	for (c = t; *c; c++)
+		if ((unsigned char) *c < 0x21 || (unsigned char) *c > 0x7E)
+			return;
+	strcpy(out, t);
+}
+
+void shiori_credential_header(const ShioriConfig *c, const char *url, char *out, long cap)
+{
+	char want[160], h[160], k[160], token[128];
+	const char *name;
+
+	out[0] = '\0';
+	shiori_origin_of(url, want, (long) sizeof(want));
+	if (want[0] == '\0')
+		return;
+	shiori_origin_of(c->hister, h, (long) sizeof(h));
+	shiori_origin_of(c->kura, k, (long) sizeof(k));
+	if (h[0] && strcmp(want, h) == 0) {
+		if (c->direct) {
+			shiori_checked_hister_token(c->histerToken, token, (long) sizeof(token));
+			name = "X-Access-Token: ";
+		} else {
+			shiori_checked_room_token(c->roomToken, token, (long) sizeof(token));
+			name = "Authorization: Bearer ";
+		}
+	} else if (k[0] && strcmp(want, k) == 0) {
+		shiori_checked_room_token(c->roomToken, token, (long) sizeof(token));
+		name = "Authorization: Bearer ";
+	} else {
+		return;
+	}
+	if (token[0] == '\0' || cap < (long) (strlen(name) + strlen(token) + 1))
+		return;
+	strcpy(out, name);
 	strcat(out, token);
 }
