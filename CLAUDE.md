@@ -420,12 +420,24 @@ you.
 - AGPL section 13: `SHIORI_SOURCE_URL` puts a Source link in About; only a
   plain http(s) address counts.
 
-## Notes (Kura)
+## Notes (Kura or Hister)
 
-- **Notes come only from Kura** (`/api/search`, `/api/recent`, `/api/note`,
-  `/api/vaults`, `feed.xml`), their previews too (`/api/note`, every vault);
-  Hister may hold the default vault's notes for its own UI, but Shiori never
-  lists, previews or links a note there (no "Open in Hister" on a note).
+- **Notes come from Kura or from Hister** (the owner's call): Settings →
+  Notes From, `notesSource` (`""` until chosen, `kura`, `hister`), per
+  device, never sent to the account. Until chosen, Kura when one is set up,
+  else Hister. `S.notesSource` / `NotesSource` and the Haiku and classic
+  cores are twins on `scripts/notes-source-cases.json`.
+  - **From Kura** (`/api/search`, `/api/recent`, `/api/note`, `/api/vaults`,
+    `feed.xml`): every vault the filter picks, previews from `/api/note`.
+  - **From Hister**: its `label:vault` documents (Kura pushes the default
+    vault's and the shared ones'; `S.histerNotesText`), **the default
+    vault's alone** (`S.histerNoteShown` / `Notes.histerNoteShown`: by
+    address as Kura reads it, `/v/<vault>/` never, since without Kura a
+    shared vault can't be told from a private one), previews from Hister's
+    `/api/preview`. No vault filter, no notes feed; Save This Note's Links
+    still needs Kura (its links are Kura's).
+  - Every other Hister query leaves the notes out (`S.histerText`), and no
+    note gets "Open in Hister".
 - Other vaults: searchable only in Notes, through the vault filter (Kura's
   `vault`); previewed from Kura's `/api/note` HTML, never cached. A private
   one's are never recorded as opened or deleted in Hister and get no AI

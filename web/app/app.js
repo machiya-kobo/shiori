@@ -2970,6 +2970,12 @@ if (shared) addPage(shared);
 let vaultsAt = 0;
 const loadVaults = () => {
   vaultsAt = Date.now();
+  // No Kura set up (notes from Hister): nothing to ask, and with no answer
+  // every vault but the default stays private.
+  if (!settings.niwaURL) {
+    kuraVaults = [];
+    return Promise.resolve();
+  }
   // api.kuraVaults passes them to S.useVaults.
   return api.kuraVaults().then((v) => {
     kuraVaults = v;

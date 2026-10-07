@@ -5,6 +5,18 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.17.0 (2026-10-07)
+
+### Added
+
+- **Notes From: Kura or Hister**, everywhere Shiori runs (the apps, the
+  search page and Safari's, the web app, Linux, Haiku and the classic
+  Mac). Hister holds your default vault's notes because Kura pushes them
+  there, so notes and their previews no longer need Kura: until you
+  choose, Shiori uses Kura when one is set up, else Hister. From Hister,
+  only the default vault's notes show (never another vault's, shared or
+  private), with no vault filter or notes feed.
+
 ## 0.16.0 (2026-10-07)
 
 ### Added

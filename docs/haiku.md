@@ -11,9 +11,13 @@ note, save a web page to Hister, and quick-search from the Deskbar.
   and **Code**. Nothing searches while you type. *Show More…* ends a list
   that has another page. Files, Small Web, the web and AI aren't in this
   app.
-- **A note's preview**: invoking a note shows it from Kura (never Hister's
-  copy, never cached), with its links opening in the browser and *Open in
-  Kura*. A page opens in the browser (WebPositive, or your preferred one).
+- **Notes From** (Settings): Kura, or Hister, which holds the default
+  vault's notes because Kura pushes them there (only those are shown from
+  it, and there's no vault menu). Until you choose, Kura when one is set
+  up, else Hister.
+- **A note's preview**: invoking a note shows it from Kura (never cached),
+  or Hister's readable copy when notes come from Hister, with its links
+  opening in the browser and *Open in Kura*. A page opens in the browser (WebPositive, or your preferred one).
 - **Save URL** (File → Save URL…, a link dropped on the window, or
   `Shiori --save <url> [label]`): a deliberate save to Hister. When Hister
   can't take it (unreachable, unwell, or you're not signed in), it waits

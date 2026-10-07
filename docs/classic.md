@@ -10,14 +10,16 @@ C with [Retro68](https://github.com/autc04/Retro68); the code is in
 
 ## What it does
 
-- **Search** (Return, or a pill): **All** (Kura's top notes, then your
-  pages), **Pages**, **Notes** (Kura's default vault, or a shared one from
-  the vault menu) and **Code**. Nothing searches while you type. *Show
+- **Search** (Return, or a pill): **All** (your top notes, then your
+  pages), **Pages**, **Notes** and **Code**. Notes come from Kura (its
+  default vault, or a shared one from the vault menu) or from Hister, which
+  holds the default vault's notes because Kura pushes them there:
+  Preferences → Notes from (until you choose, Kura when one is set up). Nothing searches while you type. *Show
   More* ends a list that has another page. Files, Small Web, the web, AI
   and saving aren't in this app.
 - **Readers**: a result opens in its own window (up to three): a note from
-  Kura (never Hister's copy, never cached), a page from Hister's readable
-  copy. Headings, bold, italic, code, quotes, lists and links are styled.
+  Kura (never cached), or Hister's readable copy when notes come from
+  Hister; a page from Hister's readable copy. Headings, bold, italic, code, quotes, lists and links are styled.
   A link to another note in the same Kura opens it there; any other link
   shows its address, and Copy Link copies it (there's no browser).
   Find (⌘F) and Find Again (⌘G) search the text.
@@ -48,8 +50,8 @@ the original M0110 keyboard has no arrows: use Tab and the Search menu.)
   up no names, so it speaks plain HTTP/1.0, by IP address. Either:
   - **Directly to Hister**, served over plain HTTP on your LAN (below).
     The simplest setup: Shiori is then an ordinary Hister client, with or
-    without Hister's access token. Kura is optional (without it there are
-    no notes).
+    without Hister's access token. Kura is optional: without it, notes come
+    from Hister.
   - **Through mac-bridge** ([`classic/bridge/`](../classic/bridge)), when
     your Hister is HTTPS-only or signed in with users. The bridge listens
     on your LAN, one port for Hister and one for Kura, passes a few
