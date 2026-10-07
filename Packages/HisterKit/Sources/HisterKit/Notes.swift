@@ -267,7 +267,7 @@ public enum Notes {
             return try JSONDecoder().decode([Card].self, from: data)
         } catch {
             // Without the cards, notes lose their Konbini links, quietly.
-            HisterClient.log.error("Konbini cards didn't decode: \(String(describing: error), privacy: .public)")
+            HisterClient.log.error("Konbini cards didn't decode: \(DecodeLog.describe(error), privacy: .public)")
             return []
         }
     }

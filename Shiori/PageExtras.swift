@@ -1,8 +1,9 @@
 import HisterKit
 import SwiftUI
 
-/// An image from a preview, large: pinch or scroll to zoom, and Open in
-/// Browser for the original. Only reached with Images in Previews on.
+/// An image from a preview, large: pinch, double-tap, the Zoom buttons
+/// (⌘+ and ⌘−) or VoiceOver's zoom actions, and Open in Browser for the
+/// original. Only reached with Images in Previews on.
 struct ImageViewer: View {
     let url: URL
     @Environment(\.dismiss) private var dismiss
@@ -10,6 +11,11 @@ struct ImageViewer: View {
     @Environment(\.palette) private var palette
     @State private var zoom: CGFloat = 1
     @GestureState private var pinch: CGFloat = 1
+
+    static let zoomRange: ClosedRange<CGFloat> = 1...6
+
+    private func zoomIn() { withAnimation(.snappy) { zoom = min(zoom * 1.5, Self.zoomRange.upperBound) } }
+    private func zoomOut() { withAnimation(.snappy) { zoom = max(zoom / 1.5, Self.zoomRange.lowerBound) } }
 
     /// The image itself, without the marker `linkingImages` added.
     private var source: URL {
@@ -31,6 +37,13 @@ struct ImageViewer: View {
                             .scaledToFit()
                             .scaleEffect(zoom * pinch)
                             .accessibilityLabel("Image from the page")
+                            .accessibilityZoomAction { action in
+                                switch action.direction {
+                                case .zoomIn: zoomIn()
+                                case .zoomOut: zoomOut()
+                                @unknown default: break
+                                }
+                            }
                     case .failure:
                         ContentUnavailableView("Image Not Loaded", systemImage: "photo.badge.exclamationmark")
                     default:
@@ -41,7 +54,7 @@ struct ImageViewer: View {
                 .gesture(
                     MagnifyGesture()
                         .updating($pinch) { value, state, _ in state = value.magnification }
-                        .onEnded { value in zoom = min(max(zoom * value.magnification, 1), 6) }
+                        .onEnded { value in zoom = min(max(zoom * value.magnification, Self.zoomRange.lowerBound), Self.zoomRange.upperBound) }
                 )
                 .onTapGesture(count: 2) { zoom = zoom > 1 ? 1 : 2.5 }
             }
@@ -54,7 +67,15 @@ struct ImageViewer: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    Button("Zoom Out", systemImage: "minus.magnifyingglass", action: zoomOut)
+                        .keyboardShortcut("-")
+                        .disabled(zoom <= Self.zoomRange.lowerBound)
+                        .help("Zoom out")
+                    Button("Zoom In", systemImage: "plus.magnifyingglass", action: zoomIn)
+                        .keyboardShortcut("=")
+                        .disabled(zoom >= Self.zoomRange.upperBound)
+                        .help("Zoom in")
                     Button("Open in Browser", systemImage: "safari") { openURL(source) }
                         .help("Open in browser")
                 }
@@ -112,7 +133,8 @@ struct DiffView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 1) {
+            // Lazy: a long page's diff is thousands of lines.
+            LazyVStack(alignment: .leading, spacing: 1) {
                 ForEach(Array(version.textDiff.split(separator: "\n", omittingEmptySubsequences: false).enumerated()), id: \.offset) { _, line in
                     Text(line.isEmpty ? " " : String(line))
                         .textStyle(.footnote, design: .monospaced)
@@ -176,7 +198,8 @@ struct AddPageSheet: View {
 
     var body: some View {
         if let chosen {
-            SaveSheet(input: .init(url: chosen))
+            // Back to the address, as typed.
+            SaveSheet(input: .init(url: chosen), back: { self.chosen = nil })
         } else {
             NavigationStack {
                 Form {

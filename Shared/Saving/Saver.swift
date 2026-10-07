@@ -71,7 +71,7 @@ nonisolated enum Saver {
         } catch .cancelled where Task.isCancelled {
             // The user cancelled (not a dropped connection): don't queue it.
             return .cancelled
-        } catch .unreachable, .untrusted, .cancelled {
+        } catch .unreachable, .untrusted, .plainHTTP, .cancelled {
             return queue(page, in: outbox)
         } catch .server(let status, _) where status >= 500 || status == 429 {
             return queue(page, in: outbox)
@@ -128,6 +128,8 @@ extension Saver {
             return .cancelled
         } catch .signedOut {
             return .failed("Hister wants you signed in: Settings → Account.")
+        } catch .plainHTTP {
+            return .failed(HisterError.plainHTTP.saveMessage)
         } catch .unreachable, .untrusted, .cancelled {
             return .failed("Hister is out of reach, so this couldn't be checked: try again later.")
         } catch {
@@ -189,7 +191,7 @@ extension Saver {
             return .rejected(rejection.reason)
         } catch .cancelled where Task.isCancelled {
             return .cancelled
-        } catch .unreachable, .untrusted, .cancelled {
+        } catch .unreachable, .untrusted, .plainHTTP, .cancelled {
             return queue(page, in: outbox) == .queued ? .queued : .failed("Hister is out of reach, and the page couldn't be kept for later.")
         } catch .server(let status, _) where status >= 500 || status == 429 {
             return queue(page, in: outbox) == .queued ? .queued : .failed("Hister is out of reach, and the page couldn't be kept for later.")
@@ -257,6 +259,7 @@ extension HisterError {
         case .invalidQuery(let message): message.isEmpty ? "Hister couldn't read that page." : message
         case .server(let status, let message): message.isEmpty ? "The server answered \(status)." : "The server answered \(status): \(message)"
         case .badResponse: "The server's reply didn't make sense."
+        case .plainHTTP: "This address uses http://, and Shiori needs https://."
         case .signedOut: "Hister wants you to sign in: sign in again in Shiori's Settings → Account."
         default: localizedDescription
         }

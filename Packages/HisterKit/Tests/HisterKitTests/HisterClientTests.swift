@@ -70,6 +70,15 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
     override func stopLoading() {}
 }
 
+/// A request's JSON object body. Throws, never traps: usable in a stub's
+/// handler as well as a test.
+func jsonBody(_ request: URLRequest) throws -> [String: Any] {
+    guard let data = request.httpBody, let body = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        throw URLError(.cannotParseResponse)
+    }
+    return body
+}
+
 @Suite(.serialized)
 struct HisterClientTests {
     static let host = "client.example"
@@ -101,8 +110,10 @@ struct HisterClientTests {
         let page = try await client.search("y", sort: .newest, pageKey: "p1", limit: 1)
         let request = try #require(requests.first)
         #expect(request.value(forHTTPHeaderField: "Origin") == "hister://")
-        let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
-        let query = try JSONSerialization.jsonObject(with: Data(items.first { $0.name == "query" }!.value!.utf8)) as! [String: Any]
+        let url = try #require(request.url)
+        let items = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
+        let sent = try #require(items.first { $0.name == "query" }?.value)
+        let query = try #require(try JSONSerialization.jsonObject(with: Data(sent.utf8)) as? [String: Any])
         // Notes come from Kura: every Hister query leaves them out.
         #expect(query["text"] as? String == "y -label:vault -metadata.source:vault -type:local -metadata.source:code")  // one letter: no prefix
         #expect(query["sort"] as? String == "date")
@@ -123,8 +134,10 @@ struct HisterClientTests {
         let raw = try #require(request.url?.absoluteString)
         #expect(!raw.contains("+"))
         #expect(raw.contains("%2B"))
-        let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
-        let query = try JSONSerialization.jsonObject(with: Data(items.first { $0.name == "query" }!.value!.utf8)) as! [String: Any]
+        let url = try #require(request.url)
+        let items = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
+        let sent = try #require(items.first { $0.name == "query" }?.value)
+        let query = try #require(try JSONSerialization.jsonObject(with: Data(sent.utf8)) as? [String: Any])
         #expect(query["text"] as? String == "c++ -label:vault -metadata.source:vault -type:local -metadata.source:code")
         #expect(query["page_key"] as? String == "[\" Am+MO~\"]")
     }
@@ -136,6 +149,7 @@ struct HisterClientTests {
         #expect(HisterError(transport: URLError(.secureConnectionFailed)) == .untrusted)
         #expect(HisterError(transport: URLError(.cannotFindHost)) == .unreachable)
         #expect(HisterError(transport: URLError(.timedOut)) == .unreachable)
+        #expect(HisterError(transport: URLError(.appTransportSecurityRequiresSecureConnection)) == .plainHTTP)
     }
 
     @Test func aShortPageHasNoNextKey() async throws {
@@ -177,7 +191,8 @@ struct HisterClientTests {
         let request = try #require(requests.first)
         #expect(request.httpMethod == "POST")
         #expect(request.url?.path() == "/api/label")
-        let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: String]
+        let data = try #require(request.httpBody)
+        let body = try #require(try JSONSerialization.jsonObject(with: data) as? [String: String])
         #expect(body == ["url": "https://a.example/", "label": "books"])
     }
 
@@ -190,7 +205,7 @@ struct HisterClientTests {
         #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/x-www-form-urlencoded")
         #expect(request.value(forHTTPHeaderField: "Origin") == "hister://")
         var form = URLComponents()
-        form.percentEncodedQuery = String(decoding: request.httpBody!, as: UTF8.self)
+        form.percentEncodedQuery = String(decoding: try #require(request.httpBody), as: UTF8.self)
         let fields = Dictionary(uniqueKeysWithValues: (form.queryItems ?? []).map { ($0.name, $0.value ?? "") })
         #expect(fields == ["alias-keyword": "@alpha", "alias-value": "label:(alpha-one|alpha-two|c+d)"])
     }
@@ -200,17 +215,17 @@ struct HisterClientTests {
         try await client.deleteAlias("@beta")
         let request = try #require(requests.first)
         #expect(request.url?.path() == "/api/delete_alias")
-        #expect(String(decoding: request.httpBody!, as: UTF8.self) == "alias=@beta")
+        #expect(String(decoding: try #require(request.httpBody), as: UTF8.self) == "alias=@beta")
     }
 
     @Test func deleteRunsADryRunAndDeletesOnlyOneMatch() async throws {
         StubProtocol.handle(Self.host) { request in
-            let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
+            let body = try jsonBody(request)
             return (200, Data(((body["dry_run"] as? Bool) == true ? #"{"matched":1}"# : #"{"deleted":1}"#).utf8))
         }
         try await client.delete(url: #"https://a.example/"q""#)
         #expect(requests.count == 2)
-        let first = try JSONSerialization.jsonObject(with: requests[0].httpBody!) as! [String: Any]
+        let first = try jsonBody(requests[0])
         #expect(first["query"] as? String == #"url:"https://a.example/\"q\"""#)
         #expect(first["dry_run"] as? Bool == true)
     }

@@ -49,8 +49,9 @@ public struct LinkedNote: Sendable, Equatable, Decodable {
         title = (try? c.decode(String.self, forKey: .title)) ?? ""
         url = (try? c.decode(String.self, forKey: .url)) ?? ""
         tags = (try? c.decode([String].self, forKey: .tags)) ?? []
-        // Absent before Kura shipped the field: no links, not an error.
-        externalLinks = (try? c.decode([NoteLink].self, forKey: .externalLinks)) ?? []
+        // Absent before Kura shipped the field: no links, not an error. One
+        // link that doesn't read is skipped, not all of them.
+        externalLinks = (try? c.decodeIfPresent(Lenient<NoteLink>.self, forKey: .externalLinks))?.elements ?? []
     }
 }
 
@@ -172,17 +173,22 @@ extension KuraClient {
 
     /// The links of every note under a folder of the default vault
     /// (`/api/links`), a page at a time. Notes without links aren't listed.
-    public func folderLinks(folder: String, limit: Int = 100, offset: Int = 0) async throws(HisterError) -> (total: Int, notes: [LinkedNote]) {
+    /// `listed`: how many notes the page held, a skipped one included (what
+    /// the next offset counts).
+    public func folderLinks(
+        folder: String, limit: Int = 100, offset: Int = 0
+    ) async throws(HisterError) -> (total: Int, notes: [LinkedNote], listed: Int) {
         struct Reply: Decodable {
             var total: Int?
-            var notes: [LinkedNote]?
+            /// One note that doesn't read is skipped, not the folder.
+            var notes: Lenient<LinkedNote>?
         }
         let reply: Reply = try await get("api/links", [
             URLQueryItem(name: "folder", value: folder),
             URLQueryItem(name: "limit", value: String(limit)),
             URLQueryItem(name: "offset", value: String(offset)),
         ])
-        return (reply.total ?? 0, reply.notes ?? [])
+        return (reply.total ?? 0, reply.notes?.elements ?? [], reply.notes?.count ?? 0)
     }
 
     /// Every note under a folder that has links, paging through
@@ -195,8 +201,8 @@ extension KuraClient {
             let page = try await folderLinks(folder: folder, limit: 100, offset: offset)
             notes += page.notes
             links += page.notes.reduce(0) { $0 + $1.externalLinks.count }
-            offset += page.notes.count
-            if page.notes.isEmpty || offset >= page.total { break }
+            offset += page.listed
+            if page.listed == 0 || offset >= page.total { break }
         }
         return notes
     }
@@ -213,10 +219,7 @@ extension KuraClient {
         }
         guard let http = response as? HTTPURLResponse else { throw .badResponse }
         guard http.statusCode == 200 else { throw .server(status: http.statusCode, message: "") }
-        do {
-            return try JSONDecoder().decode(T.self, from: data)
-        } catch {
-            throw .badResponse
-        }
+        guard let value = DecodeLog.decode(T.self, from: data, what: "Kura's links") else { throw .badResponse }
+        return value
     }
 }

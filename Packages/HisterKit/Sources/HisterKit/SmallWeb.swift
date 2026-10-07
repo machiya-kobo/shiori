@@ -40,7 +40,7 @@ public struct SmallWebClient: Sendable {
         struct Reply: Decodable { var url: String? }
         let body = try http.encodeJSON(["url": url])
         let data = try await http.send(http.makeRequest("api/save", method: "POST", body: body))
-        return (try? JSONDecoder().decode(Reply.self, from: data))?.url.flatMap { $0.isEmpty ? nil : $0 } ?? url
+        return DecodeLog.decode(Reply.self, from: data, what: "Small-web save reply")?.url.flatMap { $0.isEmpty ? nil : $0 } ?? url
     }
 }
 

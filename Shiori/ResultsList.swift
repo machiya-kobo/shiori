@@ -531,6 +531,7 @@ struct FailureView: View {
         switch error {
         case .unreachable: "Can't Reach Hister"
         case .untrusted: "Connection Not Trusted"
+        case .plainHTTP: "Needs HTTPS"
         case .previewUnavailable: "Preview Not Shown"
         case .invalidQuery: "Query Not Understood"
         default: "Something Went Wrong"
@@ -541,6 +542,7 @@ struct FailureView: View {
         switch error {
         case .unreachable: "network.slash"
         case .untrusted: "lock.trianglebadge.exclamationmark"
+        case .plainHTTP: "lock.open"
         case .previewUnavailable: "doc.text.magnifyingglass"
         case .invalidQuery: "questionmark.text.page"
         default: "exclamationmark.triangle"
@@ -556,6 +558,8 @@ extension HisterError {
             "The server didn't answer. Check your network or VPN and the server address in Settings, then try again."
         case .untrusted:
             "The server's certificate isn't trusted, so Shiori didn't send anything. Check the server's HTTPS setup."
+        case .plainHTTP:
+            "This address uses http://, and Shiori needs https://."
         case .previewUnavailable:
             "This page's preview couldn't be shown."
         case .invalidQuery(let message):

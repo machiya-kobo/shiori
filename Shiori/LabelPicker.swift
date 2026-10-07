@@ -19,6 +19,8 @@ struct LabelPicker: View {
     @State private var suggestion: LabelSuggestion?
     @State private var suggesting = false
     @State private var suggestionFailure: String?
+    /// The server's labels on their way (they may already be here).
+    @State private var loadingLabels = true
 
     var body: some View {
         NavigationStack {
@@ -49,9 +51,7 @@ struct LabelPicker: View {
             .themedBackground()
             .disabled(saving)
             .overlay {
-                if app.rules.labels.isEmpty {
-                    ProgressView()
-                }
+                if app.rules.labels.isEmpty { noLabels }
             }
             #if os(iOS)
             // No .searchSuggestions(.hidden, for: .content) here: on iOS 27
@@ -71,13 +71,44 @@ struct LabelPicker: View {
                 }
             }
             .task {
-                await app.loadRulesIfNeeded()
+                await loadLabels()
                 await suggest()
             }
         }
         #if os(macOS)
         .frame(minWidth: 320, minHeight: 480)
         #endif
+    }
+
+    /// Without labels: still coming, why they didn't, or that there are
+    /// none yet (as the Labels tab says it).
+    @ViewBuilder private var noLabels: some View {
+        if loadingLabels {
+            ProgressView()
+        } else if app.client == nil || app.rulesFailure != nil {
+            FailureView(error: app.rulesFailure ?? .unreachable, hasServer: app.client != nil) {
+                Task { await loadLabels(again: true) }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(palette.background)
+        } else {
+            ContentUnavailableView {
+                Label("No Labels Yet", systemImage: "tag")
+            } description: {
+                Text("Labels come from your Hister server's aliases.")
+            } actions: {
+                Button("Try Again") { Task { await loadLabels(again: true) } }
+                    .buttonStyle(.bordered)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(palette.background)
+        }
+    }
+
+    private func loadLabels(again: Bool = false) async {
+        loadingLabels = true
+        if again { await app.reloadRules() } else { await app.loadRulesIfNeeded() }
+        loadingLabels = false
     }
 
     private var filterText: String {

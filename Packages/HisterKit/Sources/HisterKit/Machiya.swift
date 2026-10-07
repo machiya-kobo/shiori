@@ -220,7 +220,7 @@ public enum Machiya {
             var token: String?
             var principal: String?
         }
-        let reply = try? JSONDecoder().decode(Reply.self, from: data)
+        let reply = DecodeLog.decode(Reply.self, from: data, what: "Pairing reply")
         let token = Self.token(reply?.token ?? "")
         let principal = String((reply?.principal ?? "").prefix(64))
         guard !token.isEmpty, !principal.isEmpty else { throw .badReply }

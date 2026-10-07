@@ -233,6 +233,9 @@ struct ListOrderKey: PreferenceKey {
 struct KeyboardHelp: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.palette) private var palette
+    /// The keys' column grows with the text size (the Mac's too).
+    @ScaledMetric(relativeTo: .body) private var keyWidth: CGFloat = 110
+    @Environment(\.macTextScale) private var macScale
     private let keys: [(String, String)] = [
         ("j  k", "Next, previous result"),
         ("h  l", "Previous, next choice (All · Pages · Notes · Web · Opened)"),
@@ -254,7 +257,7 @@ struct KeyboardHelp: View {
                     Text(key.0)
                         .textStyle(.body, design: .monospaced)
                         .foregroundStyle(palette.accent)
-                        .frame(width: 110, alignment: .leading)
+                        .frame(width: keyWidth * macScale, alignment: .leading)
                     Text(key.1)
                         .foregroundStyle(palette.text)
                 }

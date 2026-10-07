@@ -116,7 +116,17 @@ public enum PageFetcher {
         }
     }
 
-    public static func fetch(_ url: URL, session: URLSession = .shared) async throws -> Fetched {
+    /// Its own session: no cookies or cache shared with anything else, and
+    /// the whole download (redirects included) done in 30 s at most.
+    /// Redirects are followed: the save looks the final address up again.
+    public static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 30
+        return URLSession(configuration: config)
+    }()
+
+    public static func fetch(_ url: URL, session: URLSession = PageFetcher.session) async throws -> Fetched {
         var request = URLRequest(url: url, timeoutInterval: 15)
         request.setValue("text/html,application/xhtml+xml;q=0.9,*/*;q=0.5", forHTTPHeaderField: "Accept")
         let (bytes, response) = try await session.bytes(for: request)
@@ -127,17 +137,26 @@ public enum PageFetcher {
             return Fetched(url: finalURL, title: "", html: "")
         }
         // Room for the page up front (the share extension has little memory
-        // to spare for regrowing it), capped either way.
+        // to spare for regrowing it), capped either way. Read in chunks: a
+        // byte at a time costs an await per byte.
         var data = Data()
         let expected = response.expectedContentLength
         data.reserveCapacity(expected > 0 ? min(Int(expected), maxBytes) : 256 * 1024)
+        var chunk: [UInt8] = []
+        chunk.reserveCapacity(chunkSize)
         for try await byte in bytes {
-            data.append(byte)
+            chunk.append(byte)
+            guard chunk.count == chunkSize else { continue }
+            data.append(contentsOf: chunk)
+            chunk.removeAll(keepingCapacity: true)
             if data.count >= maxBytes { break }
         }
-        let html = String(decoding: data, as: UTF8.self)
+        data.append(contentsOf: chunk)
+        let html = String(decoding: data.prefix(maxBytes), as: UTF8.self)
         return Fetched(url: finalURL, title: title(in: html), html: capped(html))
     }
+
+    static let chunkSize = 64 * 1024
 
     /// The document's <title>, entities decoded.
     public static func title(in html: String) -> String {
@@ -147,7 +166,8 @@ public enum PageFetcher {
 
     /// Cut at the last '>' before the cap, as the Safari extension does.
     public static func capped(_ html: String) -> String {
-        guard html.count > maxHTMLCharacters else { return html }
+        // UTF-8 bytes are never fewer than characters, and counted at once.
+        guard html.utf8.count > maxHTMLCharacters else { return html }
         let prefix = html.prefix(maxHTMLCharacters)
         if let close = prefix.lastIndex(of: ">") { return String(prefix[...close]) }
         return String(prefix)
@@ -206,8 +226,13 @@ public struct Outbox: Sendable {
         try? directory.setResourceValues(resourceValues)
         var page = page
         for file in files() {
-            if let entry = read(file), entry.page.url == page.url {
+            guard let entry = read(file) else { continue }
+            if entry.page.url == page.url {
                 page.added = page.added ?? entry.page.added
+                try? FileManager.default.removeItem(at: file)
+            } else if let added = entry.page.added, now.timeIntervalSince1970 - TimeInterval(added) > Self.maxAge {
+                // Too old to send: gone now, not only when a drain reaches it.
+                Self.log.notice("Dropping an outbox entry older than \(Int(Self.maxAge / 86400)) days")
                 try? FileManager.default.removeItem(at: file)
             }
         }

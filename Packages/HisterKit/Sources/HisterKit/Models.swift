@@ -341,13 +341,20 @@ struct DocumentWire: Decodable {
             // The history list sends "" rather than leaving it out.
             domain: domain.flatMap { $0.isEmpty ? nil : $0 } ?? URL(string: url)?.host() ?? "",
             label: label ?? "",
-            added: Date(timeIntervalSince1970: TimeInterval(added ?? 0)),
-            updated: Date(timeIntervalSince1970: TimeInterval(updated ?? added ?? 0)),
+            added: histerDate(added),
+            updated: histerDate(updated ?? added),
             faviconKey: favicon_key ?? "",
             snippetHTML: text ?? "")
         page.code = metadata?.code
         return page
     }
+}
+
+/// Hister's unix seconds as a date. Missing (or 0) is no date at all:
+/// `.distantPast`, which the rows leave out, not 1 January 1970.
+func histerDate(_ seconds: Int64?) -> Date {
+    guard let seconds, seconds > 0 else { return .distantPast }
+    return Date(timeIntervalSince1970: TimeInterval(seconds))
 }
 
 struct PreviewResponse: Decodable {
@@ -389,8 +396,8 @@ struct PreviewResponse: Decodable {
         PagePreview(
             title: title ?? "",
             contentHTML: content ?? "",
-            added: Date(timeIntervalSince1970: TimeInterval(added ?? 0)),
-            updated: Date(timeIntervalSince1970: TimeInterval(updated ?? added ?? 0)),
+            added: histerDate(added),
+            updated: histerDate(updated ?? added),
             label: details?.label ?? "",
             visits: details?.visits ?? 0,
             author: meta?.author.flatMap { $0.isEmpty ? nil : $0 },

@@ -316,7 +316,8 @@ you.
   off, a CSP of images and inline styles, no referrer and a non-persistent
   store. Links open in the browser.
 - Transport errors say what to do (`HisterError(transport:)`): TLS failures
-  are `.untrusted`, everything else `.unreachable`.
+  are `.untrusted`, a plain http:// address (App Transport Security)
+  `.plainHTTP`, everything else `.unreachable`.
 - HisterKit's types are `Sendable` and nonisolated; keep
   `NonisolatedNonsendingByDefault` off (it crashed the network tests).
 - Replies that don't decode are logged by field names, never content.

@@ -19,6 +19,9 @@ public enum AIError: Error, Equatable, LocalizedError {
     case tooLong
     /// No engine is switched on for this content.
     case noEngine
+    /// A plain http:// address, which the system's App Transport Security
+    /// refuses: nothing was sent.
+    case plainHTTP
 
     public var errorDescription: String? {
         switch self {
@@ -44,6 +47,8 @@ public enum AIError: Error, Equatable, LocalizedError {
             "The page was too long for the model."
         case .noEngine:
             "No AI engine is switched on for this."
+        case .plainHTTP:
+            "This address uses http://, and Shiori needs https://."
         }
     }
 }

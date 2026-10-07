@@ -26,10 +26,10 @@ struct SavingTests {
         try await client.add(page("https://a.example/"))
         let request = try #require(StubProtocol.requests(Self.host).first)
         #expect(request.url?.path() == "/api/add")
-        let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
+        let body = try jsonBody(request)
         #expect(body["url"] as? String == "https://a.example/")
         #expect(body["label"] as? String == "books")
-        let metadata = body["metadata"] as! [String: Any]
+        let metadata = try #require(body["metadata"] as? [String: Any])
         #expect(metadata["client"] as? String == "shiori")
         #expect(metadata["source"] as? String == "shiori")
         #expect(metadata["client_version"] as? String == "1.2")
@@ -46,7 +46,7 @@ struct SavingTests {
 
     @Test func anEmptyLabelIsLeftOut() throws {
         let p = NewPage(url: "u", title: "t", label: "", via: "share")
-        let body = try JSONSerialization.jsonObject(with: JSONEncoder().encode(p)) as! [String: Any]
+        let body = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(p)) as? [String: Any])
         #expect(body["label"] == nil)
     }
 
@@ -65,14 +65,14 @@ struct SavingTests {
         try outbox.enqueue(page("https://ok.example/"), now: Date(timeIntervalSince1970: 1))
         try outbox.enqueue(page("https://skip.example/"), now: Date(timeIntervalSince1970: 2))
         StubProtocol.handle(Self.host) { request in
-            let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
+            let body = try jsonBody(request)
             return ((body["url"] as? String) == "https://skip.example/" ? 406 : 201, Data())
         }
         // The pages are stamped at seconds 1 and 2: drain on their clock.
         let result = await outbox.drain(using: client, now: Date(timeIntervalSince1970: 3))
         #expect(result == .sent(1))
         #expect(outbox.status().count == 0)
-        let first = try JSONSerialization.jsonObject(with: StubProtocol.requests(Self.host)[0].httpBody!) as! [String: Any]
+        let first = try jsonBody(try #require(StubProtocol.requests(Self.host).first))
         #expect(first["added"] as? Int == 1)
     }
 
@@ -98,13 +98,21 @@ struct SavingTests {
     @Test func pagesOlderThanTwoWeeksAreDroppedUnsent() async throws {
         let outbox = Outbox(directory: dir)
         let now = Date(timeIntervalSince1970: 2_000_000)
-        try outbox.enqueue(page("https://old.example/", added: Int(now.timeIntervalSince1970 - Outbox.maxAge - 1)), now: now)
         try outbox.enqueue(page("https://new.example/"), now: now)
+        try outbox.enqueue(page("https://old.example/", added: Int(now.timeIntervalSince1970 - Outbox.maxAge - 1)), now: now)
         StubProtocol.handle(Self.host) { _ in (201, Data()) }
         #expect(await outbox.drain(using: client, now: now) == .sent(1))
         #expect(outbox.status().count == 0)
-        let sent = try JSONSerialization.jsonObject(with: StubProtocol.requests(Self.host)[0].httpBody!) as! [String: Any]
+        let sent = try jsonBody(try #require(StubProtocol.requests(Self.host).first))
         #expect(sent["url"] as? String == "https://new.example/")
+    }
+
+    @Test func queueingAPageDropsOnesTooOldToSend() throws {
+        let outbox = Outbox(directory: dir)
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        try outbox.enqueue(page("https://old.example/", added: Int(now.timeIntervalSince1970 - Outbox.maxAge - 1)), now: now)
+        try outbox.enqueue(page("https://new.example/"), now: now)
+        #expect(outbox.pages.map(\.url) == ["https://new.example/"])
     }
 
     @Test func anUnreadableEntryIsDroppedAndTheRestSent() async throws {
@@ -127,5 +135,31 @@ struct SavingTests {
         let big = "<p>" + String(repeating: "a", count: PageFetcher.maxHTMLCharacters) + "</p>"
         let cut = PageFetcher.capped(big)
         #expect(cut == "<p>")
+        #expect(PageFetcher.capped("<p>été</p>") == "<p>été</p>")
+    }
+
+    @Test func aFetchedPageIsCappedAndOnlyHTMLOrText() async throws {
+        let host = "fetch.example"
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [StubProtocol.self]
+        let session = URLSession(configuration: config)
+        defer { StubProtocol.reset(host) }
+        let url = try #require(URL(string: "https://\(host)/page"))
+        let big = "<title>Big</title>" + String(repeating: "a", count: PageFetcher.maxBytes + 100_000)
+        StubProtocol.headers(host, ["Content-Type": "text/html; charset=utf-8"])
+        StubProtocol.handle(host) { _ in (200, Data(big.utf8)) }
+        let fetched = try await PageFetcher.fetch(url, session: session)
+        #expect(fetched.title == "Big")
+        #expect(fetched.url == url.absoluteString)
+        #expect(fetched.html.utf8.count <= PageFetcher.maxHTMLCharacters)
+        #expect(fetched.html.hasPrefix("<title>Big</title>"))
+
+        StubProtocol.headers(host, ["Content-Type": "text/html"])
+        StubProtocol.handle(host) { _ in (200, Data("<title>Small</title><p>x</p>".utf8)) }
+        #expect(try await PageFetcher.fetch(url, session: session).html == "<title>Small</title><p>x</p>")
+
+        StubProtocol.headers(host, ["Content-Type": "application/pdf"])
+        StubProtocol.handle(host) { _ in (200, Data("%PDF".utf8)) }
+        #expect(try await PageFetcher.fetch(url, session: session) == PageFetcher.Fetched(url: url.absoluteString, title: "", html: ""))
     }
 }

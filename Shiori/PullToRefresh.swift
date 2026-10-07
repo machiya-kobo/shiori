@@ -8,11 +8,14 @@ import SwiftUI
 /// Not the system's `.refreshable`: with Shiori's bars under the navigation
 /// bar (`topBar`'s safe-area bars), iOS drew its spinner where it couldn't
 /// be seen, and its haptic came only after a long pull. iOS only: the Mac
-/// has no pull (a trackpad's bounce isn't one).
+/// has no pull (a trackpad's bounce isn't one). VoiceOver has a Refresh
+/// action instead, and Reduce Motion keeps the mark still (no growing or
+/// turning: the arrow points up, in the accent, once letting go reloads).
 struct PullToRefresh: ViewModifier {
     let action: () async -> Void
 
     @Environment(\.palette) private var palette
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pull: CGFloat = 0
     @State private var armed = false
     @State private var refreshing = false
@@ -41,6 +44,7 @@ struct PullToRefresh: ViewModifier {
             }
             .sensoryFeedback(.impact(weight: .medium), trigger: armed) { _, now in now }
             .overlay(alignment: .top) { mark }
+            .accessibilityAction(named: "Refresh") { if !refreshing { start() } }
         #else
         content
         #endif
@@ -68,20 +72,23 @@ struct PullToRefresh: ViewModifier {
                 if refreshing {
                     ProgressView().controlSize(.small).tint(palette.accent)
                 } else {
-                    Image(systemName: "arrow.down")
+                    Image(systemName: reduceMotion && armed ? "arrow.up" : "arrow.down")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(armed ? palette.accent : palette.secondaryText)
-                        .rotationEffect(.degrees(armed ? 180 : 0))
+                        .rotationEffect(.degrees(armed && !reduceMotion ? 180 : 0))
                 }
             }
             .frame(width: 32, height: 32)
             .background(palette.raised, in: Circle())
             .shadow(color: .black.opacity(0.15), radius: 4, y: 1)
-            .scaleEffect(refreshing ? 1 : 0.6 + 0.4 * progress)
+            .scaleEffect(refreshing || reduceMotion ? 1 : 0.6 + 0.4 * progress)
             .opacity(refreshing ? 1 : progress)
             .padding(.top, 10)
-            .animation(.snappy(duration: 0.2), value: armed)
-            .accessibilityLabel(refreshing ? "Refreshing" : "Pull to refresh")
+            .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: armed)
+            // The arrow is decoration (the Refresh action does its work);
+            // the spinner says a reload is under way.
+            .accessibilityLabel("Refreshing")
+            .accessibilityHidden(!refreshing)
             .transition(.opacity)
         }
     }

@@ -65,7 +65,7 @@ public struct KuraClient: Sendable {
             throw HisterError(transport: error)
         }
         guard (response as? HTTPURLResponse)?.statusCode == 200,
-            let reply = try? JSONDecoder().decode(Reply.self, from: data)
+            let reply = DecodeLog.decode(Reply.self, from: data, what: "Kura's vaults")
         else { throw .badResponse }
         return reply.vaults
     }
@@ -86,7 +86,7 @@ public struct KuraClient: Sendable {
         }
         guard let http = response as? HTTPURLResponse else { throw .badResponse }
         guard http.statusCode == 200 else { throw .server(status: http.statusCode, message: "") }
-        guard let html = (try? JSONDecoder().decode(Reply.self, from: data))?.html else { throw .badResponse }
+        guard let html = DecodeLog.decode(Reply.self, from: data, what: "Kura's note")?.html else { throw .badResponse }
         return html
     }
 
@@ -146,10 +146,11 @@ public struct KuraClient: Sendable {
                 let changed: Double?
             }
             let total: Int?
-            let results: [Note]
+            /// One note that doesn't read is skipped, not the page.
+            let results: Lenient<Note>
         }
-        guard let reply = try? JSONDecoder().decode(Reply.self, from: data) else { return nil }
-        let notes = reply.results.filter { $0.url.hasPrefix("https://") || $0.url.hasPrefix("http://") }
+        guard let reply = DecodeLog.decode(Reply.self, from: data, what: "Kura's notes") else { return nil }
+        let notes = reply.results.elements.filter { $0.url.hasPrefix("https://") || $0.url.hasPrefix("http://") }
         let documents = notes.map { note in
             let changed = note.changed ?? note.created ?? 0
             return StoredPage(
@@ -160,7 +161,7 @@ public struct KuraClient: Sendable {
         let total = max(reply.total ?? documents.count, documents.count)
         let next = offset + reply.results.count
         return SearchPage(
-            total: total, documents: documents, nextPageKey: next < total && !reply.results.isEmpty ? String(next) : nil,
+            total: total, documents: documents, nextPageKey: next < total && reply.results.count > 0 ? String(next) : nil,
             suggestion: nil)
     }
 }

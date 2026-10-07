@@ -72,6 +72,10 @@ struct NoteLinksTests {
         // Before Kura shipped the field: no links, not an error.
         let without = try JSONDecoder().decode(LinkedNote.self, from: Data(#"{"path":"P/N.md","title":"N","url":"u"}"#.utf8))
         #expect(without.externalLinks.isEmpty)
+        // One link that doesn't read is skipped, not all of them.
+        let oneBad = #"{"path":"P/N.md","external_links":[{"text":"no url"},{"url":"https://b.example/"}]}"#
+        let kept = try JSONDecoder().decode(LinkedNote.self, from: Data(oneBad.utf8))
+        #expect(kept.externalLinks == [NoteLink(url: "https://b.example/", text: "")])
     }
 
     @Test func folderLinksPageUntilDone() async throws {

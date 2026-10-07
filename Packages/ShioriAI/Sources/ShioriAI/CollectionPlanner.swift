@@ -120,7 +120,9 @@ public struct CollectionPlanner: Sendable {
             let collection: String?
             let confidence: String?
         }
-        guard let reply = try? JSONDecoder().decode(Reply.self, from: Data(answer.text.utf8)) else { throw AIError.badResponse }
+        guard let reply = DecodeLog.decode(Reply.self, from: Data(answer.text.utf8), what: "Collection placement") else {
+            throw AIError.badResponse
+        }
         let keyword = reply.collection.flatMap { keywords.contains($0) ? $0 : nil }
         return CollectionPlacement(
             keyword: keyword, confidence: LabelSuggestion.Confidence(rawValue: reply.confidence ?? "") ?? .low,
@@ -174,7 +176,7 @@ public struct CollectionPlanner: Sendable {
             }
             let collections: [Item]
         }
-        guard let reply = try? JSONDecoder().decode(Reply.self, from: Data(json.utf8)) else { return [] }
+        guard let reply = DecodeLog.decode(Reply.self, from: Data(json.utf8), what: "Collection proposals") else { return [] }
         let taken = Set(existing.map { $0.lowercased() })
         var used = Set<String>()
         var out: [ProposedCollection] = []

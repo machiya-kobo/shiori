@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// The settings that follow the person (machiya docs/contracts/prefs.md):
 /// the account's copy at the sign-in helper on Hister's host
@@ -61,6 +62,26 @@ enum AccountPrefs {
         d.data(forKey: key).flatMap { try? JSONDecoder().decode(T.self, from: $0) }
     }
 
+    private static let log = Logger(subsystem: ShioriID.app, category: "prefs")
+
+    /// What a failed send left, value by value: one that doesn't read (not
+    /// a string or null) is logged and dropped, never the rest with it.
+    private static func readPending(_ d: UserDefaults) -> [String: String?] {
+        guard let data = d.data(forKey: pendingKey) else { return [:] }
+        if let pending = try? JSONDecoder().decode([String: String?].self, from: data) { return pending }
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            log.error("Pending settings unreadable: none kept")
+            return [:]
+        }
+        var pending: [String: String?] = [:]
+        for (key, value) in object {
+            if let text = value as? String { pending[key] = .some(text) } else if value is NSNull { pending[key] = .some(nil) }
+        }
+        // Counts only: the keys and values are the person's settings.
+        log.error("Pending settings partly unreadable: \(pending.count, privacy: .public) of \(object.count, privacy: .public) kept")
+        return pending
+    }
+
     private static func write<T: Encodable>(_ value: T?, _ key: String, _ d: UserDefaults) {
         if let value, let data = try? JSONEncoder().encode(value) { d.set(data, forKey: key) } else { d.removeObject(forKey: key) }
     }
@@ -68,12 +89,12 @@ enum AccountPrefs {
     // MARK: One contact
 
     /// One contact with the account; the App Group is updated in place.
-    static func contact(base: URL, credential: Credential, defaults d: UserDefaults, session: URLSession = .shared) async -> State {
+    static func contact(base: URL, credential: Credential, defaults d: UserDefaults, session: URLSession = AccountPrefs.session) async -> State {
         let now = current(d)
         // What the person changed here since the last contact, and what a
         // failed send left: both go first (rule 2). A first contact has no
         // snapshot: the rules fill the account's blanks instead.
-        var pending: [String: String?] = read([String: String?].self, pendingKey, d) ?? [:]
+        var pending = readPending(d)
         if let last = read([String: String].self, localKey, d) {
             for key in Set(now.keys).union(last.keys) where now[key] != last[key] { pending[key] = now[key] }
         }
@@ -121,6 +142,10 @@ enum AccountPrefs {
     }
 
     // MARK: The helper's API
+
+    /// Its own: the request carries a credential, so no cookies or cache
+    /// shared with anything else, and no redirect followed.
+    static let session = URLSession(configuration: .ephemeral, delegate: NoRedirects(), delegateQueue: nil)
 
     enum Reply {
         case ok(PrefsSync.Snapshot)

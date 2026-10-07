@@ -153,7 +153,7 @@ public struct AnthropicClient: AIEngine {
                 case stopDetails = "stop_details"
             }
         }
-        guard let envelope = try? JSONDecoder().decode(Envelope.self, from: data) else { throw AIError.badResponse }
+        guard let envelope = DecodeLog.decode(Envelope.self, from: data, what: "Anthropic reply") else { throw AIError.badResponse }
         if envelope.stopReason == "refusal" { throw AIError.declined(envelope.stopDetails?.explanation) }
         let text = envelope.content.filter { $0.type == "text" }.compactMap(\.text).joined()
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AIError.emptyContent }
@@ -178,7 +178,7 @@ public struct AnthropicClient: AIEngine {
             }
             let usage: Usage?
         }
-        guard let usage = (try? JSONDecoder().decode(Envelope.self, from: data))?.usage else { return nil }
+        guard let usage = DecodeLog.decode(Envelope.self, from: data, what: "Anthropic usage")?.usage else { return nil }
         return (usage.inputTokens ?? 0, usage.cacheReadInputTokens ?? 0, usage.cacheCreationInputTokens ?? 0, usage.outputTokens ?? 0)
     }
 
@@ -195,7 +195,7 @@ public struct AnthropicClient: AIEngine {
                 case lastID = "last_id"
             }
         }
-        guard let page = try? JSONDecoder().decode(Page.self, from: data) else { throw AIError.badResponse }
+        guard let page = DecodeLog.decode(Page.self, from: data, what: "Anthropic models") else { throw AIError.badResponse }
         return (page.data.map(\.id), page.hasMore ?? false, page.lastID)
     }
 }

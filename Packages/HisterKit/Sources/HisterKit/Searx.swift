@@ -92,7 +92,7 @@ public struct SearxClient: Sendable {
         do {
             reply = try JSONDecoder().decode(Reply.self, from: data)
         } catch {
-            HisterClient.log.error("SearXNG reply didn't decode: \(String(describing: error), privacy: .public)")
+            HisterClient.log.error("SearXNG reply didn't decode: \(DecodeLog.describe(error), privacy: .public)")
             throw .badResponse
         }
         var seen = Set<String>()
@@ -176,13 +176,21 @@ extension HisterClient {
             if !fresh.isEmpty { pairs.append(fresh) }
         }
         func query(_ list: [String]) -> String { "url:(\(list.joined(separator: "|")))" }
+        // Lengths kept as it goes, not each batch joined again per URL:
+        // "url:(" and ")" are 6, and each "|" one.
+        func length(_ list: [String]) -> Int { list.reduce(list.count - 1) { $0 + $1.count } }
         var out: [String] = []
         var batch: [String] = []
-        for pair in pairs where query(pair).count <= max {
-            if !batch.isEmpty, query(batch + pair).count > max {
+        var batchLength = 0
+        for pair in pairs {
+            let pairLength = length(pair)
+            guard 6 + pairLength <= max else { continue }
+            if !batch.isEmpty, 6 + batchLength + 1 + pairLength > max {
                 out.append(query(batch))
                 batch = []
+                batchLength = 0
             }
+            batchLength += (batch.isEmpty ? 0 : 1) + pairLength
             batch += pair
         }
         if !batch.isEmpty { out.append(query(batch)) }

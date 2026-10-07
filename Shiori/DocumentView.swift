@@ -420,6 +420,7 @@ struct DocumentView: View {
         let chain = app.ai.chain
         let title = preview.title.isEmpty ? document.displayTitle : preview.title
         let url = document.url
+        let page = document
         summarizing?.cancel()
         summary = .working
         summarizing = Task {
@@ -435,7 +436,9 @@ struct DocumentView: View {
                     : await app.isWorkNoteNow(url) ? .workNote : isNote ? .note : .page
                 let made = try await Summarizer(chain: chain).summarize(
                     title: title, url: url, html: preview.contentHTML, content: content)
-                SummaryCache.write(made, url: url, updated: preview.updated)
+                // Never kept for code, a file or a private vault's note
+                // (`OfflineStore.keepable`, checked inside).
+                SummaryCache.write(made, for: page, updated: preview.updated)
                 guard !Task.isCancelled, url == document.url else { return }
                 summary = .done(made)
             } catch is CancellationError {

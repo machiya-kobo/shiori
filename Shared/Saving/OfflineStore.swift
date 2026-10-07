@@ -12,6 +12,10 @@ import HisterKit
 /// counts an unknown vault as private), a file and code are never kept, and
 /// what's read back is checked again, since a vault may have turned private
 /// since. Signing out of Hister empties it all; a delete drops its preview.
+///
+/// Writes, pruning, forgetting and clearing run on one serial queue off the
+/// caller's (the main) actor, in the order asked: a save asked for before a
+/// sign-out's clear can't land after it. Reads stay where the UI waits.
 nonisolated enum OfflineStore {
     static let previewLimit = 50
     /// The first page a Library list loads.
@@ -32,8 +36,12 @@ nonisolated enum OfflineStore {
     // MARK: Lists
 
     static func saveList(_ name: String, origin: String, pages: [StoredPage], now: Date = .now) {
-        let kept = pages.filter(keepable).prefix(listLimit).map(Page.init)
-        write(ListEntry(origin: origin, savedAt: now, pages: Array(kept)), to: file("lists", "\(origin)|\(name)"))
+        // Which pages may be kept is decided now; the rest happens off this actor.
+        let kept = Array(pages.filter(keepable).prefix(listLimit))
+        guard let file = file("lists", "\(origin)|\(name)") else { return }
+        queue.async {
+            write(ListEntry(origin: origin, savedAt: now, pages: kept.map(Page.init)), to: file)
+        }
     }
 
     static func list(_ name: String, origin: String) -> (pages: [StoredPage], savedAt: Date)? {
@@ -44,51 +52,68 @@ nonisolated enum OfflineStore {
 
     // MARK: Previews
 
+    /// One copy per page, named by its address alone (so `forget` finds it
+    /// without reading anything); the origin inside is checked on reading.
     static func savePreview(_ preview: PagePreview, for page: StoredPage, origin: String, now: Date = .now) {
-        guard keepable(page) else { return }
-        write(PreviewEntry(origin: origin, url: page.url, savedAt: now, preview: Preview(preview)), to: file("previews", "\(origin)|\(page.url)"))
-        prune("previews", keeping: previewLimit)
+        guard keepable(page), let file = previewFile(page.url), let folder = directory?.appending(path: "previews", directoryHint: .isDirectory)
+        else { return }
+        let url = page.url
+        queue.async {
+            write(PreviewEntry(origin: origin, url: url, savedAt: now, preview: Preview(preview)), to: file)
+            prune(folder, keeping: previewLimit)
+        }
     }
 
     static func preview(for page: StoredPage, origin: String) -> (preview: PagePreview, savedAt: Date)? {
-        guard keepable(page), let entry: PreviewEntry = read(file("previews", "\(origin)|\(page.url)")),
+        guard keepable(page), let entry: PreviewEntry = read(previewFile(page.url)),
               entry.origin == origin, entry.url == page.url
         else { return nil }
         return (entry.preview.preview, entry.savedAt)
     }
 
-    /// A deleted page's preview goes with it (from every origin's copy).
+    /// A deleted page's preview goes with it (whichever origin's copy it is).
     static func forget(url: String) {
-        guard let folder = directory?.appending(path: "previews", directoryHint: .isDirectory),
-              let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
-        else { return }
-        for file in files {
-            if let entry: PreviewEntry = read(file), entry.url == url { try? FileManager.default.removeItem(at: file) }
-        }
+        guard let file = previewFile(url) else { return }
+        queue.async { try? FileManager.default.removeItem(at: file) }
     }
 
     /// Everything, on signing out.
     static func clear() {
-        if let directory { try? FileManager.default.removeItem(at: directory) }
+        guard let directory else { return }
+        queue.async { try? FileManager.default.removeItem(at: directory) }
+    }
+
+    /// Returns once every write, prune and clear asked for so far is done.
+    static func settled() async {
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in queue.async { done.resume() } }
     }
 
     // MARK: Files
 
+    /// Serial, so writes and clears land in the order asked.
+    private static let queue = DispatchQueue(label: "Offline", qos: .utility)
+
     static var directory: URL? {
-        testDirectory
-            ?? FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appending(path: "Offline", directoryHint: .isDirectory)
+        #if DEBUG
+        if let testDirectory { return testDirectory }
+        #endif
+        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appending(path: "Offline", directoryHint: .isDirectory)
     }
 
+    #if DEBUG
     /// Set by the tests: a folder of their own instead of the app's caches.
     nonisolated(unsafe) static var testDirectory: URL?
+    #endif
 
     private static func file(_ folder: String, _ key: String) -> URL? {
         let name = SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
         return directory?.appending(path: folder, directoryHint: .isDirectory).appending(path: name + ".json")
     }
 
-    private static func write(_ value: some Encodable, to file: URL?) {
-        guard let file, let data = try? JSONEncoder().encode(value) else { return }
+    private static func previewFile(_ url: String) -> URL? { file("previews", url) }
+
+    private static func write(_ value: some Encodable, to file: URL) {
+        guard let data = try? JSONEncoder().encode(value) else { return }
         try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: file, options: .atomic)
     }
@@ -99,10 +124,9 @@ nonisolated enum OfflineStore {
     }
 
     /// The newest `limit` stay.
-    private static func prune(_ folder: String, keeping limit: Int) {
+    private static func prune(_ folder: URL, keeping limit: Int) {
         let keys: [URLResourceKey] = [.contentModificationDateKey]
-        guard let folder = directory?.appending(path: folder, directoryHint: .isDirectory),
-              let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys),
+        guard let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys),
               files.count > limit
         else { return }
         let dated = files.map { ($0, (try? $0.resourceValues(forKeys: Set(keys)).contentModificationDate) ?? .distantPast) }

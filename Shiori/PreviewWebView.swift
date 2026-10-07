@@ -21,8 +21,9 @@ enum PreviewPage {
         let whereLine = place.map { escape($0) } ?? #"<span class="domain">\#(escape(shownDomain))</span>"#
         let title = escape(preview.title.isEmpty ? document.displayTitle : preview.title)
         let dates = [
-            "Added \(preview.added.formatted(date: .abbreviated, time: .omitted))",
-            preview.updated != preview.added
+            // No date (`.distantPast`): none shown, not year 1.
+            preview.added > .distantPast ? "Added \(preview.added.formatted(date: .abbreviated, time: .omitted))" : nil,
+            preview.updated != preview.added && preview.updated > .distantPast
                 ? "updated \(preview.updated.formatted(date: .abbreviated, time: .omitted))" : nil,
             preview.visits > 1 ? "\(preview.visits) visits" : nil,
         ].compactMap { $0 }.joined(separator: " · ")

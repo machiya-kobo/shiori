@@ -231,6 +231,7 @@ struct WebRow: View {
         .padding(.vertical, 4)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isLink)
         .accessibilityHint("Opens in Safari")
     }
 
@@ -267,6 +268,8 @@ struct WebRow: View {
 /// path (and outbox when Hister is out of reach), from inside the app.
 struct SaveSheet: View {
     let input: Saver.Input
+    /// Add Page's way back to its address step; nil elsewhere.
+    var back: (() -> Void)? = nil
     @Environment(AppState.self) private var app
     @Environment(\.dismiss) private var dismiss
     @Environment(\.palette) private var palette
@@ -314,10 +317,17 @@ struct SaveSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(outcome == nil ? "Cancel" : "Done") {
-                        // Cancel stops a save in flight; it isn't queued either.
-                        saveTask?.cancel()
-                        dismiss()
+                    if let back, outcome != .saved, outcome != .queued {
+                        Button("Back") {
+                            saveTask?.cancel()
+                            back()
+                        }
+                    } else {
+                        Button(outcome == nil ? "Cancel" : "Done") {
+                            // Cancel stops a save in flight; it isn't queued either.
+                            saveTask?.cancel()
+                            dismiss()
+                        }
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -333,6 +343,8 @@ struct SaveSheet: View {
         #if os(macOS)
         .frame(minWidth: 380, minHeight: 300)
         #endif
+        // Closed by a swipe, as Cancel: a save in flight stops.
+        .onDisappear { saveTask?.cancel() }
     }
 
     private func save() async {

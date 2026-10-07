@@ -43,7 +43,7 @@ public enum Export {
         }
         let rows = pages.map {
             Row(url: $0.url, title: $0.title, domain: $0.domain, label: $0.label,
-                added: Int($0.added.timeIntervalSince1970), updated: Int($0.updated.timeIntervalSince1970))
+                added: max(0, Int($0.added.timeIntervalSince1970)), updated: max(0, Int($0.updated.timeIntervalSince1970)))
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
@@ -86,7 +86,7 @@ public enum Export {
         for page in pages {
             out += "<item><title>\(xml(page.displayTitle))</title><link>\(xml(page.url))</link>"
             out += "<guid isPermaLink=\"true\">\(xml(page.url))</guid>"
-            out += "<pubDate>\(rfc822(page.added))</pubDate>"
+            if page.added > .distantPast { out += "<pubDate>\(rfc822(page.added))</pubDate>" }
             if !page.label.isEmpty { out += "<category>\(xml(page.label))</category>" }
             let text = page.snippet.plainText
             if !text.isEmpty { out += "<description>\(xml(String(text.prefix(500))))</description>" }
@@ -156,8 +156,9 @@ public enum Export {
         return out
     }
 
+    /// Empty for no date (`.distantPast`).
     static func iso(_ date: Date) -> String {
-        date.formatted(.iso8601)
+        date > .distantPast ? date.formatted(.iso8601) : ""
     }
 
     static func rfc822(_ date: Date) -> String {

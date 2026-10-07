@@ -104,6 +104,9 @@ public struct AppleIntelligenceEngine: AIEngine {
             return text
         } catch let error as AIError {
             throw error
+        } catch let error as CancellationError {
+            // Cancelled, not unavailable: no other engine is asked instead.
+            throw error
         } catch {
             throw Self.mapped(error)
         }
@@ -134,8 +137,12 @@ public struct AppleIntelligenceEngine: AIEngine {
             return DynamicGenerationSchema(
                 name: name, description: description,
                 properties: try properties.keys.sorted().map { key in
-                    DynamicGenerationSchema.Property(
-                        name: key, description: nil, schema: try dynamicSchema(properties[key]!, name: key),
+                    // The property's own description guides the model too
+                    // (what "new_label" or "second" is for).
+                    let about: String? =
+                        if case .object(let property)? = properties[key], case .string(let text)? = property["description"] { text } else { nil }
+                    return DynamicGenerationSchema.Property(
+                        name: key, description: about, schema: try dynamicSchema(properties[key]!, name: key),
                         isOptional: !required.contains(key))
                 })
         case "string":
@@ -156,7 +163,8 @@ public struct AppleIntelligenceEngine: AIEngine {
 
     /// The framework's errors as the engine chain reads them: a refusal or
     /// guardrail is "declined", a limit or a missing asset "unavailable";
-    /// both let the next engine try. iOS/macOS 27 throw
+    /// both let the next engine try. An answer that didn't decode is
+    /// `badResponse`: shown, not routed around. iOS/macOS 27 throw
     /// `LanguageModelError`, 26 threw `GenerationError`: both are read.
     @available(iOS 26, macOS 26, *)
     static func mapped(_ error: Error) -> Error {
@@ -176,6 +184,9 @@ public struct AppleIntelligenceEngine: AIEngine {
                 return AIError.declined(nil)
             case .exceededContextWindowSize:
                 return AIError.tooLong
+            case .decodingFailure:
+                // An answer that didn't read is shown, not routed around.
+                return AIError.badResponse
             default:
                 return AIError.unavailable("Apple Intelligence: \(error.localizedDescription)")
             }

@@ -148,6 +148,11 @@ fileprivate final class FocusReportingSearchField: NSSearchField {
         }
     }
 
+    private func removeKeys() {
+        if let keys { NSEvent.removeMonitor(keys) }
+        keys = nil
+    }
+
     /// Where the caret is, from the field editor, so the grey starts right
     /// after the text whatever its size or scroll; hidden unless the caret
     /// is at the end with nothing selected.
@@ -209,8 +214,14 @@ fileprivate final class FocusReportingSearchField: NSSearchField {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        // Out of a window (the toolbar rebuilt, the window closed), the keys'
+        // monitor goes too: installed again when the field is back.
+        guard let window else {
+            removeKeys()
+            return
+        }
         installKeys()
-        guard parked, let window else { return }
+        guard parked else { return }
         parked = false
         window.makeFirstResponder(self)
         let length = (stringValue as NSString).length

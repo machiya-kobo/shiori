@@ -10,11 +10,12 @@ public enum AIHTTP {
     public static let timeout: TimeInterval = 30
 
     /// Ephemeral: no cookies, no cache, nothing of a request kept on disk.
+    /// Follows no redirect: its requests carry API keys.
     public static func session(timeout: TimeInterval = timeout) -> URLSession {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = timeout
         config.timeoutIntervalForResource = timeout * 2
-        return URLSession(configuration: config)
+        return URLSession(configuration: config, delegate: NoRedirects(), delegateQueue: nil)
     }
 
     /// Keys sorted: the same request is the same bytes every time (what a
@@ -26,7 +27,14 @@ public enum AIHTTP {
     }
 
     static func data(for request: URLRequest, session: URLSession) async throws -> Data {
-        let (data, response) = try await session.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError where error.code == .appTransportSecurityRequiresSecureConnection {
+            // Say why, not "couldn't connect": the fix is the address.
+            throw AIError.plainHTTP
+        }
         guard let http = response as? HTTPURLResponse else { throw AIError.badResponse }
         guard (200..<300).contains(http.statusCode) else {
             let message = errorMessage(from: data)
@@ -66,5 +74,16 @@ public enum AIHTTP {
     /// A base address with the trailing slash `appending(path:)` needs.
     static func base(_ url: URL) -> URL {
         url.absoluteString.hasSuffix("/") ? url : URL(string: url.absoluteString + "/") ?? url
+    }
+}
+
+/// Follows no redirect (as HisterKit's): a key must never go on to
+/// another address.
+final class NoRedirects: NSObject, URLSessionTaskDelegate, Sendable {
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
     }
 }

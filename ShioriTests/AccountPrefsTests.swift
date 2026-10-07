@@ -19,14 +19,19 @@ struct AccountPrefsTests {
         var puts: [[String: Any]] = []
 
         func answer() -> Data {
-            try! JSONSerialization.data(withJSONObject: ["v": 1, "rev": rev, "prefs": prefs, "updated": updated])
+            (try? JSONSerialization.data(withJSONObject: ["v": 1, "rev": rev, "prefs": prefs, "updated": updated])) ?? Data()
         }
 
         func handle(_ request: URLRequest) -> (Int, Data) {
             if let status { return (status, Data(#"{"error":"x"}"#.utf8)) }
             if request.httpMethod == "PUT" {
-                let body = try! JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as! [String: Any]
-                let values = body["prefs"] as! [String: Any]
+                // A body that isn't the contract's fails the test, not the run.
+                guard let body = (try? JSONSerialization.jsonObject(with: request.httpBody ?? Data())) as? [String: Any],
+                      let values = body["prefs"] as? [String: Any]
+                else {
+                    Issue.record("a PUT without a prefs object")
+                    return (400, Data())
+                }
                 puts.append(values)
                 var changed = false
                 for (key, value) in values {

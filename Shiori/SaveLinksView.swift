@@ -92,6 +92,7 @@ final class SaveLinksModel {
     }
 
     func load(app: AppState) async {
+        phase = .loading
         guard let kura = app.notesKura else {
             phase = .failed("Set Kura's address in Settings → Search first.")
             return
@@ -249,7 +250,14 @@ struct SaveLinksView: View {
             ProgressView("Finding the links…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let message):
-            ContentUnavailableView("No Links", systemImage: "link", description: Text(message))
+            ContentUnavailableView {
+                Label("Couldn't Load Links", systemImage: "link")
+            } description: {
+                Text(message)
+            } actions: {
+                Button("Try Again") { Task { await model.load(app: app) } }
+                    .buttonStyle(.bordered)
+            }
         case .loaded where model.rows.isEmpty:
             ContentUnavailableView("No Links", systemImage: "link",
                                    description: Text("No links to other sites in \(target.title)."))
@@ -338,9 +346,11 @@ private struct LinkRow: View {
             }
             .buttonStyle(.plain)
             .disabled(!row.status.isOpen)
-            .accessibilityLabel(row.selected ? "Selected" : "Not selected")
+            // Named by its link; whether it's ticked is the trait, not the name.
+            .accessibilityLabel(title)
+            .accessibilityAddTraits(row.selected ? .isSelected : [])
             VStack(alignment: .leading, spacing: 2) {
-                Text(row.link.text.isEmpty || row.link.text == row.link.url ? host : row.link.text)
+                Text(title)
                     .textStyle(.body)
                     .lineLimit(2)
                 Text(row.link.url)
@@ -369,6 +379,7 @@ private struct LinkRow: View {
     }
 
     private var host: String { URL(string: row.link.url)?.host() ?? row.link.url }
+    private var title: String { row.link.text.isEmpty || row.link.text == row.link.url ? host : row.link.text }
 
     @ViewBuilder private var status: some View {
         switch row.status {

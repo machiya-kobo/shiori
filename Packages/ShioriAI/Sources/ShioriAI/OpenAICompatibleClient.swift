@@ -45,7 +45,7 @@ public struct OpenAICompatibleClient: AIEngine {
             let data: [Model]
         }
         let data = try await AIHTTP.data(for: request, session: session)
-        guard let page = try? JSONDecoder().decode(Page.self, from: data) else { throw AIError.badResponse }
+        guard let page = DecodeLog.decode(Page.self, from: data, what: "Models list") else { throw AIError.badResponse }
         return page.data.map(\.id)
     }
 
@@ -145,7 +145,7 @@ public struct OpenAICompatibleClient: AIEngine {
             }
             let choices: [Choice]
         }
-        guard let choice = (try? JSONDecoder().decode(Envelope.self, from: data))?.choices.first else {
+        guard let choice = DecodeLog.decode(Envelope.self, from: data, what: "Chat reply")?.choices.first else {
             throw AIError.badResponse
         }
         if let refusal = choice.message.refusal, !refusal.isEmpty { throw AIError.declined(refusal) }

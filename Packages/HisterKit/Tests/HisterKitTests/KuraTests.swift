@@ -46,6 +46,20 @@ import Testing
         #expect(last.nextPageKey == nil)
         #expect(KuraClient.page(from: Data("not json".utf8), offset: 0) == nil)
     }
+
+    @Test func oneNoteThatDoesntReadIsSkippedNotThePage() throws {
+        let json = """
+            {"total": 3, "results": [
+              {"title": "no url"},
+              {"path": "a.md", "title": "A", "url": "https://kura.example/n/a", "changed": 1790553600},
+              {"path": "b.md", "title": "B", "url": "https://kura.example/n/b", "changed": "soon"}
+            ]}
+            """
+        let page = try #require(KuraClient.page(from: Data(json.utf8), offset: 0))
+        #expect(page.documents.map(\.title) == ["A"])
+        // Paging counts every note listed, read or not.
+        #expect(page.nextPageKey == nil)
+    }
 }
 
 /// Against the real Kura, read-only, when KURA_LIVE_URL is set (as

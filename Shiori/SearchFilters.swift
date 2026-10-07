@@ -324,6 +324,9 @@ private struct FilterSheet: View {
                 }
             }
             .themedBackground()
+            .overlay {
+                if nothingMatches { ContentUnavailableView.search(text: search) }
+            }
             #if os(iOS)
             // No .searchSuggestions(.hidden, for: .content): on iOS 27 it
             // blanked a sheet (CLAUDE.md).
@@ -375,7 +378,15 @@ private struct FilterSheet: View {
     @ViewBuilder
     private func termSection(_ name: String, facet: String, field: String, hideable: Bool = false) -> some View {
         let shown = terms(facet).filter { matches($0.label ?? $0.term) }
-        if !shown.isEmpty {
+        if shown.isEmpty, text.isEmpty, model.facets == nil, model.phase == .loading {
+            // The counts come with the list's first page.
+            Section(name) {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Loading…").foregroundStyle(palette.secondaryText)
+                }
+            }
+        } else if !shown.isEmpty {
             Section(name) {
                 ForEach(shown, id: \.term) { term in
                     let word = "\(field):\(term.term)"
@@ -415,11 +426,13 @@ private struct FilterSheet: View {
                 }
             }
         }
-        if !text.isEmpty, terms("domains").filter({ matches($0.label ?? $0.term) }).isEmpty,
-           app.rules.labels.filter(matches).isEmpty, app.rules.collections.filter({ matches(CollectionIcon.title(for: $0.name)) }).isEmpty {
-            Text("No sites or labels match “\(search)”.")
-                .foregroundStyle(palette.secondaryText)
-        }
+    }
+
+    /// A search that finds no site, and no label where labels are offered.
+    private var nothingMatches: Bool {
+        guard !text.isEmpty, terms("domains").filter({ matches($0.label ?? $0.term) }).isEmpty else { return false }
+        return model.source == .notes
+            || app.rules.labels.filter(matches).isEmpty && app.rules.collections.filter({ matches(CollectionIcon.title(for: $0.name)) }).isEmpty
     }
 
     private func row(_ title: String, count: Int? = nil, on: Bool, hidden: Bool = false, action: @escaping () -> Void) -> some View {

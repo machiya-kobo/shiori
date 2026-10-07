@@ -7,6 +7,9 @@ public enum HisterError: Error, Equatable, Sendable {
     case unreachable
     /// The server answered, but its TLS certificate isn't trusted.
     case untrusted
+    /// A plain http:// address, which the system's App Transport Security
+    /// refuses: nothing was sent.
+    case plainHTTP
     /// A page's preview couldn't be drawn (the app's web view failed).
     case previewUnavailable
     /// The server rejected the query itself (e.g. a bad regexp).
@@ -296,16 +299,18 @@ public struct HisterClient: Sendable {
     }
 
     func decode<T: Decodable>(_ data: Data) throws(HisterError) -> T {
-        if let value = try? JSONDecoder().decode(T.self, from: data) { return value }
         // Stored page text can carry raw control characters that Hister
         // does not escape, which strict JSON parsers reject. Outside
-        // strings they are whitespace anyway, so blank them and retry.
+        // strings they are whitespace anyway (and escaped ones are plain
+        // text), so a reply holding any is blanked first: one decode, not
+        // a failed one and another.
+        let readable = data.contains { $0 < 0x20 } ? Self.blankingControlCharacters(data) : data
         do {
-            return try JSONDecoder().decode(T.self, from: Self.blankingControlCharacters(data))
+            return try JSONDecoder().decode(T.self, from: readable)
         } catch {
             // A server-side schema change shows up here, with the key
             // path (the error names fields, not page content).
-            Self.log.error("\(T.self, privacy: .public) didn't decode: \(String(describing: error), privacy: .public)")
+            Self.log.error("\(T.self, privacy: .public) didn't decode: \(DecodeLog.describe(error), privacy: .public)")
             throw .badResponse
         }
     }
@@ -346,8 +351,10 @@ extension HisterError {
     /// What a failed request means for the user. A certificate problem is
     /// its own case (not "check Tailscale"); anything else, a name that
     /// doesn't resolve included (MagicDNS with Tailscale off), stays
-    /// .unreachable, which the outbox treats as "keep for later". The code
-    /// is logged, so Console can tell the causes apart.
+    /// .unreachable, which the outbox treats as "keep for later". A plain
+    /// http:// address is its own case too: the system refused it, so the
+    /// fix is the address. The code is logged, so Console can tell the
+    /// causes apart.
     public init(transport error: any Error) {
         let code = (error as? URLError)?.code
         HisterClient.log.error("request failed: URLError \(code?.rawValue ?? 0, privacy: .public)")
@@ -356,6 +363,8 @@ extension HisterError {
             .serverCertificateHasUnknownRoot, .secureConnectionFailed, .clientCertificateRejected,
             .clientCertificateRequired:
             self = .untrusted
+        case .appTransportSecurityRequiresSecureConnection:
+            self = .plainHTTP
         default:
             self = .unreachable
         }

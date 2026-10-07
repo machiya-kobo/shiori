@@ -299,6 +299,7 @@ final class AppState {
         histerAccount = nil
         // What was kept for reading offline was this account's.
         OfflineStore.clear()
+        SummaryCache.clear()
         credentialsChanged()
     }
 
@@ -356,6 +357,7 @@ final class AppState {
         MachiyaKeychain.signOut()
         // Kura's notes kept for reading offline came with this sign-in.
         OfflineStore.clear()
+        SummaryCache.clear()
         machiyaChanged()
     }
 
@@ -416,6 +418,9 @@ final class AppState {
     /// Mac has them in File, through the `listExport` focused value).
     var shownList: ListExport?
     private var rulesLoaded = false
+    /// Why the last rules fetch failed (nil once one succeeds), for the
+    /// label picker's Try Again.
+    private(set) var rulesFailure: HisterError?
 
     /// Pages deleted in this session; lists hide them without refetching.
     private(set) var deletedURLs: Set<String> = []
@@ -685,6 +690,7 @@ final class AppState {
             let fetched = try await client.rules()
             rules = fetched
             rulesLoaded = true
+            rulesFailure = nil
             // The share sheet's label picker works from this copy.
             SharedSettings.defaults?.set(fetched.labels, forKey: SharedSettings.Key.labels)
             if let found = try? await client.topDomains() { domains = found }
@@ -692,6 +698,7 @@ final class AppState {
         } catch .cancelled {
         } catch {
             // Tried again on the next screen that needs them; say why here.
+            rulesFailure = error
             Self.log.notice("Rules not loaded: \(error.userMessage, privacy: .public)")
         }
     }
@@ -720,6 +727,7 @@ final class AppState {
         guard !(await isWorkNoteNow(document.url)), !isLocalFile(document.url) else { throw .notFound }
         try await client.delete(url: document.url)
         OfflineStore.forget(url: document.url)
+        SummaryCache.remove(url: document.url)
         if deletedURLs.count >= 2000 { deletedURLs.removeAll() }
         deletedURLs.insert(document.url)
     }
@@ -768,7 +776,18 @@ final class AppState {
         guard let pending = pendingDelete else { return }
         pendingTask?.cancel()
         pendingDelete = nil
+        #if os(iOS)
+        // Leaving for the background, iOS would suspend the app mid-DELETE:
+        // ask for the time to finish it.
+        let time = BackgroundTime()
+        time.id = UIApplication.shared.beginBackgroundTask(withName: "Delete") { time.end() }
+        Task {
+            await finish(pending)
+            time.end()
+        }
+        #else
         Task { await finish(pending) }
+        #endif
     }
 
     private func finish(_ pending: PendingDelete) async {
@@ -881,6 +900,20 @@ final class FaviconCache {
         }
     }
 }
+
+#if os(iOS)
+/// A background task's time, ended once: when the work is done, or when
+/// iOS says the time is up.
+private final class BackgroundTime {
+    var id = UIBackgroundTaskIdentifier.invalid
+
+    func end() {
+        guard id != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(id)
+        id = .invalid
+    }
+}
+#endif
 
 #if canImport(UIKit)
 import UIKit

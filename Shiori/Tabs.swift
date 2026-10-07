@@ -20,9 +20,9 @@ struct RootView: View {
     /// Held here, above the layout choice, so a layout switch keeps it.
     @State private var session = SearchSession()
     @State private var addingPage = false
-    /// Settings asked for by `shiori://settings` on an iPad's narrow
-    /// layout (the iPhone has its Settings tab).
-    @State private var showingSettings = false
+    /// Save This Note's Links on screen; `app.saveLinksRequest` waits until
+    /// no other sheet is open (one can't open over another from here).
+    @State private var savingLinks: SaveLinksTarget?
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.scenePhase) private var scenePhase
@@ -52,8 +52,11 @@ struct RootView: View {
                 Text(app.deleteFailure ?? "")
             }
             .sheet(isPresented: $addingPage) { AddPageSheet() }
-            .sheet(item: Binding(get: { app.saveLinksRequest }, set: { app.saveLinksRequest = $0 })) { target in
+            .sheet(item: $savingLinks) { target in
                 SaveLinksView(target: target)
+            }
+            .onChange(of: app.saveLinksRequest, initial: true) { _, target in
+                if target != nil { Task { await presentSaveLinks() } }
             }
             .onChange(of: app.addPageRequests) { _, _ in addingPage = true }
             // The chosen pill gone (Show Opened off, or hidden in Settings →
@@ -70,16 +73,6 @@ struct RootView: View {
                 if !(UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular) { selection = .settings }
                 #endif
             }
-            .sheet(isPresented: $showingSettings) {
-                NavigationStack {
-                    SettingsView()
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showingSettings = false }
-                            }
-                        }
-                }
-            }
             .task(id: app.serverURL) {
                 // Labels for the lists, and Konbini's cards so every note shows its place.
                 await app.loadRulesIfNeeded()
@@ -93,6 +86,32 @@ struct RootView: View {
                 }
             }
             #endif
+    }
+
+    /// A save-links request (a note's menu, or a `shiori://save-links`
+    /// link that arrived while Add Page, Settings or a picker was open):
+    /// shown once nothing else is, rather than dropped.
+    private func presentSaveLinks() async {
+        while addingPage || savingLinks != nil || Self.sheetIsOpen {
+            try? await Task.sleep(for: .milliseconds(300))
+            if Task.isCancelled { return }
+        }
+        guard let target = app.saveLinksRequest else { return }
+        app.saveLinksRequest = nil
+        savingLinks = target
+    }
+
+    /// A sheet open anywhere in the app's windows in front.
+    private static var sheetIsOpen: Bool {
+        #if os(macOS)
+        NSApp.windows.contains { $0.attachedSheet != nil }
+        #else
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .filter { $0.activationState == .foregroundActive }
+            .flatMap(\.windows)
+            .contains { $0.rootViewController?.presentedViewController != nil }
+        #endif
     }
 
     /// The Mac, and an iPad with the room, get the three columns; the

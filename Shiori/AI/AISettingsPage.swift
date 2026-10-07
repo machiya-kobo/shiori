@@ -61,7 +61,7 @@ struct AISettingsPage: View {
         Section {
             Toggle("Use a Local Server", isOn: $app.ai.localEnabled)
             if app.ai.localEnabled {
-                TextField("Address", text: $app.ai.localURL, prompt: Text("http://server:11434/v1"))
+                TextField("Address", text: $app.ai.localURL, prompt: Text("https://server.example.ts.net/v1"))
                     .urlField()
                 TextField("Model", text: $app.ai.localModel, prompt: Text("e.g. qwen3"))
                     .monospacedField()

@@ -148,10 +148,11 @@ struct LabellingState: Codable {
     func start(app: AppState) {
         loop?.cancel()
         guard app.ai.enabled, app.ai.autoLabel || app.ai.autoCollections else { return }
-        loop = Task { [weak self] in
+        // Both weak: held only while a run is under way, never across the sleeps.
+        loop = Task { [weak self, weak app] in
             try? await Task.sleep(for: .seconds(20))
             while !Task.isCancelled {
-                await self?.run(app: app)
+                if let self, let app { await self.run(app: app) } else { return }
                 #if os(macOS)
                 try? await Task.sleep(for: .seconds(15 * 60))
                 #else
@@ -456,7 +457,12 @@ struct LabellingState: Codable {
         do {
             return try JSONDecoder().decode(LabellingState.self, from: data)
         } catch {
-            log.error("Labelling state unreadable: \(error.localizedDescription, privacy: .public)")
+            // Kept aside (the newest such copy) before starting empty, so
+            // the next save can't overwrite the Undo log and what was learnt.
+            let backup = file.appendingPathExtension("bak")
+            try? FileManager.default.removeItem(at: backup)
+            let kept = (try? FileManager.default.moveItem(at: file, to: backup)) != nil
+            log.error("Labelling state unreadable\(kept ? ", kept as labelling.json.bak" : "", privacy: .public): \(error.localizedDescription, privacy: .public)")
             return LabellingState()
         }
     }
@@ -468,8 +474,19 @@ struct LabellingState: Codable {
             state.seen = Dictionary(uniqueKeysWithValues: state.seen.sorted { $0.value > $1.value }.prefix(4_000).map { ($0.key, $0.value) })
         }
         do {
-            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try JSONEncoder().encode(state).write(to: file, options: .atomic)
+            // This device's own, as the outbox: kept out of backups, and on
+            // iOS readable only once the device has been unlocked since boot.
+            var folder = file.deletingLastPathComponent()
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? folder.setResourceValues(values)
+            #if os(iOS)
+            let options: Data.WritingOptions = [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+            #else
+            let options: Data.WritingOptions = [.atomic]
+            #endif
+            try JSONEncoder().encode(state).write(to: file, options: options)
         } catch {
             log.error("Labelling state not saved: \(error.localizedDescription, privacy: .public)")
         }
