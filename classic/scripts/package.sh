@@ -1,8 +1,7 @@
 #!/bin/bash
 # The release files for Shiori for Classic Macintosh, in classic/build-release/:
 #   Shiori-Classic-<version>.dsk      an 800K HFS floppy image
-#   Shiori-Classic-<version>.sit      StuffIt 1.5
-#   Shiori-Classic-<version>.sit.hqx  that archive in BinHex
+#   Shiori-Classic-<version>.sit.hqx  a StuffIt 1.5 archive in BinHex
 # Each holds Shiori, Shiori Search (the desk accessory's suitcase) and About Shiori.
 # Built with neutral defaults only (SHIORI_RELEASE=1): never this machine's local.env.
 # Needs hfsutils, macutils' binhex and the emulator hub's sit (scripts/setup-sit.sh).
@@ -51,7 +50,8 @@ hcopy -r "$out/About Shiori" ":About Shiori"
 hattrib -t ttro -c ttxt ":About Shiori"
 humount >/dev/null
 
-# The archive, and the archive in BinHex
+# The archive, in BinHex only: plain text that survives any download, and
+# it keeps the archive's type, so Expander opens it on the old Mac
 stage="$out/.sit-staging"
 rm -rf "$stage" && mkdir -p "$stage"
 python3 "$SPLIT" split "$out/Shiori.bin" "$stage/Shiori"
@@ -59,8 +59,8 @@ python3 "$SPLIT" split "$out/Shiori Search.bin" "$stage/Shiori Search"
 cp "$out/About Shiori" "$stage/About Shiori"
 python3 "$SPLIT" make-info "$stage/About Shiori" ttro ttxt
 rm -f "$out/$name.sit" "$out/$name.sit.hqx"
-(cd "$stage" && "$SIT" -o "$out/$name.sit" Shiori "Shiori Search" "About Shiori" >/dev/null)
+(cd "$stage" && "$SIT" -o "$name.sit" Shiori "Shiori Search" "About Shiori" >/dev/null)
+(cd "$stage" && binhex -d -t 'SIT!' -c 'SIT!' "$name.sit") > "$out/$name.sit.hqx"
 rm -rf "$stage"
-(cd "$out" && binhex -d -t 'SIT!' -c 'SIT!' "$name.sit" > "$name.sit.hqx")
 
-ls -l "$dsk" "$out/$name.sit" "$out/$name.sit.hqx"
+ls -l "$dsk" "$out/$name.sit.hqx"
