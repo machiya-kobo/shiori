@@ -5,6 +5,18 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.13.0 (2026-10-06)
+
+### Added
+
+- **Filter by label or collection**: Filter → Label in the apps (with Hide
+  for a label), and after the dates in the web app's Filter.
+
+### Changed
+
+- **A standard-size search field** on iPhone, with more room between it, the
+  pills and Sort · Group · Filter; the web app's too.
+
 ## 0.12.2 (2026-10-06)
 
 ### Changed
