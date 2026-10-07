@@ -14,7 +14,7 @@
 //   shiori pair <code> [device] pair with a code from `identity pair` (against
 //                               the config's Kura); prints the token for config.json
 //   shiori provider-search <words…>  the desktop search's rows, as JSON (for Cinnamon's menu)
-//   shiori shiori://… | kura://… an app link
+//   shiori shiori://… | kura://… an app link (shiori://sign-in: sign-in)
 
 const USAGE =
   'usage: shiori [--quick | search <words…> | save <url> [label] | save-links [--folder] <note path or folder> [label] [--dry-run] | send | status | sign-in | sign-out | pair <code> [device] | <shiori:// link>]';
@@ -54,6 +54,8 @@ export function parseArgs(argv) {
   if (first === 'provider-search') return { command: 'provider-search', query: rest.join(' ').trim() };
   if (first === 'sign-in' || first === 'sign-out') return rest.length ? { command: 'error', message: `${first} takes nothing`, usage: USAGE } : { command: first };
   if (first === 'send' || first === 'status') return rest.length ? { command: 'error', message: `${first} takes nothing`, usage: USAGE } : { command: first };
+  // The menu's and quick search's sign-in row.
+  if (/^shiori:\/\/sign-in\/?$/i.test(first)) return { command: 'sign-in' };
   if (/^(shiori|kura):\/\//i.test(first)) return { command: 'link', url: first };
   return { command: 'error', message: `unknown: ${first}`, usage: USAGE };
 }

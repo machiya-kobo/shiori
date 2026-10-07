@@ -81,8 +81,45 @@ export function notesFromReply(S, json, hister) {
   return hister ? S.histerNoteDocuments(json) : S.kuraDocuments(json);
 }
 
-/** What an activated row opens: a page in the browser, a note in Kura's reader. */
+/** What an activated row opens: a page in the browser, a note in Kura's reader, or Shiori's sign-in. */
 export function activation(id) {
+  if (String(id) === SIGN_IN) return { kind: 'signin', url: SIGN_IN };
   const m = String(id).match(/^(page|note):(https?:\/\/.+)$/i);
   return m ? { kind: m[1].toLowerCase(), url: m[2] } : null;
+}
+
+/** The sign-in row's id and address (`shiori shiori://sign-in` opens the window). */
+export const SIGN_IN = 'shiori://sign-in';
+
+/**
+ * One reply's state: 'ok', 'signin' (401 or 403: Hister has users, or
+ * Kura asks who you are), 'unreachable' (no answer, or an error), or
+ * 'none' (nothing to ask). `reply` is { status, json }, null when it
+ * failed, undefined when nothing was asked.
+ */
+export function replyState(reply) {
+  if (reply === undefined) return 'none';
+  if (!reply) return 'unreachable';
+  if (reply.status === 401 || reply.status === 403) return 'signin';
+  return reply.status >= 200 && reply.status < 300 && reply.json ? 'ok' : 'unreachable';
+}
+
+/**
+ * What the quick search and the menu show beside the rows: { message,
+ * signIn }. A refused search says so (it found nothing because it wasn't
+ * let in), never "Nothing matches".
+ */
+export function quickStatus(text, pages, notes, count) {
+  const signIn = pages === 'signin' || notes === 'signin';
+  if (pages === 'signin') return { message: 'Sign in to Hister to search your pages from here.', signIn };
+  if (notes === 'signin' && !count) return { message: 'Sign in to see your notes here.', signIn };
+  if (count) return { message: '', signIn };
+  if (pages === 'unreachable' && notes !== 'ok') return { message: "Hister didn't answer. Check your network or VPN.", signIn };
+  if (pages === 'none' && notes === 'none') return { message: 'Add your servers to ~/.config/shiori/config.json.', signIn };
+  return { message: `Nothing matches “${text}”.`, signIn };
+}
+
+/** The menu's row that opens the sign-in window. */
+export function signInRow() {
+  return { id: SIGN_IN, kind: 'signin', name: 'Sign in to Hister', description: 'Shiori: to search your pages from the menu', url: SIGN_IN };
 }

@@ -11,7 +11,8 @@ import { ShimURL, ShimURLSearchParams, installURL } from '../linux/src/url.js';
 import { newPage, addRequest, titleIn, capped, MAX_HTML_CHARACTERS } from '../linux/src/page.js';
 import * as outbox from '../linux/src/outbox.js';
 import { parseArgs, saveLinksTarget } from '../linux/src/cli.js';
-import { providerQuery, providerResults, activation, notesFromHister, notesSearch, notesFromReply } from '../linux/src/provider.js';
+import { providerQuery, providerResults, activation, notesFromHister, notesSearch, notesFromReply, replyState, quickStatus, signInRow, SIGN_IN } from '../linux/src/provider.js';
+import { navigation, signInPage, fitSize } from '../linux/src/window.js';
 import { roomHeaders, roomOrigins, signInStatus, pairedMessage } from '../linux/src/machiya.js';
 import { histerHeaders, histerTokenStatus } from '../linux/src/hister.js';
 
@@ -382,4 +383,77 @@ test('the GJS self-test passes (linux/gjs/selftest.js)', { skip: spawnSync('gjs'
   const r = spawnSync('gjs', ['-m', fileURLToPath(new URL('../linux/gjs/selftest.js', import.meta.url))], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.doesNotMatch(r.stdout, /FAIL/);
+});
+
+test('the window keeps the web app, its frames and the sign-ins; everything else goes to the system', () => {
+  const config = { webApp: 'https://shiori.example/', server: 'https://hister.example/', kura: 'https://kura.example/' };
+  const go = (uri, opts = {}) => navigation(uri, { config, ...opts });
+  // The web app, and what its pages make: the preview's srcdoc frame, an export, a blank frame.
+  assert.equal(go('https://shiori.example/#/search?q=lantern'), 'view');
+  assert.equal(go('about:srcdoc'), 'view');
+  assert.equal(go('about:blank'), 'view');
+  assert.equal(go('blob:https://shiori.example/1b2c'), 'view');
+  assert.equal(go('data:text/plain,hi'), 'view');
+  // Never handed to the system (the portal's "Open With… No apps" dialog), even in a new window.
+  for (const uri of ['about:srcdoc', 'data:text/html,x', 'blob:https://shiori.example/x', 'javascript:alert(1)', 'file:///etc/passwd', 'chrome://x', '']) {
+    assert.notEqual(go(uri), 'system', uri);
+    assert.notEqual(go(uri, { newWindow: true }), 'system', uri);
+  }
+  // The sign-ins, whose cookies the window needs: Hister's helper, Kura's own page.
+  assert.equal(go('https://hister.example/machiya/signin?return=https%3A%2F%2Fshiori.example%2F'), 'view');
+  assert.equal(go('https://hister.example/machiya/callback?x=1'), 'view');
+  assert.equal(go('https://kura.example/signin'), 'view');
+  // Other pages on those hosts are the browser's…
+  assert.equal(go('https://hister.example/'), 'system');
+  assert.equal(go('https://kura.example/n/Projects/Lantern'), 'system');
+  assert.equal(go('https://hister.example/machiyax'), 'system');
+  // …except right after a sign-in page: back to the web app, signed in.
+  assert.equal(go('https://kura.example/', { from: 'https://kura.example/signin' }), 'home');
+  assert.equal(go('https://hister.example/', { from: 'https://hister.example/machiya/signin' }), 'home');
+  assert.equal(go('https://elsewhere.example/', { from: 'https://kura.example/signin' }), 'system');
+  // A new window is always the system's (target=_blank results), the web app's own included.
+  assert.equal(go('https://shiori.example/', { newWindow: true }), 'system');
+  assert.equal(go('https://hister.example/machiya/sessions', { newWindow: true }), 'system');
+  for (const uri of ['https://www.example.org/page', 'http://plain.example/', 'gemini://geminiprotocol.example/', 'gopher://gopher.example/', 'mailto:someone@example.com', 'obsidian://open?vault=Sample&file=Lantern']) {
+    assert.equal(go(uri), 'system', uri);
+  }
+  // Hosts under a path, and a look-alike host.
+  const nested = { webApp: 'https://house.example/shiori/', server: 'https://house.example/hister/', kura: 'https://house.example/kura/' };
+  assert.equal(signInPage('https://house.example/hister/machiya/signin', nested), true);
+  assert.equal(signInPage('https://house.example/machiya/signin', nested), false);
+  assert.equal(signInPage('https://house.example/kura/signin', nested), true);
+  assert.equal(signInPage('https://house.example/kura/n/signin', nested), false);
+  assert.equal(signInPage('https://hister.example.evil.example/machiya/signin', config), false);
+  assert.equal(signInPage('https://kura.example/signin', { webApp: config.webApp }), false);
+});
+
+test('the window starts at 1200×800, or what fits the screen', () => {
+  assert.deepEqual(fitSize(1920, 1080), [1200, 800]);
+  assert.deepEqual(fitSize(1366, 768), [1200, 652]);
+  assert.deepEqual(fitSize(1280, 800), [1152, 680]);
+  assert.deepEqual(fitSize(960, 540), [864, 459]);
+  assert.deepEqual(fitSize(0, 0), [1200, 800]);
+  assert.deepEqual(fitSize(400, 300), [480, 400]);
+});
+
+test('a refused quick search says to sign in, never "Nothing matches"', () => {
+  assert.equal(replyState(undefined), 'none');
+  assert.equal(replyState(null), 'unreachable');
+  assert.equal(replyState({ status: 403, json: { error: 'x' } }), 'signin');
+  assert.equal(replyState({ status: 401, json: null }), 'signin');
+  assert.equal(replyState({ status: 200, json: { documents: [] } }), 'ok');
+  assert.equal(replyState({ status: 500, json: { error: 'x' } }), 'unreachable');
+  assert.equal(replyState({ status: 200, json: null }), 'unreachable');
+  assert.deepEqual(quickStatus('lantern', 'signin', 'ok', 2), { message: 'Sign in to Hister to search your pages from here.', signIn: true });
+  assert.deepEqual(quickStatus('lantern', 'ok', 'signin', 0), { message: 'Sign in to see your notes here.', signIn: true });
+  assert.deepEqual(quickStatus('lantern', 'ok', 'signin', 3), { message: '', signIn: true });
+  assert.deepEqual(quickStatus('lantern', 'ok', 'ok', 0), { message: 'Nothing matches “lantern”.', signIn: false });
+  assert.deepEqual(quickStatus('lantern', 'ok', 'ok', 4), { message: '', signIn: false });
+  assert.match(quickStatus('lantern', 'unreachable', 'unreachable', 0).message, /didn't answer/);
+  assert.match(quickStatus('lantern', 'none', 'none', 0).message, /config\.json/);
+  // The menu's sign-in row opens Shiori's sign-in window.
+  assert.deepEqual(activation(signInRow().id), { kind: 'signin', url: SIGN_IN });
+  assert.deepEqual(parseArgs([SIGN_IN]), { command: 'sign-in' });
+  assert.deepEqual(parseArgs(['shiori://sign-in/']), { command: 'sign-in' });
+  assert.equal(parseArgs(['shiori://sign-in-elsewhere']).command, 'link');
 });

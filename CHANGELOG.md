@@ -5,6 +5,32 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.17.2 (2026-10-07)
+
+### Fixed
+
+- **Shiori for Linux works on a real desktop.** Tests had only run with
+  no window manager, which hid all of this; on Cinnamon:
+  - The window has a title bar again (Back, Reload, and the window's
+    buttons), so it can be moved, resized and closed, and it starts at a
+    size that fits the screen.
+  - Previews load: the window sent the preview's frame to the system as
+    if it were a link, so clicking a result showed nothing and an "Open
+    With… No apps available" dialog popped up. Only real links leave the
+    window now.
+  - Signing in works inside the window: Hister's and Kura's sign-in pages
+    opened in the browser, so the window never got the sign-in and kept
+    sending you there.
+  - Export saves a file: it asks where, then says it's saved.
+  - Quick search opens in the middle of the screen, over a dimmed
+    backdrop, instead of in a corner.
+  - When Hister or Kura asks you to sign in, quick search and the menu's
+    search say so and offer Sign In, instead of "Nothing matches".
+  - The panel and window list match the window to Shiori's icon and
+    launcher. The desktop file adds Sign In to Hister.
+  - Re-run `linux/install-desktop.sh` after updating, for the menu's
+    Sign In row.
+
 ## 0.17.1 (2026-10-07)
 
 ### Changed

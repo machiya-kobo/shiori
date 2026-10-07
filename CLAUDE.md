@@ -527,6 +527,13 @@ you.
 - GJS on GTK 4 and libadwaita, a Flatpak (`io.github.machiya_kobo.Shiori`) on the
   GNOME 49 runtime. `linux/src/` is pure modules tested under Node; keep
   `linux/gjs/` thin.
+- **Test windows in `linux/desktop-test.sh`** (Cinnamon on a virtual
+  display), not only `headless.sh`: with no window manager the window had
+  no title bar, quick search sat in a corner, and the preview's
+  `about:srcdoc` went to the portal, and nothing showed it.
+- **Only real links leave the window** (`linux/src/window.js`): the web
+  app, its frames (`about:`, `data:`, `blob:`) and the sign-in pages stay
+  in the web view, whose cookies they need.
 - **Use `app.runAsync()`, never `app.run()`**: the main module awaits, and
   inside a blocking `run()` callbacks' promise jobs never run.
 - Commands with no window (`save`, `send`, `status`, `save-links`,

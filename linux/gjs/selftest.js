@@ -9,7 +9,8 @@ import { installURL } from '../src/url.js';
 import { newPage, addRequest, titleIn } from '../src/page.js';
 import * as outbox from '../src/outbox.js';
 import { parseArgs } from '../src/cli.js';
-import { providerResults } from '../src/provider.js';
+import { providerResults, replyState } from '../src/provider.js';
+import { navigation, fitSize } from '../src/window.js';
 import { histerHeaders, histerCookie, sessionFromSetCookie, signInRecord } from '../src/hister.js';
 
 installURL(globalThis);
@@ -26,6 +27,13 @@ function check(name, got, want) {
 }
 
 check('URL is the shim', typeof URL === 'function' && new URL('https://www.Example.com:443/a?b=1').host, 'www.example.com');
+const roomsConfig = { webApp: 'https://shiori.example/', server: 'https://hister.example/', kura: 'https://kura.example/' };
+check('the preview frame stays in the window', navigation('about:srcdoc', { config: roomsConfig }), 'view');
+check("Hister's sign-in stays in the window", navigation('https://hister.example/machiya/signin?return=x', { config: roomsConfig }), 'view');
+check('another site goes to the browser', navigation('https://www.example.org/', { config: roomsConfig }), 'system');
+check('a sign-in done goes home', navigation('https://kura.example/', { config: roomsConfig, from: 'https://kura.example/signin' }), 'home');
+check('fitSize', fitSize(1366, 768), [1200, 652]);
+check('a 403 asks for a sign-in', replyState({ status: 403, json: {} }), 'signin');
 check('normalizeURL', S.normalizeURL('https://www.Example.com/a/b/?utm_source=x&q=1'), 'example.com/a/b?q=1');
 check('histerText', S.histerText('machi'), '(machi|machi*) -label:vault -metadata.source:vault -type:local -metadata.source:code');
 const tokenConfig = { server: 'https://h.example/', smallweb: 'https://sw.example/', histerToken: 'ABCDEFGHJKLMNPQRSTUVWXYZ23' };

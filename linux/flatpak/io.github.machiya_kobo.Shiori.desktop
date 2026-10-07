@@ -7,8 +7,12 @@ Icon=io.github.machiya_kobo.Shiori
 Categories=Network;Utility;
 MimeType=x-scheme-handler/shiori;
 StartupWMClass=io.github.machiya_kobo.Shiori
-Actions=quick;
+Actions=quick;sign-in;
 
 [Desktop Action quick]
 Name=Quick Search
 Exec=shiori --quick
+
+[Desktop Action sign-in]
+Name=Sign In to Hister
+Exec=shiori sign-in

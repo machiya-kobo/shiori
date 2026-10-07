@@ -18,7 +18,9 @@ let latest = 0;
 function icon(kind) {
     const gicon = kind === 'note'
         ? new Gio.ThemedIcon({ name: 'accessories-text-editor-symbolic' })
-        : new Gio.FileIcon({ file: Gio.File.new_for_path(GLib.build_filenamev([HERE, 'icon.png'])) });
+        : kind === 'signin'
+            ? new Gio.ThemedIcon({ name: 'dialog-password-symbolic' })
+            : new Gio.FileIcon({ file: Gio.File.new_for_path(GLib.build_filenamev([HERE, 'icon.png'])) });
     return new St.Icon({ gicon: gicon, icon_size: 22, icon_type: St.IconType.FULLCOLOR });
 }
 
@@ -48,6 +50,8 @@ function perform_search(pattern) {
 }
 
 function on_result_selected(result) {
-    // A page opens in the browser, a note in Kura's reader.
-    Util.spawn(['xdg-open', result.id]);
+    // Shiori's own (the sign-in row: Hister or Kura refused the search)
+    // through Shiori; a page opens in the browser, a note in Kura's reader.
+    if (/^shiori:/.test(result.id)) Util.spawn([LAUNCHER, result.id]);
+    else Util.spawn(['xdg-open', result.id]);
 }
