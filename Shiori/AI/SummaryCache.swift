@@ -76,3 +76,10 @@ nonisolated enum SummaryCache {
         }
     }
 }
+
+extension SummaryStore {
+    /// This app's caches, by `SummaryCache`'s rules.
+    static let live = SummaryStore(
+        read: { SummaryCache.read(url: $0, updated: $1) },
+        write: { SummaryCache.write($0, for: $1, updated: $2) })
+}

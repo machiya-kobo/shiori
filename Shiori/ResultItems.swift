@@ -55,7 +55,7 @@ private struct ResultActionsHost: ViewModifier {
                     // Undo instead of a confirmation, as in the web app.
                     delete: { document in
                         if selection?.wrappedValue == document { selection?.wrappedValue = nil }
-                        app.deleteWithUndo(document)
+                        app.deletes.start(document)
                     },
                     // Beside a preview pane, into the pane.
                     preview: { document in
@@ -202,7 +202,7 @@ struct DocumentItem: View {
 
     var body: some View {
         let note = app.noteLinks(for: document)
-        let original = app.searchPage.clickOpensOriginal(pane: selection != nil)
+        let original = app.rowStyle.clickOpensOriginal(pane: selection != nil)
         if let selection {
             Group {
                 // Selecting previews; a row that opens the original is a
@@ -218,13 +218,13 @@ struct DocumentItem: View {
             .preference(key: ListOrderKey.self, value: [document])
             // The theme's background, and a tint for the selected page.
             .listRowBackground(ResultBar(kind: kind(note), selected: selection.wrappedValue == document,
-                                         palette: palette, style: app.searchPage.resultStyle))
-            .resultSeparator(app.searchPage.resultStyle)
+                                         palette: palette, style: app.rowStyle.resultStyle))
+            .resultSeparator(app.rowStyle.resultStyle)
             .modifier(Swipes(document: document, note: note, original: original))
         } else {
             row(note: note, original: original)
-                .listRowBackground(ResultBar(kind: kind(note), palette: palette, style: app.searchPage.resultStyle))
-                .resultSeparator(app.searchPage.resultStyle)
+                .listRowBackground(ResultBar(kind: kind(note), palette: palette, style: app.rowStyle.resultStyle))
+                .resultSeparator(app.rowStyle.resultStyle)
                 .modifier(Swipes(document: document, note: note, original: original))
                 .contextMenu { DocumentMenu(document: document) }
         }

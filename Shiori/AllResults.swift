@@ -97,7 +97,7 @@ struct AllResults: View {
     }
 
     private func shown(_ model: ResultsModel, count: Int) -> [StoredPage] {
-        Array(model.documents.filter { !app.deletedURLs.contains($0.url) }.prefix(count))
+        Array(model.documents.filter { !app.deletes.hidden.contains($0.url) }.prefix(count))
     }
 
     /// Any part that failed: with nothing to show, that's the answer, not
@@ -128,7 +128,7 @@ struct AllResults: View {
             ? pages.opened.map { StoredPage(opened: $0) }.filter { !app.isNotePage($0.url) } : []
         var seen = Set<String>()
         return Array((opened + pages.documents)
-            .filter { !app.deletedURLs.contains($0.url) && seen.insert($0.url).inserted }
+            .filter { !app.deletes.hidden.contains($0.url) && seen.insert($0.url).inserted }
             .prefix(Self.count))
     }
 

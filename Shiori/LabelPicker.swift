@@ -250,11 +250,18 @@ struct LabelPicker: View {
             let page = try await preview
             let title = page.title.isEmpty ? document.displayTitle : page.title
             let similar = await AutoLabeller.neighbours(of: document.url, title: title, labels: Set(labels), client: client)
+            // Where the page may go, as for a summary: another vault's note
+            // is asked of Kura afresh (the default vault's asks nothing).
+            let isFile = LocalFiles.isLocalFile(document.url), isCode = document.code != nil
+            let content = AIContent.classify(
+                isLocalFile: isFile, isCode: isCode,
+                isPrivateNote: isFile || isCode ? false : await app.isWorkNoteNow(document.url),
+                isNote: document.label == Notes.label)
             suggestion = try await LabelClassifier(chain: app.ai.chain).suggest(
                 title: title, url: document.url, html: page.contentHTML, choices: choices,
                 siteLabels: hints.siteLabels(for: document.url), neighbours: similar,
                 corrections: Array(app.labeller.state.corrections.prefix(10)),
-                content: document.label == Notes.label ? .note : .page)
+                content: content)
         } catch is CancellationError {
         } catch let error as HisterError {
             if error != .cancelled { suggestionFailure = error.userMessage }

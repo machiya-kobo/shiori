@@ -422,7 +422,7 @@ struct LibraryView: View {
     #endif
 
     @ViewBuilder private var preview: some View {
-        if let selected = session.selected, !app.deletedURLs.contains(selected.url) {
+        if let selected = session.selected, !app.deletes.hidden.contains(selected.url) {
             NavigationStack {
                 DocumentView(document: selected)
             }

@@ -568,7 +568,7 @@ struct OpenedSection: View {
     @ViewBuilder private func row(_ opened: OpenedResult) -> some View {
         let page = page(opened)
         let note = app.noteLinks(for: page)
-        let original = app.searchPage.clickOpensOriginal(pane: selection != nil)
+        let original = app.rowStyle.clickOpensOriginal(pane: selection != nil)
         let label = DocumentRow(document: page, label: app.label(of: page), notePlace: note?.place)
         Group {
             if original {
@@ -589,8 +589,8 @@ struct OpenedSection: View {
         }
         .preference(key: ListOrderKey.self, value: selection != nil ? [page] : [])
         .listRowBackground(ResultBar(kind: note != nil ? .note : .opened, selected: selection?.wrappedValue == page,
-                                     palette: palette, style: app.searchPage.resultStyle))
-        .resultSeparator(app.searchPage.resultStyle)
+                                     palette: palette, style: app.rowStyle.resultStyle))
+        .resultSeparator(app.rowStyle.resultStyle)
         .contextMenu {
             OpenChoices(document: page)
             Divider()

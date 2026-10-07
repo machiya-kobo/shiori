@@ -2,14 +2,6 @@ import HisterKit
 import ShioriAI
 import SwiftUI
 
-/// Where a page's summary is, from asking to reading it.
-enum SummaryState: Equatable {
-    case none
-    case working
-    case done(Summary)
-    case failed(String)
-}
-
 /// The summary above the preview: what it says, which engine wrote it,
 /// and Copy, Regenerate and Close.
 struct SummaryCard: View {

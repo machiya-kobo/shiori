@@ -30,7 +30,7 @@ struct ShioriApp: App {
                     // A delete waiting out its Undo goes now: the app may not
                     // come back before the toast would have.
                     if phase == .background {
-                        app.commitPendingDelete()
+                        app.deletes.commit()
                         #if os(iOS)
                         app.labeller.stop()
                         #endif

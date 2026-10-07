@@ -194,8 +194,6 @@ final class AppState {
         return await task.value
     }
     private(set) var rules = Rules(aliases: [:])
-    /// Sites Hister has pages from, most first: `domain:` completions.
-    private(set) var domains: [String] = []
     /// Bumped by File → Add Page… on the Mac: RootView shows the sheet.
     var addPageRequests = 0
     /// Bumped when a search is submitted (Return): the results list takes
@@ -422,8 +420,8 @@ final class AppState {
     /// label picker's Try Again.
     private(set) var rulesFailure: HisterError?
 
-    /// Pages deleted in this session; lists hide them without refetching.
-    private(set) var deletedURLs: Set<String> = []
+    /// Delete with Undo, and the pages deleted in this session.
+    let deletes: PendingDeletes
     /// Labels changed in this session, by page URL.
     private(set) var labelEdits: [String: String] = [:]
 
@@ -501,13 +499,29 @@ final class AppState {
     }
     private(set) var allSearch = AllSearchOptions()
 
-    /// Copies the two out of `searchPage`, only when they changed.
+    /// How every result row looks and what a click on it opens (Result
+    /// Style, Click Opens): rows read this, never `searchPage`.
+    struct RowStyle: Equatable {
+        var resultStyle = "tint"
+        var clickOpens = "auto"
+
+        /// Whether a click on a result's card opens the original (else
+        /// Shiori's preview): Automatic previews beside a preview pane.
+        func clickOpensOriginal(pane: Bool) -> Bool {
+            clickOpens == "original" || (clickOpens != "preview" && !pane)
+        }
+    }
+    private(set) var rowStyle = RowStyle()
+
+    /// Copies these out of `searchPage`, only when they changed.
     private func refreshListSettings() {
         let notes = NoteSources(vault: searchPage.obsidianVault, niwaURL: searchPage.niwaURL, konbiniURL: searchPage.konbiniURL)
         if notes != noteSources { noteSources = notes }
         let all = AllSearchOptions(
             histerCount: searchPage.histerCount, vaultCount: searchPage.vaultCount, webResults: searchPage.webResults)
         if all != allSearch { allSearch = all }
+        let row = RowStyle(resultStyle: searchPage.resultStyle, clickOpens: searchPage.clickOpens)
+        if row != rowStyle { rowStyle = row }
     }
 
     /// A vault note by its address alone (a Niwa page or Konbini card with
@@ -540,10 +554,6 @@ final class AppState {
     /// Hister holds your repos (code-import, `metadata.source:code`):
     /// the Code pill shows only then. Asked with the files.
     private(set) var hasCodeDocs = false
-
-    /// A code document: shown on the Code pill only, never labelled,
-    /// deleted or given to a model off the device (`AIContent.code`).
-    func isCode(_ document: StoredPage) -> Bool { document.code != nil }
 
     /// A repo's note in the default vault (`Repos/<name>.git.md`), Kura's
     /// reader page for it when Kura has one; asked once per repo a launch.
@@ -656,6 +666,17 @@ final class AppState {
                 ?? defaults.string(forKey: AppPalette.storageKey))
         deviceTextSize = defaults.string(forKey: Self.deviceTextSizeKey).map(TextSize.resolve)
         client = HisterClient(serverURL: stored ?? fallback, token: HisterKeychain.token, histerSession: HisterKeychain.session)
+        // The delete goes through this app (its guards, its caches), reached
+        // without keeping it: set once the rest is.
+        let owner = WeakOwner()
+        deletes = PendingDeletes(
+            send: { (document: StoredPage) async throws(HisterError) -> Void in
+                guard let app = owner.app else { throw .unreachable }
+                try await app.delete(document)
+            },
+            isPrivate: { Notes.isPrivateNote($0) },
+            undoWindow: Self.undoWindow,
+            holdBackground: Self.holdBackground)
 
         let shared = SharedSettings.defaults
         pills = PillOrder.clean(shared?.array(forKey: SharedSettings.Key.pills))
@@ -674,6 +695,7 @@ final class AppState {
         shared?.set(theme.rawValue, forKey: SharedSettings.Key.theme)
         shared?.set(textSize.rawValue, forKey: SharedSettings.Key.textSize)
         shared?.set(serverURL, forKey: SharedSettings.Key.serverURL)
+        owner.app = self
     }
 
     /// The server's aliases and labels, fetched once per server.
@@ -693,7 +715,6 @@ final class AppState {
             rulesFailure = nil
             // The share sheet's label picker works from this copy.
             SharedSettings.defaults?.set(fetched.labels, forKey: SharedSettings.Key.labels)
-            if let found = try? await client.topDomains() { domains = found }
             await loadLocalFiles()
         } catch .cancelled {
         } catch {
@@ -728,76 +749,22 @@ final class AppState {
         try await client.delete(url: document.url)
         OfflineStore.forget(url: document.url)
         SummaryCache.remove(url: document.url)
-        if deletedURLs.count >= 2000 { deletedURLs.removeAll() }
-        deletedURLs.insert(document.url)
     }
 
-    // MARK: Delete with Undo
+    // MARK: Delete with Undo (`deletes`)
 
-    /// A delete waiting out its Undo: the page is gone from every list at
-    /// once, and from Hister when the toast's time is up. Hister can't
-    /// bring a deleted page back, so the undo is the wait, not a restore.
-    struct PendingDelete: Identifiable, Equatable {
-        let id = UUID()
-        let document: StoredPage
-    }
-
-    private(set) var pendingDelete: PendingDelete?
-    /// Why the last delete failed (it's back in its list).
-    var deleteFailure: String?
-    @ObservationIgnored private var pendingTask: Task<Void, Never>?
     static let undoWindow = Duration.seconds(6)
 
-    /// Every delete in the app goes this way: swipe, menu, the page's ⋯, dd.
-    func deleteWithUndo(_ document: StoredPage) {
-        // Hister never has a work note, and must never be sent one's address.
-        guard !isWorkNote(document.url) else { return }
-        commitPendingDelete()
-        deletedURLs.insert(document.url)
-        let pending = PendingDelete(document: document)
-        pendingDelete = pending
-        pendingTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.undoWindow)
-            guard !Task.isCancelled else { return }
-            await self?.finish(pending)
-        }
-    }
-
-    func undoDelete() {
-        guard let pending = pendingDelete else { return }
-        pendingTask?.cancel()
-        pendingDelete = nil
-        deletedURLs.remove(pending.document.url)
-    }
-
-    /// Sends a waiting delete now: another delete started, or the app is
-    /// going to the background (a delete is what was asked for).
-    func commitPendingDelete() {
-        guard let pending = pendingDelete else { return }
-        pendingTask?.cancel()
-        pendingDelete = nil
+    /// Time to finish a delete sent on the way to the background: iOS
+    /// would suspend the app mid-DELETE. Nothing to hold on the Mac.
+    private static func holdBackground() -> () -> Void {
         #if os(iOS)
-        // Leaving for the background, iOS would suspend the app mid-DELETE:
-        // ask for the time to finish it.
         let time = BackgroundTime()
         time.id = UIApplication.shared.beginBackgroundTask(withName: "Delete") { time.end() }
-        Task {
-            await finish(pending)
-            time.end()
-        }
+        return { time.end() }
         #else
-        Task { await finish(pending) }
+        return {}
         #endif
-    }
-
-    private func finish(_ pending: PendingDelete) async {
-        if pendingDelete?.id == pending.id { pendingDelete = nil }
-        do {
-            try await delete(pending.document)
-        } catch {
-            deletedURLs.remove(pending.document.url)
-            deleteFailure = error.userMessage
-        }
     }
 
     // MARK: Opened results (Settings → Results → Remember What You Open)
@@ -901,6 +868,11 @@ final class FaviconCache {
     }
 }
 
+/// The app, for a sub-model's closure made in `init`, before `self` can be.
+private final class WeakOwner {
+    weak var app: AppState?
+}
+
 #if os(iOS)
 /// A background task's time, ended once: when the work is done, or when
 /// iOS says the time is up.
@@ -969,13 +941,9 @@ struct SearchPageOptions: Equatable {
     var resultStyle = "tint"
     /// Set once Result Style has been put back to Tint (0.5.0).
     static let resultStyleResetKey = "resultStyleTintReset"
-    /// What a click on a result's card opens (`SharedSettings.Key.clickOpens`).
+    /// What a click on a result's card opens (`SharedSettings.Key.clickOpens`;
+    /// rows read it through `AppState.rowStyle`).
     var clickOpens = "auto"
-    /// Whether a click on a result's card opens the original (else Shiori's
-    /// preview): Automatic previews beside a preview pane.
-    func clickOpensOriginal(pane: Bool) -> Bool {
-        clickOpens == "original" || (clickOpens != "preview" && !pane)
-    }
     /// Labels and collections lead the search field's suggestions.
     var labelSuggestions = true
     /// The user's NewsBlur, for "Subscribe in NewsBlur" (opened in the browser).

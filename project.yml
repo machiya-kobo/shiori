@@ -330,9 +330,14 @@ targets:
     platform: macOS
     sources:
       - Shared
+      # The app's models with no view or AppState (their dependencies
+      # come in as closures), tested here over stubs.
+      - Shiori/Core
       - ShioriTests
     dependencies:
       - package: HisterKit
+      - package: ShioriAI
+        product: ShioriAI
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

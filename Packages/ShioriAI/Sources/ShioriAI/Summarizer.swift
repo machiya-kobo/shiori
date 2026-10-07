@@ -39,6 +39,17 @@ public struct Summarizer: Sendable {
         self.chain = chain
     }
 
+    /// What a failed summary says, or nil when there's nothing to say (it
+    /// was cancelled). A note with no engine it may use says why: notes
+    /// never go to an AI provider.
+    public static func failureMessage(_ error: Error, isNote: Bool) -> String? {
+        if error is CancellationError { return nil }
+        if isNote, case AIError.noEngine = error {
+            return "Notes are summarized only on this device or your own server, never by an AI provider, and neither is available."
+        }
+        return error.localizedDescription
+    }
+
     /// From the readable HTML the preview shows. Converted here, off the
     /// caller's actor (a nonisolated async function in this package runs
     /// on the global executor), since a long page's markup takes a moment.

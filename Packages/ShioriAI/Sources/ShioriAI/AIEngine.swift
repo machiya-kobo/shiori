@@ -54,6 +54,18 @@ public enum AIContent: Sendable, Equatable {
     case none
 }
 
+extension AIContent {
+    /// What a document is, for where it may go, the strictest first: a
+    /// file, then code, then a private vault's note (from Kura asked
+    /// afresh, the caller's job), then any other note, else a page.
+    public static func classify(isLocalFile: Bool, isCode: Bool, isPrivateNote: Bool, isNote: Bool) -> AIContent {
+        if isLocalFile { return .localFile }
+        if isCode { return .code }
+        if isPrivateNote { return .workNote }
+        return isNote ? .note : .page
+    }
+}
+
 /// One question for an engine: instructions, the user turn, and (for
 /// answers code will read) a JSON schema the reply must follow.
 public struct AIRequest: Sendable {

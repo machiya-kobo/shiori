@@ -29,9 +29,9 @@ struct DocumentView: View {
     @State private var renderFailed = false
     /// Bumped by Try Again after a failed render: a fresh web view.
     @State private var renderAttempt = 0
-    /// Summarize (Settings → AI): the card above the preview.
-    @State private var summary: SummaryState = .none
-    @State private var summarizing: Task<Void, Never>?
+    /// Summarize (Settings → AI): the card above the preview. Made on
+    /// first use (it needs the app's engines).
+    @State private var pageSummary: PageSummary?
     /// A code document's repo note in Kura (`Repos/<name>.git.md`), when it has one.
     @State private var repoNote: URL?
     #if os(iOS)
@@ -54,11 +54,10 @@ struct DocumentView: View {
                 if let name = document.code?.repoName, !name.isEmpty { repoNote = await app.repoNoteURL(repoName: name) }
             }
             .task(id: document.url) {
-                summarizing?.cancel()
-                summary = .none
+                summarizer().reset(for: document.url)
                 await app.loadCardsIfNeeded()
                 await load()
-                showCachedSummary()
+                if let preview { summarizer().showCached(url: document.url, updated: preview.updated) }
                 await loadExtras()
             }
             // An offline copy: the server is asked again until it answers.
@@ -69,7 +68,7 @@ struct DocumentView: View {
                     await load()
                 }
             }
-            .onDisappear { summarizing?.cancel() }
+            .onDisappear { pageSummary?.close() }
             .sheet(isPresented: $labelling) {
                 LabelPicker(document: document) { failure = $0 }
             }
@@ -116,7 +115,9 @@ struct DocumentView: View {
                             .padding(.vertical, 6)
                     }
                     if summary != .none {
-                        SummaryCard(state: summary, regenerate: { summarize(note: note != nil, fresh: true) }, close: closeSummary)
+                        SummaryCard(state: summary, regenerate: { summarize(note: note != nil, fresh: true) }) {
+                            pageSummary?.close()
+                        }
                     }
                 }
             }
@@ -289,7 +290,7 @@ struct DocumentView: View {
                 if !workNote, !localFile, !code {
                     Divider()
                     Button("Delete", systemImage: "trash", role: .destructive) {
-                        app.deleteWithUndo(document)
+                        app.deletes.start(document)
                         dismiss()
                     }
                 }
@@ -313,9 +314,10 @@ struct DocumentView: View {
     /// and summarized on the device only (`AIContent.code`).
     private var code: Bool { document.code != nil }
 
-    /// Whether an engine may summarize this: code only on the device.
+    /// Whether an engine may summarize this: code only on the device. From
+    /// settings alone: no engine is built, no key read, as the view draws.
     private func canSummarize(note: AppState.NoteLinks?) -> Bool {
-        code ? !app.ai.chain.eligible(for: .code).isEmpty : app.ai.hasEngine(note: note != nil)
+        app.ai.hasEngine(for: code ? .code : note != nil ? .note : .page)
     }
 
     private func load() async {
@@ -401,60 +403,22 @@ struct DocumentView: View {
         #endif
     }
 
-    /// A summary made before, for this version of the page: shown again.
-    private func showCachedSummary() {
-        guard let preview, let cached = SummaryCache.read(url: document.url, updated: preview.updated) else { return }
-        summary = .done(cached)
+    private var summary: SummaryState { pageSummary?.state ?? .none }
+
+    private func summarizer() -> PageSummary {
+        if let pageSummary { return pageSummary }
+        let made = PageSummary(
+            chain: { [app] in app.ai.chain },
+            isPrivateNow: { [app] in await app.isWorkNoteNow($0) },
+            store: .live)
+        pageSummary = made
+        return made
     }
 
-    /// `fresh`: Regenerate, past the cache. A note is summarized only by an
-    /// engine it may use (never a cloud one: `EngineChain` decides).
+    /// `fresh`: Regenerate, past the cache.
     private func summarize(note: Bool, fresh: Bool = false) {
         guard let preview else { return }
-        if !fresh, let cached = SummaryCache.read(url: document.url, updated: preview.updated) {
-            summary = .done(cached)
-            return
-        }
-        let isNote = note || document.label == Notes.label
-        let isCode = document.code != nil
-        let chain = app.ai.chain
-        let title = preview.title.isEmpty ? document.displayTitle : preview.title
-        let url = document.url
-        let page = document
-        summarizing?.cancel()
-        summary = .working
-        summarizing = Task {
-            do {
-                // A work note reaches no model at all (EngineChain refuses
-                // `.workNote`), even if a button slipped through. Another
-                // vault's note is asked of Kura afresh first: a shared vault
-                // may be private by now.
-                // A file reaches none either (`.localFile`).
-                // Code stays on the device (`.code`: Apple Intelligence only).
-                let content: AIContent = LocalFiles.isLocalFile(url) ? .localFile
-                    : isCode ? .code
-                    : await app.isWorkNoteNow(url) ? .workNote : isNote ? .note : .page
-                let made = try await Summarizer(chain: chain).summarize(
-                    title: title, url: url, html: preview.contentHTML, content: content)
-                // Never kept for code, a file or a private vault's note
-                // (`OfflineStore.keepable`, checked inside).
-                SummaryCache.write(made, for: page, updated: preview.updated)
-                guard !Task.isCancelled, url == document.url else { return }
-                summary = .done(made)
-            } catch is CancellationError {
-            } catch AIError.noEngine where isNote {
-                guard !Task.isCancelled else { return }
-                summary = .failed("Notes are summarized only on this device or your own server, never by an AI provider, and neither is available.")
-            } catch {
-                guard !Task.isCancelled, url == document.url else { return }
-                summary = .failed(error.localizedDescription)
-            }
-        }
-    }
-
-    private func closeSummary() {
-        summarizing?.cancel()
-        summary = .none
+        summarizer().summarize(document: document, preview: preview, isNote: note, fresh: fresh)
     }
 
     private func show(as name: String?) {

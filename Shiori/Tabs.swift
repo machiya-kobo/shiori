@@ -36,20 +36,20 @@ struct RootView: View {
             .environment(session)
             .focusedSceneValue(\.searchSession, session)
             .overlay(alignment: .bottom) {
-                if let pending = app.pendingDelete {
-                    UndoToast(title: pending.document.displayTitle) { app.undoDelete() }
+                if let pending = app.deletes.pending {
+                    UndoToast(title: pending.document.displayTitle) { app.deletes.undo() }
                         .id(pending.id)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .animation(.snappy, value: app.pendingDelete)
+            .animation(.snappy, value: app.deletes.pending)
             .alert(
                 "Couldn't Delete",
-                isPresented: Binding(get: { app.deleteFailure != nil }, set: { if !$0 { app.deleteFailure = nil } })
+                isPresented: Binding(get: { app.deletes.failure != nil }, set: { if !$0 { app.deletes.failure = nil } })
             ) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(app.deleteFailure ?? "")
+                Text(app.deletes.failure ?? "")
             }
             .sheet(isPresented: $addingPage) { AddPageSheet() }
             .sheet(item: $savingLinks) { target in
@@ -649,7 +649,7 @@ struct SearchTips: View {
 }
 
 /// "Deleted “…”" with Undo, for the few seconds before the delete goes to
-/// Hister (`AppState.deleteWithUndo`).
+/// Hister (`AppState.deletes`).
 struct UndoToast: View {
     let title: String
     let undo: () -> Void

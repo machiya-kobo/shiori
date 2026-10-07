@@ -159,7 +159,7 @@ struct OpenedListView: View {
 
     @ViewBuilder private func row(_ entry: OpenedEntry) -> some View {
         let page = StoredPage(opened: OpenedResult(url: entry.url, title: entry.title))
-        let original = app.searchPage.clickOpensOriginal(pane: selection != nil)
+        let original = app.rowStyle.clickOpensOriginal(pane: selection != nil)
         let row = VStack(alignment: .leading, spacing: 3) {
             // A link: the title always opens the original.
             Button { openURL.openPage(page, app: app) } label: {
@@ -190,8 +190,8 @@ struct OpenedListView: View {
             }
         }
         .listRowBackground(ResultBar(kind: app.isNotePage(page.url) ? .note : .opened, selected: selection?.wrappedValue == page,
-                                     palette: palette, style: app.searchPage.resultStyle))
-        .resultSeparator(app.searchPage.resultStyle)
+                                     palette: palette, style: app.rowStyle.resultStyle))
+        .resultSeparator(app.rowStyle.resultStyle)
         .task { await model.loadMoreIfNeeded(after: entry, using: app.client) }
         .contextMenu {
             OpenChoices(document: page)
