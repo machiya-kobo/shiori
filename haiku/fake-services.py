@@ -135,6 +135,17 @@ class Hister(Base):
             docs = [{"url": f"https://example.com/many/{i}", "title": f"Many {i}", "domain": "example.com",
                      "added": 1790000000, "text": "one of <mark>many</mark>", "metadata": {"source": "shiori"}} for i in n]
             return self.reply(200, {"total": 45, "documents": docs, "page_key": "p2" if first else ""})
+        # "heavy": 20 pages shaped like a real Hister reply (long highlighted
+        # snippets, metadata, dates), for timing a slow client (Classic's probe).
+        if "heavy" in words_of(text):
+            filler = ("Lorem ipsum &amp; dolor sit amet, the <mark>heavy</mark> reply goes on with words "
+                      "about caf\u00e9s, Ch\u014dchin lanterns and \"quoted\" text to decode. ") * 3
+            docs = [{"url": f"https://example.com/heavy/{i}?ref=search&page={i}",
+                     "title": f"Heavy page {i}: a longer title with UTF-8 \u2014 dashes and \u201cquotes\u201d",
+                     "domain": "example.com", "label": "tech", "added": 1790000000 + i, "updated": 1790500000 + i,
+                     "score": 12.5 - i / 10, "text": filler,
+                     "metadata": {"source": "shiori", "client": "shiori", "client_version": "1.2.3"}} for i in range(20)]
+            return self.reply(200, {"total": 230, "documents": docs, "page_key": "p2", "query_suggestion": ""})
         code = "metadata.source:code" in text.split()
         words = words_of(text)
         docs = []
@@ -253,8 +264,11 @@ class Kura(Base):
         self.reply(200, {"total": len(results), "took_ms": 1, "results": results[offset:offset + limit]})
 
 
+BIND = "127.0.0.1"
+
+
 def serve(port, handler):
-    http.server.ThreadingHTTPServer(("127.0.0.1", port), handler).serve_forever()
+    http.server.ThreadingHTTPServer((BIND, port), handler).serve_forever()
 
 
 threading.Thread(target=serve, args=(KURA_PORT, Kura), daemon=True).start()

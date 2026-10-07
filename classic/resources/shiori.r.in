@@ -1,0 +1,80 @@
+/* Shiori for Classic Macintosh: resources (Rez). */
+#include "Processes.r"
+#include "Menus.r"
+#include "Windows.r"
+#include "Dialogs.r"
+
+resource 'MBAR' (128) {
+	{ 128, 129, 130 };
+};
+
+resource 'MENU' (128) {
+	128, textMenuProc, 0x7FFFFFFD, enabled, apple,
+	{
+		"About Shiori\311", noIcon, noKey, noMark, plain;
+		"-", noIcon, noKey, noMark, plain;
+	}
+};
+
+resource 'MENU' (129) {
+	129, textMenuProc, 0x7FFFFFFD, enabled, "File",
+	{
+		"Run Probe", noIcon, "R", noMark, plain;
+		"-", noIcon, noKey, noMark, plain;
+		"Quit", noIcon, "Q", noMark, plain;
+	}
+};
+
+resource 'MENU' (130) {
+	130, textMenuProc, 0, enabled, "Edit",
+	{
+		"Undo", noIcon, "Z", noMark, plain;
+		"-", noIcon, noKey, noMark, plain;
+		"Cut", noIcon, "X", noMark, plain;
+		"Copy", noIcon, "C", noMark, plain;
+		"Paste", noIcon, "V", noMark, plain;
+		"Clear", noIcon, noKey, noMark, plain;
+	}
+};
+
+resource 'ALRT' (128, purgeable) {
+	{ 60, 60, 190, 400 }, 128,
+	{
+		OK, visible, sound1;
+		OK, visible, sound1;
+		OK, visible, sound1;
+		OK, visible, sound1;
+	},
+	alertPositionMainScreen
+};
+
+resource 'DITL' (128, purgeable) {
+	{
+		{ 98, 260, 118, 330 }, Button { enabled, "OK" };
+		{ 10, 20, 90, 330 }, StaticText { disabled,
+			"Shiori for Classic Macintosh\r"
+			"Version @SHIORI_VERSION@\r\r"
+			"Search your pages in Hister and your notes in Kura." };
+	}
+};
+
+resource 'SIZE' (-1) {
+	reserved,
+	acceptSuspendResumeEvents,
+	reserved,
+	canBackground,
+	doesActivateOnFGSwitch,
+	backgroundAndForeground,
+	dontGetFrontClicks,
+	ignoreChildDiedEvents,
+	is32BitCompatible,
+	notHighLevelEventAware,
+	onlyLocalHLEvents,
+	notStationeryAware,
+	dontUseTextEditServices,
+	reserved,
+	reserved,
+	reserved,
+	1024 * 1024,
+	640 * 1024
+};

@@ -54,3 +54,10 @@ haiku/Version.rdef
 
 # Haiku packages (haiku/package.sh)
 *.hpkg
+
+# Shiori for Classic Macintosh: builds, emulator disks, local settings
+/classic/build/
+/classic/diskimages/
+/classic/local.env
+/classic/tests/test_core
+/classic/tests/test_core.dSYM/
