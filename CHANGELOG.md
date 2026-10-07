@@ -5,6 +5,23 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.14.1 (2026-10-06)
+
+### Fixed
+
+- **Smoother previews and deletes**: offline copies and summaries are saved
+  in the background, not on the screen's own thread.
+- **Summaries are cleaned up** like offline copies: on delete and sign-out,
+  and never kept for code, files or private notes.
+- **A plain http:// address says why it fails**: Shiori needs https://.
+- **Saving a note's links** downloads faster and never takes more than 30
+  seconds a page.
+- **Clearer states**: the label picker and Save Links offer Try Again when
+  something fails, and Filter says when nothing matches.
+- **Accessibility**: zoom buttons in the image viewer, a Refresh action for
+  VoiceOver, and Reduce Motion respected when pulling to refresh.
+- Add Page can go back from Save to the address.
+
 ## 0.14.0 (2026-10-06)
 
 ### Changed
