@@ -46,6 +46,8 @@ int json_skip(JsonReader *r, int token);
 /* The last KEY or STRING decoded into out (UTF-8, NUL-terminated, cut at a
    character boundary to fit cap); returns its length. */
 long json_string(const JsonReader *r, char *out, long cap);
+/* A raw string token's text (as json_string decodes it), from any pointer. */
+long json_decode(const char *raw, long rawLen, char *out, long cap);
 /* Whether the last KEY is exactly k (keys are compared undecoded). */
 int json_is(const JsonReader *r, const char *k);
 /* The last NUMBER as a long (fraction and exponent dropped; 0 if not a number). */

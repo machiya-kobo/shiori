@@ -1,5 +1,6 @@
 # The tests that run anywhere: Node (search-core, the web pages, the Safari
-# extension's scripts, Linux's modules) and the Haiku app's portable C++ core.
+# extension's scripts, Linux's modules), the Haiku app's portable C++ core,
+# and Shiori for Classic Macintosh's portable C core and LAN bridge.
 # The Swift apps and the Be API UI build on their own systems.
 name: tests
 on:
@@ -15,5 +16,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Node tests (with the Haiku core, built by g++)
+      - name: Node tests (with the Haiku and Classic cores, built by the host's compilers)
         run: node --test scripts/*.test.mjs

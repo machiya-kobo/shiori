@@ -2,12 +2,18 @@
 // fakes on loopback only) and the portable core's (C89, built with the host's cc).
 // Run: node --test scripts/*.test.mjs
 
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+test("the classic core's vectors are search-core.js's current answers (haiku/tests/gen-vectors.mjs --c)", () => {
+  const fresh = execFileSync('node', ['haiku/tests/gen-vectors.mjs', '--c', 'patches/shiori/search-core.js'], { cwd: root, encoding: 'utf8' });
+  assert.equal(fresh, readFileSync(new URL('../classic/tests/vectors.h', import.meta.url), 'utf8'));
+});
+
 const python = spawnSync('python3', ['--version']).error ? null : 'python3';
 
 test('the classic bridge (classic/bridge) passes its tests', { skip: python ? false : 'no python3' }, () => {

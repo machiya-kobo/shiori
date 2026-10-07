@@ -1,5 +1,5 @@
 # Shiori for Classic Macintosh: built with Retro68 (scripts/build.sh).
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.10)
 project(Shiori C)
 
 if(NOT DEFINED SHIORI_VERSION)
@@ -17,6 +17,11 @@ set(SHIORI_SOURCES
     app/net.c
     core/json.c
     core/http.c
+    core/query.c
+    core/results.c
+    core/config.c
+    core/roman.c
+    core/notetext.c
 )
 
 # The desk accessory: a flat code resource (its DRVR header comes first, in

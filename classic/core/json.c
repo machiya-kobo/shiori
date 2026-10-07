@@ -277,7 +277,12 @@ static int put_utf8(char *out, long cap, long *n, unsigned long cp)
 
 long json_string(const JsonReader *r, char *out, long cap)
 {
-	const char *p = r->tok, *end = r->tok + r->tokLen;
+	return json_decode(r->tok, r->tokLen, out, cap);
+}
+
+long json_decode(const char *raw, long rawLen, char *out, long cap)
+{
+	const char *p = raw, *end = raw + rawLen;
 	long n = 0;
 
 	if (cap <= 0)
