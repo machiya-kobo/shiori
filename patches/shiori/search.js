@@ -2077,13 +2077,18 @@
   // The build's privacy front ends (SHIORI_FRONTENDS: Redlib, Invidious…).
   const FRONTENDS = S.frontendInstances(S.fromBuild('__SHIORI_FRONTENDS__'));
 
-  /** A web page elsewhere: the Wayback Machine, archive.is and the build's front ends (links only). */
+  /**
+   * A web page elsewhere: the Wayback Machine, archive.is and the build's
+   * front ends (links only), as one group at the end of the card's bottom
+   * row, apart from its tags: they're where to open it, not what it is.
+   */
   function elsewhere(url) {
-    return S.elsewhereLinks(url, FRONTENDS).map((link) =>
-      link.name === 'Original'
-        ? el('a', { href: link.url, title: `Open Original on ${link.site}` }, link.site.toLowerCase())
-        : el('a', { href: link.url, title: link.name.startsWith('Archive.') ? `Open on ${link.name}` : `Open in ${link.name}` },
-          link.name === 'Archive.org' ? 'cached' : link.name === 'Archive.is' ? 'archive.is' : link.name.toLowerCase()));
+    const links = S.elsewhereLinks(url, FRONTENDS).map((link) => {
+      const archive = link.name.startsWith('Archive.');
+      const title = link.name === 'Original' ? `Open Original on ${link.site}` : archive ? `Open on ${link.name}` : `Open in ${link.name}`;
+      return el('a', { class: `away ${archive ? 'archive' : 'out'}`, href: link.url, title }, link.name === 'Original' ? link.site : link.name);
+    });
+    return links.length ? [el('span', { class: 'elsewhere' }, ...links)] : [];
   }
 
   function webCard(r) {

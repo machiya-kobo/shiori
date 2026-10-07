@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.17.4 (2026-10-07)
+
+### Changed
+
+- **A result's archive links look like buttons**, on the search page:
+  Archive.org and Archive.is (and the build's front ends) sit at the end
+  of the card's bottom row, apart from its tags, as small grey buttons
+  with an icon, tinted on hover. They read as "cached" and "archive.is"
+  in plain text beside the tags, and didn't look like something to click.
+
 ## 0.17.3 (2026-10-07)
 
 ### Fixed
