@@ -17,9 +17,10 @@ resource 'MENU' (128) {
 };
 
 resource 'MENU' (129) {
-	129, textMenuProc, 0x7FFFFFFD, enabled, "File",
+	129, textMenuProc, 0x7FFFFFFF, enabled, "File",
 	{
 		"Run Probe", noIcon, "R", noMark, plain;
+		"Error Probes", noIcon, "E", noMark, plain;
 		"-", noIcon, noKey, noMark, plain;
 		"Quit", noIcon, "Q", noMark, plain;
 	}

@@ -227,6 +227,22 @@ class Kura(Base):
             log("NOTE kura got the room token while signed in (the id should win)")
         if bearer != "Bearer " + ROOM_TOKEN and not (SIGNED_IN["sid"] and bearer == "Bearer " + SID):
             return self.reply(401, {"error": "sign in", "signin": "http://127.0.0.1/signin"})
+        # Classic's error probes (search words): a redirect, a slow answer, and
+        # answers too large for the Mac (300 KB) and for the bridge (600 KB).
+        q = params.get("q", [""])[0]
+        if q.startswith("redirect"):
+            self.send_response(302)
+            self.send_header("Location", "https://elsewhere.example/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if q.startswith("slow"):
+            import time
+            time.sleep(12)
+        if q.startswith("big") or q.startswith("huge"):
+            size = 300_000 if q.startswith("big") else 600_000
+            note = {"path": "Big/x.md", "url": "http://127.0.0.1/n/Big/x", "title": "Big", "summary": "x" * 1000}
+            return self.reply(200, {"total": 1, "results": [note] * (size // 1100)})
         limit = int(params.get("limit", ["20"])[0])
         offset = int(params.get("offset", ["0"])[0])
         log("kura vault=" + params.get("vault", ["-"])[0], "offset=" + str(offset))

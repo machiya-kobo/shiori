@@ -7,6 +7,8 @@ Steps, run in order (coordinates are the Mac's 512×342 screen, calibrated each 
     open-app      open the disk's window, select Shiori, File > Open (⌘O); waits for launch
     probe         File > Run Probe (⌘R); waits for both requests
     da            Apple menu > Shiori Search (the desk accessory)
+    cmd:K         Command-K (a letter; "period" for ⌘-., which stops a request)
+    stop          ⌘-. (Escape on a Mac Plus keyboard)
     close         close the front window (⌘W is not wired in the probe: clicks the go-away box)
     shot:NAME     a screenshot of the whole display, /tmp/shiori/NAME.png
     wait:SECONDS  sleep
@@ -61,6 +63,12 @@ def main(steps):
         elif step == "probe":
             snow.cmd_key("r")
             time.sleep(60)
+        elif step.startswith("cmd:"):
+            snow.cmd_key(step[4:])
+            time.sleep(0.5)
+        elif step == "stop":
+            snow.cmd_key("period")          # XK has no keysym named "."
+            time.sleep(0.5)
         elif step == "da":
             snow.menu_select(APPLE_MENU_X, DA_ITEM_Y)
             time.sleep(4)

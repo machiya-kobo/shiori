@@ -59,8 +59,11 @@ The token is the fake house's (43 K's), not a real one.
 ### The fake house
 
 ```sh
-classic/tests/fake_house.py --allow <the LAN, e.g. 192.168.1.0/24>
+classic/scripts/fake-house.sh start     # admits this machine's /24; --allow NETWORK to choose
+classic/scripts/fake-house.sh status | log | stop
 ```
+
+(It runs `classic/tests/fake_house.py`, and tracks it by PID file.)
 
 This runs the real bridge (`classic/bridge/bridge.py`) on ports 8070
 (Hister) and 8071 (Kura), with:
@@ -70,15 +73,18 @@ This runs the real bridge (`classic/bridge/bridge.py`) on ports 8070
 - a fake hister-login that knows the one room token.
 
 The bridge swaps the Mac's room token for fake Hister's token, as the real
-one does. Search words for timing:
+one does. Search words:
 
 - `heavy` (Hister): 20 rows shaped like a real reply, about 16 KB.
 - `many` (Hister 45 pages; Kura 45 notes).
+- Kura's error words: `redirect` (a 302), `slow` (12 s), `big` (300 KB,
+  over the Mac's cap) and `huge` (600 KB, over the bridge's: a 413).
 
 Snow's NAT connects from this machine's own LAN address. Basilisk II
 connects from its own address when bridged, or from this machine's when
-on slirp. Start the fake house with `nohup … &`. Don't look for it with
-`pgrep -f fake_house`: that matches your own shell's command line.
+on slirp. **Never `pkill -f` or `pgrep -f` a pattern** here: it matches
+your own shell's command line, and over SSH it kills the session.
+`fake-house.sh` uses a PID file for that reason.
 
 ### Build and deploy
 
@@ -94,6 +100,7 @@ Drive it with `classic/tests/snow_session.py`. For example:
 
 ```sh
 classic/tests/snow_session.py open-app shot:launched probe shot:probe
+classic/tests/snow_session.py cmd:e wait:5 stop wait:25 shot:errors   # error probes, ⌘-. on the slow one
 classic/tests/snow_session.py da shot:da
 ```
 
@@ -114,6 +121,8 @@ What we learned setting it up:
 - The Apple menu lists the System's DAs first; Shiori Search comes last.
 - Screenshots: `scrot` only, never ImageMagick's `import`: it grabs the
   pointer and Snow's mouse stays broken until restart.
+- The XTEST library has no keysym named ".": ⌘-. is `cmd_key("period")`
+  (the `stop` step).
 
 ### Basilisk II (System 7.6.1)
 
@@ -157,16 +166,30 @@ copy `classic/build/Shiori.dsk`, or the release's `.dsk`, onto the card.
 The owner tests it. Live services are reached only through the deployed
 bridge, and only for reads.
 
-## Phase 0's measurements (Snow, Mac Plus, 4 MB)
+## Measurements (Snow, Mac Plus, 4 MB)
 
 | Reply | Bytes | Rows | Connect | Transfer | Parse |
 |---|---|---|---|---|---|
 | Hister `heavy` | 16,101 | 20 | 0.3 s | 5.8 s | 0.9 s |
 | Kura `many` | 6,200 | 20 | 0.2 s | 2.6 s | 0.5 s |
 
+Phase 2, after the switch to the non-blocking fetch (parse now decodes
+every field of every row):
+
+| Reply | Bytes | Rows | Connect | Transfer | Reads | Parse |
+|---|---|---|---|---|---|---|
+| Hister `heavy` | 16,101 | 20 | 0.5 s | 5.8 s | 30 | 1.5 s |
+| Kura `many` | 6,200 | 20 | 0.2 s | 2.8 s | 11 | 0.9 s |
+
 - Free memory after both: 3.5 MB (single Finder, the whole machine).
-- Parsing a page of results is fine. Transfer, about 3 KB/s through
-  Snow's DaynaPORT, is the cost: phase 2 tries larger receive buffers, and
-  the numbers on the real Plus will tell.
+- Parsing a page of results is fine. Transfer is the cost: the reply
+  comes in segments of about 540 bytes, one every 0.19 s, about 2.8 KB/s
+  through Snow's emulated DaynaPORT. Larger receive buffers (16 KB) and
+  several reads per event-loop pass (Geomys's fix) didn't change it, so
+  the limit is the emulated network, not the app. The real Plus on a
+  BlueSCSI will tell.
+- So the app asks for 10 rows a page (the 512×342 list shows about 8).
+  If the real Plus is as slow, the next step is compression in the bridge
+  (JSON shrinks about 5x; an inflater is small on a 68000).
 - A `fields=` filter on Kura's `/api/note` (it sends the body twice) is
   worth proposing if notes prove slow.

@@ -15,6 +15,7 @@ configure_file(resources/shiori.r.in ${CMAKE_CURRENT_BINARY_DIR}/shiori.r @ONLY)
 set(SHIORI_SOURCES
     app/main.c
     app/net.c
+    app/fetch.c
     core/json.c
     core/http.c
     core/query.c

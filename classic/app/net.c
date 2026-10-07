@@ -1,18 +1,9 @@
-/*
- * net.c: MacTCP, asynchronously. Each driver call is issued with
- * PBControlAsync and then polled: the yield callback runs between polls
- * (WaitNextEvent in the app), and a call past its deadline or cancelled is
- * aborted. One connection at a time.
- */
+/* net.c: see net.h. */
 #include <Devices.h>
 #include <Memory.h>
-#include <OSUtils.h>
-#include <Events.h>
 #include <string.h>
 
 #include "net.h"
-
-#define RCV_BUF_LEN 8192L   /* MacTCP's receive buffer for the stream (4K at least) */
 
 static short gIPP = 0;      /* the .IPP driver's refnum, once opened */
 
@@ -62,60 +53,38 @@ Boolean NetParseIP(const char *s, ip_addr *out)
 	return true;
 }
 
-/* Starts the call in c->pb and waits for it, yielding; aborts on timeout or cancel. */
-static OSErr Wait(NetConn *c)
-{
-	OSErr err;
-
-	c->pb.ioResult = inProgress;
-	err = PBControlAsync((ParmBlkPtr) &c->pb);
-	if (err != noErr)
-		return err;
-	while (c->pb.ioResult == inProgress) {
-		if (c->yield != NULL && c->yield(c->yieldCtx))
-			c->cancelled = true;
-		if (c->cancelled || TickCount() > c->deadline) {
-			TCPiopb abort;
-
-			memset(&abort, 0, sizeof(abort));
-			abort.ioCRefNum = gIPP;
-			abort.csCode = TCPAbort;
-			abort.tcpStream = c->stream;
-			PBControlSync((ParmBlkPtr) &abort);   /* completes the pending call */
-			while (c->pb.ioResult == inProgress)
-				;
-			return c->cancelled ? userCanceledErr : commandTimeout;
-		}
-	}
-	return c->pb.ioResult;
-}
-
-static void Prepare(NetConn *c, short csCode, short timeoutSecs)
+static void Prepare(NetConn *c, short csCode)
 {
 	memset(&c->pb, 0, sizeof(c->pb));
 	c->pb.ioCRefNum = gIPP;
 	c->pb.csCode = csCode;
 	c->pb.tcpStream = c->stream;
-	c->deadline = TickCount() + (unsigned long) timeoutSecs * 60;
 }
 
-OSErr NetOpen(NetConn *c, ip_addr host, tcp_port port, short timeoutSecs, NetYield yield, void *ctx)
+static OSErr Start(NetConn *c)
+{
+	OSErr err;
+
+	c->pb.ioResult = inProgress;
+	err = PBControlAsync((ParmBlkPtr) &c->pb);
+	c->busy = err == noErr;
+	return err;
+}
+
+OSErr NetCreate(NetConn *c, long bufLen)
 {
 	OSErr err;
 
 	memset(c, 0, sizeof(*c));
-	c->yield = yield;
-	c->yieldCtx = ctx;
 	if ((err = NetInit()) != noErr)
 		return err;
-	c->rcvBufLen = RCV_BUF_LEN;
-	c->rcvBuf = NewPtr(c->rcvBufLen);
+	c->rcvBufLen = bufLen;
+	c->rcvBuf = NewPtr(bufLen);
 	if (c->rcvBuf == NULL)
 		return memFullErr;
-
-	Prepare(c, TCPCreate, 5);
+	Prepare(c, TCPCreate);
 	c->pb.csParam.create.rcvBuff = c->rcvBuf;
-	c->pb.csParam.create.rcvBuffLen = c->rcvBufLen;
+	c->pb.csParam.create.rcvBuffLen = (unsigned long) bufLen;
 	err = PBControlSync((ParmBlkPtr) &c->pb);
 	if (err != noErr) {
 		DisposePtr(c->rcvBuf);
@@ -123,60 +92,92 @@ OSErr NetOpen(NetConn *c, ip_addr host, tcp_port port, short timeoutSecs, NetYie
 		return err;
 	}
 	c->stream = c->pb.tcpStream;
+	return noErr;
+}
 
-	Prepare(c, TCPActiveOpen, timeoutSecs);
+OSErr NetBeginOpen(NetConn *c, ip_addr host, tcp_port port, short timeoutSecs)
+{
+	Prepare(c, TCPActiveOpen);
 	c->pb.csParam.open.ulpTimeoutValue = (byte) timeoutSecs;
 	c->pb.csParam.open.ulpTimeoutAction = 1;          /* abort when it passes */
 	c->pb.csParam.open.validityFlags = 0xC0;          /* both of the above are set */
 	c->pb.csParam.open.commandTimeoutValue = (byte) timeoutSecs;
 	c->pb.csParam.open.remoteHost = host;
 	c->pb.csParam.open.remotePort = port;
-	return Wait(c);
+	return Start(c);
 }
 
-OSErr NetSend(NetConn *c, const char *data, unsigned short len)
+OSErr NetBeginSend(NetConn *c, const char *data, unsigned short len)
 {
-	wdsEntry wds[2];
-
-	wds[0].length = len;
-	wds[0].ptr = (Ptr) data;
-	wds[1].length = 0;
-	wds[1].ptr = NULL;
-	Prepare(c, TCPSend, 20);
-	c->pb.csParam.send.ulpTimeoutValue = 20;
+	c->wds[0].length = len;
+	c->wds[0].ptr = (Ptr) data;
+	c->wds[1].length = 0;
+	c->wds[1].ptr = NULL;
+	Prepare(c, TCPSend);
+	c->pb.csParam.send.ulpTimeoutValue = 30;
 	c->pb.csParam.send.ulpTimeoutAction = 1;
 	c->pb.csParam.send.validityFlags = 0xC0;
 	c->pb.csParam.send.pushFlag = true;
-	c->pb.csParam.send.wdsPtr = (Ptr) wds;
-	return Wait(c);
+	c->pb.csParam.send.wdsPtr = (Ptr) c->wds;
+	return Start(c);
 }
 
-OSErr NetRecv(NetConn *c, char *buf, unsigned short *len, short timeoutSecs)
+OSErr NetBeginRecv(NetConn *c, char *buf, unsigned short len, short timeoutSecs)
 {
-	OSErr err;
-
-	Prepare(c, TCPRcv, timeoutSecs + 2);
+	Prepare(c, TCPRcv);
 	c->pb.csParam.receive.commandTimeoutValue = (byte) timeoutSecs;
 	c->pb.csParam.receive.rcvBuff = buf;
-	c->pb.csParam.receive.rcvBuffLen = *len;
-	err = Wait(c);
-	*len = (err == noErr) ? c->pb.csParam.receive.rcvBuffLen : 0;
-	return err;
+	c->pb.csParam.receive.rcvBuffLen = len;
+	return Start(c);
 }
 
-void NetClose(NetConn *c)
+OSErr NetPoll(NetConn *c)
 {
+	if (!c->busy)
+		return noErr;
+	if (c->pb.ioResult == inProgress)
+		return inProgress;
+	c->busy = false;
+	return c->pb.ioResult;
+}
+
+Boolean NetReady(const NetConn *c)
+{
+	return !c->busy || c->pb.ioResult != inProgress;
+}
+
+unsigned short NetReceived(const NetConn *c)
+{
+	return c->pb.csParam.receive.rcvBuffLen;
+}
+
+void NetAbort(NetConn *c)
+{
+	TCPiopb abort;
+
+	if (c->stream == NULL)
+		return;
+	memset(&abort, 0, sizeof(abort));
+	abort.ioCRefNum = gIPP;
+	abort.csCode = TCPAbort;
+	abort.tcpStream = c->stream;
+	(void) PBControlSync((ParmBlkPtr) &abort);       /* completes the operation in flight */
+	while (c->busy && c->pb.ioResult == inProgress)
+		;
+	c->busy = false;
+}
+
+void NetRelease(NetConn *c)
+{
+	TCPiopb rel;
+
 	if (c->stream != NULL) {
-		Prepare(c, TCPClose, 3);
-		c->pb.csParam.close.ulpTimeoutValue = 3;
-		c->pb.csParam.close.ulpTimeoutAction = 1;
-		c->pb.csParam.close.validityFlags = 0xC0;
-		if (!c->cancelled)
-			(void) Wait(c);
-		Prepare(c, TCPAbort, 2);
-		(void) PBControlSync((ParmBlkPtr) &c->pb);
-		Prepare(c, TCPRelease, 2);
-		(void) PBControlSync((ParmBlkPtr) &c->pb);
+		NetAbort(c);
+		memset(&rel, 0, sizeof(rel));
+		rel.ioCRefNum = gIPP;
+		rel.csCode = TCPRelease;
+		rel.tcpStream = c->stream;
+		(void) PBControlSync((ParmBlkPtr) &rel);
 		c->stream = NULL;
 	}
 	if (c->rcvBuf != NULL) {
