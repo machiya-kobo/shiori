@@ -3,8 +3,11 @@
 # and Shiori for Classic Macintosh's portable C core and LAN bridge.
 # The Swift apps and the Be API UI build on their own systems.
 name: tests
+# Branches only: a tag points at a commit main has already tested, and a tag
+# checkout isn't one the version tests can read (mac-bridge-v0.1.1 isn't vX.Y.Z).
 on:
   push:
+    branches: ['**']
   pull_request:
 permissions:
   contents: read
