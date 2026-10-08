@@ -201,6 +201,8 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
   color: var(--tab); border: 1.5px solid var(--tab); background: transparent;
 }
 #categories a[aria-current="page"] { color: var(--bg); background: var(--tab); border-color: var(--tab); }
+/* Under the pointer, a light fill of the pill's own colour (the apps' hoverFill). */
+#categories a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--tab) 14%, transparent); }
 #categories a[data-cat="general"] { --tab: var(--tab-general); }
 #categories a[data-cat="hister"] { --tab: var(--accent); }
 #categories a[data-cat="vault"] { --tab: var(--notes); }

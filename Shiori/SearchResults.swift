@@ -639,6 +639,7 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
                 .padding(.horizontal, 11)
                 .padding(.vertical, 4)
                 .background(Capsule().fill(on ? color : .clear))
+                .hoverFill(Capsule(), color: color, active: !on)
                 .overlay(Capsule().strokeBorder(color, lineWidth: 1.5))
                 .contentShape(Capsule())
         }

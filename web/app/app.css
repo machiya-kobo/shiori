@@ -203,6 +203,8 @@ body.phone-preview #preview-column { display: flex; border: 0; }
   color: var(--tab); border: 1.5px solid var(--tab); background: transparent;
 }
 .segments button[aria-pressed="true"] { color: var(--bg); background: var(--tab); }
+/* Under the pointer, a light fill of the pill's own colour (the apps' hoverFill). */
+.segments button:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--tab) 14%, transparent); }
 .segments button[data-tint="cyan"] { --tab: var(--tab-general); }
 .segments button[data-tint="blue"] { --tab: var(--accent); }
 .segments button[data-tint="orange"] { --tab: var(--notes); }
@@ -399,6 +401,7 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
   padding: 7px 10px; border-radius: 8px; cursor: pointer; color: var(--text);
 }
 #sidebar button[aria-current="page"] { background: var(--accent); color: var(--bg); }
+#sidebar button:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
 #sidebar .status-link { display: block; padding: 7px 10px; color: var(--secondary); text-decoration: none; font-size: 0.8125rem; }
 #sidebar .status-link:hover { color: var(--accent); }
 /* Every icon, and a label's dot, in the same 18px square, so the names

@@ -338,6 +338,30 @@ struct TitleLink: View {
     }
 }
 
+/// A hover highlight for things that select (the sidebar's rows, the pills
+/// over a list), as the web pages draw theirs: a light fill of the thing's
+/// own colour under the pointer, never on the one already chosen. Drawn
+/// behind the content, past its edges, so nothing moves.
+struct HoverFill<S: Shape>: ViewModifier {
+    let shape: S
+    let color: Color
+    var active = true
+    var outset = EdgeInsets()
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(shape.fill(color.opacity(hovering && active ? 0.14 : 0)).padding(outset))
+            .onHover { hovering = $0 }
+    }
+}
+
+extension View {
+    func hoverFill<S: Shape>(_ shape: S, color: Color, active: Bool = true, outset: EdgeInsets = EdgeInsets()) -> some View {
+        modifier(HoverFill(shape: shape, color: color, active: active, outset: outset))
+    }
+}
+
 struct OpenOriginalButton: View {
     let document: StoredPage
     /// "Open", for a swipe's narrow button.

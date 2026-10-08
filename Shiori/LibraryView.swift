@@ -285,12 +285,14 @@ struct LibraryView: View {
             Section {
                 // The Library has the All / Pages / Notes filter.
                 Label { Text("Library") } icon: { RowIcon(symbol: "books.vertical") }
+                    .sidebarHover(item != .recent, palette: palette)
                     .tag(Item.recent)
                 // The search on screen, then the last few (up to five in
                 // all), so going back to one is a click.
                 ForEach(sidebarSearches, id: \.self) { query in
                     Label { Text(query) } icon: { RowIcon(symbol: "magnifyingglass") }
                         .lineLimit(1)
+                        .sidebarHover(item != .search(query), palette: palette)
                         .tag(Item.search(query))
                 }
             }
@@ -315,7 +317,9 @@ struct LibraryView: View {
                 || !app.labeller.state.collectionProposals.isEmpty
             {
                 Section {
-                    SuggestedLabelsRow().tag(Item.suggestedLabels)
+                    SuggestedLabelsRow()
+                        .sidebarHover(item != .suggestedLabels, palette: palette)
+                        .tag(Item.suggestedLabels)
                 } header: {
                     SidebarDivider()
                 }
@@ -323,7 +327,9 @@ struct LibraryView: View {
             if !app.rules.aliases.isEmpty {
                 Section(isExpanded: $collectionsOpen) {
                     ForEach(app.rules.aliases.keys.sorted(), id: \.self) { alias in
-                        CollectionLabel(name: alias).tag(Item.alias(alias))
+                        CollectionLabel(name: alias)
+                            .sidebarHover(item != .alias(alias), palette: palette)
+                            .tag(Item.alias(alias))
                             .contextMenu { FeedButtons(feed: app.feedURL(query: alias, title: CollectionIcon.title(for: alias))) }
                     }
                 } header: {
@@ -341,6 +347,7 @@ struct LibraryView: View {
                         } icon: {
                             RowDot(color: palette.chipColor(for: label))
                         }
+                        .sidebarHover(item != .label(label), palette: palette)
                         .tag(Item.label(label))
                         .contextMenu { FeedButtons(feed: app.feedURL(query: "label:\(label)", title: label)) }
                     }
@@ -352,6 +359,7 @@ struct LibraryView: View {
             // The Mac has its own Settings window (⌘,).
             Section {
                 Label { Text("Settings") } icon: { RowIcon(symbol: "gearshape") }
+                    .sidebarHover(item != .settings, palette: palette)
                     .tag(Item.settings)
             } header: {
                 SidebarDivider()
@@ -471,6 +479,17 @@ private struct SuggestionsKey: Equatable {
 /// A line between the sidebar's sections, over the section's heading if it
 /// has one: the sections ran together and read as one ragged list. The
 /// web app's `#sidebar h2` draws the same line.
+private extension View {
+    /// A sidebar row's hover: the accent, lightly, across the row (past the
+    /// label's edges, as the selection is drawn), never on the chosen row.
+    func sidebarHover(_ active: Bool, palette: Palette) -> some View {
+        frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
+            .hoverFill(RoundedRectangle(cornerRadius: 6), color: palette.accent, active: active,
+                       outset: EdgeInsets(top: -3, leading: -6, bottom: -3, trailing: -6))
+    }
+}
+
 private struct SidebarDivider: View {
     var title: String?
 
