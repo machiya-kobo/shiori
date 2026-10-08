@@ -4,9 +4,9 @@ Thanks for helping. Shiori is a client for [Hister](https://github.com/asciimoo/
 native apps for iPhone, iPad and Mac with a Safari extension, a search page
 and web app, and a small Linux app. It's one of the
 [Machiya](https://github.com/machiya-kobo/machiya) services ("rooms"; README
-says what they are). [CLAUDE.md](CLAUDE.md) is the detailed
-guide to how it works and the traps already found; read the section for the
-part you're changing.
+says what they are). [CLAUDE.md](CLAUDE.md) is the guide to how it works and
+the project-wide rules; each folder has its own `CLAUDE.md` with the traps
+already found there. Read the one for the part you're changing.
 
 ## Building
 

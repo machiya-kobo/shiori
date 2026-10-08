@@ -6,7 +6,7 @@
 // ext/badge.js (ShioriBadge), and before upstream, whose command listeners
 // it keeps so the menu can run them.
 //
-// A link is saved by Save This Note's Links' rules (CLAUDE.md): never one
+// A link is saved by Save This Note's Links' rules (Packages/HisterKit/CLAUDE.md): never one
 // Hister holds (looked up before, and again after redirects: api/add would
 // replace its metadata); never a file; downloaded here without cookies,
 // http:// tried as https:// first; skip rules hold (no ignore_skip_rules);

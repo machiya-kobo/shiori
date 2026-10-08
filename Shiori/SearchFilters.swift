@@ -329,7 +329,7 @@ private struct FilterSheet: View {
             }
             #if os(iOS)
             // No .searchSuggestions(.hidden, for: .content): on iOS 27 it
-            // blanked a sheet (CLAUDE.md).
+            // blanked a sheet (root CLAUDE.md).
             .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Find a Site or Label")
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
