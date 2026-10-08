@@ -114,16 +114,13 @@ A Flatpak around the web app, with Cinnamon's menu search, a quick-search hotkey
 
 A native app on the Be API, installed with `pkgman` or built with `make`: [docs/haiku.md](docs/haiku.md).
 
+<p align="center"><a href="docs/screenshots/shiori-haiku-search.png"><img src="docs/screenshots/shiori-haiku-search.png" alt="Shiori on Haiku: notes and pages for lantern" width="60%"></a><br>Native on Haiku</p>
+
 ### Classic Macintosh
 
-A native app for 68k Macs, from a Mac Plus on System 6 to color on System 7, with a quick-search desk accessory: [docs/classic.md](docs/classic.md).
+A native app for 68k Macs, with a quick-search desk accessory: [docs/classic.md](docs/classic.md).
 
-<table>
-  <tr>
-    <td align="center" width="50%"><a href="docs/screenshots/shiori-haiku-search.png"><img src="docs/screenshots/shiori-haiku-search.png" alt="Shiori on Haiku: notes and pages for lantern" width="100%"></a><br>Native on Haiku</td>
-    <td align="center" width="50%"><a href="docs/screenshots/shiori-classic-system7-color.png"><img src="docs/screenshots/shiori-classic-system7-color.png" alt="Shiori in color on System 7: a search and a note in a reader window" width="100%"></a><br>Color on System 7</td>
-  </tr>
-</table>
+<p align="center"><a href="docs/screenshots/shiori-classic-system7-color.png"><img src="docs/screenshots/shiori-classic-system7-color.png" alt="Shiori in color on System 7: a search and a note in a reader window" width="60%"></a><br>Color on System 7</p>
 
 ## Credits and license
 
