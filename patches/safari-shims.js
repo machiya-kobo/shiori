@@ -1,7 +1,8 @@
 // Safari compatibility shim, prepended to background.js at build time,
 // before ext/host-native.js, ext/core.js and the rest of Shiori's own
 // (BACKGROUND in scripts/build-extension.sh). Both
-// sections come from nburns/hister-safari.
+// sections come from nburns/hister-safari (Nick Burns, AGPL-3.0), which
+// Shiori's extension build started from; see THIRD_PARTY_NOTICES.
 //
 // 1. Toolbar icons. Upstream background.js uses OffscreenCanvas +
 //    createImageBitmap inside the service worker to derive greyscale toolbar

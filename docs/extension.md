@@ -2,6 +2,8 @@
 
 Hister's [official extensions](https://hister.org/docs/browser-extension) cover Firefox and Chrome, and [hister-safari](https://github.com/nburns/hister-safari) brings Hister to Safari on the Mac. Safari on iPhone and iPad loads only extensions that ship inside a signed app, so Shiori carries Hister's own extension, built for Safari.
 
+**Where it comes from.** Shiori's Safari extension is Hister's own extension, built from Hister's source (a pinned submodule, never modified) and patched at build time. That design, the build pipeline, the manifest merge and the Safari shims (`patches/safari-shims.js`) come from [hister-safari](https://github.com/nburns/hister-safari) by Nick Burns, which Shiori started from; it's AGPL-3.0, like Shiori. What Shiori adds is the offline queue, settings shared with the app, the search page, and carrying the extension in an iPhone and iPad app.
+
 It runs on the Mac too. Use Shiori's or hister-safari there, not both: with both on, Safari sends every page twice.
 
 To install it, [build the apps](build.md), then [turn on the extension](build.md#turn-on-the-extension).
