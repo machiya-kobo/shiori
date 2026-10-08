@@ -310,22 +310,32 @@ struct DocumentItem: View {
 /// A result's title, the link to the original: underlined under the pointer,
 /// with the link cursor on the Mac, as the web pages draw a hovered link. A
 /// click beside it does what Click Opens says, so the link must read apart
-/// from the card around it.
-struct TitleLinkHover: ViewModifier {
+/// from the card around it. A plain button, drawn by SwiftUI: a borderless
+/// one is AppKit's on the Mac and takes the pointer, so its label never
+/// hears the hover.
+struct TitleLink: View {
+    let title: String
+    let help: String
+    let action: () -> Void
+    @Environment(\.palette) private var palette
     @State private var hovering = false
 
-    func body(content: Content) -> some View {
-        content
-            .underline(hovering)
-            #if os(macOS)
-            .pointerStyle(.link)
-            #endif
-            .onHover { hovering = $0 }
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .textStyle(.headline)
+                .foregroundStyle(palette.accent)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .underline(hovering)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        #if os(macOS)
+        .pointerStyle(.link)
+        #endif
+        .help(help)
     }
-}
-
-extension View {
-    func titleLinkHover() -> some View { modifier(TitleLinkHover()) }
 }
 
 struct OpenOriginalButton: View {

@@ -162,16 +162,9 @@ struct OpenedListView: View {
         let original = app.rowStyle.clickOpensOriginal(pane: selection != nil)
         let row = VStack(alignment: .leading, spacing: 3) {
             // A link: the title always opens the original.
-            Button { openURL.openPage(page, app: app) } label: {
-                Text(page.displayTitle)
-                    .textStyle(.headline)
-                    .foregroundStyle(palette.accent)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .titleLinkHover()
+            TitleLink(title: page.displayTitle, help: OpenOriginalButton.title(for: page, app: app)) {
+                openURL.openPage(page, app: app)
             }
-            .buttonStyle(.borderless)
-            .help(OpenOriginalButton.title(for: page, app: app))
             Text("For “\(entry.typedQuery)” · \(entry.added.formatted(date: model.byDay ? .omitted : .abbreviated, time: .shortened))")
                 .textStyle(.subheadline)
                 .foregroundStyle(palette.secondaryText)

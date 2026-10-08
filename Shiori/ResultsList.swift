@@ -359,19 +359,10 @@ struct DocumentRow: View {
                 // The accent, as the search page and the web app draw titles.
                 // A link: it always opens the original, whatever a click on
                 // the rest of the row does (Click Opens).
-                Button {
+                TitleLink(title: document.displayTitle, help: OpenOriginalButton.title(for: document, app: app)) {
                     actions.opened(document)
                     openURL.openPage(document, app: app)
-                } label: {
-                    Text(document.displayTitle)
-                        .textStyle(.headline)
-                        .foregroundStyle(palette.accent)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                        .titleLinkHover()
                 }
-                .buttonStyle(.borderless)
-                .help(OpenOriginalButton.title(for: document, app: app))
                 HStack(spacing: 6) {
                     if let code = document.code {
                         // Which forge (most are Forgejo, and the rows looked alike),
