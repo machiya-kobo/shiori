@@ -23,7 +23,8 @@ capture: run it again to refresh them.
 With --site DIR, the same run also takes Machiya's site images into DIR, light and dark, sharper than the screen:
 hero (the web app, "washi", a page open; 1280x800 at 2x), hero-phone (the same at 390x844, 2x), web (the search page,
 "kyoto lanterns"; 1280x720 at 1.5x), pages (its Pages tab, "lantern"; 810x720 at 1.5x), pages-phone (the same at
-390x844, 2x) and code (its Code tab, "flicker"; 810x660 at 1.5x). Two invented code results (an issue on a sample GitHub repo and one on a sample Forgejo
+390x844, 2x), code (its Code tab, "flicker"; 810x660 at 1.5x), and search-desk and search-phone (the search page's
+All for "lantern", its Info card and sections open; 1600x1000, and 390x844 at 2x). Two invented code results (an issue on a sample GitHub repo and one on a sample Forgejo
 repo, at .example addresses) go into Hister for every run, so the Code tab has something to show.
 
 Needs Playwright for Python with its Chromium (`pip install playwright pillow && playwright install chromium`, in
@@ -52,6 +53,7 @@ SITE_HERO = {"width": 1280, "height": 800}
 SITE_WEB = {"width": 1280, "height": 720}
 SITE_PAGES = {"width": 810, "height": 720}
 SITE_CODE = {"width": 810, "height": 660}
+SITE_SEARCH = {"width": 1600, "height": 1000}
 
 # Two invented code results, as code-import writes them (machiya stack/code-import): an open issue on a sample
 # GitHub repo and one on a sample Forgejo repo, at .example addresses. They hold no lantern words, so the
@@ -378,6 +380,8 @@ def main():
                     site("pages", site_url + "/?q=lantern&cat=hister", SITE_PAGES, "Folding a chōchin lantern")
                     site("pages-phone", site_url + "/?q=lantern&cat=hister", PHONE, "Folding a chōchin lantern", (), 2)
                     site("code", site_url + "/?q=flicker", SITE_CODE, "Candle or LED inside a paper lantern?", (code_tab,))
+                    site("search-desk", site_url + "/?q=lantern", SITE_SEARCH, "Folding a chōchin lantern", (open_sections,), 1)
+                    site("search-phone", site_url + "/?q=lantern", PHONE, "Folding a chōchin lantern", (open_sections,), 2)
             browser.close()
     finally:
         if a.keep:
