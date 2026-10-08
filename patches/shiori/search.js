@@ -536,22 +536,30 @@
     } catch (_) {}
     return null;
   }
-  async function loadRules() {
-    if (rules || !histerBase) return rules;
+  // One fetch at a time: each keystroke asks, and the first few came before
+  // the first answer, each sending its own.
+  let rulesLoading = null;
+  function loadRules() {
+    if (rules || !histerBase) return Promise.resolve(rules);
     const cached = cachedRules();
     if (cached) {
       const aliases = S.collectionAliases(cached);
-      return (rules = { aliases, labels: S.labelsFromAliases(aliases).labels });
+      return Promise.resolve((rules = { aliases, labels: S.labelsFromAliases(aliases).labels }));
     }
-    try {
-      const reply = await fetchJSON(`${histerBase}api/rules`, { headers: histerAuth({ Accept: 'application/json' }) });
-      const aliases = S.collectionAliases((reply && reply.aliases) || {});
-      rules = { aliases, labels: S.labelsFromAliases(aliases).labels };
+    rulesLoading ??= (async () => {
       try {
-        localStorage.setItem(RULES_KEY, JSON.stringify({ base: histerBase, at: Date.now(), aliases }));
+        const reply = await fetchJSON(`${histerBase}api/rules`, { headers: histerAuth({ Accept: 'application/json' }) });
+        const aliases = S.collectionAliases((reply && reply.aliases) || {});
+        rules = { aliases, labels: S.labelsFromAliases(aliases).labels };
+        try {
+          localStorage.setItem(RULES_KEY, JSON.stringify({ base: histerBase, at: Date.now(), aliases }));
+        } catch (_) {}
       } catch (_) {}
-    } catch (_) {}
-    return rules;
+      return rules;
+    })().finally(() => {
+      rulesLoading = null;
+    });
+    return rulesLoading;
   }
   /** Labels and collections for what's typed, straight from the rules. */
   function labelItems(typed) {

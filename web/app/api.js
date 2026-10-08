@@ -26,7 +26,29 @@ export class HisterError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body, timeout = 12000, keepalive = false } = {}) {
+// An identical read already on its way is shared, never sent twice: the
+// first draw and the one after the rules and vaults arrive ask the same
+// searches, the web's included (each counts). Only while it's in flight,
+// so nothing is ever older than a fresh request; each caller gets its own
+// copy of the reply.
+const inFlight = new Map();
+function shared(key, make) {
+  let pending = inFlight.get(key);
+  if (!pending) {
+    pending = make();
+    inFlight.set(key, pending);
+    const done = () => inFlight.delete(key);
+    pending.then(done, done);
+  }
+  return pending.then((value) => (value && typeof value === 'object' ? structuredClone(value) : value));
+}
+
+function request(path, options = {}) {
+  const read = (options.method || 'GET') === 'GET' && options.body === undefined && !options.keepalive;
+  return read ? shared('GET ' + path, () => send(path, options)) : send(path, options);
+}
+
+async function send(path, { method = 'GET', body, timeout = 12000, keepalive = false } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   let response;
@@ -204,12 +226,13 @@ export const faviconURL = (key) => (key ? `${ROOT}api/favicon?${query({ key })}`
 export const histerPageURL = (url) => `${ROOT}preview?${query({ id: url })}`;
 
 /** Web results from SearXNG (through /searx/). */
-export async function web(q, page = 1) {
-  const response = await fetch(`${ROOT}searx/search?${query({ q, format: 'json', pageno: String(page), categories: 'general' })}`, {
-    credentials: 'same-origin',
-  }).catch(() => null);
-  if (!response || !response.ok) throw new HisterError("The web search didn't answer.");
-  return response.json();
+export function web(q, page = 1) {
+  const url = `${ROOT}searx/search?${query({ q, format: 'json', pageno: String(page), categories: 'general' })}`;
+  return shared('web ' + url, async () => {
+    const response = await fetch(url, { credentials: 'same-origin' }).catch(() => null);
+    if (!response || !response.ok) throw new HisterError("The web search didn't answer.");
+    return response.json();
+  });
 }
 
 const readVaults = () => request('kura/api/vaults', { timeout: 4000 }).then((r) => r && r.vaults);
@@ -395,7 +418,11 @@ export function cards() {
 }
 
 /** SearXNG's autocomplete for `q` (its list of searches), for "Did you mean"; [] on failure. */
-export async function autocomplete(q) {
+export function autocomplete(q) {
+  return shared('autocomplete ' + q, () => fetchAutocomplete(q));
+}
+
+async function fetchAutocomplete(q) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 3000);
   try {

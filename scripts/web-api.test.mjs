@@ -527,3 +527,27 @@ test('the search page and the web app read notes from the source Notes From pick
   // the hosted page says whether Kura is set up (/kura/ is always routed)
   assert.match(read('../web/shim.js'), /kuraConfigured: !!merged\.niwaURL/);
 });
+
+test('identical reads in flight are sent once, each caller gets its own copy, and nothing is kept after', async () => {
+  reset(vaults(false));
+  const webCalls = () => server.calls.filter((c) => String(c.url).startsWith('/searx/search?')).length;
+  // The web search: two draws asking at once (each search counts).
+  const [a, b] = await Promise.all([api.web('lantern'), api.web('lantern')]);
+  assert.equal(webCalls(), 1);
+  a.mutated = true;
+  assert.equal(b.mutated, undefined, 'each caller has its own copy');
+  // Once answered, the next one asks again: nothing is reused.
+  await api.web('lantern');
+  assert.equal(webCalls(), 2);
+  // Another search is its own request.
+  await Promise.all([api.web('lantern'), api.web('washi')]);
+  assert.equal(webCalls(), 4);
+  // Hister's searches too.
+  server.calls = [];
+  await Promise.all([api.search('lantern'), api.search('lantern')]);
+  assert.equal(server.calls.filter((c) => String(c.url).startsWith('/search?')).length, 1);
+  // A write is never shared.
+  server.calls = [];
+  await Promise.all([api.recordOpened('https://a.example/', 'A', 'a'), api.recordOpened('https://a.example/', 'A', 'a')]);
+  assert.equal(server.calls.filter((c) => c.url === '/api/history').length, 2);
+});
