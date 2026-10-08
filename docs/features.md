@@ -20,7 +20,7 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 - **Save pages** from the share sheet on iPhone, iPad and Mac, by address (Add Page, ⇧⌘A on the Mac), or with Shortcuts and Siri ("Search Hister", "Save URL to Hister"), with an optional label.
 - **Offline support.** Saves wait on the device, out of your backups, and go when Hister answers. After 14 days they're dropped.
 - **Export** any list as JSON, CSV or RSS.
-- **Subscribe** to any search, collection or label as RSS (all collections at once as OPML, for NewsBlur). **Needs your own feed service for now:** a companion service on the Hister host that isn't published yet. Its contract, for anyone who builds one: `GET /shiori/feed?q=<query>[&title=…][&exclude_label=…]`, answering RSS 2.0 with the 50 newest matches.
+- **Subscribe** to any search, collection or label as RSS (all collections at once as OPML, for NewsBlur). It needs Machiya's [shiori-feed](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-feed.md) on the Hister host (the reference compose's `shiori` profile): `GET /shiori/feed?q=<query>[&title=…][&exclude_label=…]`, answering RSS 2.0 with the 50 newest matches.
 
 ## Your settings
 
@@ -29,7 +29,7 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 
 ## AI
 
-Off by default, on-device first: Summarize, label suggestions, Label New Pages and an AI Answer for web searches, in the apps ([ai.md](ai.md)). The hosted web app's Summarize and AI Answer **need your own AI service for now**: a companion service on the Hister host that isn't published yet ([ai.md](ai.md) has its contract).
+Off by default, on-device first: Summarize, label suggestions, Label New Pages and an AI Answer for web searches, in the apps ([ai.md](ai.md)). The hosted web app's Summarize and AI Answer need Machiya's [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md) on the Hister host (the reference compose's `shiori` profile; [ai.md](ai.md) has its contract).
 
 ## What it talks to
 

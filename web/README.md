@@ -34,7 +34,7 @@ origin):
 | `/konbini/*` | Konbini, `/konbini` removed (only `api/cards`) |
 | `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/api/prefs`, `/kura/feed.xml` | Kura, `/kura` removed: your notes, and (signed in) your theme, appearance and text size. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
 | `/smallweb/*` | the small-web gateway, `/smallweb` removed (`api/search`, `api/save`): Gemini and Gopher, and the web app's Add Page (any http(s), gemini or gopher page; its `SMALLWEB_ORIGINS` must include this host's origin) |
-| anything else | the Hister host as it is: Hister's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (companion services that aren't published yet, so for now they need your own server: the feed's contract is in [docs/features.md](../docs/features.md), the AI's in [docs/ai.md](../docs/ai.md); the pages ask for `/shiori/ai/*` only when built with `SHIORI_AI=1`) |
+| anything else | the Hister host as it is: Hister's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (Machiya's [shiori-feed](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-feed.md) and [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md), the reference compose's `shiori` profile; the pages ask for `/shiori/ai/*` only when built with `SHIORI_AI=1`) |
 
 Pass requests through **unchanged**. Do not add `Origin: hister://`: Hister
 lets a same-origin browser write (`Sec-Fetch-Site: same-origin`) and
