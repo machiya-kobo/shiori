@@ -158,13 +158,16 @@ struct ThemeTests {
         }
     }
 
-    /// A pill under the pointer lifts onto `raised`, its colour moved to
-    /// the shade that reads there (as the web's `--<tint>-raised`).
+    /// A pill under the pointer lifts onto its hover fill, its text moved to
+    /// the shade that reads there (as the web's `--<pill>-hover`), and the
+    /// fill stands apart from the page more than the plain raised shade.
     @Test(arguments: variants)
-    func hoveredPillsReadOnTheRaisedShade(name: String, palette: Palette) {
+    func hoveredPillsReadOnTheirHoverFill(name: String, palette: Palette) {
+        let h = palette.hex
         for tint in [Palette.Tint.blue, .cyan, .purple, .green, .orange, .red, .yellow, .teal] {
-            let ink = palette.tintOnRaisedHex(tint)
-            #expect(Palette.contrast(ink, palette.hex.raised) >= 4.5, "\(name) \(tint): \(Palette.css(ink)) on \(Palette.css(palette.hex.raised))")
+            let (fill, ink) = palette.pillHoverHex(tint)
+            #expect(Palette.contrast(ink, fill) >= 4.5, "\(name) \(tint): \(Palette.css(ink)) on \(Palette.css(fill))")
+            #expect(Palette.contrast(fill, h.background) > Palette.contrast(h.raised, h.background), "\(name) \(tint): the fill shows")
         }
         // A colour that already reads is left as it is.
         #expect(Palette.readable(0x000000, on: 0xFFFFFF, lighter: false) == 0x000000)

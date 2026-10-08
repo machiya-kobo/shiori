@@ -198,25 +198,26 @@ body.phone-preview #preview-column { display: flex; border: 0; }
   mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
 }
 .segments button {
-  --tab: var(--accent); --tab-raised: var(--accent-raised); flex: none; padding: 4px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  --tab: var(--accent); --tab-hover-bg: var(--accent-hover-bg); --tab-hover: var(--accent-hover); flex: none; padding: 4px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap;
   font-size: 0.8125rem; font-weight: 600;
   color: var(--tab); border: 1.5px solid var(--tab); background: transparent;
 }
 .segments button[aria-pressed="true"] { color: var(--bg); background: var(--tab); }
-/* Under the pointer a pill that isn't chosen lifts onto --raised with a small
-   shadow, its colour moved to the shade that reads there (the rooms' rule). */
+/* Under the pointer a pill that isn't chosen lifts onto its hover fill (24% of
+   its colour over --raised) with a small shadow, its text moved to the shade
+   that reads there at 4.5:1. */
 .segments button:not([aria-pressed="true"]):hover {
-  background: var(--raised); color: var(--tab-raised); border-color: var(--tab-raised);
+  background: var(--tab-hover-bg); color: var(--tab-hover); border-color: var(--tab-hover);
   box-shadow: var(--shadow, 0 1px 2px rgb(0 0 0 / 0.3));
 }
-.segments button[data-tint="cyan"] { --tab: var(--tab-general); --tab-raised: var(--tab-general-raised); }
-.segments button[data-tint="blue"] { --tab: var(--accent); --tab-raised: var(--accent-raised); }
-.segments button[data-tint="orange"] { --tab: var(--notes); --tab-raised: var(--notes-raised); }
-.segments button[data-tint="purple"] { --tab: var(--tab-news); --tab-raised: var(--tab-news-raised); }
-.segments button[data-tint="yellow"] { --tab: var(--web); --tab-raised: var(--web-raised); }
-.segments button[data-tint="teal"] { --tab: var(--smallweb); --tab-raised: var(--smallweb-raised); }
-.segments button[data-tint="green"] { --tab: var(--kept); --tab-raised: var(--kept-raised); }
-.segments button[data-tint="red"] { --tab: var(--tab-videos); --tab-raised: var(--tab-videos-raised); }
+.segments button[data-tint="cyan"] { --tab: var(--tab-general); --tab-hover-bg: var(--tab-general-hover-bg); --tab-hover: var(--tab-general-hover); }
+.segments button[data-tint="blue"] { --tab: var(--accent); --tab-hover-bg: var(--accent-hover-bg); --tab-hover: var(--accent-hover); }
+.segments button[data-tint="orange"] { --tab: var(--notes); --tab-hover-bg: var(--notes-hover-bg); --tab-hover: var(--notes-hover); }
+.segments button[data-tint="purple"] { --tab: var(--tab-news); --tab-hover-bg: var(--tab-news-hover-bg); --tab-hover: var(--tab-news-hover); }
+.segments button[data-tint="yellow"] { --tab: var(--web); --tab-hover-bg: var(--web-hover-bg); --tab-hover: var(--web-hover); }
+.segments button[data-tint="teal"] { --tab: var(--smallweb); --tab-hover-bg: var(--smallweb-hover-bg); --tab-hover: var(--smallweb-hover); }
+.segments button[data-tint="green"] { --tab: var(--kept); --tab-hover-bg: var(--kept-hover-bg); --tab-hover: var(--kept-hover); }
+.segments button[data-tint="red"] { --tab: var(--tab-videos); --tab-hover-bg: var(--tab-videos-hover-bg); --tab-hover: var(--tab-videos-hover); }
 /* Their totals on the Pages and Notes pills ("Pages 31"), as the search page. */
 .segments .pill-count { margin-left: 5px; font-weight: 400; font-variant-numeric: tabular-nums; }
 /* All: your top pages and notes among the web rows, each title led by whose it is. */

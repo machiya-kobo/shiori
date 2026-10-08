@@ -7,7 +7,7 @@
   --notes: #e96833; --konbini: #de66a0; --niwa: #859900; --web: #b58900; --obsidian: #2aa198; --smallweb: #2aa198; --danger: #e56865;
   --chip0: #3295da; --chip1: #2aa198; --chip2: #de66a0; --chip3: #859900; --chip4: #e96833; --chip5: #e56865; --chip6: #b58900; --chip7: #2aa198;
   --rooms-bg: #00212b; --rooms-on: #073642; --rooms-text: #93a1a1; --rooms-muted: #8b9b9d;
-  --tab-general-raised: #2ca9a0; --accent-raised: #48a0de; --notes-raised: #eb794a; --web-raised: #c29300; --tab-images-raised: #8ea300; --tab-videos-raised: #e87774; --tab-news-raised: #e175a9; --smallweb-raised: #2ca9a0; --kept-raised: #8ea300;
+  --tab-general-hover-bg: #0f5057; --tab-general-hover: #36cbbf; --accent-hover-bg: #114d66; --accent-hover: #80bde8; --notes-hover-bg: #3d423e; --notes-hover: #f09671; --web-hover-bg: #314a32; --web-hover: #dea800; --tab-images-hover-bg: #254e32; --tab-images-hover: #a6bf00; --tab-videos-hover-bg: #3c424a; --tab-videos-hover: #ed9593; --tab-news-hover-bg: #3b4259; --tab-news-hover: #e896be; --smallweb-hover-bg: #0f5057; --smallweb-hover: #36cbbf; --kept-hover-bg: #254e32; --kept-hover: #a6bf00;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   --highlight: rgb(181 137 0 / 0.30); --tint-mix: 9%;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;
@@ -19,7 +19,7 @@
   --notes: #bb4514; --konbini: #c52b76; --niwa: #627000; --web: #876600; --obsidian: #1f7770; --smallweb: #1f7770; --danger: #cf2623;
   --chip0: #1e70a9; --chip1: #1f7770; --chip2: #c52b76; --chip3: #627000; --chip4: #bb4514; --chip5: #cf2623; --chip6: #876600; --chip7: #1f7770;
   --rooms-bg: #eee8d5; --rooms-on: #fffbf0; --rooms-text: #566b72; --rooms-muted: #586c73;
-  --tab-general-raised: #1e736c; --accent-raised: #1d6da5; --notes-raised: #b64314; --web-raised: #846400; --tab-images-raised: #606d00; --tab-videos-raised: #c82522; --tab-news-raised: #bf2a72; --smallweb-raised: #1e736c; --kept-raised: #606d00;
+  --tab-general-hover-bg: #bccdbd; --tab-general-hover: #185d57; --accent-hover-bg: #bccbca; --accent-hover: #175884; --notes-hover-bg: #e2c1a7; --notes-hover: #923610; --web-hover-bg: #d5c9a2; --web-hover: #6b5100; --tab-images-hover-bg: #cccba2; --tab-images-hover: #4e5900; --tab-videos-hover-bg: #e7b9aa; --tab-videos-hover: #9d1d1b; --tab-news-hover-bg: #e4bbbe; --tab-news-hover: #97215a; --smallweb-hover-bg: #bccdbd; --smallweb-hover: #185d57; --kept-hover-bg: #cccba2; --kept-hover: #4e5900;
   --rooms-shadow: 0 1px 2px rgb(88 110 117 / 0.12), 0 6px 18px rgb(88 110 117 / 0.12);
   --highlight: rgb(135 102 0 / 0.22); --tint-mix: 8%;
   --shadow: 0 1px 2px rgb(88 110 117 / 0.12); color-scheme: light;
@@ -32,7 +32,7 @@
     --notes: #bb4514; --konbini: #c52b76; --niwa: #627000; --web: #876600; --obsidian: #1f7770; --smallweb: #1f7770; --danger: #cf2623;
     --chip0: #1e70a9; --chip1: #1f7770; --chip2: #c52b76; --chip3: #627000; --chip4: #bb4514; --chip5: #cf2623; --chip6: #876600; --chip7: #1f7770;
     --rooms-bg: #eee8d5; --rooms-on: #fffbf0; --rooms-text: #566b72; --rooms-muted: #586c73;
-    --tab-general-raised: #1e736c; --accent-raised: #1d6da5; --notes-raised: #b64314; --web-raised: #846400; --tab-images-raised: #606d00; --tab-videos-raised: #c82522; --tab-news-raised: #bf2a72; --smallweb-raised: #1e736c; --kept-raised: #606d00;
+    --tab-general-hover-bg: #bccdbd; --tab-general-hover: #185d57; --accent-hover-bg: #bccbca; --accent-hover: #175884; --notes-hover-bg: #e2c1a7; --notes-hover: #923610; --web-hover-bg: #d5c9a2; --web-hover: #6b5100; --tab-images-hover-bg: #cccba2; --tab-images-hover: #4e5900; --tab-videos-hover-bg: #e7b9aa; --tab-videos-hover: #9d1d1b; --tab-news-hover-bg: #e4bbbe; --tab-news-hover: #97215a; --smallweb-hover-bg: #bccdbd; --smallweb-hover: #185d57; --kept-hover-bg: #cccba2; --kept-hover: #4e5900;
     --rooms-shadow: 0 1px 2px rgb(88 110 117 / 0.12), 0 6px 18px rgb(88 110 117 / 0.12);
     --highlight: rgb(135 102 0 / 0.22); --tint-mix: 8%;
     --shadow: 0 1px 2px rgb(88 110 117 / 0.12); color-scheme: light;
@@ -46,7 +46,7 @@
   --notes: #d5947f; --konbini: #bb99b5; --niwa: #a3be8c; --web: #ebcb8b; --obsidian: #8fbcbb; --smallweb: #8fbcbb; --danger: #d39299;
   --chip0: #8aa7c5; --chip1: #88c0d0; --chip2: #bb99b5; --chip3: #a3be8c; --chip4: #d5947f; --chip5: #d39299; --chip6: #ebcb8b; --chip7: #8fbcbb;
   --rooms-bg: #272c36; --rooms-on: #3b4252; --rooms-text: #eceff4; --rooms-muted: #aeb6c4;
-  --tab-general-raised: #88c0d0; --accent-raised: #98b1cc; --notes-raised: #daa18e; --web-raised: #ebcb8b; --tab-images-raised: #a3be8c; --tab-videos-raised: #d89fa5; --tab-news-raised: #c3a5be; --smallweb-raised: #8fbcbb; --kept-raised: #a3be8c;
+  --tab-general-hover-bg: #4d6070; --tab-general-hover: #bddce5; --accent-hover-bg: #4e5a6e; --accent-hover: #c4d3e2; --notes-hover-bg: #60565d; --notes-hover: #eac9be; --web-hover-bg: #656360; --web-hover: #f2deb4; --tab-images-hover-bg: #546060; --tab-images-hover: #cddbc0; --tab-videos-hover-bg: #5f5563; --tab-videos-hover: #e8c7ca; --tab-news-hover-bg: #5a576a; --tab-news-hover: #ddcbda; --smallweb-hover-bg: #4f5f6b; --smallweb-hover: #c2dbda; --kept-hover-bg: #546060; --kept-hover: #cddbc0;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   --highlight: rgb(235 203 139 / 0.30); --tint-mix: 9%;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;
@@ -58,7 +58,7 @@
   --notes: #a85237; --konbini: #885b81; --niwa: #587241; --web: #896218; --obsidian: #447271; --smallweb: #447271; --danger: #b14852;
   --chip0: #4c6d94; --chip1: #337183; --chip2: #885b81; --chip3: #587241; --chip4: #a85237; --chip5: #b14852; --chip6: #896218; --chip7: #447271;
   --rooms-bg: #e5e9f0; --rooms-on: #f6f8fb; --rooms-text: #2e3440; --rooms-muted: #4c566a;
-  --tab-general-raised: #337183; --accent-raised: #4a6b91; --notes-raised: #a45036; --web-raised: #896218; --tab-images-raised: #577040; --tab-videos-raised: #ad4750; --tab-news-raised: #865a80; --smallweb-raised: #43706f; --kept-raised: #577040;
+  --tab-general-hover-bg: #baccd6; --tab-general-hover: #295b69; --accent-hover-bg: #c0cbda; --accent-hover: #3c5776; --notes-hover-bg: #d6c5c4; --notes-hover: #85412c; --web-hover-bg: #cfc9bc; --web-hover: #6f4f13; --tab-images-hover-bg: #c3ccc6; --tab-images-hover: #465b34; --tab-videos-hover-bg: #d9c2ca; --tab-videos-hover: #8b3940; --tab-news-hover-bg: #cfc7d5; --tab-news-hover: #6d4967; --smallweb-hover-bg: #beccd2; --smallweb-hover: #365a59; --kept-hover-bg: #c3ccc6; --kept-hover: #465b34;
   --rooms-shadow: 0 1px 2px rgb(46 52 64 / 0.12), 0 6px 18px rgb(46 52 64 / 0.12);
   --highlight: rgb(137 98 24 / 0.22); --tint-mix: 8%;
   --shadow: 0 1px 2px rgb(46 52 64 / 0.12); color-scheme: light;
@@ -71,7 +71,7 @@
     --notes: #a85237; --konbini: #885b81; --niwa: #587241; --web: #896218; --obsidian: #447271; --smallweb: #447271; --danger: #b14852;
     --chip0: #4c6d94; --chip1: #337183; --chip2: #885b81; --chip3: #587241; --chip4: #a85237; --chip5: #b14852; --chip6: #896218; --chip7: #447271;
     --rooms-bg: #e5e9f0; --rooms-on: #f6f8fb; --rooms-text: #2e3440; --rooms-muted: #4c566a;
-    --tab-general-raised: #337183; --accent-raised: #4a6b91; --notes-raised: #a45036; --web-raised: #896218; --tab-images-raised: #577040; --tab-videos-raised: #ad4750; --tab-news-raised: #865a80; --smallweb-raised: #43706f; --kept-raised: #577040;
+    --tab-general-hover-bg: #baccd6; --tab-general-hover: #295b69; --accent-hover-bg: #c0cbda; --accent-hover: #3c5776; --notes-hover-bg: #d6c5c4; --notes-hover: #85412c; --web-hover-bg: #cfc9bc; --web-hover: #6f4f13; --tab-images-hover-bg: #c3ccc6; --tab-images-hover: #465b34; --tab-videos-hover-bg: #d9c2ca; --tab-videos-hover: #8b3940; --tab-news-hover-bg: #cfc7d5; --tab-news-hover: #6d4967; --smallweb-hover-bg: #beccd2; --smallweb-hover: #365a59; --kept-hover-bg: #c3ccc6; --kept-hover: #465b34;
     --rooms-shadow: 0 1px 2px rgb(46 52 64 / 0.12), 0 6px 18px rgb(46 52 64 / 0.12);
     --highlight: rgb(137 98 24 / 0.22); --tint-mix: 8%;
     --shadow: 0 1px 2px rgb(46 52 64 / 0.12); color-scheme: light;
@@ -85,7 +85,7 @@
   --notes: #ffb86c; --konbini: #ff79c6; --niwa: #50fa7b; --web: #f1fa8c; --obsidian: #8be9fd; --smallweb: #8be9fd; --danger: #ff6f6f;
   --chip0: #bd93f9; --chip1: #8be9fd; --chip2: #ff79c6; --chip3: #50fa7b; --chip4: #ffb86c; --chip5: #ff6f6f; --chip6: #f1fa8c; --chip7: #8be9fd;
   --rooms-bg: #21222c; --rooms-on: #44475a; --rooms-text: #f8f8f2; --rooms-muted: #b6b9cc;
-  --tab-general-raised: #8be9fd; --accent-raised: #caa9fa; --notes-raised: #ffb86c; --web-raised: #f1fa8c; --tab-images-raised: #50fa7b; --tab-videos-raised: #ff9a9a; --tab-news-raised: #ff93d1; --smallweb-raised: #8be9fd; --kept-raised: #50fa7b;
+  --tab-general-hover-bg: #556e81; --tab-general-hover: #c5f4fe; --accent-hover-bg: #615980; --accent-hover: #e3d2fc; --notes-hover-bg: #71625e; --notes-hover: #ffddb9; --web-hover-bg: #6e7266; --web-hover: #f4fba4; --tab-images-hover-bg: #477262; --tab-images-hover: #a9fdbe; --tab-videos-hover-bg: #71515f; --tab-videos-hover: #ffc3c3; --tab-news-hover-bg: #715374; --tab-news-hover: #ffc6e7; --smallweb-hover-bg: #556e81; --smallweb-hover: #c5f4fe; --kept-hover-bg: #477262; --kept-hover: #a9fdbe;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   --highlight: rgb(241 250 140 / 0.30); --tint-mix: 9%;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;
@@ -97,7 +97,7 @@
   --notes: #a34d14; --konbini: #a3144d; --niwa: #14710a; --web: #806a14; --obsidian: #036a96; --smallweb: #036a96; --danger: #c73929;
   --chip0: #644ac9; --chip1: #036a96; --chip2: #a3144d; --chip3: #14710a; --chip4: #a34d14; --chip5: #c73929; --chip6: #806a14; --chip7: #036a96;
   --rooms-bg: #f3efdd; --rooms-on: #ffffff; --rooms-text: #1f1f1f; --rooms-muted: #4f4b38;
-  --tab-general-raised: #036a96; --accent-raised: #644ac9; --notes-raised: #a34d14; --web-raised: #806a14; --tab-images-raised: #14710a; --tab-videos-raised: #c53829; --tab-news-raised: #a3144d; --smallweb-raised: #036a96; --kept-raised: #14710a;
+  --tab-general-hover-bg: #b9cfcc; --tab-general-hover: #035c82; --accent-hover-bg: #d1c7d8; --accent-hover: #573bc4; --notes-hover-bg: #e0c8ad; --notes-hover: #8a4111; --web-hover-bg: #d7cfad; --web-hover: #685610; --tab-images-hover-bg: #bdd1aa; --tab-images-hover: #126309; --tab-videos-hover-bg: #e8c3b2; --tab-videos-hover: #9d2d20; --tab-news-hover-bg: #e0baba; --tab-news-hover: #9c134a; --smallweb-hover-bg: #b9cfcc; --smallweb-hover: #035c82; --kept-hover-bg: #bdd1aa; --kept-hover: #126309;
   --rooms-shadow: 0 1px 2px rgb(31 31 31 / 0.12), 0 6px 18px rgb(31 31 31 / 0.12);
   --highlight: rgb(128 106 20 / 0.22); --tint-mix: 8%;
   --shadow: 0 1px 2px rgb(31 31 31 / 0.12); color-scheme: light;
@@ -110,7 +110,7 @@
     --notes: #a34d14; --konbini: #a3144d; --niwa: #14710a; --web: #806a14; --obsidian: #036a96; --smallweb: #036a96; --danger: #c73929;
     --chip0: #644ac9; --chip1: #036a96; --chip2: #a3144d; --chip3: #14710a; --chip4: #a34d14; --chip5: #c73929; --chip6: #806a14; --chip7: #036a96;
     --rooms-bg: #f3efdd; --rooms-on: #ffffff; --rooms-text: #1f1f1f; --rooms-muted: #4f4b38;
-    --tab-general-raised: #036a96; --accent-raised: #644ac9; --notes-raised: #a34d14; --web-raised: #806a14; --tab-images-raised: #14710a; --tab-videos-raised: #c53829; --tab-news-raised: #a3144d; --smallweb-raised: #036a96; --kept-raised: #14710a;
+    --tab-general-hover-bg: #b9cfcc; --tab-general-hover: #035c82; --accent-hover-bg: #d1c7d8; --accent-hover: #573bc4; --notes-hover-bg: #e0c8ad; --notes-hover: #8a4111; --web-hover-bg: #d7cfad; --web-hover: #685610; --tab-images-hover-bg: #bdd1aa; --tab-images-hover: #126309; --tab-videos-hover-bg: #e8c3b2; --tab-videos-hover: #9d2d20; --tab-news-hover-bg: #e0baba; --tab-news-hover: #9c134a; --smallweb-hover-bg: #b9cfcc; --smallweb-hover: #035c82; --kept-hover-bg: #bdd1aa; --kept-hover: #126309;
     --rooms-shadow: 0 1px 2px rgb(31 31 31 / 0.12), 0 6px 18px rgb(31 31 31 / 0.12);
     --highlight: rgb(128 106 20 / 0.22); --tint-mix: 8%;
     --shadow: 0 1px 2px rgb(31 31 31 / 0.12); color-scheme: light;
@@ -124,7 +124,7 @@
   --notes: #fab387; --konbini: #cba6f7; --niwa: #a6e3a1; --web: #f9e2af; --obsidian: #94e2d5; --smallweb: #94e2d5; --danger: #f38ba8;
   --chip0: #89b4fa; --chip1: #89dceb; --chip2: #cba6f7; --chip3: #a6e3a1; --chip4: #fab387; --chip5: #f38ba8; --chip6: #f9e2af; --chip7: #94e2d5;
   --rooms-bg: #181825; --rooms-on: #313244; --rooms-text: #cdd6f4; --rooms-muted: #a6adc8;
-  --tab-general-raised: #89dceb; --accent-raised: #89b4fa; --notes-raised: #fab387; --web-raised: #f9e2af; --tab-images-raised: #a6e3a1; --tab-videos-raised: #f38ba8; --tab-news-raised: #cba6f7; --smallweb-raised: #94e2d5; --kept-raised: #a6e3a1;
+  --tab-general-hover-bg: #465b6c; --tab-general-hover: #89dceb; --accent-hover-bg: #465170; --accent-hover: #a6c7fb; --notes-hover-bg: #615154; --notes-hover: #fbbc96; --web-hover-bg: #615c5e; --web-hover: #f9e2af; --tab-images-hover-bg: #4d5c5a; --tab-images-hover: #a6e3a1; --tab-videos-hover-bg: #60475c; --tab-videos-hover: #f6abc0; --tab-news-hover-bg: #564e6f; --tab-news-hover: #d7bbf9; --smallweb-hover-bg: #495c67; --smallweb-hover: #94e2d5; --kept-hover-bg: #4d5c5a; --kept-hover: #a6e3a1;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   --highlight: rgb(249 226 175 / 0.30); --tint-mix: 9%;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;
@@ -136,7 +136,7 @@
   --notes: #b64301; --konbini: #8737ef; --niwa: #307820; --web: #925d13; --obsidian: #12757a; --smallweb: #12757a; --danger: #d00f38;
   --chip0: #0d5af5; --chip1: #03709c; --chip2: #8737ef; --chip3: #307820; --chip4: #b64301; --chip5: #d00f38; --chip6: #925d13; --chip7: #12757a;
   --rooms-bg: #e6e9ef; --rooms-on: #f8f9fb; --rooms-text: #4c4f69; --rooms-muted: #65687c;
-  --tab-general-raised: #03709c; --accent-raised: #0d5af5; --notes-raised: #b64301; --web-raised: #925d13; --tab-images-raised: #307820; --tab-videos-raised: #d00f38; --tab-news-raised: #8737ef; --smallweb-raised: #127378; --kept-raised: #307820;
+  --tab-general-hover-bg: #b0ccdb; --tab-general-hover: #025a7e; --accent-hover-bg: #b2c7f0; --accent-hover: #0847c7; --notes-hover-bg: #dac1b6; --notes-hover: #903501; --web-hover-bg: #d2c7ba; --web-hover: #754a0f; --tab-images-hover-bg: #bacebd; --tab-images-hover: #26601a; --tab-videos-hover-bg: #e1b5c3; --tab-videos-hover: #9e0b2b; --tab-news-hover-bg: #cfbeef; --tab-news-hover: #6911da; --smallweb-hover-bg: #b3cdd3; --smallweb-hover: #0e5e62; --kept-hover-bg: #bacebd; --kept-hover: #26601a;
   --rooms-shadow: 0 1px 2px rgb(76 79 105 / 0.12), 0 6px 18px rgb(76 79 105 / 0.12);
   --highlight: rgb(146 93 19 / 0.22); --tint-mix: 8%;
   --shadow: 0 1px 2px rgb(76 79 105 / 0.12); color-scheme: light;
@@ -149,7 +149,7 @@
     --notes: #b64301; --konbini: #8737ef; --niwa: #307820; --web: #925d13; --obsidian: #12757a; --smallweb: #12757a; --danger: #d00f38;
     --chip0: #0d5af5; --chip1: #03709c; --chip2: #8737ef; --chip3: #307820; --chip4: #b64301; --chip5: #d00f38; --chip6: #925d13; --chip7: #12757a;
     --rooms-bg: #e6e9ef; --rooms-on: #f8f9fb; --rooms-text: #4c4f69; --rooms-muted: #65687c;
-    --tab-general-raised: #03709c; --accent-raised: #0d5af5; --notes-raised: #b64301; --web-raised: #925d13; --tab-images-raised: #307820; --tab-videos-raised: #d00f38; --tab-news-raised: #8737ef; --smallweb-raised: #127378; --kept-raised: #307820;
+    --tab-general-hover-bg: #b0ccdb; --tab-general-hover: #025a7e; --accent-hover-bg: #b2c7f0; --accent-hover: #0847c7; --notes-hover-bg: #dac1b6; --notes-hover: #903501; --web-hover-bg: #d2c7ba; --web-hover: #754a0f; --tab-images-hover-bg: #bacebd; --tab-images-hover: #26601a; --tab-videos-hover-bg: #e1b5c3; --tab-videos-hover: #9e0b2b; --tab-news-hover-bg: #cfbeef; --tab-news-hover: #6911da; --smallweb-hover-bg: #b3cdd3; --smallweb-hover: #0e5e62; --kept-hover-bg: #bacebd; --kept-hover: #26601a;
     --rooms-shadow: 0 1px 2px rgb(76 79 105 / 0.12), 0 6px 18px rgb(76 79 105 / 0.12);
     --highlight: rgb(146 93 19 / 0.22); --tint-mix: 8%;
     --shadow: 0 1px 2px rgb(76 79 105 / 0.12); color-scheme: light;
@@ -163,7 +163,7 @@
   --notes: #fe8019; --konbini: #d3869b; --niwa: #b8bb26; --web: #fabd2f; --obsidian: #8ec07c; --smallweb: #8ec07c; --danger: #fb6452;
   --chip0: #83a598; --chip1: #83a598; --chip2: #d3869b; --chip3: #b8bb26; --chip4: #fe8019; --chip5: #fb6452; --chip6: #fabd2f; --chip7: #8ec07c;
   --rooms-bg: #1d2021; --rooms-on: #3c3836; --rooms-text: #ebdbb2; --rooms-muted: #bdae93;
-  --tab-general-raised: #89a99d; --accent-raised: #89a99d; --notes-raised: #fe8019; --web-raised: #fabd2f; --tab-images-raised: #b8bb26; --tab-videos-raised: #fc7d6d; --tab-news-raised: #d68da1; --smallweb-raised: #8ec07c; --kept-raised: #b8bb26;
+  --tab-general-hover-bg: #4d524e; --tab-general-hover: #b4c8c1; --accent-hover-bg: #4d524e; --accent-hover: #b4c8c1; --notes-hover-bg: #6b492f; --notes-hover: #feb274; --web-hover-bg: #6a5834; --web-hover: #fbcb5c; --tab-images-hover-bg: #5a5732; --tab-images-hover: #cfd22b; --tab-videos-hover-bg: #6a433d; --tab-videos-hover: #fda79d; --tab-news-hover-bg: #604b4e; --tab-news-hover: #e5b7c3; --smallweb-hover-bg: #505947; --smallweb-hover: #b3d5a7; --kept-hover-bg: #5a5732; --kept-hover: #cfd22b;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   --highlight: rgb(250 189 47 / 0.30); --tint-mix: 9%;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;
@@ -175,7 +175,7 @@
   --notes: #af3a03; --konbini: #8f3f71; --niwa: #6b670c; --web: #8c5b10; --obsidian: #3c6f50; --smallweb: #3c6f50; --danger: #9d0006;
   --chip0: #076678; --chip1: #076678; --chip2: #8f3f71; --chip3: #6b670c; --chip4: #af3a03; --chip5: #9d0006; --chip6: #8c5b10; --chip7: #3c6f50;
   --rooms-bg: #ebdbb2; --rooms-on: #f9f5d7; --rooms-text: #3c3836; --rooms-muted: #665c54;
-  --tab-general-raised: #076678; --accent-raised: #076678; --notes-raised: #ac3903; --web-raised: #85570f; --tab-images-raised: #66630b; --tab-videos-raised: #9d0006; --tab-news-raised: #8f3f71; --smallweb-raised: #396a4c; --kept-raised: #66630b;
+  --tab-general-hover-bg: #b4bfa4; --tab-general-hover: #065260; --accent-hover-bg: #b4bfa4; --accent-hover: #065260; --notes-hover-bg: #ddb488; --notes-hover: #872d02; --web-hover-bg: #d4bc8b; --web-hover: #6c460c; --tab-images-hover-bg: #ccbf8a; --tab-images-hover: #524f09; --tab-videos-hover-bg: #d8a689; --tab-videos-hover: #8e0005; --tab-news-hover-bg: #d5b6a2; --tab-news-hover: #76345d; --smallweb-hover-bg: #c1c19a; --smallweb-hover: #2f563e; --kept-hover-bg: #ccbf8a; --kept-hover: #524f09;
   --rooms-shadow: 0 1px 2px rgb(60 56 54 / 0.12), 0 6px 18px rgb(60 56 54 / 0.12);
   --highlight: rgb(140 91 16 / 0.22); --tint-mix: 8%;
   --shadow: 0 1px 2px rgb(60 56 54 / 0.12); color-scheme: light;
@@ -188,7 +188,7 @@
     --notes: #af3a03; --konbini: #8f3f71; --niwa: #6b670c; --web: #8c5b10; --obsidian: #3c6f50; --smallweb: #3c6f50; --danger: #9d0006;
     --chip0: #076678; --chip1: #076678; --chip2: #8f3f71; --chip3: #6b670c; --chip4: #af3a03; --chip5: #9d0006; --chip6: #8c5b10; --chip7: #3c6f50;
     --rooms-bg: #ebdbb2; --rooms-on: #f9f5d7; --rooms-text: #3c3836; --rooms-muted: #665c54;
-    --tab-general-raised: #076678; --accent-raised: #076678; --notes-raised: #ac3903; --web-raised: #85570f; --tab-images-raised: #66630b; --tab-videos-raised: #9d0006; --tab-news-raised: #8f3f71; --smallweb-raised: #396a4c; --kept-raised: #66630b;
+    --tab-general-hover-bg: #b4bfa4; --tab-general-hover: #065260; --accent-hover-bg: #b4bfa4; --accent-hover: #065260; --notes-hover-bg: #ddb488; --notes-hover: #872d02; --web-hover-bg: #d4bc8b; --web-hover: #6c460c; --tab-images-hover-bg: #ccbf8a; --tab-images-hover: #524f09; --tab-videos-hover-bg: #d8a689; --tab-videos-hover: #8e0005; --tab-news-hover-bg: #d5b6a2; --tab-news-hover: #76345d; --smallweb-hover-bg: #c1c19a; --smallweb-hover: #2f563e; --kept-hover-bg: #ccbf8a; --kept-hover: #524f09;
     --rooms-shadow: 0 1px 2px rgb(60 56 54 / 0.12), 0 6px 18px rgb(60 56 54 / 0.12);
     --highlight: rgb(140 91 16 / 0.22); --tint-mix: 8%;
     --shadow: 0 1px 2px rgb(60 56 54 / 0.12); color-scheme: light;
@@ -202,7 +202,7 @@
   --notes: #ebbcba; --konbini: #c4a7e7; --niwa: #4094b6; --web: #f6c177; --obsidian: #9ccfd8; --smallweb: #9ccfd8; --danger: #eb6f92;
   --chip0: #9ccfd8; --chip1: #9ccfd8; --chip2: #c4a7e7; --chip3: #4094b6; --chip4: #ebbcba; --chip5: #eb6f92; --chip6: #f6c177; --chip7: #9ccfd8;
   --rooms-bg: #14121d; --rooms-on: #26233a; --rooms-text: #e0def4; --rooms-muted: #908caa;
-  --tab-general-raised: #9ccfd8; --accent-raised: #9ccfd8; --notes-raised: #ebbcba; --web-raised: #f6c177; --tab-images-raised: #4196b8; --tab-videos-raised: #eb6f92; --tab-news-raised: #c4a7e7; --smallweb-raised: #9ccfd8; --kept-raised: #4196b8;
+  --tab-general-hover-bg: #424c60; --tab-general-hover: #9ccfd8; --accent-hover-bg: #424c60; --accent-hover: #9ccfd8; --notes-hover-bg: #554859; --notes-hover: #ebbcba; --web-hover-bg: #584949; --web-hover: #f6c177; --tab-images-hover-bg: #2c3e58; --tab-images-hover: #6db0cc; --tab-videos-hover-bg: #55354f; --tab-videos-hover: #ef8eaa; --tab-news-hover-bg: #4c4364; --tab-news-hover: #c7abe8; --smallweb-hover-bg: #424c60; --smallweb-hover: #9ccfd8; --kept-hover-bg: #2c3e58; --kept-hover: #6db0cc;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   --highlight: rgb(246 193 119 / 0.30); --tint-mix: 9%;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;
@@ -214,7 +214,7 @@
   --notes: #be413b; --konbini: #7a6196; --niwa: #43737c; --web: #995f10; --obsidian: #43737c; --smallweb: #43737c; --danger: #a75068;
   --chip0: #286983; --chip1: #43737c; --chip2: #7a6196; --chip3: #43737c; --chip4: #be413b; --chip5: #a75068; --chip6: #995f10; --chip7: #43737c;
   --rooms-bg: #f2e9e1; --rooms-on: #fffaf3; --rooms-text: #575279; --rooms-muted: #6a6683;
-  --tab-general-raised: #42717a; --accent-raised: #286983; --notes-raised: #ba403a; --web-raised: #945c10; --tab-images-raised: #42717a; --tab-videos-raised: #a44e66; --tab-news-raised: #775f93; --smallweb-raised: #42717a; --kept-raised: #42717a;
+  --tab-general-hover-bg: #c8cdc9; --tab-general-hover: #365c63; --accent-hover-bg: #c2caca; --accent-hover: #22596f; --notes-hover-bg: #e6c1b9; --notes-hover: #95332e; --web-hover-bg: #ddc8af; --web-hover: #794b0d; --tab-images-hover-bg: #c8cdc9; --tab-images-hover: #365c63; --tab-videos-hover-bg: #e0c4c4; --tab-videos-hover: #853f53; --tab-news-hover-bg: #d5c8cf; --tab-news-hover: #624e79; --smallweb-hover-bg: #c8cdc9; --smallweb-hover: #365c63; --kept-hover-bg: #c8cdc9; --kept-hover: #365c63;
   --rooms-shadow: 0 1px 2px rgb(87 82 121 / 0.12), 0 6px 18px rgb(87 82 121 / 0.12);
   --highlight: rgb(153 95 16 / 0.22); --tint-mix: 8%;
   --shadow: 0 1px 2px rgb(87 82 121 / 0.12); color-scheme: light;
@@ -227,7 +227,7 @@
     --notes: #be413b; --konbini: #7a6196; --niwa: #43737c; --web: #995f10; --obsidian: #43737c; --smallweb: #43737c; --danger: #a75068;
     --chip0: #286983; --chip1: #43737c; --chip2: #7a6196; --chip3: #43737c; --chip4: #be413b; --chip5: #a75068; --chip6: #995f10; --chip7: #43737c;
     --rooms-bg: #f2e9e1; --rooms-on: #fffaf3; --rooms-text: #575279; --rooms-muted: #6a6683;
-    --tab-general-raised: #42717a; --accent-raised: #286983; --notes-raised: #ba403a; --web-raised: #945c10; --tab-images-raised: #42717a; --tab-videos-raised: #a44e66; --tab-news-raised: #775f93; --smallweb-raised: #42717a; --kept-raised: #42717a;
+    --tab-general-hover-bg: #c8cdc9; --tab-general-hover: #365c63; --accent-hover-bg: #c2caca; --accent-hover: #22596f; --notes-hover-bg: #e6c1b9; --notes-hover: #95332e; --web-hover-bg: #ddc8af; --web-hover: #794b0d; --tab-images-hover-bg: #c8cdc9; --tab-images-hover: #365c63; --tab-videos-hover-bg: #e0c4c4; --tab-videos-hover: #853f53; --tab-news-hover-bg: #d5c8cf; --tab-news-hover: #624e79; --smallweb-hover-bg: #c8cdc9; --smallweb-hover: #365c63; --kept-hover-bg: #c8cdc9; --kept-hover: #365c63;
     --rooms-shadow: 0 1px 2px rgb(87 82 121 / 0.12), 0 6px 18px rgb(87 82 121 / 0.12);
     --highlight: rgb(153 95 16 / 0.22); --tint-mix: 8%;
     --shadow: 0 1px 2px rgb(87 82 121 / 0.12); color-scheme: light;
@@ -241,7 +241,7 @@
   --notes: #ffa066; --konbini: #9984bb; --niwa: #98bb6c; --web: #e6c384; --obsidian: #7aa89f; --smallweb: #7aa89f; --danger: #e46876;
   --chip0: #7e9cd8; --chip1: #7fb4ca; --chip2: #9984bb; --chip3: #98bb6c; --chip4: #ffa066; --chip5: #e46876; --chip6: #e6c384; --chip7: #7aa89f;
   --rooms-bg: #16161d; --rooms-on: #2a2a37; --rooms-text: #dcd7ba; --rooms-muted: #a6a69c;
-  --tab-general-raised: #7fb4ca; --accent-raised: #7e9cd8; --notes-raised: #ffa066; --web-raised: #e6c384; --tab-images-raised: #98bb6c; --tab-videos-raised: #e56c7a; --tab-news-raised: #9d89be; --smallweb-raised: #7aa89f; --kept-raised: #98bb6c;
+  --tab-general-hover-bg: #3e4b5a; --tab-general-hover: #93c0d2; --accent-hover-bg: #3e455e; --accent-hover: #9db4e1; --notes-hover-bg: #5d4642; --notes-hover: #ffa670; --web-hover-bg: #574f49; --web-hover: #e6c384; --tab-images-hover-bg: #444d44; --tab-images-hover: #a5c47f; --tab-videos-hover-bg: #573946; --tab-videos-hover: #ec959f; --tab-news-hover-bg: #454057; --tab-news-hover: #b8aad0; --smallweb-hover-bg: #3d4850; --smallweb-hover: #99bcb5; --kept-hover-bg: #444d44; --kept-hover: #a5c47f;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   --highlight: rgb(230 195 132 / 0.30); --tint-mix: 9%;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;
@@ -253,7 +253,7 @@
   --notes: #9c5300; --konbini: #624c83; --niwa: #586e3e; --web: #6d6839; --obsidian: #4e6c67; --smallweb: #4e6c67; --danger: #b93548;
   --chip0: #4b6798; --chip1: #3c6d7e; --chip2: #624c83; --chip3: #586e3e; --chip4: #9c5300; --chip5: #b93548; --chip6: #6d6839; --chip7: #4e6c67;
   --rooms-bg: #e5ddb0; --rooms-on: #f7f3d6; --rooms-text: #545464; --rooms-muted: #636155;
-  --tab-general-raised: #396777; --accent-raised: #47618f; --notes-raised: #944f00; --web-raised: #666235; --tab-images-raised: #53673a; --tab-videos-raised: #af3244; --tab-news-raised: #624c83; --smallweb-raised: #4a6661; --kept-raised: #53673a;
+  --tab-general-hover-bg: #bcc2a4; --tab-general-hover: #2d525f; --accent-hover-bg: #c0c1aa; --accent-hover: #384e72; --notes-hover-bg: #d3bc86; --notes-hover: #763f00; --web-hover-bg: #c8c193; --web-hover: #524e2b; --tab-images-hover-bg: #c3c295; --tab-images-hover: #43542f; --tab-videos-hover-bg: #dab597; --tab-videos-hover: #892735; --tab-news-hover-bg: #c6baa5; --tab-news-hover: #554271; --smallweb-hover-bg: #c1c29e; --smallweb-hover: #3c534f; --kept-hover-bg: #c3c295; --kept-hover: #43542f;
   --rooms-shadow: 0 1px 2px rgb(84 84 100 / 0.12), 0 6px 18px rgb(84 84 100 / 0.12);
   --highlight: rgb(109 104 57 / 0.22); --tint-mix: 8%;
   --shadow: 0 1px 2px rgb(84 84 100 / 0.12); color-scheme: light;
@@ -266,7 +266,7 @@
     --notes: #9c5300; --konbini: #624c83; --niwa: #586e3e; --web: #6d6839; --obsidian: #4e6c67; --smallweb: #4e6c67; --danger: #b93548;
     --chip0: #4b6798; --chip1: #3c6d7e; --chip2: #624c83; --chip3: #586e3e; --chip4: #9c5300; --chip5: #b93548; --chip6: #6d6839; --chip7: #4e6c67;
     --rooms-bg: #e5ddb0; --rooms-on: #f7f3d6; --rooms-text: #545464; --rooms-muted: #636155;
-    --tab-general-raised: #396777; --accent-raised: #47618f; --notes-raised: #944f00; --web-raised: #666235; --tab-images-raised: #53673a; --tab-videos-raised: #af3244; --tab-news-raised: #624c83; --smallweb-raised: #4a6661; --kept-raised: #53673a;
+    --tab-general-hover-bg: #bcc2a4; --tab-general-hover: #2d525f; --accent-hover-bg: #c0c1aa; --accent-hover: #384e72; --notes-hover-bg: #d3bc86; --notes-hover: #763f00; --web-hover-bg: #c8c193; --web-hover: #524e2b; --tab-images-hover-bg: #c3c295; --tab-images-hover: #43542f; --tab-videos-hover-bg: #dab597; --tab-videos-hover: #892735; --tab-news-hover-bg: #c6baa5; --tab-news-hover: #554271; --smallweb-hover-bg: #c1c29e; --smallweb-hover: #3c534f; --kept-hover-bg: #c3c295; --kept-hover: #43542f;
     --rooms-shadow: 0 1px 2px rgb(84 84 100 / 0.12), 0 6px 18px rgb(84 84 100 / 0.12);
     --highlight: rgb(109 104 57 / 0.22); --tint-mix: 8%;
     --shadow: 0 1px 2px rgb(84 84 100 / 0.12); color-scheme: light;
@@ -280,7 +280,7 @@
   --notes: #e69875; --konbini: #d699b6; --niwa: #a7c080; --web: #dbbc7f; --obsidian: #83c092; --smallweb: #83c092; --danger: #e78284;
   --chip0: #7fbbb3; --chip1: #7fbbb3; --chip2: #d699b6; --chip3: #a7c080; --chip4: #e69875; --chip5: #e78284; --chip6: #dbbc7f; --chip7: #83c092;
   --rooms-bg: #232a2e; --rooms-on: #343f44; --rooms-text: #d3c6aa; --rooms-muted: #a0aba3;
-  --tab-general-raised: #7fbbb3; --accent-raised: #7fbbb3; --notes-raised: #e69875; --web-raised: #dbbc7f; --tab-images-raised: #a7c080; --tab-videos-raised: #e98f91; --tab-news-raised: #d699b6; --smallweb-raised: #83c092; --kept-raised: #a7c080;
+  --tab-general-hover-bg: #465d5f; --tab-general-hover: #b3d6d2; --accent-hover-bg: #465d5f; --accent-hover: #b3d6d2; --notes-hover-bg: #5f5450; --notes-hover: #f0c2ad; --web-hover-bg: #5c5d52; --web-hover: #e7d2a9; --tab-images-hover-bg: #505e52; --tab-images-hover: #c8d8b0; --tab-videos-hover-bg: #5f4f53; --tab-videos-hover: #f2babb; --tab-news-hover-bg: #5b555f; --tab-news-hover: #e7c3d4; --smallweb-hover-bg: #475e57; --smallweb-hover: #b4d9bd; --kept-hover-bg: #505e52; --kept-hover: #c8d8b0;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   --highlight: rgb(219 188 127 / 0.30); --tint-mix: 9%;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;
@@ -292,7 +292,7 @@
   --notes: #ad4e09; --konbini: #be298f; --niwa: #627001; --web: #8a6300; --obsidian: #26785a; --smallweb: #26785a; --danger: #d60c09;
   --chip0: #2c7196; --chip1: #2c7196; --chip2: #be298f; --chip3: #627001; --chip4: #ad4e09; --chip5: #d60c09; --chip6: #8a6300; --chip7: #26785a;
   --rooms-bg: #efebd4; --rooms-on: #fffbef; --rooms-text: #5c6a72; --rooms-muted: #606d60;
-  --tab-general-raised: #2b7094; --accent-raised: #2b7094; --notes-raised: #ad4e09; --web-raised: #8a6300; --tab-images-raised: #627001; --tab-videos-raised: #d40c09; --tab-news-raised: #bc298d; --smallweb-raised: #257659; --kept-raised: #627001;
+  --tab-general-hover-bg: #c0cec5; --tab-general-hover: #235b78; --accent-hover-bg: #c0cec5; --accent-hover: #235b78; --notes-hover-bg: #dfc5a3; --notes-hover: #893e07; --web-hover-bg: #d7caa1; --web-hover: #6e4f00; --tab-images-hover-bg: #cdcda1; --tab-images-hover: #4e5901; --tab-videos-hover-bg: #e9b5a3; --tab-videos-hover: #a00907; --tab-news-hover-bg: #e3bcc3; --tab-news-hover: #94206f; --smallweb-hover-bg: #bfcfb7; --smallweb-hover: #1e5f47; --kept-hover-bg: #cdcda1; --kept-hover: #4e5901;
   --rooms-shadow: 0 1px 2px rgb(92 106 114 / 0.12), 0 6px 18px rgb(92 106 114 / 0.12);
   --highlight: rgb(138 99 0 / 0.22); --tint-mix: 8%;
   --shadow: 0 1px 2px rgb(92 106 114 / 0.12); color-scheme: light;
@@ -305,7 +305,7 @@
     --notes: #ad4e09; --konbini: #be298f; --niwa: #627001; --web: #8a6300; --obsidian: #26785a; --smallweb: #26785a; --danger: #d60c09;
     --chip0: #2c7196; --chip1: #2c7196; --chip2: #be298f; --chip3: #627001; --chip4: #ad4e09; --chip5: #d60c09; --chip6: #8a6300; --chip7: #26785a;
     --rooms-bg: #efebd4; --rooms-on: #fffbef; --rooms-text: #5c6a72; --rooms-muted: #606d60;
-    --tab-general-raised: #2b7094; --accent-raised: #2b7094; --notes-raised: #ad4e09; --web-raised: #8a6300; --tab-images-raised: #627001; --tab-videos-raised: #d40c09; --tab-news-raised: #bc298d; --smallweb-raised: #257659; --kept-raised: #627001;
+    --tab-general-hover-bg: #c0cec5; --tab-general-hover: #235b78; --accent-hover-bg: #c0cec5; --accent-hover: #235b78; --notes-hover-bg: #dfc5a3; --notes-hover: #893e07; --web-hover-bg: #d7caa1; --web-hover: #6e4f00; --tab-images-hover-bg: #cdcda1; --tab-images-hover: #4e5901; --tab-videos-hover-bg: #e9b5a3; --tab-videos-hover: #a00907; --tab-news-hover-bg: #e3bcc3; --tab-news-hover: #94206f; --smallweb-hover-bg: #bfcfb7; --smallweb-hover: #1e5f47; --kept-hover-bg: #cdcda1; --kept-hover: #4e5901;
     --rooms-shadow: 0 1px 2px rgb(92 106 114 / 0.12), 0 6px 18px rgb(92 106 114 / 0.12);
     --highlight: rgb(138 99 0 / 0.22); --tint-mix: 8%;
     --shadow: 0 1px 2px rgb(92 106 114 / 0.12); color-scheme: light;
@@ -319,7 +319,7 @@
   --notes: #ff8f40; --konbini: #d2a6ff; --niwa: #aad94c; --web: #ffb454; --obsidian: #95e6cb; --smallweb: #95e6cb; --danger: #f07178;
   --chip0: #59c2ff; --chip1: #39bae6; --chip2: #d2a6ff; --chip3: #aad94c; --chip4: #ff8f40; --chip5: #f07178; --chip6: #ffb454; --chip7: #95e6cb;
   --rooms-bg: #07090d; --rooms-on: #131721; --rooms-text: #bfbdb6; --rooms-muted: #8a8986;
-  --tab-general-raised: #39bae6; --accent-raised: #59c2ff; --notes-raised: #ff8f40; --web-raised: #ffb454; --tab-images-raised: #aad94c; --tab-videos-raised: #f07178; --tab-news-raised: #d2a6ff; --smallweb-raised: #95e6cb; --kept-raised: #aad94c;
+  --tab-general-hover-bg: #1c3e50; --tab-general-hover: #39bae6; --accent-hover-bg: #244056; --accent-hover: #59c2ff; --notes-hover-bg: #4c3428; --notes-hover: #ff8f40; --web-hover-bg: #4c3d2d; --web-hover: #ffb454; --tab-images-hover-bg: #37462b; --tab-images-hover: #aad94c; --tab-videos-hover-bg: #482d36; --tab-videos-hover: #f1787f; --tab-news-hover-bg: #413956; --tab-news-hover: #d2a6ff; --smallweb-hover-bg: #32494a; --smallweb-hover: #95e6cb; --kept-hover-bg: #37462b; --kept-hover: #aad94c;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   --highlight: rgb(255 180 84 / 0.30); --tint-mix: 9%;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.35); color-scheme: dark;
@@ -331,7 +331,7 @@
   --notes: #b44f05; --konbini: #8954bd; --niwa: #587500; --web: #99600b; --obsidian: #2b7960; --smallweb: #2b7960; --danger: #d71717;
   --chip0: #1771b2; --chip1: #247490; --chip2: #8954bd; --chip3: #587500; --chip4: #b44f05; --chip5: #d71717; --chip6: #99600b; --chip7: #2b7960;
   --rooms-bg: #f0f0f0; --rooms-on: #ffffff; --rooms-text: #5c6166; --rooms-muted: #6b6d71;
-  --tab-general-raised: #247490; --accent-raised: #1771b2; --notes-raised: #b44f05; --web-raised: #99600b; --tab-images-raised: #587500; --tab-videos-raised: #d71717; --tab-news-raised: #8954bd; --smallweb-raised: #2b7960; --kept-raised: #587500;
+  --tab-general-hover-bg: #bfd2d9; --tab-general-hover: #1d5f75; --accent-hover-bg: #bcd2e1; --accent-hover: #135b90; --notes-hover-bg: #e2c9b8; --notes-hover: #914004; --web-hover-bg: #dbcdb9; --web-hover: #7c4e09; --tab-images-hover-bg: #ccd2b6; --tab-images-hover: #475e00; --tab-videos-hover-bg: #eabcbc; --tab-videos-hover: #a71212; --tab-news-hover-bg: #d7cbe4; --tab-news-hover: #723fa4; --smallweb-hover-bg: #c1d3cd; --smallweb-hover: #23624e; --kept-hover-bg: #ccd2b6; --kept-hover: #475e00;
   --rooms-shadow: 0 1px 2px rgb(92 97 102 / 0.12), 0 6px 18px rgb(92 97 102 / 0.12);
   --highlight: rgb(153 96 11 / 0.22); --tint-mix: 8%;
   --shadow: 0 1px 2px rgb(92 97 102 / 0.12); color-scheme: light;
@@ -344,7 +344,7 @@
     --notes: #b44f05; --konbini: #8954bd; --niwa: #587500; --web: #99600b; --obsidian: #2b7960; --smallweb: #2b7960; --danger: #d71717;
     --chip0: #1771b2; --chip1: #247490; --chip2: #8954bd; --chip3: #587500; --chip4: #b44f05; --chip5: #d71717; --chip6: #99600b; --chip7: #2b7960;
     --rooms-bg: #f0f0f0; --rooms-on: #ffffff; --rooms-text: #5c6166; --rooms-muted: #6b6d71;
-    --tab-general-raised: #247490; --accent-raised: #1771b2; --notes-raised: #b44f05; --web-raised: #99600b; --tab-images-raised: #587500; --tab-videos-raised: #d71717; --tab-news-raised: #8954bd; --smallweb-raised: #2b7960; --kept-raised: #587500;
+    --tab-general-hover-bg: #bfd2d9; --tab-general-hover: #1d5f75; --accent-hover-bg: #bcd2e1; --accent-hover: #135b90; --notes-hover-bg: #e2c9b8; --notes-hover: #914004; --web-hover-bg: #dbcdb9; --web-hover: #7c4e09; --tab-images-hover-bg: #ccd2b6; --tab-images-hover: #475e00; --tab-videos-hover-bg: #eabcbc; --tab-videos-hover: #a71212; --tab-news-hover-bg: #d7cbe4; --tab-news-hover: #723fa4; --smallweb-hover-bg: #c1d3cd; --smallweb-hover: #23624e; --kept-hover-bg: #ccd2b6; --kept-hover: #475e00;
     --rooms-shadow: 0 1px 2px rgb(92 97 102 / 0.12), 0 6px 18px rgb(92 97 102 / 0.12);
     --highlight: rgb(153 96 11 / 0.22); --tint-mix: 8%;
     --shadow: 0 1px 2px rgb(92 97 102 / 0.12); color-scheme: light;

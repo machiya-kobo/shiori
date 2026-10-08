@@ -134,26 +134,29 @@ test('the app offers the ten as Theme, System / Light / Dark as Appearance, and 
   assert.match(read('../scripts/build-pwa.sh'), /web\/app\/palettes\.css/);
 });
 
-test('a hovered pill reads on --raised: every theme, every pill (--<pill>-raised; the apps\' tintOnRaised)', () => {
+test('a hovered pill reads on its hover fill: every theme, every pill (--<pill>-hover on --<pill>-hover-bg; the apps\' pillHover)', () => {
   for (const [key, p] of Object.entries(table)) {
     for (const mode of ['dark', 'light']) {
       const v = variant(p[mode], mode);
-      for (const t of PILLS) assert.ok(ratio(v[`${t}-raised`], v.raised) >= 4.5, `${key} ${mode} ${t}: ${v[`${t}-raised`]} on ${v.raised}`);
+      for (const t of PILLS) {
+        assert.ok(ratio(v[`${t}-hover`], v[`${t}-hover-bg`]) >= 4.5, `${key} ${mode} ${t}: ${v[`${t}-hover`]} on ${v[`${t}-hover-bg`]}`);
+        // It shows: the fill stands apart from the page more than the plain raised shade does.
+        assert.ok(ratio(v[`${t}-hover-bg`], v.bg) > ratio(v.raised, v.bg), `${key} ${mode} ${t}: the fill shows`);
+      }
     }
   }
-  // search.css's Tokyo Night carries the generator's, and they read on its own --raised.
+  // search.css's Tokyo Night carries the generator's.
   const css = read('../patches/shiori/search.css');
   const block = (selector) => {
     const at = css.indexOf(selector);
     return css.slice(css.indexOf('{', at) + 1, css.indexOf('}', at));
   };
   for (const [selector, mode] of [[':root {', 'dark'], [':root:not([data-theme="night"]) {', 'light'], [':root[data-theme="day"] {', 'light']]) {
-    const body = block(selector);
-    const tokens = Object.fromEntries([...body.matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+    const tokens = Object.fromEntries([...block(selector).matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
     const v = variant(table['tokyo-night'][mode], mode);
     for (const t of PILLS) {
-      assert.equal(tokens[`${t}-raised`], v[`${t}-raised`], `${selector} ${t}-raised`);
-      assert.ok(ratio(tokens[`${t}-raised`], tokens.raised) >= 4.5, `${selector} ${t}-raised on ${tokens.raised}`);
+      assert.equal(tokens[`${t}-hover-bg`], v[`${t}-hover-bg`], `${selector} ${t}-hover-bg`);
+      assert.equal(tokens[`${t}-hover`], v[`${t}-hover`], `${selector} ${t}-hover`);
     }
   }
 });

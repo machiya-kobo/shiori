@@ -479,13 +479,18 @@ private struct SuggestionsKey: Equatable {
 /// has one: the sections ran together and read as one ragged list. The
 /// web app's `#sidebar h2` draws the same line.
 private extension View {
-    /// A sidebar row's hover: the accent, lightly, across the row (past the
-    /// label's edges, as the selection is drawn), never on the chosen row.
+    /// A sidebar row's hover: the accent, lightly, across the whole row, as
+    /// the selection is drawn, never on the chosen row. The row's cell is the
+    /// label plus 6 points all round (a 32-point row for a 20-point label):
+    /// the pointer is caught, and the fill drawn, out to those edges, so the
+    /// gap between two rows is never dead. The layout keeps the label's size.
     func sidebarHover(_ active: Bool, palette: Palette) -> some View {
         frame(maxWidth: .infinity, alignment: .leading)
+            .padding(6)
             .contentShape(.rect)
             .hoverFill(RoundedRectangle(cornerRadius: 6), color: palette.accent, active: active,
-                       outset: EdgeInsets(top: -3, leading: -6, bottom: -3, trailing: -6))
+                       outset: EdgeInsets(top: 1, leading: 0, bottom: 1, trailing: 0))
+            .padding(-6)
     }
 }
 

@@ -647,10 +647,9 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
 }
 
 /// A pill over a list: outlined in its colour, filled when chosen. Under the
-/// pointer one that isn't chosen lifts onto the raised shade with a small
-/// shadow, its colour moved to the shade that reads at 4.5:1 there
-/// (`tintOnRaised`), as the web pages and the rooms draw it: a fill of its
-/// own colour behind it couldn't be read in most themes.
+/// pointer one that isn't chosen lifts onto its hover fill (24% of its
+/// colour over the raised shade) with a small shadow, its text moved to the
+/// shade that reads at 4.5:1 there (`pillHover`), as the web pages draw it.
 private struct PillFace: View {
     let text: Text
     let tint: Palette.Tint
@@ -661,13 +660,14 @@ private struct PillFace: View {
     var body: some View {
         let color = palette.tint(tint)
         let lifted = hovering && !on
-        let ink = lifted ? palette.tintOnRaised(tint) : color
+        let hover = palette.pillHover(tint)
+        let ink = lifted ? hover.ink : color
         text
             .textStyle(.subheadline, weight: .semibold)
             .foregroundStyle(on ? palette.background : ink)
             .padding(.horizontal, 11)
             .padding(.vertical, 4)
-            .background(Capsule().fill(on ? color : lifted ? palette.raised : .clear))
+            .background(Capsule().fill(on ? color : lifted ? hover.fill : .clear))
             .overlay(Capsule().strokeBorder(on ? color : ink, lineWidth: 1.5))
             .shadow(color: .black.opacity(lifted ? (palette.isDark ? 0.35 : 0.12) : 0), radius: 1, y: 1)
             .contentShape(Capsule())

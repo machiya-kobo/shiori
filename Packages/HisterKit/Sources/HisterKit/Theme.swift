@@ -157,16 +157,30 @@ public struct Palette: Sendable {
         hex.chips.indices.contains(tint.rawValue) ? Color(hex: hex.chips[tint.rawValue]) : accent
     }
 
-    /// A tint as text on `raised` (a pill under the pointer lifts onto it):
-    /// its own colour moved in lightness only until it reads at 4.5:1 there,
-    /// as scripts/palettes.mjs makes the web's `--<tint>-raised` (twins).
-    public func tintOnRaised(_ tint: Tint) -> Color {
-        Color(hex: tintOnRaisedHex(tint))
+    /// How much of its colour a hovered pill's fill takes, over `raised`.
+    public static let hoverMix = 0.24
+
+    /// A pill under the pointer: its fill (24% of its colour over `raised`)
+    /// and its text, its own colour moved in lightness only until it reads
+    /// at 4.5:1 on that fill. scripts/palettes.mjs makes the web's
+    /// `--<pill>-hover-bg` and `--<pill>-hover` the same way (twins).
+    public func pillHover(_ tint: Tint) -> (fill: Color, ink: Color) {
+        let (fill, ink) = pillHoverHex(tint)
+        return (Color(hex: fill), Color(hex: ink))
     }
 
-    public func tintOnRaisedHex(_ tint: Tint) -> UInt32 {
+    public func pillHoverHex(_ tint: Tint) -> (fill: UInt32, ink: UInt32) {
         let colour = hex.chips.indices.contains(tint.rawValue) ? hex.chips[tint.rawValue] : hex.accent
-        return Palette.readable(colour, on: hex.raised, lighter: isDark)
+        let fill = Palette.mix(colour, hex.raised, Palette.hoverMix)
+        return (fill, Palette.readable(colour, on: fill, lighter: isDark))
+    }
+
+    /// `tint` laid over `base` at `amount`, per channel (palettes.mjs's mix).
+    public static func mix(_ tint: UInt32, _ base: UInt32, _ amount: Double) -> UInt32 {
+        [16, 8, 0].reduce(UInt32(0)) { out, shift in
+            let t = Double((tint >> UInt32(shift)) & 0xFF), b = Double((base >> UInt32(shift)) & 0xFF)
+            return out | (UInt32((t * amount + b * (1 - amount)).rounded()) << UInt32(shift))
+        }
     }
 
     /// WCAG's contrast ratio between two colours.
