@@ -44,7 +44,7 @@ Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-c
 
 ## Quickstart
 
-### Have Hister and SearXNG? Search them together with Shiori
+### Already have Hister and SearXNG? Search them together with Shiori
 
 Turn on SearXNG's JSON results (`formats: [html, json]` under `search:` in its `settings.yml`), then run:
 
@@ -57,9 +57,22 @@ docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
 
 Open http://localhost:8080 to search, or http://localhost:8081 for the web app. If your Hister has users, sign in with your Hister account.
 
-Starting from scratch? [Machiya's compose file](https://github.com/machiya-kobo/machiya) runs Hister, SearXNG and Shiori together: `mkdir -p data/hister && docker compose -f shiori.yml up -d`.
+### Starting from scratch? Run Hister, SearXNG and Shiori together
 
-**Add more.** Each extra is its own app with a public image on ghcr.io/machiya-kobo. Run it, then give Shiori its address:
+`compose/shiori.yml` in [Machiya](https://github.com/machiya-kobo/machiya) brings up all three on this machine:
+
+```bash
+git clone https://github.com/machiya-kobo/machiya.git && cd machiya/compose
+echo "SEARXNG_SECRET=$(openssl rand -hex 32)" >> .env
+mkdir -p data/hister
+docker compose -f shiori.yml up -d
+```
+
+Then open http://localhost:8080. Save pages to Hister with its [browser extension](https://hister.org/docs/browser-extension), and they show up in Shiori.
+
+### Add more to Shiori
+
+Each extra is its own app with a public image on ghcr.io/machiya-kobo. Run it, then give Shiori its address:
 
 | To search | Run | Then set on Shiori |
 |---|---|---|
