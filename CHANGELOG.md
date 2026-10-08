@@ -5,6 +5,19 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.1.0 (2026-10-08)
+
+- **Shiori in a container.** `ghcr.io/machiya-kobo/shiori-web` serves the
+  search page and the web app behind nginx, for amd64 and arm64, signed with
+  cosign on each release. Two settings run it (`SHIORI_HISTER_URL` and
+  `SHIORI_SEARXNG_URL`); Kura, Konbini, the small web, the feed, AI and
+  hister-login are optional, and an unset one is hidden with its routes
+  answering 404. Without hister-login it signs in with Hister's own
+  account. The start-up log says if Hister is unreachable or SearXNG refuses
+  JSON results. web/README.md ("In a container") has every setting.
+- The pages take their sign-in and feed settings from the host, so a host
+  with no feed service offers no Subscribe links.
+
 ## 1.0.0 (2026-10-08)
 
 The first public release. Shiori is a search app for your own

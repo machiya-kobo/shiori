@@ -212,6 +212,8 @@ const SOURCE_URL = S.sourceLink(fromBuild('__SHIORI_SOURCE_URL__'));
 const SMALLWEB = fromBuild('__SHIORI_SMALLWEB_URL__') !== '';
 /** The build's privacy front ends (SHIORI_FRONTENDS: Redlib, Invidious…), for a page's menu. */
 const FRONTENDS = S.frontendInstances(fromBuild('__SHIORI_FRONTENDS__'));
+// A host with no feed service (the shiori-web image without SHIORI_FEED_URL) says so; unstamped builds keep the feeds.
+const FEED_SERVICE = fromBuild('__SHIORI_FEED__') !== 'off';
 
 /** A new tab on a link the app may open (S.linkHref): never javascript: or data:. */
 function openTab(url) {
@@ -1380,7 +1382,7 @@ function viewLibrary(params) {
   const query = withWord('*', c.word);
   const title = { all: 'Library', hister: 'Pages', notes: 'Notes' }[filter] || 'Library';
   const source = { all: 'all', hister: 'pages', notes: 'notes' }[filter] || 'all';
-  shownList = { title, query, sort: c.hister, source, feed: S.feedURL(location.origin, { query, title, source, kuraBase: notesFromHister() ? '' : KURA_BASE }) };
+  shownList = { title, query, sort: c.hister, source, feed: S.feedURL(location.origin, { query, title, source, kuraBase: notesFromHister() ? '' : KURA_BASE, feedService: FEED_SERVICE }) };
   resultsList(list, {
     query,
     sort: c.hister,
@@ -1468,7 +1470,7 @@ function viewList(params) {
     const words = field.value.trim();
     const c = listChoices(params, { search: !!words });
     const query = withWord(words ? `${q} ${words}` : q, c.word);
-    shownList = { title, query, sort: c.hister, feed: S.feedURL(location.origin, { query, title }) };
+    shownList = { title, query, sort: c.hister, feed: S.feedURL(location.origin, { query, title, feedService: FEED_SERVICE }) };
     resultsList($('list'), {
       query, sort: c.hister, group: c.group, opened: false,
       empty: words ? `Nothing in ${title} matches “${words}”.` : 'No pages have this yet.',
@@ -1572,7 +1574,7 @@ function viewSearch(params) {
   const text = q;
   listSearch = text;
   const source = scope === 'notes' ? 'notes' : 'pages';
-  shownList = { title: q, query: withWord(text, c.word), sort: c.hister, source, feed: S.feedURL(location.origin, { query: withWord(text, c.word), title: q, source, kuraBase: notesFromHister() ? '' : KURA_BASE }) };
+  shownList = { title: q, query: withWord(text, c.word), sort: c.hister, source, feed: S.feedURL(location.origin, { query: withWord(text, c.word), title: q, source, kuraBase: notesFromHister() ? '' : KURA_BASE, feedService: FEED_SERVICE }) };
   if (listed) {
     const notes = scope === 'notes';
     resultsList($('list'), {

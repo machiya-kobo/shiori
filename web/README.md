@@ -119,6 +119,58 @@ on Kura's own origin).
 
 `web/dev-server.py` does exactly this routing locally, for testing.
 
+## In a container
+
+`ghcr.io/machiya-kobo/shiori-web` serves the search page (port 8080) and the web app (port 8081) behind nginx, and
+proxies Hister, SearXNG and the optional services same-origin, as the table above describes. One image for every
+deployment: the settings are read **when the container starts** (nothing is baked in), checked, and stamped into the
+pages. It runs as a non-root user, works with `--read-only --tmpfs /tmp`, and logs no query string.
+
+```bash
+docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
+  -e SHIORI_HISTER_URL=http://hister.example:4433 \
+  -e SHIORI_SEARXNG_URL=http://searxng.example:8080 \
+  ghcr.io/machiya-kobo/shiori-web
+```
+
+Without `SHIORI_HISTER_URL` and `SHIORI_SEARXNG_URL` it refuses to start and says so. The start-up log names what is on
+and off and says plainly if Hister isn't answering or SearXNG refuses JSON results; `/_shiori/config.json` on either
+port shows the same (the sign-in mode and which services are on), and `/healthz` answers 200.
+
+| Setting | Meaning | Default |
+|---|---|---|
+| `SHIORI_HISTER_URL` | **Required.** Hister, as this container reaches it (`http(s)://host[:port]`, no path) | none |
+| `SHIORI_SEARXNG_URL` | **Required.** SearXNG, with `formats: [html, json]` on | none |
+| `SHIORI_KURA_URL` | Kura (notes): only its API paths and feed are routed | off: the Notes tab is hidden, `/kura/` answers 404 |
+| `SHIORI_KONBINI_URL` | Konbini (project cards) | off |
+| `SHIORI_SMALLWEB_URL` | The small-web gateway (Gemini, Gopher): its API only | off |
+| `SHIORI_FEED_URL` | shiori-feed, behind Subscribe | off: no feed links |
+| `SHIORI_AI_URL` | shiori-ai, behind Summarize and AI Answer | off |
+| `SHIORI_LOGIN_URL` | hister-login, for one sign-in across Machiya's apps; `SHIORI_LOGIN_AUTH_URL` is its nginx auth address (default: the same host, port 8081) and `SHIORI_ROOM_COOKIE` this host's room cookie (default `__Host-machiya_sso_shiori`) | unset: Hister's own sign-in |
+| `SHIORI_SEARCH_PORT`, `SHIORI_APP_PORT` | The ports inside the container (1024 and up) | 8080, 8081 |
+| `SHIORI_SEARCH_PAGE_URL`, `SHIORI_APP_URL` | The sites' own addresses, as a browser reaches them (OpenSearch, the room cookie's origin) | `http://localhost:8080/`, `http://localhost:8081/` |
+| `SHIORI_KURA_PUBLIC_URL`, `SHIORI_KONBINI_PUBLIC_URL`, `SHIORI_HISTER_PUBLIC_URL`, `SHIORI_SEARXNG_PUBLIC_URL`, `SHIORI_ROOMS` | Addresses people click (the Rooms menu, links to Kura and Konbini) when a browser reaches them differently from this container | the Kura and Konbini addresses above |
+| `SHIORI_HISTER_HOST` | The `Host` Hister expects, if it isn't the address above | the address above |
+| `SHIORI_UPSTREAM_TLS_VERIFY` | `0` to accept an https upstream's certificate unchecked | `1` |
+| `SHIORI_OBSIDIAN_VAULT`, `SHIORI_SOURCE_URL`, `SHIORI_STATUS_URL`, `SHIORI_FRONTENDS` | As in the build configuration (CLAUDE.md) | empty |
+
+**Signing in.** Without `SHIORI_LOGIN_URL` the sign-in is Hister's own: Hister's `/auth` page is proxied on this origin,
+its `hister` cookie goes to Hister and to nothing else, and the pages open if Hister has no users. With it, hister-login's
+shared flow takes over, as in the table above. A browser's other cookies are never forwarded: Hister gets its own
+session, Kura and Konbini the rooms' session cookie, SearXNG and the rest none. `Origin` and the `Sec-Fetch-*` headers
+pass through untouched and are never added, so Hister's same-origin check still protects it.
+
+**Verify the image** (each release is signed by its workflow, no key to fetch):
+
+```bash
+cosign verify ghcr.io/machiya-kobo/shiori-web:<version> \
+  --certificate-identity-regexp '^https://github.com/machiya-kobo/shiori/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+Build it yourself with `docker build -f docker/shiori-web/Dockerfile -t shiori-web .` from the repository root, and test
+it with `tools/container-test`.
+
 ## Add Page and the share target (the web app)
 
 With `SHIORI_SMALLWEB_URL` set at build time, the web app saves pages

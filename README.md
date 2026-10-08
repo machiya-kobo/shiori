@@ -44,6 +44,38 @@ Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-c
 
 ## Quickstart
 
+### Have Hister and SearXNG? Search them together with Shiori
+
+Turn on SearXNG's JSON results (`formats: [html, json]` under `search:` in its `settings.yml`), then run:
+
+```bash
+docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
+  -e SHIORI_HISTER_URL=http://hister.example:4433 \
+  -e SHIORI_SEARXNG_URL=http://searxng.example:8080 \
+  ghcr.io/machiya-kobo/shiori-web
+```
+
+Open http://localhost:8080 to search, or http://localhost:8081 for the web app. If your Hister has users, sign in with your Hister account.
+
+**Add more.** Each extra is its own app with a public image on ghcr.io/machiya-kobo. Run it, then give Shiori its address:
+
+| To search | Run | Then set on Shiori |
+|---|---|---|
+| Your Obsidian notes | Kura, on your vault | `SHIORI_KURA_URL` |
+| Your projects | Konbini, on the same vault | `SHIORI_KONBINI_URL` |
+| Your code on Forgejo or GitHub | code-import, which copies your repos into Hister | nothing: the Code tab appears |
+| The small web (Gemini, Gopher) | smallweb | `SHIORI_SMALLWEB_URL` |
+
+| To get | Run | Then set on Shiori |
+|---|---|---|
+| Subscribe to a search as RSS | shiori-feed | `SHIORI_FEED_URL` |
+| AI Answer and Summarize | shiori-ai, with an Anthropic API key | `SHIORI_AI_URL` |
+| One sign-in for every app | hister-login | `SHIORI_LOGIN_URL` |
+
+Every setting, and how to check the image's signature, is in [In a container](web/README.md#in-a-container). Want them all? Machiya's Quickstart runs the whole stack.
+
+### Try it from the source, with sample pages
+
 Run a Hister with a dozen invented pages, then Shiori's search page and web app, on this machine. You need `git`, `bash`, `python3`, `curl`, and `podman` or `docker`. Ports 4433, 8765 and 8766 must be free.
 
 **1. Get the code**

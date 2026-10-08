@@ -1978,11 +1978,12 @@
    * what you opened, else the feed service (`shiori/feed`)
    * without the notes.
    */
-  function feedURL(base, { query, title = '', source = 'pages', opened = false, kuraBase = '' }) {
+  function feedURL(base, { query, title = '', source = 'pages', opened = false, kuraBase = '', feedService = true }) {
     const b = base.endsWith('/') ? base : base + '/';
     if (opened) return `${b}api/history?opened=true&format=rss`;
     if (source === 'notes') return kuraFeedURL(kuraBase, query);
     if (String(query).trim() === '*' && source === 'all') return `${b}api/history?format=rss`;
+    if (!feedService) return '';          // a host with no feed service offers no feed for it
     const params = new URLSearchParams({ q: query });
     params.set('exclude_label', 'vault');
     if (title && title !== query) params.set('title', title);
@@ -2536,16 +2537,22 @@
   // asks: a Hister without users never answers 401 or 403. The extension's
   // page never goes there (it has the token).
 
-  /** The helper's sign-in for this page, back to `back`: from the rooms' Hister address (SHIORI_ROOMS), else ''. */
+  /**
+   * The helper's sign-in for this page, back to `back`: from the rooms' Hister address (SHIORI_ROOMS), else ''.
+   * With Hister's own sign-in (the shiori-web image without the helper, `__SHIORI_SIGNIN__` = "hister") it is
+   * Hister's `/auth` page on this origin, which the host proxies and which returns to the page.
+   */
   function histerSignInURL(stamped, here, back) {
+    if (fromBuild('__SHIORI_SIGNIN__') === 'hister') return '/auth';
     const hister = rooms(stamped, here).find((r) => r.key === 'hister');
     if (!hister || !/^https:\/\//i.test(hister.url)) return '';
     const base = hister.url.replace(/\/?$/, '/');
     return `${base}machiya/signin?${new URLSearchParams({ return: String(back || '') })}`;
   }
 
-  /** The helper's sessions page (where a browser signs out), or ''. */
+  /** The helper's sessions page (where a browser signs out), or ''; Hister's own profile page (it has Sign Out) in its own sign-in. */
   function histerSessionsURL(stamped, here) {
+    if (fromBuild('__SHIORI_SIGNIN__') === 'hister') return '/profile';
     const url = histerSignInURL(stamped, here, '');
     return url ? url.replace(/signin\?.*$/, 'sessions') : '';
   }

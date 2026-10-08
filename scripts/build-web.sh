@@ -65,25 +65,11 @@ set -- "$out/_shiori/web-shim.js" "$out/_shiori/search.js"
 # The notes' homes (Kura, Konbini), the Obsidian vault's name and whether the host has the
 # AI companion (SHIORI_AI=1), from the environment as for the
 # extension (the server passes them in); unset leaves them for Settings.
-python3 - "$@" <<'PY'
-import os, sys
-for path in sys.argv[1:]:
-    with open(path) as f:
-        text = f.read()
-    for placeholder, name in (("__SHIORI_KURA_URL__", ("SHIORI_KURA_URL", "SHIORI_NIWA_URL")), ("__SHIORI_KONBINI_URL__", "SHIORI_KONBINI_URL"),
-                              ("__SHIORI_OBSIDIAN_VAULT__", "SHIORI_OBSIDIAN_VAULT"),
-                              ("__SHIORI_SOURCE_URL__", "SHIORI_SOURCE_URL"), ("__SHIORI_AI__", "SHIORI_AI"), ("__SHIORI_FRONTENDS__", "SHIORI_FRONTENDS")):
-        # A tuple names the setting, then its older name (SHIORI_NIWA_URL, accepted as before).
-        value = next((os.environ[n] for n in (name if isinstance(name, tuple) else (name,)) if os.environ.get(n)), "")
-        if value:
-            text = text.replace(placeholder, value)
-    with open(path, "w") as f:
-        f.write(text)
-PY
+python3 scripts/stamp-env.py "$@"
 
 # Each file's address carries the build, so a browser holding an older copy
 # (they're cached for minutes) never runs new HTML with old scripts.
-version=$(git rev-parse --short HEAD 2>/dev/null || date +%s)
+version=${SHIORI_BUILD_ID:-$(git rev-parse --short HEAD 2>/dev/null || date +%s)}
 sed -i.bak -E "s#(/_shiori/(web-shim|search-core|search|palettes)\.(js|css))\"#\1?v=$version\"#g" "$out/index.html" && rm -f -- "$out/index.html.bak"
 
 for needle in '/_shiori/web-shim.js' '/_shiori/search.js' '/_shiori/search.css' '/_shiori/palettes.css' 'opensearch.xml'; do

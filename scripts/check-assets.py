@@ -26,7 +26,8 @@ CSS_URL = re.compile(r'url\(\s*[\'"]?([^\'")]+)[\'"]?\s*\)')
 def local_file(ref, page, out):
     """The file in OUT a reference names, or None when it isn't one of ours."""
     ref = ref.strip()
-    if not ref or ref.startswith(("#", "?", "data:", "mailto:", "javascript:", "//")):
+    # A placeholder a later step fills (the shiori-web image stamps its settings when it starts) names no file yet.
+    if not ref or ref.startswith(("#", "?", "data:", "mailto:", "javascript:", "//", "__SHIORI_")):
         return None
     parts = urlsplit(ref)
     if parts.scheme or parts.netloc:

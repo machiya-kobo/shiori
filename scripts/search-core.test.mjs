@@ -356,6 +356,30 @@ test('a list\'s feed, as the app builds it', () => {
   assert.equal(S.newsBlurSubscribeURL('', 'https://f/'), null);
 });
 
+test('a host with no feed service offers no feed for what only that service makes; Hister\'s and Kura\'s stay', () => {
+  const base = 'https://shiori.example/';
+  assert.equal(S.feedURL(base, { query: 'rust', title: 'rust', feedService: false }), '');
+  assert.equal(S.feedURL(base, { query: '*', title: 'Pages', feedService: false }), '');
+  assert.equal(S.feedURL(base, { query: '*', source: 'all', feedService: false }), 'https://shiori.example/api/history?format=rss');
+  assert.equal(S.feedURL(base, { opened: true, feedService: false }), 'https://shiori.example/api/history?opened=true&format=rss');
+  assert.equal(S.feedURL(base, { query: 'rust', source: 'notes', kuraBase: 'https://shiori.example/kura/', feedService: false }), 'https://shiori.example/kura/feed.xml?q=rust');
+  assert.equal(S.feedURL(base, { query: 'rust', title: 'rust', feedService: true }), 'https://shiori.example/shiori/feed?q=rust&exclude_label=vault');
+});
+
+test("Hister's own sign-in (the shiori-web image without the helper): its /auth and /profile on this origin", () => {
+  // Unstamped, or stamped for the helper: the helper's pages, from the rooms' Hister address.
+  const rooms = 'hister=https://hister.example/';
+  assert.equal(S.histerSignInURL(rooms, 'https://shiori.example/', 'https://shiori.example/?q=x'), 'https://hister.example/machiya/signin?return=https%3A%2F%2Fshiori.example%2F%3Fq%3Dx');
+  const own = {};
+  own.globalThis = own;
+  vm.createContext(own);
+  vm.runInContext(source.replace(/__SHIORI_SIGNIN__/g, 'hister'), own);
+  const O = own.ShioriSearch;
+  assert.equal(O.histerSignInURL(rooms, 'https://shiori.example/', 'https://shiori.example/?q=x'), '/auth');
+  assert.equal(O.histerSignInURL('', 'https://shiori.example/', ''), '/auth');
+  assert.equal(O.histerSessionsURL(rooms, 'https://shiori.example/'), '/profile');
+});
+
 test('vi keys: j/k, h/l, open, preview, copy, help, search, label', () => {
   const k = (key, extra = {}) => S.vimKey({}, { key, now: 1000, ...extra }).action;
   assert.equal(k('j'), 'next');

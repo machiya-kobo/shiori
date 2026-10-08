@@ -31,11 +31,12 @@ def git(*args):
         return ""
 
 
-build = git("rev-parse", "--short", "HEAD")
-if build and git("status", "--porcelain", "--untracked-files=no"):
+# A build with no git (a container's) says the commit and the Hister release itself.
+build = os.environ.get("SHIORI_BUILD_ID") or git("rev-parse", "--short", "HEAD")
+if build and not os.environ.get("SHIORI_BUILD_ID") and git("status", "--porcelain", "--untracked-files=no"):
     build += "-dirty"
 # The tag when the submodule is checked out, else the commit the superproject pins.
-hister = git("-C", "vendor/hister", "describe", "--tags", "--exact-match")
+hister = os.environ.get("SHIORI_HISTER_RELEASE") or git("-C", "vendor/hister", "describe", "--tags", "--exact-match")
 if not hister:
     pinned = git("ls-tree", "HEAD", "vendor/hister").split()
     hister = pinned[2][:7] if len(pinned) > 2 else ""

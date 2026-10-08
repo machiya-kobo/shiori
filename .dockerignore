@@ -1,0 +1,24 @@
+# The shiori-web image builds only the web pages (docker/shiori-web/Dockerfile): none of the native apps' sources.
+.git
+.github
+vendor
+Shiori
+Shared
+ShioriShare
+ShioriExtension
+Shiori.xcodeproj
+Packages
+haiku
+linux
+classic
+tests
+tools
+skills
+build
+docs/screenshots
+**/node_modules
+**/__pycache__
+local.yml
+local.env
+.local
+CLAUDE.local.md

@@ -1,0 +1,245 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""container-test - the shiori-web image, built and run against a fake house.
+
+    tools/container-test [--image NAME] [--engine podman|docker] [--keep]
+
+Builds docker/shiori-web/Dockerfile (or uses --image), then runs it the way it is meant to run (a non-root user, a
+read-only root filesystem, a tmpfs on /tmp) beside a fake house (docker/shiori-web/test/fake-upstream.py: Hister,
+SearXNG, Kura, Konbini, shiori-feed, shiori-ai, the small-web gateway and hister-login, each echoing what it was asked)
+and checks:
+
+  - it refuses to start without Hister and SearXNG, and says what to set;
+  - with only those two, both pages answer, /_shiori/config.json says what is on, the optional routes answer 404;
+  - a proxied route reaches its own service, and `Origin` (and Sec-Fetch-*) pass through untouched, never added;
+  - a browser's cookies reach only their own service (Hister's session to Hister; nothing to SearXNG);
+  - Hister's own sign-in: the feed and AI routes ask Hister whether the session is good;
+  - with hister-login: the auth request, the room cookie, Hister's session swapped in and its Set-Cookie dropped;
+  - a SearXNG that refuses JSON is said so in the start-up log.
+
+Needs podman or docker. Exit 1 if a check fails.
+"""
+import argparse
+import http.client
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NET = "shiori-web-test"
+FAKE = "shiori-web-fake"
+failures = []
+
+
+def check(ok, what, detail=""):
+    print(("ok   " if ok else "FAIL ") + what + ("" if ok else f"  [{detail}]"))
+    if not ok:
+        failures.append(what)
+
+
+class Engine:
+    def __init__(self, name):
+        self.name = name
+
+    def run(self, *args, check_=True, timeout=600):
+        r = subprocess.run([self.name, *args], capture_output=True, text=True, timeout=timeout)
+        if check_ and r.returncode:
+            sys.exit(f"container-test: {self.name} {' '.join(args[:3])} failed:\n{r.stderr.strip()}")
+        return r
+
+    def start(self, name, image, env=None, entrypoint=None, volumes=(), ports=(), cmd=()):
+        args = ["run", "-d", "--name", name, "--network", NET, "--read-only", "--tmpfs", "/tmp", "--cap-drop=ALL",
+                "--security-opt=no-new-privileges"]
+        for k, v in (env or {}).items():
+            args += ["-e", f"{k}={v}"]
+        if entrypoint:
+            args += ["--entrypoint", entrypoint]
+        for v in volumes:
+            args += ["-v", v]
+        for p in ports:
+            args += ["-p", f"127.0.0.1::{p}"]
+        self.run(*args, image, *cmd)
+
+    def port(self, name, inner):
+        out = self.run("port", name, str(inner)).stdout.strip().splitlines()[0]
+        return int(out.rsplit(":", 1)[1])
+
+    def logs(self, name):
+        r = self.run("logs", name, check_=False)
+        return r.stdout + r.stderr
+
+    def rm(self, *names):
+        for n in names:
+            self.run("rm", "-f", n, check_=False)
+
+
+def get(port, path, headers=None):
+    """(status, headers, parsed JSON or text) from 127.0.0.1:port; no redirects, exactly the headers given."""
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    c.request("GET", path, headers=headers or {})
+    r = c.getresponse()
+    body = r.read().decode("utf-8", "replace")
+    h = {k.lower(): v for k, v in r.getheaders()}
+    c.close()
+    try:
+        return r.status, h, json.loads(body)
+    except ValueError:
+        return r.status, h, body
+
+
+def wait(port, path="/healthz", seconds=30):
+    for _ in range(seconds * 4):
+        try:
+            if get(port, path)[0] == 200:
+                return True
+        except OSError:
+            pass
+        time.sleep(0.25)
+    return False
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--image", default="")
+    ap.add_argument("--engine", default="")
+    ap.add_argument("--keep", action="store_true")
+    a = ap.parse_args()
+    name = a.engine or shutil.which("podman") and "podman" or shutil.which("docker") and "docker"
+    if not name:
+        sys.exit("container-test: needs podman or docker")
+    e = Engine(name)
+    image = a.image or "shiori-web:test"
+    if not a.image:
+        print(f"== building {image}")
+        e.run("build", "-f", "docker/shiori-web/Dockerfile", "-t", image, "--build-arg", "SHIORI_BUILD_ID=test", ROOT)
+    started = []
+    try:
+        e.run("network", "rm", "-f", NET, check_=False)
+        e.run("network", "create", NET)
+        e.start(FAKE, image, entrypoint="python3",
+                volumes=[f"{ROOT}/docker/shiori-web/test/fake-upstream.py:/fake.py:ro"], cmd=["/fake.py"])
+        time.sleep(1.5)
+        house = {
+            "SHIORI_HISTER_URL": f"http://{FAKE}:9001", "SHIORI_SEARXNG_URL": f"http://{FAKE}:9002",
+        }
+        full = {**house, "SHIORI_KURA_URL": f"http://{FAKE}:9003", "SHIORI_KONBINI_URL": f"http://{FAKE}:9004",
+                "SHIORI_FEED_URL": f"http://{FAKE}:9005", "SHIORI_AI_URL": f"http://{FAKE}:9006",
+                "SHIORI_SMALLWEB_URL": f"http://{FAKE}:9007", "SHIORI_STATUS_URL": "https://status.example/"}
+
+        print("== it refuses to start without Hister and SearXNG")
+        e.start("shiori-web-bare", image)
+        started.append("shiori-web-bare")
+        time.sleep(3)
+        state = e.run("inspect", "-f", "{{.State.Status}} {{.State.ExitCode}}", "shiori-web-bare").stdout.strip()
+        log = e.logs("shiori-web-bare")
+        check(state.startswith("exited") and not state.endswith(" 0"), "it exits, not zero", state)
+        check("SHIORI_HISTER_URL" in log and "SHIORI_SEARXNG_URL" in log and "where Hister is" in log, "and says what to set", log[:200])
+
+        print("== with only Hister and SearXNG")
+        e.start("shiori-web-min", image, env=house, ports=[8080, 8081])
+        started.append("shiori-web-min")
+        p1, p2 = e.port("shiori-web-min", 8080), e.port("shiori-web-min", 8081)
+        check(wait(p1) and wait(p2), "both pages come up")
+        check(e.run("exec", "shiori-web-min", "id", "-u").stdout.strip() not in ("", "0"), "it runs as a non-root user")
+        s, h, body = get(p1, "/")
+        check(s == 200 and "Shiori" in body and "default-src 'self'" in h.get("content-security-policy", ""), "the search page answers, with its CSP")
+        s, h, body = get(p2, "/")
+        check(s == 200 and "manifest.webmanifest" in body, "the web app answers")
+        check(get(p2, "/sw.js")[0] == 200 and get(p2, "/manifest.webmanifest")[0] == 200, "its service worker and manifest")
+        cfg = get(p1, "/_shiori/config.json")[2]
+        check(isinstance(cfg, dict) and cfg["signin"] == "hister" and cfg["services"]["kura"] is False
+              and cfg["services"]["searxng"] is True, "config.json says Hister's own sign-in, Kura off", str(cfg)[:120])
+        s, h, body = get(p2, "/_shiori/app.js")
+        check(s == 200 and "__SHIORI_FEED__" not in body and "fromBuild('off')" in body, "the pages carry this run's settings (feed off)")
+        s, h, body = get(p1, "/")
+        import re
+        asset = re.search(r'/_shiori/search\.js\?v=[\w.-]+', body)
+        s, h, _ = get(p1, asset.group(0)) if asset else (0, {}, "")
+        check(asset and "immutable" in h.get("cache-control", ""), "a versioned asset is cached immutably", str(asset))
+        check("no-cache" in get(p1, "/")[1].get("cache-control", ""), "the page itself always revalidates")
+        for path in ("/kura/api/search?q=x", "/konbini/api/cards", "/smallweb/api/search?q=x", "/shiori/feed?q=x", "/shiori/ai/status", "/machiya/start"):
+            check(get(p1, path)[0] == 404, f"off: {path} answers 404")
+        # SearXNG: reached, with Origin and Sec-Fetch-* exactly as the browser sent them, and no cookie.
+        s, h, echo = get(p1, "/searx/search?q=x&format=json", {"Origin": "https://shiori.example", "Sec-Fetch-Site": "same-origin", "Cookie": "hister=goodabcdefgh; a=b"})
+        hd = echo.get("headers", {}) if isinstance(echo, dict) else {}
+        check(s == 200 and echo.get("path") == "/search?q=x&format=json", "/searx/ reaches SearXNG with the prefix stripped", str(echo)[:150])
+        check(hd.get("origin") == "https://shiori.example" and hd.get("sec-fetch-site") == "same-origin", "Origin and Sec-Fetch-Site pass through untouched")
+        check("cookie" not in hd, "no cookie goes to SearXNG")
+        s, h, echo = get(p1, "/searx/search?q=x&format=json")
+        check(isinstance(echo, dict) and "origin" not in echo.get("headers", {}), "no Origin is added when the browser sent none")
+        # Hister: the rest, with only its own cookie.
+        s, h, echo = get(p1, "/search?query=%7B%7D", {"Cookie": "a=b; hister=goodabcdefgh; machiya_session=secretsecret"})
+        hd = echo.get("headers", {}) if isinstance(echo, dict) else {}
+        check(s == 200 and echo.get("service") == "hister" and hd.get("cookie") == "hister=goodabcdefgh", "Hister gets its own session cookie and nothing else", str(hd.get("cookie")))
+        check("hister=fromupstream" in h.get("set-cookie", ""), "Hister's own Set-Cookie reaches the browser (its sign-in works here)")
+        check("origin" not in hd, "no Origin is added for Hister either")
+        e.rm("shiori-web-min")
+
+        print("== every service on; Hister's own sign-in gates the feed and AI routes")
+        e.start("shiori-web-full", image, env=full, ports=[8080, 8081])
+        started.append("shiori-web-full")
+        p1 = e.port("shiori-web-full", 8080)
+        check(wait(p1), "it comes up")
+        cfg = get(p1, "/_shiori/config.json")[2]
+        check(all(cfg["services"].values()), "config.json: every service on", str(cfg["services"]))
+        check('<a href="https://status.example/">Status</a>' in get(p1, "/")[2], "the status link is filled")
+        for path, svc in (("/kura/api/search?q=x", "kura"), ("/konbini/api/cards", "konbini"), ("/smallweb/api/search?q=x", "smallweb")):
+            s, h, echo = get(p1, path)
+            check(s == 200 and echo.get("service") == svc, f"{path} reaches {svc}", str(echo)[:100])
+        check(get(p1, "/kura/")[0] == 404 and get(p1, "/kura/signin")[0] == 404, "Kura's own pages are never passed")
+        check(get(p1, "/shiori/ai/status")[0] == 200, "shiori-ai's status needs no sign-in")
+        check(get(p1, "/shiori/feed?q=x")[0] == 403, "the feed needs Hister's sign-in: 403 without it")
+        s, h, echo = get(p1, "/shiori/feed?q=x", {"Cookie": "hister=goodabcdefgh; x=y"})
+        check(s == 200 and echo.get("service") == "feed" and "cookie" not in echo.get("headers", {}), "with a good session it reaches the feed, with no cookie", str(echo)[:120])
+        check(get(p1, "/shiori/ai/summarize", {"Cookie": "hister=bad"})[0] == 403, "and AI summaries too")
+        s, h, echo = get(p1, "/kura/api/search?q=x", {"Cookie": "hister=goodabcdefgh; machiya_session=roomsession123"})
+        check(echo.get("headers", {}).get("cookie") == "machiya_session=roomsession123", "Kura gets only the rooms' session cookie")
+        e.rm("shiori-web-full")
+
+        print("== with hister-login")
+        e.start("shiori-web-login", image, env={**full, "SHIORI_LOGIN_URL": f"http://{FAKE}:9008", "SHIORI_LOGIN_AUTH_URL": f"http://{FAKE}:9009"},
+                ports=[8080, 8081])
+        started.append("shiori-web-login")
+        p1 = e.port("shiori-web-login", 8080)
+        check(wait(p1), "it comes up")
+        check(get(p1, "/_shiori/config.json")[2]["signin"] == "hister-login", "config.json says hister-login")
+        check(get(p1, "/search?query=%7B%7D")[0] == 401, "a Hister route without a room cookie: 401 (the page sends the person to sign in)")
+        room = "mhr_" + "A" * 43
+        s, h, echo = get(p1, "/search?query=%7B%7D", {"Cookie": f"a=b; __Host-machiya_sso_shiori={room}; hister=browsers-own"})
+        hd = echo.get("headers", {}) if isinstance(echo, dict) else {}
+        check(s == 200 and hd.get("cookie") == "hister=sessionfromhelper", "Hister gets the session the helper returned, replacing the browser's whole Cookie", str(hd.get("cookie")))
+        check("set-cookie" not in h, "and Hister's Set-Cookie never reaches the browser")
+        s, h, echo = get(p1, "/kura/api/search?q=x", {"Cookie": f"__Host-machiya_sso_shiori={room}"})
+        check(echo.get("headers", {}).get("cookie") == f"__Host-machiya_sso_kura={room}", "Kura gets this host's session under its own cookie name", str(echo)[:140])
+        s, h, echo = get(p1, "/machiya/signout")
+        check(echo.get("service") == "helper" if isinstance(echo, dict) else False, "the helper's own paths reach it on this origin", str(echo)[:100])
+        e.rm("shiori-web-login")
+
+        print("== a SearXNG that refuses JSON")
+        e.rm(FAKE)
+        e.start(FAKE, image, env={"FAKE_SEARX_JSON": "403"}, entrypoint="python3",
+                volumes=[f"{ROOT}/docker/shiori-web/test/fake-upstream.py:/fake.py:ro"], cmd=["/fake.py"])
+        time.sleep(1.5)
+        e.start("shiori-web-403", image, env=house)
+        started.append("shiori-web-403")
+        time.sleep(3)
+        log = e.logs("shiori-web-403")
+        check("SearXNG doesn't allow JSON results" in log and "formats: [html, json]" in log, "the start-up log says so plainly", log[-300:])
+        check("Hister and SearXNG answer" not in log, "and doesn't claim all is well")
+    finally:
+        if not a.keep:
+            e.rm(FAKE, *started)
+            e.run("network", "rm", "-f", NET, check_=False)
+    print()
+    if failures:
+        print(f"{len(failures)} check(s) failed")
+        return 1
+    print("container test: all passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

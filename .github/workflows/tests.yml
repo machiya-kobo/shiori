@@ -21,3 +21,11 @@ jobs:
           node-version: 22
       - name: Node tests (with the Haiku and Classic cores, built by the host's compilers)
         run: node --test scripts/*.test.mjs
+  # The shiori-web image, built and run against a fake house (docker/shiori-web/test): refuses to start unset, serves
+  # both pages, proxies each route to its own service with Origin untouched, signs in as Hister or hister-login does.
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Build the image and test it
+        run: python3 tools/container-test --engine docker
