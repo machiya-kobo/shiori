@@ -65,6 +65,10 @@ python3 "$SPLIT" make-info "$stage/About Shiori" ttro ttxt
 rm -f "$out/$name.sit" "$out/$name.hqx" "$out/$name.sit.hqx"
 (cd "$stage" && "$SIT" -o "$out/$name.sit" Shiori "Shiori Search" "About Shiori" >/dev/null)
 rm -rf "$stage"
-(cd "$out" && binhex -d -t 'SIT!' -c 'SIT!' "$name.sit" > "$name.hqx")
+# macutils' binhex heads it "(This file must be converted; you knew that
+# already.)": decoders look for BinHex 4.0's own line (unar refused it), so
+# that's the one written. The header isn't in BinHex's checksums.
+(cd "$out" && binhex -d -t 'SIT!' -c 'SIT!' "$name.sit" \
+    | sed '1s/.*/(This file must be converted with BinHex 4.0)/' > "$name.hqx")
 
 ls -l "$dsk" "$out/$name.sit" "$out/$name.hqx"

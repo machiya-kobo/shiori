@@ -59,7 +59,7 @@ Each tag's GitHub release carries builds anyone can test. Make each one from the
 | File | Built on | How |
 |---|---|---|
 | `Shiori-X.Y.Z-macOS.dmg` | a Mac | `scripts/release-mac.sh vX.Y.Z` (a fresh worktree, the public bundle prefix only, signed ad hoc) |
-| `Shiori-X.Y.Z-linux-x86_64.flatpak` | Linux with flatpak-builder | from `git archive vX.Y.Z`: `flatpak-builder --repo=repo build linux/flatpak/io.github.machiya_kobo.Shiori.json`, then `flatpak build-bundle repo … io.github.machiya_kobo.Shiori` |
+| `Shiori-X.Y.Z-linux-x86_64.flatpak` | Linux with flatpak-builder | from `git archive vX.Y.Z`: `flatpak-builder --repo=repo build linux/flatpak/io.github.machiya_kobo.Shiori.json`, then `flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo repo Shiori-X.Y.Z-linux-x86_64.flatpak io.github.machiya_kobo.Shiori` (without `--runtime-repo`, installing it on a system with no Flathub fails: GNOME 49 not found) |
 | `shiori-X.Y.Z-1-x86_64.hpkg` | Haiku | from the archive: `cd haiku && make && ./package.sh` |
 | `Shiori-X.Y.Z-mac68k.{dsk,sit,hqx}` | the Retro68 host | from the archive: `SHIORI_RELEASE=1 classic/scripts/package.sh` |
 

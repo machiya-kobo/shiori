@@ -27,7 +27,7 @@ Then point it at your servers in `~/.config/shiori/config.json`:
 ```
 
 - `linux/install-desktop.sh` changes your running desktop session's settings (the menu search and the hotkey); `--remove` undoes them. Without Cinnamon it installs the launcher only.
-- A bundle someone built for you installs with `flatpak install --user shiori.flatpak`.
+- A bundle someone built for you (a release's `Shiori-X.Y.Z-linux-x86_64.flatpak`) installs with `flatpak install --user shiori.flatpak`, which fetches GNOME 49 from Flathub.
 - [The Quickstart](quickstart.md#a-standalone-with-sample-pages) builds and checks it against a Hister with sample pages.
 
 **Without the Flatpak**, the launcher runs the checkout under GJS. The system then needs gjs and the typelibs for GTK 4, libadwaita 1.5 or later, WebKitGTK 6 and libsoup 3 (every command needs them, even those with no window). On Debian 13:
