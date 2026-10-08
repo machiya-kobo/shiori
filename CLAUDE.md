@@ -66,6 +66,10 @@ you.
   `xcodebuild test -scheme ShioriTests -destination platform=macOS` after
   touching `Shared/`. `HISTER_LIVE_URL` and
   `KURA_LIVE_URL` add read-only checks against real servers.
+  `tests/test_private_names.py` (machiya's, run by the Node suite) scans
+  tracked files for the names in `~/.config/machiya/private-names`, and
+  skips without it. A change to README's Quickstart blocks must match
+  docs/quickstart.md (`tools/quickstart-test --dry-run` checks).
 - **Never test a write against a live Hister.** Use the stubs in the test
   suites or `linux/fake-hister.py`. Reads against your own server are fine.
 - **Logic shared by Swift and JavaScript has twins** (HisterKit and
@@ -118,8 +122,8 @@ you.
   shim's `sendNativeMessage` (Safari ignores it). The build stops while it's
   empty.
 - `SHIORI_SERVER_URL` is the server's one home (Info.plist and the extension
-  build both read it). Others: `SHIORI_SEARXNG_URL`, `SHIORI_NIWA_URL`
-  (Kura), `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`, `SHIORI_ROOMS`,
+  build both read it). Others: `SHIORI_SEARXNG_URL`, `SHIORI_KURA_URL`
+  (Kura; its old name `SHIORI_NIWA_URL` still counts), `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`, `SHIORI_ROOMS`,
   `SHIORI_STATUS_URL`, `SHIORI_SEARCH_PAGE_URL`, `SHIORI_SOURCE_URL`,
   `SHIORI_FRONTENDS` (`redlib=https://…,invidious=https://…,libmedium=…`:
   a web page's menu, and the search page's cards, offer the page there
@@ -181,13 +185,16 @@ you.
 - **Every deploy is a release**: bump `MARKETING_VERSION` (project.yml)
   and `VERSION` (linux/gjs/save.js) together, add a `## X.Y.Z (date)`
   section to CHANGELOG.md (minor for features, patch for fixes; a test
-  holds all three), commit, then tag `vX.Y.Z` on main and push the tag to
-  both forges. The hosted builds are made from the tag, and serve
-  `/_shiori/status.json` and `/_shiori/CHANGELOG.md`. The tag's GitHub
-  release carries the Mac `.dmg`, the Flatpak, the `.hpkg` and the classic
-  `.dsk`, `.sit` and `.hqx` (docs/build.md, Release files): each built
-  from the tag with neutral defaults and searched for personal details
-  before upload. 1.0.0 marks the public release.
+  holds all three), commit, then make the signed tag with machiya's
+  `tools/release-tag` and push it to both forges. The hosted builds are
+  made from the tag, and serve `/_shiori/status.json` and
+  `/_shiori/CHANGELOG.md`. The tag's GitHub release carries the Mac
+  `.dmg`, the Flatpak, the `.hpkg` and the classic `.dsk`, `.sit` and
+  `.hqx` (docs/build.md, Release files), each built from the tag with
+  neutral defaults, searched for personal details, and listed in a signed
+  `SHA256SUMS`; machiya uploads them (this Mac's token can't). Test the
+  files on clean VMs first (a Flatpak bundle needs `--runtime-repo`).
+  1.0.0 marks the public release.
 - **The background order matters** (`BACKGROUND` in `build-extension.sh`,
   held by tests): `safari-shims`, `host-native`, `core`, `search-core`,
   `badge`, `menus`.
@@ -196,11 +203,11 @@ you.
   `menus` needs `search-core` and `badge` before it.
 - **A tab's badge goes back to the toolbar's through `ShioriBadge.clearTab`**
   (`patches/ext/badge.js`): `null` where the browser takes it, else a copy
-  kept in step with the count. Safari's answer to `null` hasn't been seen
-  on a device.
+  kept in step with the count (Safari's answer to `null` is unconfirmed
+  on a device).
 - The right-click menu (Safari on the Mac, `contextMenus`)
   runs upstream's own commands for its page items (the menu keeps
-  upstream's `onCommand` listener). Never add a rule editor there.
+  upstream's `onCommand` listener).
 - Settings reach the extension through the App Group: the background asks by
   `sendNativeMessage` on every search (400 ms budget, then its cache in
   `storage.local`). A setting the extension page shows must be in both
@@ -237,7 +244,8 @@ you.
 - **Hister's token** (`X-Access-Token`, for a server with users): the
   user's one token, entered once per device (Settings → Account,
   `HisterKeychain`; Safari's extension asks the app by the `hister` native
-  message; Linux `histerToken`). It goes to the Hister server and, under
+  message and keeps it in the background's memory only, never in storage,
+  handing it to its own pages by `hister-token`; Linux `histerToken`). It goes to the Hister server and, under
   Machiya's host rule, to the configured Kura and Konbini (rooms in Hister
   sign-in mode read it to know who's asking; a signed-in app sends them
   its `mhs_` id instead); never to the gateway (which also gets `Origin:
@@ -293,6 +301,17 @@ you.
   red, Small Web teal; the web's own results stay plain. Every card tint
   is in the contrast tests (`palettes.mjs` `TINTS`, `CARD_TINTS`,
   `SnippetAndSuggestionTests`).
+- **Hover shows what a click will do** (the house rule, machiya's
+  style guide): a result's title is a plain `TitleLink` button, underlined
+  with the link cursor (a borderless button is AppKit's on the Mac and
+  never lets its label hear the hover); a sidebar row fills 14% with the
+  accent across its whole 32-pt cell (`sidebarHover`); an unselected pill
+  lifts onto 24% of its colour over `raised`, its text moved to the shade
+  that reads there (`Palette.pillHover` and the web's `--<pill>-hover-bg` /
+  `--<pill>-hover`, twins from `palettes.mjs` `PILLS`, 4.5:1 in every theme
+  and pill, tested). Sidebar headings (Collections, Labels) are teal; on the
+  search page a tab's heading wears its tab's colour. Every such change
+  goes into the web app and the search page too.
 - **Liquid Glass stays on the system chrome**: the theme colours only the
   content layer. Every text colour is at least 4.5:1 on its background and
   surface (`SnippetAndSuggestionTests`, `theme-contrast.test.mjs`).
@@ -361,8 +380,9 @@ you.
   the app is in front (the web app: the tab visible), an open list asks
   Hister and Kura (never the web) what arrived (`ResultsModel.checkForNew`,
   the web app's `watchForNew`): newest-first lists count unseen first-page
-  results, other orders the total's growth. A "↑ N New Items" banner
-  reloads and goes to the top on a tap.
+  results, other orders the total's growth. An "N New Items" banner
+  (a refresh icon, never an up arrow: it reloads, then goes to the top)
+  does that on a tap.
 
 ## The search page and the web app
 
@@ -443,9 +463,8 @@ you.
     note gets "Open in Hister".
 - Other vaults: searchable only in Notes, through the vault filter (Kura's
   `vault`); previewed from Kura's `/api/note` HTML, never cached. A private
-  one's are never recorded as opened or deleted in Hister and get no AI
-  (`AIContent.workNote` makes `EngineChain.eligible` empty); a shared one's
-  are treated as the default vault's.
+  one's get no Hister record and no AI (the private-vault rule above;
+  `AIContent.workNote`); a shared one's are treated as the default vault's.
 - A note's chip names its vault (`Notes.vaultChip` / `S.vaultChip`); a tap
   shows Notes from that vault.
 - A note opens in Obsidian (the vault name must match exactly), with its Kura
@@ -594,7 +613,8 @@ you.
   (Hister's own token as `X-Access-Token` to Hister's origin only, the
   room token to Kura's only; Kura optional), or **through mac-bridge**
   (`classic/bridge/bridge.py`, stdlib, GET only, exact paths: the room
-  token `mht_` to both bridge origins, Hister's token never sent; the
+  token `mht_` to both bridge origins and checked by hister-login on both
+  ports before any upstream, Hister's token never sent; the
   bridge swaps in Hister's, which never reaches the LAN, and its log never
   has a query, a header or a body). docs/classic.md says what plain HTTP
   exposes; keep that warning wherever direct mode is offered.
@@ -618,7 +638,7 @@ you.
   the low-memory accessors or local constants, never a new header.
 - Windows are `NewCWindow` where Color QuickDraw is (`ThemeNewWindow`): an
   old-style port snaps every color to QuickDraw's eight.
-- Test in Snow (System 6) and Basilisk II (System 7) on the claude VM, as
+- Test in Snow (System 6) and Basilisk II (System 7) on a Linux test machine, as
   `classic/docs/TESTING.md` says, against the fake house only. Never hard-kill
   Basilisk, never point its driver off the Mac's screen (it hangs X), and
   never write Snow's disk while Snow runs.
