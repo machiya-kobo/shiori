@@ -333,9 +333,8 @@ struct LibraryView: View {
                             .contextMenu { FeedButtons(feed: app.feedURL(query: alias, title: CollectionIcon.title(for: alias))) }
                     }
                 } header: {
-                    // Folded, it says how many are inside. Larger and in the
-                    // text colour: the sidebar's small grey headings were
-                    // hard to see.
+                    // Folded, it says how many are inside (SidebarDivider
+                    // draws it in the accent, apart from the rows).
                     SidebarDivider(title: collectionsOpen ? "Collections" : "Collections (\(app.rules.aliases.count))")
                 }
             }
@@ -505,14 +504,22 @@ private struct SidebarDivider: View {
 }
 
 private extension View {
-    /// The sidebar's section titles: the rows' size and colour, semibold,
-    /// so they read clearly without outweighing the rows (the system's
-    /// small grey ones were hard to see; headline size in the theme's
-    /// lavender clashed with the rows' white).
+    /// The sidebar's section titles: the rows' size, semibold, in the
+    /// accent, so they read apart from the rows under them (in the rows'
+    /// white they looked like one more row; the system's small grey ones
+    /// were hard to see).
     func sidebarHeading() -> some View {
-        self
+        modifier(SidebarHeading())
+    }
+}
+
+private struct SidebarHeading: ViewModifier {
+    @Environment(\.palette) private var palette
+
+    func body(content: Content) -> some View {
+        content
             .textStyle(.body, weight: .semibold)
-            .foregroundStyle(.primary)
+            .foregroundStyle(palette.accent)
             .textCase(nil)
     }
 }

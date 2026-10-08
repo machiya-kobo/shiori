@@ -202,7 +202,7 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
 }
 #categories a[aria-current="page"] { color: var(--bg); background: var(--tab); border-color: var(--tab); }
 /* Under the pointer, a light fill of the pill's own colour (the apps' hoverFill). */
-#categories a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--tab) 14%, transparent); }
+#categories a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--tab) 26%, transparent); }
 #categories a[data-cat="general"] { --tab: var(--tab-general); }
 #categories a[data-cat="hister"] { --tab: var(--accent); }
 #categories a[data-cat="vault"] { --tab: var(--notes); }
@@ -441,6 +441,15 @@ a.link-chip:hover, a.link-chip:focus-visible { background: color-mix(in srgb, cu
   position: sticky; top: var(--header-h, 0px); z-index: 1; margin: 18px 0 8px; padding: 8px 4px 6px;
   background: var(--frost); -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
 }
+/* The heading wears its tab's colour, as the pill does, so it reads apart from the results under it. */
+body[data-cat="general"] #web-title, body[data-cat="web"] #web-title { color: var(--web); }
+body[data-cat="hister"] #web-title { color: var(--accent); }
+body[data-cat="vault"] #web-title { color: var(--notes); }
+body[data-cat="images"] #web-title { color: var(--tab-images); }
+body[data-cat="videos"] #web-title, body[data-cat="code"] #web-title { color: var(--tab-videos); }
+body[data-cat="news"] #web-title { color: var(--tab-news); }
+body[data-cat="smallweb"] #web-title { color: var(--smallweb); }
+body[data-cat="files"] #web-title { color: var(--kept); }
 .chevron {
   width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
   transform: rotate(-45deg); transition: transform 0.2s ease; flex: none;

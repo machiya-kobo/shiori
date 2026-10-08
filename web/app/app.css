@@ -204,7 +204,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 }
 .segments button[aria-pressed="true"] { color: var(--bg); background: var(--tab); }
 /* Under the pointer, a light fill of the pill's own colour (the apps' hoverFill). */
-.segments button:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--tab) 14%, transparent); }
+.segments button:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--tab) 26%, transparent); }
 .segments button[data-tint="cyan"] { --tab: var(--tab-general); }
 .segments button[data-tint="blue"] { --tab: var(--accent); }
 .segments button[data-tint="orange"] { --tab: var(--notes); }
@@ -393,7 +393,7 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 /* Sidebar */
 /* Headings at the rows' size, in the text colour, as the Mac app's (its
    small grey ones were hard to see). */
-#sidebar h2 { margin: 12px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 1rem; font-weight: 600; color: var(--text); }
+#sidebar h2 { margin: 12px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 1rem; font-weight: 600; color: var(--accent); }
 /* The line between sections, as the Mac app's SidebarDivider. */
 #sidebar .sidebar-rule { margin: 12px 10px 0; padding-top: 4px; border-top: 1px solid var(--line); }
 #sidebar button {
