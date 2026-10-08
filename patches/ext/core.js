@@ -37,6 +37,55 @@
 // or 403 is Hister wanting a credential (its users on, the token not here
 // yet or made anew): the capture is kept, with no try counted, until a
 // token is (14 days at most, as any).
+
+// Hister's token (X-Access-Token, for a server with users). The app keeps
+// it (its Keychain, asked over native messaging); here it lives in memory
+// only, a minute at most, never in storage, where every content script
+// could read it. The fetch wrapper below adds it to the background's own
+// requests to the configured Hister server (upstream's included), and the
+// extension's own pages ask for it by message (`hister-token`), never a
+// content script. Its listener is added before section 2's wrapper, which
+// would hide it.
+const shioriHisterToken = (() => {
+  const FRESH_MS = 60_000;
+  const UNSET_MS = 5_000; // none (unset, or the app didn't answer): asked again soon
+  let cached = { at: 0, token: '', ttl: 0 };
+  const hasStorage = typeof chrome !== 'undefined' && !!chrome.storage && !!chrome.storage.local;
+
+  /** The token, checked ('' when the app has none). */
+  async function get({ fresh = false } = {}) {
+    if (!fresh && Date.now() - cached.at < cached.ttl) return cached.token;
+    let raw = '';
+    try {
+      raw = typeof shioriHost.histerToken === 'function' ? await shioriHost.histerToken() : '';
+    } catch (_) {}
+    const S = globalThis.ShioriSearch;
+    const token = S ? S.histerToken(raw) : '';
+    cached = { at: Date.now(), token, ttl: token ? FRESH_MS : UNSET_MS };
+    return token;
+  }
+
+  // Earlier versions kept it in storage.local: gone at start.
+  if (hasStorage) void Promise.resolve(chrome.storage.local.remove('histerToken')).catch(() => {});
+
+  const isExtensionPage = (sender) =>
+    !!sender && typeof sender.url === 'string' && typeof chrome.runtime.getURL === 'function' &&
+    sender.url.startsWith(chrome.runtime.getURL('')) && (!sender.id || sender.id === chrome.runtime.id);
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage && chrome.runtime.onMessage.addListener) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (!request || request.shiori !== 'hister-token') return false;
+      if (!isExtensionPage(sender)) {
+        sendResponse({ ok: false });
+        return false;
+      }
+      get().then((token) => sendResponse({ ok: true, token }), () => sendResponse({ ok: false }));
+      return true;
+    });
+  }
+
+  return { get };
+})();
+
 (function installCaptureQueue() {
   if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
   if (typeof globalThis.fetch !== 'function') return;
@@ -208,11 +257,10 @@
         let done = true;
         const expired = Date.now() - (head.queuedAt ?? Date.now()) > MAX_AGE_MS;
         if (item && !expired) {
-          // Hister's token (histerToken, from the app), read fresh at replay
-          // and never stored with the
-          // queued item. Unset while the server has no users; with users, a
-          // replay without it would be refused and the queue would drop it.
-          const { histerToken } = await storage.get(['histerToken']);
+          // Hister's token (from the app), read at replay and never stored
+          // with the queued item. Unset while the server has no users; with
+          // users, a replay without it is refused and the capture kept.
+          const histerToken = await shioriHisterToken.get();
           const headers = { ...item.headers };
           if (histerToken) headers['X-Access-Token'] = histerToken;
           let r;
@@ -352,10 +400,19 @@
     const url = requestURL(input);
     const method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
     const endpoint = url ? await histerEndpoint(url) : '';
-    // A request to Hister carrying its token (upstream's own, Shiori's)
-    // never follows a redirect: fetch would keep the header for any host.
-    if (endpoint && init && Object.keys(plainHeaders(init.headers)).some((k) => k.toLowerCase() === 'x-access-token')) {
-      init = { ...init, redirect: 'error' };
+    // Hister's token goes on every request to Hister that lacks one (upstream
+    // has none: it reads storage, where the token no longer is). A request
+    // carrying it never follows a redirect: fetch would keep the header for
+    // any host.
+    if (endpoint) {
+      const headers = plainHeaders((init && init.headers) || (input && typeof input === 'object' && input.headers));
+      if (!Object.keys(headers).some((k) => k.toLowerCase() === 'x-access-token')) {
+        const token = await shioriHisterToken.get();
+        if (token) init = { ...(init || {}), headers: { ...headers, 'X-Access-Token': token } };
+      }
+      if (init && Object.keys(plainHeaders(init.headers)).some((k) => k.toLowerCase() === 'x-access-token')) {
+        init = { ...init, redirect: 'error' };
+      }
     }
 
     if (endpoint === 'api/rules' && method === 'GET') {
@@ -696,14 +753,8 @@ const shioriMachiya = (() => {
       }
     }
     await chrome.storage.local.set(changes);
-    // Hister's token, from the app (Safari): kept where upstream's background
-    // and Shiori's pages read it (histerToken), gone when the app has none.
-    if (typeof shioriHost.histerToken === 'function' && globalThis.ShioriSearch) {
-      const token = globalThis.ShioriSearch.histerToken(await shioriHost.histerToken());
-      const current = (await chrome.storage.local.get(['histerToken'])).histerToken || '';
-      if (token && token !== current) await chrome.storage.local.set({ histerToken: token });
-      if (!token && current) await chrome.storage.local.remove('histerToken');
-    }
+    // Hister's token, asked afresh with the settings (kept in memory only).
+    await shioriHisterToken.get({ fresh: true });
   }
 
   // Going Back from Shiori's page reloads DuckDuckGo as a fresh navigation

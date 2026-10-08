@@ -133,10 +133,24 @@
   // A page of Pages, Notes, Code or Files (as the apps and the web app load
   // them); the web's tabs keep SearXNG's own pages.
   const PAGE_SIZE = 30;
-  const stored = await chrome.storage.local.get(['histerURL', 'histerToken', PAGE_CACHE_KEY, FOLDS_KEY, 'shioriSettings']);
-  // Hister's token where this device has one (the extension; the hosted
-  // page has none: its host signs it in), sent as X-Access-Token.
-  const histerAuth = (headers = {}) => S.histerHeaders(stored.histerToken, headers);
+  const stored = await chrome.storage.local.get(['histerURL', PAGE_CACHE_KEY, FOLDS_KEY, 'shioriSettings']);
+  // Hister's token where this device has one (the extension's background
+  // hands it to its own pages; the hosted page has none: its host signs it
+  // in), sent as X-Access-Token.
+  const histerToken = await Promise.race([
+    new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ shiori: 'hister-token' }, (reply) => {
+          void chrome.runtime.lastError;
+          resolve((reply && reply.ok && reply.token) || '');
+        });
+      } catch (_) {
+        resolve('');
+      }
+    }),
+    new Promise((resolve) => setTimeout(() => resolve(''), 500)),
+  ]);
+  const histerAuth = (headers = {}) => S.histerHeaders(histerToken, headers);
   const settings = {
     showInfobox: true,
     showRelated: true,
@@ -1660,7 +1674,7 @@
       fetch(`${histerBase}api/history`, {
         method: 'POST',
         headers: histerAuth({ 'Content-Type': 'application/json' }),
-        ...(stored.histerToken ? { redirect: 'error' } : {}),
+        ...(histerToken ? { redirect: 'error' } : {}),
         // As the search was sent: Hister matches the exact text.
         body: JSON.stringify({ url, title, query }),
         credentials: sameOrigin(histerBase) ? 'same-origin' : 'omit',

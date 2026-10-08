@@ -47,7 +47,8 @@ function fakeStorage(initial = {}, { events = false } = {}) {
 // network(url, init) returns a Response or throws; calls are recorded.
 const RULES = { shioriCachedRules: '{"skip":[]}' };
 
-function loadBackground({ network, storage = fakeStorage({ histerURL: BASE, ...RULES }), source = backgroundShim }) {
+// hister: Hister's token as the app answers it (the `hister` native message), '' for none.
+function loadBackground({ network, storage = fakeStorage({ histerURL: BASE, ...RULES }), source = backgroundShim, hister = '' }) {
   const calls = [];
   const fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input.url;
@@ -55,7 +56,14 @@ function loadBackground({ network, storage = fakeStorage({ histerURL: BASE, ...R
     return network(url, init);
   };
   const ctx = {
-    chrome: { storage: { local: storage, onChanged: storage.onChanged }, runtime: { getManifest: () => ({ version: '9.8.7' }) } },
+    chrome: {
+      storage: { local: storage, onChanged: storage.onChanged },
+      runtime: {
+        getManifest: () => ({ version: '9.8.7' }),
+        sendNativeMessage: async (_app, message) => (message.type === 'hister' ? { token: ctx.histerFromApp } : {}),
+      },
+    },
+    histerFromApp: hister,
     fetch,
     Response,
     Headers,
@@ -257,8 +265,10 @@ test("a capture Hister refuses for want of a credential (401/403) is kept, with 
   await settle();
   assert.equal(queued(storage).length, 1);
   assert.equal(queued(storage)[0].attempts ?? 0, 0);
-  // The token arrives: the next answer drains it, with the token.
-  storage.data.histerToken = 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
+  // The token arrives (the app has it; asked afresh with the settings):
+  // the next answer drains it, with the token.
+  ctx.histerFromApp = 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
+  await vm.runInContext('shioriHisterToken.get({ fresh: true })', ctx);
   token = true;
   await ctx.fetch(BASE + 'api/rules', { headers: { 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' } });
   await settle();
@@ -479,8 +489,9 @@ test('the worker fetches the rules at start, so the next offline capture can que
 test('queued captures never store credentials, and replays use the current token', async () => {
   let online = false;
   const replayed = [];
-  const storage = fakeStorage({ histerURL: BASE, ...RULES, histerToken: 'new-token' });
+  const storage = fakeStorage({ histerURL: BASE, ...RULES });
   const { ctx } = loadBackground({
+    hister: 'new-token',
     network: (url, init) => {
       if (!online) offline();
       if (url.endsWith('api/add')) replayed.push(init.headers);
@@ -943,8 +954,9 @@ test("Safari's whole background on the Mac: the badge counts the queue and the r
 
 test("Hister's token never follows a redirect: a live request carrying it, or a queued replay", async () => {
   let online = false;
-  const storage = fakeStorage({ histerURL: BASE, ...RULES, histerToken: 'ABCDEFGHJKLMNPQRSTUVWXYZ23' });
+  const storage = fakeStorage({ histerURL: BASE, ...RULES });
   const { ctx, calls } = loadBackground({
+    hister: 'ABCDEFGHJKLMNPQRSTUVWXYZ23',
     network: (url) => {
       if (!online) offline();
       return new Response('{}', { status: url.endsWith('api/add') ? 201 : 200 });
@@ -955,9 +967,14 @@ test("Hister's token never follows a redirect: a live request carrying it, or a 
   online = true;
   await ctx.fetch(BASE + 'api/rules', { headers: { 'X-Access-Token': 'ABCDEFGHJKLMNPQRSTUVWXYZ23' } });
   assert.equal(calls.at(-1).init.redirect, 'error');
-  // Without the token, as before.
+  // Upstream's own request without it (it reads storage, where the token
+  // no longer is): the token goes on, and no redirect either.
   await ctx.fetch(BASE + 'api/rules');
-  assert.equal(calls.at(-1).init && calls.at(-1).init.redirect, undefined);
+  assert.equal(calls.at(-1).init.headers['X-Access-Token'], 'ABCDEFGHJKLMNPQRSTUVWXYZ23');
+  assert.equal(calls.at(-1).init.redirect, 'error');
+  // Anywhere else: neither.
+  await ctx.fetch('https://favicon.example/x.ico');
+  assert.equal(calls.at(-1).init, undefined);
   // A queued capture's replay carries the token: no redirect either.
   online = false;
   await ctx.fetch(BASE + 'api/add', addInit({ url: 'https://a.example/' }));

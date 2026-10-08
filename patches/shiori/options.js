@@ -63,8 +63,18 @@
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 6000);
   try {
-    // Hister's token from the app (the background keeps it): this request's header only.
-    const { histerToken } = await chrome.storage.local.get(['histerToken']);
+    // Hister's token from the app (the background keeps it, in memory): this request's header only.
+    const histerToken = await new Promise((resolve) => {
+      setTimeout(() => resolve(''), 500);
+      try {
+        chrome.runtime.sendMessage({ shiori: 'hister-token' }, (reply) => {
+          void chrome.runtime.lastError;
+          resolve((reply && reply.ok && reply.token) || '');
+        });
+      } catch (_) {
+        resolve('');
+      }
+    });
     // With the token, no redirect is followed (S.histerFetchOptions).
     const headers = histerToken ? { Accept: 'application/json', 'X-Access-Token': histerToken } : { Accept: 'application/json' };
     const reply = await fetch(`${server}api/stats`, { headers, signal: controller.signal, ...(histerToken ? { redirect: 'error' } : {}) });

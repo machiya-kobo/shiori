@@ -378,3 +378,71 @@ test("Safari's extension presents the app's own id (mhs_) to the rooms, never Hi
   const handler = read('../ShioriExtension/SafariWebExtensionHandler.swift');
   assert.match(handler, /if sessionID\.hasPrefix\("mhs_"\) \{\n\s+reply = \["token": sessionID/);
 });
+
+test("Safari's extension keeps Hister's token in memory, never in storage, and hands it to its own pages only", async () => {
+  const HTOKEN = 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
+  // An earlier version's copy in storage.local is gone at start.
+  const storage = fakeStorage({ histerURL: HISTER, ...RULES, shioriSettings: SETTINGS, histerToken: 'stored-earlier' });
+  const { send, page, sandbox, fetched } = loadBackground({
+    storage,
+    native: async (m) => (m.type === 'hister' ? { token: HTOKEN } : m.type === 'settings' ? SETTINGS : {}),
+  });
+  await settle();
+  assert.equal('histerToken' in storage.data, false);
+  // A refresh asks the app and still writes nothing.
+  await send({ shiori: 'refresh-settings' }, page('search.html'));
+  await settle();
+  assert.equal('histerToken' in storage.data, false);
+  assert.ok(!JSON.stringify(storage.data).includes(HTOKEN));
+  // The extension's own pages get it; a content script or a web page never.
+  for (const name of ['search.html', 'shiori-options.html', 'popup.html']) {
+    assert.deepEqual(plain(await send({ shiori: 'hister-token' }, page(name))), { ok: true, token: HTOKEN }, name);
+  }
+  for (const sender of [CONTENT_SCRIPT, { tab: { id: 3 } }, { url: 'safari-web-extension://other/search.html', id: 'other' }]) {
+    const reply = plain(await send({ shiori: 'hister-token' }, sender));
+    assert.equal(reply.ok, false);
+    assert.equal(reply.token, undefined);
+  }
+  // Upstream's own request to Hister (it has no token) gets it, and no redirect.
+  await vm.runInContext(`fetch('${HISTER}api/rules')`, sandbox);
+  const toHister = fetched.filter((f) => f.url === HISTER + 'api/rules').at(-1);
+  assert.equal(toHister.init.headers['X-Access-Token'], HTOKEN);
+  assert.equal(toHister.init.redirect, 'error');
+  // Never to a room or anywhere else.
+  await vm.runInContext(`fetch('${KURA}api/vaults')`, sandbox);
+  assert.equal(fetched.at(-1).init, undefined);
+});
+
+test("no extension page reads Hister's token from storage; upstream's popup gets it from the background", async () => {
+  for (const f of ['patches/shiori/search.js', 'patches/shiori/options.js', 'patches/ext/menus.js', 'patches/ext/core.js', 'patches/shiori-popup.js']) {
+    const src = read('../' + f);
+    assert.doesNotMatch(src, /storage\.(local|session|sync)\.(get|set)\([^)]*histerToken/, f);
+    assert.doesNotMatch(src, /storage\.get\(\[\s*'histerToken'/, f);
+  }
+  // The popup's wrapper: Hister's requests only, the token from a message, no redirect.
+  const HTOKEN = 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
+  const fetched = [];
+  const asked = [];
+  const sandbox = {
+    chrome: {
+      storage: { local: { get: async () => ({ histerURL: HISTER.slice(0, -1), shioriSettings: {} }) } },
+      runtime: { sendMessage: (m, reply) => (asked.push(m), reply({ ok: true, token: HTOKEN })), lastError: undefined },
+    },
+    document: { documentElement: { dataset: {} }, querySelector: () => null },
+    MutationObserver: class { observe() {} disconnect() {} },
+    fetch: async (input, init) => (fetched.push({ url: String(input), init }), new Response('{}')),
+    Response, Headers, URL, setTimeout, clearTimeout, Promise, Object, Array, String,
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read('../patches/shiori-popup.js'), sandbox);
+  await vm.runInContext(`fetch('${HISTER}api/profile', { headers: { Accept: 'application/json' }, credentials: 'include' })`, sandbox);
+  assert.equal(fetched[0].init.headers['X-Access-Token'], HTOKEN);
+  assert.equal(fetched[0].init.headers.Accept, 'application/json');
+  assert.equal(fetched[0].init.redirect, 'error');
+  await vm.runInContext(`fetch('${KURA}api/vaults')`, sandbox);
+  assert.equal(fetched[1].init, undefined);
+  await vm.runInContext(`fetch('${HISTER.slice(0, -1)}.evil.example/api/profile')`, sandbox);
+  assert.equal(fetched[2].init, undefined);
+  assert.deepEqual(plain(asked), [{ shiori: 'hister-token' }]);
+});

@@ -35,11 +35,11 @@
   const withSlash = (u) => (u && !u.endsWith('/') ? u + '/' : u || '');
 
   // Hister's token where this device has one (sent as X-Access-Token),
-  // read with the server each time.
+  // read with the server each time (the core keeps it in memory).
   let token = '';
   async function stored() {
-    const got = await chrome.storage.local.get(['histerURL', 'histerToken', 'shioriSettings']);
-    token = got.histerToken || '';
+    const got = await chrome.storage.local.get(['histerURL', 'shioriSettings']);
+    token = typeof shioriHisterToken !== 'undefined' ? await shioriHisterToken.get() : '';
     return { base: withSlash(String(got.histerURL || '').trim()), settings: got.shioriSettings || {} };
   }
 
