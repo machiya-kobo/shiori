@@ -168,6 +168,7 @@ struct OpenedListView: View {
                     .foregroundStyle(palette.accent)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
+                    .titleLinkHover()
             }
             .buttonStyle(.borderless)
             .help(OpenOriginalButton.title(for: page, app: app))

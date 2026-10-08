@@ -368,6 +368,7 @@ struct DocumentRow: View {
                         .foregroundStyle(palette.accent)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
+                        .titleLinkHover()
                 }
                 .buttonStyle(.borderless)
                 .help(OpenOriginalButton.title(for: document, app: app))

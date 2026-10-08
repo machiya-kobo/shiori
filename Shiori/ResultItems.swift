@@ -307,6 +307,27 @@ struct DocumentItem: View {
 
 /// Opens a result's original (`openPage`), named for where it goes: a
 /// page's browser, a note's Obsidian (or Kura), a file's copy.
+/// A result's title, the link to the original: underlined under the pointer,
+/// with the link cursor on the Mac, as the web pages draw a hovered link. A
+/// click beside it does what Click Opens says, so the link must read apart
+/// from the card around it.
+struct TitleLinkHover: ViewModifier {
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .underline(hovering)
+            #if os(macOS)
+            .pointerStyle(.link)
+            #endif
+            .onHover { hovering = $0 }
+    }
+}
+
+extension View {
+    func titleLinkHover() -> some View { modifier(TitleLinkHover()) }
+}
+
 struct OpenOriginalButton: View {
     let document: StoredPage
     /// "Open", for a swipe's narrow button.
