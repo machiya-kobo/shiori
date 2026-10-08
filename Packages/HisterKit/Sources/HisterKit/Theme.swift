@@ -186,9 +186,11 @@ public struct Palette: Sendable {
     /// WCAG's contrast ratio between two colours.
     public static func contrast(_ a: UInt32, _ b: UInt32) -> Double {
         func luminance(_ value: UInt32) -> Double {
-            let channels = [16, 8, 0].map { Double((value >> UInt32($0)) & 0xFF) / 255 }
-                .map { $0 <= 0.03928 ? $0 / 12.92 : pow(($0 + 0.055) / 1.055, 2.4) }
-            return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+            func linear(_ shift: UInt32) -> Double {
+                let c = Double((value >> shift) & 0xFF) / 255
+                return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * linear(16) + 0.7152 * linear(8) + 0.0722 * linear(0)
         }
         let (hi, lo) = (max(luminance(a), luminance(b)), min(luminance(a), luminance(b)))
         return (hi + 0.05) / (lo + 0.05)
