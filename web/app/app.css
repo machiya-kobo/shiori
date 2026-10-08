@@ -393,7 +393,7 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 /* Sidebar */
 /* Headings at the rows' size, in the text colour, as the Mac app's (its
    small grey ones were hard to see). */
-#sidebar h2 { margin: 12px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 1rem; font-weight: 600; color: var(--accent); }
+#sidebar h2 { margin: 12px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 1rem; font-weight: 600; color: var(--smallweb); }
 /* The line between sections, as the Mac app's SidebarDivider. */
 #sidebar .sidebar-rule { margin: 12px 10px 0; padding-top: 4px; border-top: 1px solid var(--line); }
 #sidebar button {

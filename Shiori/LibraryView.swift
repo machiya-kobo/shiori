@@ -334,7 +334,7 @@ struct LibraryView: View {
                     }
                 } header: {
                     // Folded, it says how many are inside (SidebarDivider
-                    // draws it in the accent, apart from the rows).
+                    // draws it in teal, apart from the rows).
                     SidebarDivider(title: collectionsOpen ? "Collections" : "Collections (\(app.rules.aliases.count))")
                 }
             }
@@ -504,10 +504,10 @@ private struct SidebarDivider: View {
 }
 
 private extension View {
-    /// The sidebar's section titles: the rows' size, semibold, in the
-    /// accent, so they read apart from the rows under them (in the rows'
-    /// white they looked like one more row; the system's small grey ones
-    /// were hard to see).
+    /// The sidebar's section titles: the rows' size, semibold, in teal, so
+    /// they read apart from the rows under them (in the rows' white they
+    /// looked like one more row; the accent read as purple beside the
+    /// selection; the system's small grey ones were hard to see).
     func sidebarHeading() -> some View {
         modifier(SidebarHeading())
     }
@@ -519,7 +519,7 @@ private struct SidebarHeading: ViewModifier {
     func body(content: Content) -> some View {
         content
             .textStyle(.body, weight: .semibold)
-            .foregroundStyle(palette.accent)
+            .foregroundStyle(palette.tint(.teal))
             .textCase(nil)
     }
 }
