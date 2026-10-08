@@ -237,6 +237,8 @@ y = 26, 16 apart, with separators.
   Black & White, 4, 16, 256 and Millions are at y = 190, 201, 212, 223,
   234 (x 235); its close box (152, 155). Check black and white, 16 colors,
   256 colors, 16 and 256 grays, and Millions.
+- Every color is at least 4.5:1 on white, taken from the screen's own
+  palette.
 - Basilisk draws grays lighter than asked (#444444 shows as #656565): the
   grays in `app/theme.c` are darker than the contrast needs for that
   reason.

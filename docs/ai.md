@@ -5,7 +5,8 @@ run, on-device first and the cloud last. Four jobs:
 
 1. **Summaries**: Summarize in the apps (iPhone, iPad, Mac), and in the
    hosted web app through a server endpoint (the search page's cards have
-   none; its AI Answer uses the same endpoint).
+   none; its AI Answer uses the same endpoint). **The web's endpoint needs
+   your own server for now**: the service isn't published yet (below).
 2. **Label suggestions**: Edit Label opens with the AI's first and second
    choices, applied only on a tap.
 3. **Label New Pages**: classify unlabelled pages, automatically when the
@@ -66,8 +67,8 @@ says so ("Summarized by Claude").
 - Cached per page (url + Hister's `updated`) in the app's Caches, 300 at
   most, never in Hister (its metadata is last-writer-wins).
 - **On the web** the hosted pages can use a companion service on the
-  Hister host (`/shiori/ai/*`, same origin only). It is not part of this
-  repository; the pages ask for it only when built with `SHIORI_AI=1`
+  Hister host (`/shiori/ai/*`, same origin only). **It isn't published
+  yet: for now it needs your own server**, built to the contract below; the pages ask for it only when built with `SHIORI_AI=1`
   (web/README.md), and without it they simply don't offer Summarize or AI
   Answer (nor log a 404 for its status). Its contract, for anyone who builds one: `GET /shiori/ai/status`
   → `{enabled, answer, engine, model, remaining}`; `POST

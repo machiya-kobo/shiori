@@ -7,11 +7,9 @@ Two ways in:
 - **[A. Standalone](#a-standalone-with-sample-pages):** a Hister with invented sample pages.
 - **[B. With Machiya](#b-as-one-of-the-machiya-services):** next to Kura, Konbini, Niwa and SearXNG.
 
-`tools/quickstart-test` runs every block marked `quickstart:` on this page exactly as written, on clean machines: Debian for all of it, and OpenBSD, FreeBSD and NetBSD for the web pages. It can't test the Mac, iPhone and iPad apps (they need Xcode, a signing team and a device) or Cinnamon's menu search and hotkey (they need a desktop session). Those steps, in [build.md](build.md) and [linux.md](linux.md), are checked by hand.
-
 ## Get the tools
 
-You need `git`, `bash`, `python3`, `curl`, and `podman` or `docker` for Hister. The Linux app needs Debian or any Linux with Flatpak. Ports 4433, 8765 and 8766 must be free.
+You need `git`, `bash`, `python3`, `curl`, and `podman` or `docker` for Hister. The Linux app needs Flatpak. Ports 4433, 8765 and 8766 must be free.
 
 *Debian or Ubuntu* (everything, the Linux app included):
 
@@ -152,7 +150,7 @@ linux/flatpak/build.sh
 
 The build also writes `~/.cache/shiori-flatpak/shiori.flatpak`, a bundle to install elsewhere.
 
-Point it at Hister and the web app, and search the way the desktop search does. This overwrites `~/.config/shiori/config.json`, so back up your own first (`cp ~/.config/shiori/config.json ~/.config/shiori/config.json.bak`). Over SSH with no desktop, put `dbus-run-session --` in front of `flatpak run`.
+Point it at Hister and the web app, then search the way the desktop search does. This overwrites `~/.config/shiori/config.json`; back up yours first. Over SSH with no desktop, put `dbus-run-session --` in front of `flatpak run`.
 
 <!-- quickstart: linux-check -->
 ```bash
@@ -175,7 +173,7 @@ Restoring an old paper lantern
 
 **4. Build the Mac, iPhone and iPad apps** (not machine-tested). Follow [build.md](build.md) on a Mac with Xcode 27, and set `SHIORI_SERVER_URL` to `http://<this machine's address>:4433/`. Then [turn on the extension](build.md#turn-on-the-extension).
 
-**Stop.** End the two servers (Ctrl+C), then remove Hister:
+**Stop.** End the two servers (Ctrl-C), then remove Hister:
 
 <!-- quickstart: stop-podman -->
 ```bash
@@ -189,14 +187,14 @@ docker rm -f shiori-hister
 
 ## B. As one of the Machiya services
 
-Clone `machiya`, `kura`, `niwa`, `konbini` and `shiori` side by side. Start the stack with the [Machiya Quickstart](https://github.com/machiya-kobo/machiya#quickstart): Hister, SearXNG, Kura with the sample vault, Konbini and Niwa on this machine's ports, with no sign-in.
+Clone `machiya`, `kura`, `niwa`, `konbini` and `shiori` side by side. Start the stack with [Machiya's sample vault](https://github.com/machiya-kobo/machiya/blob/main/docs/install/sample-vault.md): Hister, SearXNG, Kura with the sample vault, Konbini and Niwa on this machine's ports, with no sign-in.
 
 **1. Build the pages** in `shiori`, with the stack's default addresses. `SHIORI_NIWA_URL` is your Kura (the name is older than Kura):
 
 <!-- quickstart: stack-pages-build -->
 ```bash
 export SHIORI_NIWA_URL=http://localhost:8083/ SHIORI_KONBINI_URL=http://localhost:8081/
-export SHIORI_ROOMS="kura=http://localhost:8083/,konbini=http://localhost:8081/,niwa=http://localhost:8082/,hister=http://localhost:4433/,searxng=http://localhost:8888/"
+export SHIORI_ROOMS="konbini=http://localhost:8081/,niwa=http://localhost:8082/,kura=http://localhost:8083/,hister=http://localhost:4433/,searxng=http://localhost:8888/"
 scripts/build-web.sh demo-site http://localhost:8765/
 scripts/build-pwa.sh demo-app
 ```
@@ -251,3 +249,4 @@ Lantern festival kit
 
 The Mac and iOS apps take the same addresses in `local.yml` (`SHIORI_SEARXNG_URL`, `SHIORI_NIWA_URL`, `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`) or in Settings.
 
+**Tested:** `tools/quickstart-test` runs every block marked `quickstart:` here exactly as written, on clean Debian (all of it) and OpenBSD, FreeBSD and NetBSD (the web pages). The Mac, iPhone and iPad apps and Cinnamon's menu search and hotkey are checked by hand.
