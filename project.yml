@@ -71,6 +71,8 @@ targetTemplates:
         # Defaults for the app's settings, from local.yml.
         ShioriDefaultServerURL: $(SHIORI_SERVER_URL)
         ShioriDefaultSearxngURL: $(SHIORI_SEARXNG_URL)
+        # Kura: SHIORI_KURA_URL, or its older name SHIORI_NIWA_URL.
+        ShioriDefaultKuraURL: $(SHIORI_KURA_URL)
         ShioriDefaultNiwaURL: $(SHIORI_NIWA_URL)
         ShioriDefaultKonbiniURL: $(SHIORI_KONBINI_URL)
         ShioriDefaultSmallwebURL: $(SHIORI_SMALLWEB_URL)

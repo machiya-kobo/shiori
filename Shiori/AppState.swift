@@ -977,7 +977,9 @@ struct SearchPageOptions: Equatable {
     init() {}
 
     init(from defaults: UserDefaults?, bundle: Bundle = .main) {
-        niwaURL = (bundle.object(forInfoDictionaryKey: "ShioriDefaultNiwaURL") as? String) ?? ""
+        // Kura's build default: SHIORI_KURA_URL, else its older name, SHIORI_NIWA_URL.
+        let kura = (bundle.object(forInfoDictionaryKey: "ShioriDefaultKuraURL") as? String) ?? ""
+        niwaURL = kura.isEmpty ? ((bundle.object(forInfoDictionaryKey: "ShioriDefaultNiwaURL") as? String) ?? "") : kura
         konbiniURL = (bundle.object(forInfoDictionaryKey: "ShioriDefaultKonbiniURL") as? String) ?? ""
         smallwebURL = (bundle.object(forInfoDictionaryKey: "ShioriDefaultSmallwebURL") as? String) ?? ""
         obsidianVault = (bundle.object(forInfoDictionaryKey: "ShioriDefaultObsidianVault") as? String) ?? ""

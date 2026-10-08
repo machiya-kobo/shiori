@@ -176,7 +176,7 @@ const DEFAULTS = {
   // The build's SHIORI_OBSIDIAN_VAULT, else none.
   obsidianVault: fromBuild('__SHIORI_OBSIDIAN_VAULT__'),
   // The notes' homes, from the build (the server passes them in).
-  niwaURL: fromBuild('__SHIORI_NIWA_URL__'), konbiniURL: fromBuild('__SHIORI_KONBINI_URL__'),
+  niwaURL: fromBuild('__SHIORI_KURA_URL__'), konbiniURL: fromBuild('__SHIORI_KONBINI_URL__'),
   foldRepeats: true, searchFilters: true, labelSuggestions: true, newsBlurURL: '', aiAnswer: true,
   showOpened: false, resultStyle: 'tint', clickOpens: 'auto', smallWebTab: true, smallWebOpen: 'gateway',
   // Which of Kura's vaults the Notes lists search: 'all', or one's name.

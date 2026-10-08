@@ -21,7 +21,7 @@ The submodule matters: the Safari extension is built from Hister's own. In a clo
 | `DEVELOPMENT_TEAM` | Your team ID, from Xcode → Settings → Accounts. |
 | `SHIORI_BUNDLE_PREFIX` | A reverse-DNS prefix of your own, such as `io.github.you`. Bundle IDs are unique across Apple. The build stops until it's set. |
 | `SHIORI_SERVER_URL` | Your Hister, with the trailing slash. For the [Quickstart](quickstart.md)'s Hister: `http://<this machine's address>:4433/`. |
-| `SHIORI_SEARXNG_URL`, `SHIORI_NIWA_URL`, `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL` | Optional: your SearXNG, Kura (the name is older than Kura), Konbini and small-web gateway. |
+| `SHIORI_SEARXNG_URL`, `SHIORI_KURA_URL`, `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL` | Optional: your SearXNG, Kura, Konbini and small-web gateway. `SHIORI_NIWA_URL`, Kura's older name, still works. |
 
 - The prefix names everything. The app is `<prefix>.shiori` and its extensions `.Extension` and `.Share`. The App Group is `group.<prefix>.shiori` on iOS and `<TeamID>.<prefix>.shiori` on macOS.
 - The server address becomes the default for the app and the extension; both can change it. Unset, the extension gets upstream's `http://127.0.0.1:4433/` and the app asks.

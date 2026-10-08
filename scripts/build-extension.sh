@@ -170,20 +170,22 @@ open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_SEARXNG_URL__", url))
 PY
 echo "==> Default SearXNG URL: ${SHIORI_SEARXNG_URL:-(none)}"
 
-# Niwa and Konbini, where vault notes live on the web (optional).
-SHIORI_NIWA_URL="${SHIORI_NIWA_URL:-$(yml SHIORI_NIWA_URL)}"
+# Kura and Konbini, where vault notes live on the web (optional). Kura's
+# setting is SHIORI_KURA_URL; its older name, SHIORI_NIWA_URL, still counts.
+SHIORI_KURA_URL="${SHIORI_KURA_URL:-${SHIORI_NIWA_URL:-$(yml SHIORI_KURA_URL)}}"
+SHIORI_KURA_URL="${SHIORI_KURA_URL:-$(yml SHIORI_NIWA_URL)}"
 SHIORI_KONBINI_URL="${SHIORI_KONBINI_URL:-$(yml SHIORI_KONBINI_URL)}"
-python3 - "$RESOURCES/background.js" "$SHIORI_NIWA_URL" "$SHIORI_KONBINI_URL" <<'PY'
+python3 - "$RESOURCES/background.js" "$SHIORI_KURA_URL" "$SHIORI_KONBINI_URL" <<'PY'
 import sys
-p, niwa, konbini = sys.argv[1:]
+p, kura, konbini = sys.argv[1:]
 s = open(p, encoding="utf-8").read()
-for placeholder, value in (("__SHIORI_NIWA_URL__", niwa), ("__SHIORI_KONBINI_URL__", konbini)):
+for placeholder, value in (("__SHIORI_KURA_URL__", kura), ("__SHIORI_KONBINI_URL__", konbini)):
     if placeholder not in s:
         sys.exit("background.js lost the %s placeholder" % placeholder)
     s = s.replace(placeholder, value)
 open(p, "w", encoding="utf-8").write(s)
 PY
-echo "==> Niwa: ${SHIORI_NIWA_URL:-(none)}   Konbini: ${SHIORI_KONBINI_URL:-(none)}"
+echo "==> Kura: ${SHIORI_KURA_URL:-(none)}   Konbini: ${SHIORI_KONBINI_URL:-(none)}"
 
 # The Obsidian vault's name (if the build sets one), the extension's
 # default before the app answers, and its results page's; none unset.
@@ -255,7 +257,7 @@ echo "==> App ID: ${APP_ID:-(none: application.id)}"
 
 # The Machiya rooms for the results page's switcher (optional).
 SHIORI_ROOMS="${SHIORI_ROOMS:-$(yml SHIORI_ROOMS)}"
-SHIORI_ROOMS="$SHIORI_ROOMS" SHIORI_NIWA_URL="$SHIORI_NIWA_URL" SHIORI_KONBINI_URL="$SHIORI_KONBINI_URL" \
+SHIORI_ROOMS="$SHIORI_ROOMS" SHIORI_KURA_URL="$SHIORI_KURA_URL" SHIORI_KONBINI_URL="$SHIORI_KONBINI_URL" \
   SHIORI_SERVER_URL="$SHIORI_SERVER_URL" SHIORI_SEARXNG_URL="$SHIORI_SEARXNG_URL" \
   python3 scripts/rooms-stamp.py "$RESOURCES/search.js"
 

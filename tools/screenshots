@@ -242,7 +242,7 @@ def main():
         subprocess.run([os.path.join(ROOT, "tools", "quickstart", "seed-hister.py"), hister], check=True, env=env)
         site, app = os.path.join(work, "site"), os.path.join(work, "app")
         kura = a.kura or "http://127.0.0.1:%d/" % stand_in_kura().server_address[1]
-        build_env = dict(env, SHIORI_NIWA_URL=kura)
+        build_env = dict(env, SHIORI_KURA_URL=kura)
         subprocess.run([os.path.join(ROOT, "scripts", "build-web.sh"), site, "http://localhost:%d/" % site_port],
                        check=True, cwd=ROOT, env=build_env, capture_output=True)
         subprocess.run([os.path.join(ROOT, "scripts", "build-pwa.sh"), app], check=True, cwd=ROOT, env=build_env,

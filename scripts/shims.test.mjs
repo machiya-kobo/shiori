@@ -167,7 +167,7 @@ test("on a fresh install (no settings stored yet) Kura's address is the build's"
     url === KURA + 'api/vaults'
       ? new Response(JSON.stringify({ vaults: [{ name: 'personal', default: true, private: false }, { name: 'work', default: false, private: false }] }))
       : new Response('{}', { status: 201 });
-  const source = backgroundShim.replaceAll('__SHIORI_NIWA_URL__', KURA);
+  const source = backgroundShim.replaceAll('__SHIORI_KURA_URL__', KURA);
   const { ctx, calls } = loadBackground({ network, source });
   assert.equal((await ctx.fetch(BASE + 'api/add', addInit({ url: KURA + 'v/work/n/plan', html: '<p>x</p>' }))).status, 201);
   assert.equal(calls.filter((c) => c.url === KURA + 'api/vaults').length, 1);

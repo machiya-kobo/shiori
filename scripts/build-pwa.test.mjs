@@ -54,7 +54,7 @@ test('the build copies only the icons the web app uses', () => {
 
 test("the service worker's cache name is a hash of the built files: other settings, a new one", () => {
   const version = (out) => read(join(out, 'sw.js')).match(/const CACHE = 'shiori-app-([0-9a-f]+)'/)[1];
-  const outs = [build(), build(), build({ SHIORI_NIWA_URL: 'https://kura.example/' }), build({}, 'https://status.example/')];
+  const outs = [build(), build(), build({ SHIORI_KURA_URL: 'https://kura.example/' }), build({}, 'https://status.example/')];
   try {
     const [a, b, c, d] = outs.map(version);
     assert.match(a, /^[0-9a-f]{12}$/);
@@ -243,5 +243,24 @@ test('the asset check fails a build that names a file it lacks', () => {
     );
   } finally {
     rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("Kura's address is SHIORI_KURA_URL; its older name, SHIORI_NIWA_URL, still counts, and the new one wins", () => {
+  const app = (out) => read(join(out, '_shiori', 'app.js'));
+  const outs = [
+    build({ SHIORI_KURA_URL: 'https://kura.example/' }),
+    build({ SHIORI_NIWA_URL: 'https://old.example/' }),
+    build({ SHIORI_KURA_URL: 'https://kura.example/', SHIORI_NIWA_URL: 'https://old.example/' }),
+    build(),
+  ];
+  try {
+    const [kura, old, both, none] = outs.map(app);
+    assert.ok(kura.includes("fromBuild('https://kura.example/')"));
+    assert.ok(old.includes("fromBuild('https://old.example/')"));
+    assert.ok(both.includes("fromBuild('https://kura.example/')") && !both.includes('old.example'));
+    assert.ok(none.includes("fromBuild('__SHIORI_KURA_URL__')"));
+  } finally {
+    for (const out of outs) rmSync(out, { recursive: true, force: true });
   }
 });

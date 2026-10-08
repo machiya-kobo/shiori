@@ -89,7 +89,7 @@ test('the rooms: http(s) bases only, never on Hister or SearXNG', () => {
   assert.deepEqual(plain(ROOMS), ['https://kura.example', 'https://konbini.example']);
   // A room on Hister's origin (one host, /kura/ under it) gets no token at all.
   assert.deepEqual(plain(S.machiyaRooms(['https://hister.example/kura/', KONBINI], [HISTER, SEARX])), ['https://konbini.example']);
-  assert.deepEqual(plain(S.machiyaRooms(['', '__SHIORI_NIWA_URL__', 'ftp://kura.example/', 'https://u:p@kura.example/'], [])), []);
+  assert.deepEqual(plain(S.machiyaRooms(['', '__SHIORI_KURA_URL__', 'ftp://kura.example/', 'https://u:p@kura.example/'], [])), []);
   // An http room counts only as configured: http, its own port.
   const local = S.machiyaRooms(['http://localhost:8080/'], []);
   assert.equal(S.mayCarryMachiyaToken('http://localhost:8080/api/vaults', local), true);

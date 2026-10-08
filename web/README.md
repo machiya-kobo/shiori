@@ -163,7 +163,7 @@ is dropped at once, so a reload never shares again. Without
   AI and this browser's own text size (the `machiya_textSizeDevice`
   cookie) stay here. Some start from the build, from the
   environment of `build-web.sh` and `build-pwa.sh` (all optional):
-  - `SHIORI_NIWA_URL` (Kura's address; the name is older than Kura), `SHIORI_KONBINI_URL`: the notes' homes;
+  - `SHIORI_KURA_URL` (Kura's address; `SHIORI_NIWA_URL`, its older name, still works), `SHIORI_KONBINI_URL`: the notes' homes;
   - `SHIORI_OBSIDIAN_VAULT`: the vault notes open in, in Obsidian;
   - `SHIORI_ROOMS`: the Rooms menu, as `key=url,…` (shiori, konbini, niwa,
     kura, hister, searxng, and machiya for the house's front door:

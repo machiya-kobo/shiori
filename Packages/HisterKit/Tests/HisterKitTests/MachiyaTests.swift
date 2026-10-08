@@ -82,7 +82,7 @@ struct MachiyaTests {
     @Test func roomsAreHTTPBasesNeverOnHisterOrSearXNG() {
         #expect(rooms == ["https://\(Self.kuraHost)", "https://\(Self.konbiniHost)"])
         #expect(Machiya.rooms(["https://hister.example/kura/", Self.konbini], excluding: [Self.hister, Self.searx]) == ["https://\(Self.konbiniHost)"])
-        #expect(Machiya.rooms(["", "__SHIORI_NIWA_URL__", "ftp://kura.example/", "https://u:p@kura.example/"]).isEmpty)
+        #expect(Machiya.rooms(["", "__SHIORI_KURA_URL__", "ftp://kura.example/", "https://u:p@kura.example/"]).isEmpty)
         let local = Machiya.rooms(["http://localhost:8080/"])
         #expect(Machiya.mayCarryToken(to: "http://localhost:8080/api/vaults", rooms: local))
         #expect(!Machiya.mayCarryToken(to: "https://localhost:8080/api/vaults", rooms: local))

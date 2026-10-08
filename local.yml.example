@@ -18,9 +18,9 @@ settings:
     # Your SearXNG instance, for combined search from Safari (optional).
     SHIORI_SEARXNG_URL: ""
     # Where notes live on the web (optional), so results can link them:
-    # SHIORI_NIWA_URL is your Kura (the notes' search and reader; the name is
-    # older than Kura), SHIORI_KONBINI_URL your Konbini board.
-    SHIORI_NIWA_URL: ""
+    # SHIORI_KURA_URL is your Kura (Machiya's notes app; SHIORI_NIWA_URL, its
+    # older name, still works), SHIORI_KONBINI_URL your Konbini board.
+    SHIORI_KURA_URL: ""
     SHIORI_KONBINI_URL: ""
     # The Machiya rooms for the results page's Rooms switcher, as
     # "key=url,…" (shiori, konbini, niwa, kura, hister, searxng); Kura,

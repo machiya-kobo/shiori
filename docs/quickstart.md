@@ -189,11 +189,11 @@ docker rm -f shiori-hister
 
 Clone `machiya`, `kura`, `niwa`, `konbini` and `shiori` side by side. Start the stack with [Machiya's sample vault](https://github.com/machiya-kobo/machiya/blob/main/docs/install/sample-vault.md): Hister, SearXNG, Kura with the sample vault, Konbini and Niwa on this machine's ports, with no sign-in.
 
-**1. Build the pages** in `shiori`, with the stack's default addresses. `SHIORI_NIWA_URL` is your Kura (the name is older than Kura):
+**1. Build the pages** in `shiori`, with the stack's default addresses:
 
 <!-- quickstart: stack-pages-build -->
 ```bash
-export SHIORI_NIWA_URL=http://localhost:8083/ SHIORI_KONBINI_URL=http://localhost:8081/
+export SHIORI_KURA_URL=http://localhost:8083/ SHIORI_KONBINI_URL=http://localhost:8081/
 export SHIORI_ROOMS="konbini=http://localhost:8081/,niwa=http://localhost:8082/,kura=http://localhost:8083/,hister=http://localhost:4433/,searxng=http://localhost:8888/"
 scripts/build-web.sh demo-site http://localhost:8765/
 scripts/build-pwa.sh demo-app
@@ -247,6 +247,6 @@ flatpak run io.github.machiya_kobo.Shiori provider-search lantern \
 Lantern festival kit
 ```
 
-The Mac and iOS apps take the same addresses in `local.yml` (`SHIORI_SEARXNG_URL`, `SHIORI_NIWA_URL`, `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`) or in Settings.
+The Mac and iOS apps take the same addresses in `local.yml` (`SHIORI_SEARXNG_URL`, `SHIORI_KURA_URL`, `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL`) or in Settings.
 
 **Tested:** `tools/quickstart-test` runs every block marked `quickstart:` here exactly as written, on clean Debian (all of it) and OpenBSD, FreeBSD and NetBSD (the web pages). The Mac, iPhone and iPad apps and Cinnamon's menu search and hotkey are checked by hand.

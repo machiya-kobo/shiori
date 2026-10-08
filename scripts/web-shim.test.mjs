@@ -58,7 +58,7 @@ test('settings stay in this browser: the server is never asked', async () => {
 });
 
 test('the notes\' homes start from the build, and a browser\'s own choice wins', async () => {
-  const stamped = source.replace('__SHIORI_NIWA_URL__', 'https://kura.example/');
+  const stamped = source.replace('__SHIORI_KURA_URL__', 'https://kura.example/');
   const window = {};
   const storage = new Map();
   vm.runInNewContext(stamped, {

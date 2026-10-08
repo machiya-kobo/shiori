@@ -35,6 +35,8 @@
 	<string>$(SHIORI_APP_GROUP)</string>
 	<key>ShioriDefaultKonbiniURL</key>
 	<string>$(SHIORI_KONBINI_URL)</string>
+	<key>ShioriDefaultKuraURL</key>
+	<string>$(SHIORI_KURA_URL)</string>
 	<key>ShioriDefaultNeverSuggest</key>
 	<string>$(SHIORI_AI_NEVER_SUGGEST)</string>
 	<key>ShioriDefaultNiwaURL</key>

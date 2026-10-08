@@ -492,7 +492,7 @@ const shioriHisterToken = (() => {
   // again counts at once), from the Kura address in the settings or, before
   // the settings were ever stored, the build's (installCombinedSearch's
   // DEFAULTS.niwaURL). A failure throws: isPrivateNoteNow then shares none.
-  const KURA_DEFAULT = '__SHIORI_NIWA_URL__';
+  const KURA_DEFAULT = '__SHIORI_KURA_URL__';
   async function readVaults() {
     const settings = { niwaURL: KURA_DEFAULT, ...((await storage.get(['shioriSettings'])).shioriSettings || {}) };
     const base = String(settings.niwaURL || '').trim();
@@ -582,7 +582,7 @@ const shioriHisterToken = (() => {
 // them): extension pages only, never a content script.
 const shioriMachiya = (() => {
   if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return null;
-  const KURA_DEFAULT = '__SHIORI_NIWA_URL__';
+  const KURA_DEFAULT = '__SHIORI_KURA_URL__';
   const KONBINI_DEFAULT = '__SHIORI_KONBINI_URL__';
   const SEARXNG_DEFAULT = '__SHIORI_SEARXNG_URL__';
   const FRESH_MS = 60_000;
@@ -700,7 +700,7 @@ const shioriMachiya = (() => {
     searchFilters: true,
     labelSuggestions: true,
     obsidianVault: '__SHIORI_OBSIDIAN_VAULT__',
-    niwaURL: '__SHIORI_NIWA_URL__',
+    niwaURL: '__SHIORI_KURA_URL__',
     konbiniURL: '__SHIORI_KONBINI_URL__',
     // Where notes come from: '' until chosen (Kura when one is set up), 'kura' or 'hister' (S.notesSource).
     notesSource: '',

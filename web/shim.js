@@ -23,7 +23,7 @@
   ];
   // The notes' homes, from the build (the server passes them in); a
   // browser's own choice wins.
-  const NOTE_HOMES = { niwaURL: '__SHIORI_NIWA_URL__', konbiniURL: '__SHIORI_KONBINI_URL__' };
+  const NOTE_HOMES = { niwaURL: '__SHIORI_KURA_URL__', konbiniURL: '__SHIORI_KONBINI_URL__' };
   const RECENT_LIMIT = 5;
   // The companion AI service (/shiori/ai/*), only when the build says it's
   // there (SHIORI_AI=1): without it the page never asks, so a host without
