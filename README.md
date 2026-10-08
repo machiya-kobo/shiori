@@ -4,6 +4,8 @@
 
 Shiori (栞, bookmark) is Machiya's search app. Search Hister and SearXNG from an iPhone, iPad, Mac, Linux, Haiku, a Classic Macintosh or the web. It's also a Hister extension for Safari on macOS and iOS, or you can use Hister's [official](https://hister.org/docs/browser-extension) or [community](https://github.com/nburns/hister-safari) extensions.
 
+Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+
 <p align="center">
 <a href="https://machiya-kobo.github.io/">Machiya</a> · <a href="#quickstart">Quickstart</a> · <a href="docs/build.md">iPhone, iPad and Mac</a> · <a href="docs/extension.md">Safari</a> · <a href="docs/linux.md">Linux</a> · <a href="docs/haiku.md">Haiku</a> · <a href="docs/classic.md">Classic Macintosh</a> · <a href="web/README.md">Web</a> · <a href="docs/signing-in.md">Sign In</a> · <a href="#credits-and-license">License</a>
 </p>
