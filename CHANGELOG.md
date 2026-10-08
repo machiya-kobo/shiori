@@ -5,6 +5,47 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 0.18.0 (2026-10-07)
+
+### Added
+
+- **Hover that shows what a click will do**, in the apps and on the web:
+  a result's title (the link to the original) underlines under the
+  pointer, with the link cursor on the Mac; a sidebar row fills with a
+  light accent across the whole row; a pill lifts onto a tint of its own
+  color, its text shifted to a shade that stays readable (4.5:1 in every
+  theme).
+- **`SHIORI_KURA_URL`** names Kura's address in builds. The older
+  `SHIORI_NIWA_URL` still works.
+- **`tools/screenshots --site`** takes Machiya's site images from the
+  sample data.
+
+### Changed
+
+- **Sidebar headings are teal**, so Collections and Labels read apart
+  from their rows. On the search page, a tab's heading (Your Pages, Your
+  Code…) wears its tab's color.
+- **A shorter README**, with every feature in docs/features.md. The
+  Linux and Haiku pages keep what installing needs; developer notes moved
+  to linux/README.md and haiku/README.md. Subscribe and the web's AI now
+  point to Machiya's shiori-feed and shiori-ai.
+
+### Fixed
+
+- **The web app sent every search twice**, the web search included (each
+  one counts against a paid search API). Now once, and the first result
+  arrives sooner (about 1.95 s to 1.5 s with a slow web).
+- **The search page asked Hister for its rules** on each of the first
+  few keystrokes; now once.
+
+### Security
+
+- **Safari's extension keeps Hister's token in memory only**, never in
+  the extension's storage, where content scripts could read it. Shiori's
+  own pages ask the background for it.
+- **mac-bridge 0.1.1** (Shiori for Classic Macintosh's bridge) checks the
+  room token on the Kura port too.
+
 ## 0.17.4 (2026-10-07)
 
 ### Changed
