@@ -2689,8 +2689,21 @@
       data = await fetchJSON(url.href, { timeout: page === 1 && webLike ? WEB_TIMEOUT_MS : 10000 });
       pageState.web = data;
       saveState();
-    } catch (_) {
+    } catch (err) {
       webArrived(null);
+      // A stock SearXNG answers 403 to format=json: say so, rather than empty results or a jump to DuckDuckGo.
+      if (err && err.status === 403) {
+        await histerDone;
+        await vaultDone;
+        reveal();
+        $('web').hidden = false;
+        $('web-status').replaceChildren(
+          "SearXNG doesn't allow JSON results: turn on formats: json under search: in its settings.yml. ",
+          el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'),
+        );
+        mixIn();
+        return restoreScroll();
+      }
       if (page === 1 && webLike) {
         await histerDone;
         await vaultDone;

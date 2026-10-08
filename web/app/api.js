@@ -230,6 +230,8 @@ export function web(q, page = 1) {
   const url = `${ROOT}searx/search?${query({ q, format: 'json', pageno: String(page), categories: 'general' })}`;
   return shared('web ' + url, async () => {
     const response = await fetch(url, { credentials: 'same-origin' }).catch(() => null);
+    // A stock SearXNG answers 403 to format=json.
+    if (response && response.status === 403) throw new HisterError("SearXNG doesn't allow JSON results: turn on formats: json under search: in its settings.yml.");
     if (!response || !response.ok) throw new HisterError("The web search didn't answer.");
     return response.json();
   });
