@@ -154,8 +154,11 @@ class BridgeTest(unittest.TestCase):
             headers.setdefault(k.strip().lower(), []).append(v.strip())
         return lines[0], headers, body
 
-    def get(self, service, target, headers=(), method="GET"):
+    def get(self, service, target, headers=(), method="GET", token=GOOD):
+        """A request as the Mac sends it: with its room token unless the test names its own Authorization (or none)."""
         req = "%s %s HTTP/1.0\r\nHost: bridge\r\n" % (method, target)
+        if token and not any(k.lower() == "authorization" for k, _ in headers):
+            headers = [("Authorization", "Bearer " + token)] + list(headers)
         for k, v in headers:
             req += "%s: %s\r\n" % (k, v)
         line, h, body = self.raw(service, (req + "\r\n").encode("latin-1"))
@@ -177,13 +180,15 @@ class BridgeTest(unittest.TestCase):
         self.assertEqual(self.hister_seen + self.kura_seen, [])
 
     def test_the_tailnet_and_denied_addresses_can_never_be_allowed(self):
-        for allow in ("100.64.0.0/10", "100.100.1.2", "0.0.0.0/0", "192.0.2.0/24"):
+        for allow in ("100.64.0.0/10", "100.100.1.2", "0.0.0.0/0", "192.0.2.0/24", "fd7a:115c:a1e0::/48",
+                      "fd7a:115c:a1e0::1", "fd7a::/16", "::/0"):
             with self.assertRaises(bridge.ConfigError):
                 bridge.Config(dict(self.env, BRIDGE_ALLOW=allow))
         with self.assertRaises(bridge.ConfigError):
             bridge.Config(dict(self.env, BRIDGE_ALLOW=""))
         self.assertFalse(self.config.admits("100.64.0.1"))
         self.assertFalse(self.config.admits("::ffff:10.0.0.1"))
+        self.assertFalse(self.config.admits("fd7a:115c:a1e0::5"))
         self.assertTrue(self.config.admits("::ffff:127.0.0.1"))
 
     def test_settings_are_checked(self):
@@ -284,20 +289,24 @@ class BridgeTest(unittest.TestCase):
 
     # -- the token swap on Hister's port ----------------------------------------------------------------------------
 
-    def test_hister_without_a_room_token_is_401_and_never_reaches_hister(self):
-        for auth in ([], [("Authorization", "Bearer " + HISTER_TOKEN)], [("X-Access-Token", HISTER_TOKEN)],
-                     [("Authorization", "Basic " + GOOD)], [("Authorization", "Bearer mht_short")],
-                     [("Authorization", "Bearer " + GOOD), ("Authorization", "Bearer " + GOOD)]):
-            status, _, body, _ = self.get("hister", "/search?query=%7B%7D", auth)
-            self.assertEqual(status, 401, auth)
-            self.assertIn(b"error", body)
-        self.assertEqual(self.hister_seen, [])
+    def test_without_a_room_token_is_401_and_never_reaches_an_upstream(self):
+        for service, path in (("hister", "/search?query=%7B%7D"), ("kura", "/api/recent")):
+            for auth in ([], [("Authorization", "Bearer " + HISTER_TOKEN)], [("X-Access-Token", HISTER_TOKEN)],
+                         [("Authorization", "Basic " + GOOD)], [("Authorization", "Bearer mht_short")],
+                         [("Authorization", "Bearer " + GOOD), ("Authorization", "Bearer " + GOOD)],
+                         [("Cookie", "machiya_session=x")], [("Tailscale-User-Login", "owner@example.com")]):
+                status, _, body, _ = self.get(service, path, auth, token=None)
+                self.assertEqual(status, 401, (service, auth))
+                self.assertIn(b"error", body)
+        self.assertEqual(self.hister_seen + self.kura_seen, [])
+        self.assertEqual(self.helper_calls, [])
 
     def test_a_refused_or_other_users_token_is_401(self):
-        for token in (REVOKED, OTHER):
-            status, *_ = self.get("hister", "/search?query=%7B%7D", [("Authorization", "Bearer " + token)])
-            self.assertEqual(status, 401)
-        self.assertEqual(self.hister_seen, [])
+        for service, path in (("hister", "/search?query=%7B%7D"), ("kura", "/api/recent")):
+            for token in (REVOKED, OTHER):
+                status, *_ = self.get(service, path, token=token)
+                self.assertEqual(status, 401, (service, token))
+        self.assertEqual(self.hister_seen + self.kura_seen, [])
 
     def test_the_check_names_this_bridge_and_is_cached(self):
         for _ in range(3):
@@ -320,9 +329,10 @@ class BridgeTest(unittest.TestCase):
 
     def test_helper_down_is_503(self):
         self.helper.down = True
-        status, *_ = self.get("hister", "/search?query=%7B%7D", [("Authorization", "Bearer " + GOOD)])
-        self.assertEqual(status, 503)
-        self.assertEqual(self.hister_seen, [])
+        for service, path in (("hister", "/search?query=%7B%7D"), ("kura", "/api/recent")):
+            status, *_ = self.get(service, path)
+            self.assertEqual(status, 503, service)
+        self.assertEqual(self.hister_seen + self.kura_seen, [])
 
     def test_no_hister_token_on_disk_is_503(self):
         os.unlink(self.token_file)
@@ -330,10 +340,24 @@ class BridgeTest(unittest.TestCase):
         status, *_ = self.get("hister", "/search?query=%7B%7D", [("Authorization", "Bearer " + GOOD)])
         self.assertEqual(status, 503)
 
-    def test_kura_gets_the_token_as_sent_and_is_never_asked_about_hister(self):
-        self.get("kura", "/api/recent", [("Authorization", "Bearer " + GOOD)])
+    def test_kura_gets_the_checked_token_and_never_histers(self):
+        status, *_ = self.get("kura", "/api/recent", [("Authorization", "bearer  " + GOOD)])
+        self.assertEqual(status, 200)
+        self.assertEqual(self.kura_seen[0]["headers"]["Authorization"], "Bearer " + GOOD)
         self.assertNotIn("X-Access-Token", self.kura_seen[0]["headers"])
-        self.assertEqual(self.helper_calls, [])
+        self.assertEqual(len(self.helper_calls), 1)
+        self.assertEqual(self.helper_calls[0]["X-Machiya-Session"], GOOD)
+        self.assertEqual(self.helper_calls[0]["X-Machiya-Room"], "http://bridge.example:8070")
+
+    def test_a_forwarded_header_with_a_control_character_or_a_fold_is_400(self):
+        for service, path in (("hister", "/search?query=%7B%7D"), ("kura", "/api/recent")):
+            for extra in (b"Accept: application/json\r\n folded\r\n", b"If-None-Match: \"a\tb\"\r\n",
+                          b"Origin: hister://\x01\r\n", b"Accept: caf\xc3\xa9\r\n"):
+                req = b"GET " + path.encode() + b" HTTP/1.0\r\nHost: bridge\r\nAuthorization: Bearer " \
+                    + GOOD.encode() + b"\r\n" + extra + b"\r\n"
+                line, _, _ = self.raw(service, req)
+                self.assertEqual(int(line.split()[1]), 400, (service, extra))
+        self.assertEqual(self.hister_seen + self.kura_seen, [])
 
     # -- replies ----------------------------------------------------------------------------------------------------
 

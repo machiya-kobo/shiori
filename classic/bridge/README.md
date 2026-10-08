@@ -8,13 +8,16 @@ settings.
 
 - **One credential on the Mac:** a room token (`mht_…`) issued by
   hister-login with two scopes, `kura` and the bridge's own token
-  service. Kura checks it itself. On the Hister port the bridge checks it
-  with hister-login and only then puts Hister's token in its place.
-  Hister's token never reaches the LAN.
+  service. On both ports the bridge checks it with hister-login first: no
+  token, or one refused, is a 401, and with the helper down a 503, before
+  any upstream is asked. Kura then gets it as sent and checks it too; on
+  the Hister port Hister's token goes in its place. Hister's token never
+  reaches the LAN.
 - **What it refuses:** any method but GET, any path not listed (matched
   before decoding), sources off `BRIDGE_ALLOW` (the tailnet's
-  100.64.0.0/10 can't be listed), `vault=all`, and vaults off
-  `BRIDGE_VAULTS`.
+  100.64.0.0/10 and fd7a:115c:a1e0::/48 can't be listed), `vault=all`,
+  vaults off `BRIDGE_VAULTS`, and a forwarded header whose value isn't
+  printable ASCII (a control character or a folded line).
 - **What passes:** a short list of headers each way (never `Cookie`,
   `Set-Cookie`, `Tailscale-*` or `X-Forwarded-*`). Replies come back with
   `Content-Length`, never chunked. A reply over `BRIDGE_MAX_BYTES` is a

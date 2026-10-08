@@ -6,15 +6,17 @@ the LAN in plain HTTP/1.0, one port per service, and passes a short list of read
     port BRIDGE_HISTER_PORT (8070)  ->  BRIDGE_HISTER_URL   GET /search, /api/preview, /api/config
     port BRIDGE_KURA_PORT   (8071)  ->  BRIDGE_KURA_URL     GET /api/search, /api/recent, /api/note, /api/vaults
 
-The Mac holds one credential, a room token (`Authorization: Bearer mht_…`) with two scopes:
-  - on the Kura port it goes to Kura untouched, and Kura checks it;
-  - on the Hister port the bridge asks hister-login (`GET /v1/check`, as vaultkit's TokenGate does) whether the token
-    is good for this bridge's token service, and only then drops it and adds Hister's own token (read from
-    BRIDGE_HISTER_TOKEN_FILE). Hister's token never reaches the LAN.
+The Mac holds one credential, a room token (`Authorization: Bearer mht_…`) with two scopes. On both ports the bridge
+first asks hister-login (`GET /v1/check`, as vaultkit's TokenGate does) whether the token is good for this bridge's
+token service; a request without one is refused before any upstream is asked, and with the helper down it's a 503.
+  - on the Kura port it then goes to Kura as sent, and Kura checks it too (the bridge reaches Kura as its host's own
+    tailnet node, so a request Kura couldn't check must never get there);
+  - on the Hister port it's dropped and Hister's own token (read from BRIDGE_HISTER_TOKEN_FILE) goes in its place.
+    Hister's token never reaches the LAN.
 
 Everything else is refused: another method, another path (matched exactly, before any decoding), a source address off
-BRIDGE_ALLOW, `vault=all` or a vault off BRIDGE_VAULTS. Only an allow-list of headers goes upstream, and only a short
-list comes back (never Set-Cookie). Replies to the Mac are HTTP/1.0 with Content-Length (never chunked); a reply over
+BRIDGE_ALLOW, `vault=all` or a vault off BRIDGE_VAULTS. Only an allow-list of headers goes upstream, each value plain printable
+ASCII (no control characters, no folded lines), and only a short list comes back (never Set-Cookie). Replies to the Mac are HTTP/1.0 with Content-Length (never chunked); a reply over
 BRIDGE_MAX_BYTES is a 413, a redirect is passed back as is, never followed. Nothing is cached but the token check, and
 the log holds the path only: never a query string (search words), a header or a body.
 
@@ -23,7 +25,8 @@ the log holds the path only: never a query string (search words), a header or a 
 Standard library only. Settings (environment):
     BRIDGE_HISTER_URL, BRIDGE_KURA_URL   the upstreams, https://… (http only with BRIDGE_ALLOW_HTTP_UPSTREAM=1: tests)
     BRIDGE_HISTER_PORT, BRIDGE_KURA_PORT the ports (8070, 8071); BRIDGE_BIND the address (0.0.0.0)
-    BRIDGE_ALLOW        the source addresses or networks admitted (required); 100.64.0.0/10 is never admitted
+    BRIDGE_ALLOW        the source addresses or networks admitted (required); the tailnet's 100.64.0.0/10 and
+                        fd7a:115c:a1e0::/48 are never admitted
     BRIDGE_DENY         addresses or networks never admitted (the host's own LAN address)
     BRIDGE_AUTH_URL     hister-login's internal address (http://hister-login:8081)
     BRIDGE_PUBLIC_URL   the origin this bridge's token service is registered under in HISTER_LOGIN_TOKEN_SERVICES
@@ -47,13 +50,15 @@ import threading
 import time
 from urllib.parse import parse_qsl, urlsplit
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 HISTER_PATHS = frozenset({"/search", "/api/preview", "/api/config"})
 KURA_PATHS = frozenset({"/api/search", "/api/recent", "/api/note", "/api/vaults"})
-NEVER = (ipaddress.ip_network("100.64.0.0/10"),)        # the tailnet: its members reach the LAN through a subnet router
+NEVER = (ipaddress.ip_network("100.64.0.0/10"),        # the tailnet: its members reach the LAN through a subnet router
+         ipaddress.ip_network("fd7a:115c:a1e0::/48"))
 RTOKEN_RE = re.compile(r"mht_[A-Za-z0-9_-]{43}\Z")      # a room token (vaultkit's RTOKEN_RE)
 VAULT_RE = re.compile(r"[a-z0-9-]{1,64}\Z")
+HEADER_VALUE_RE = re.compile(r"[\x20-\x7e]*\Z")          # what a forwarded header's value may hold (no obs-fold)
 CHECK_TIMEOUT = 2.0
 TTL_OK, TTL_OUT, TTL_DOWN = 60, 5, 5
 CACHE_MAX = 256
@@ -278,6 +283,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except ValueError:
             return self._error(400, "not a query this bridge reads")
 
+        forwarded = ("Accept", "If-None-Match", "Origin", "Authorization")
+        if any(not HEADER_VALUE_RE.match(v) for name in forwarded for v in self.headers.get_all(name) or []):
+            return self._error(400, "not a header this bridge reads")
         headers = [("Accept", self._one("Accept") or "application/json"), ("Accept-Encoding", "identity"),
                    ("Connection", "close")]
         etag = self._one("If-None-Match")
@@ -285,27 +293,28 @@ class Handler(http.server.BaseHTTPRequestHandler):
             headers.append(("If-None-Match", etag))
         if self._one("Origin") == "hister://":
             headers.append(("Origin", "hister://"))
-        auth = self.headers.get_all("Authorization") or []
-        if len(auth) > 1:
-            return self._error(401, "one credential, please")
 
         if self.service == "kura":
             refusal = self._vault_refusal(pairs)
             if refusal:
                 return self._error(403, refusal)
-            if auth:
-                headers.append(("Authorization", auth[0].strip()))
+        auth = self.headers.get_all("Authorization") or []
+        if len(auth) > 1:
+            return self._error(401, "one credential, please")
+        scheme, _, token = (auth[0] if auth else "").strip().partition(" ")
+        token = token.strip()
+        if not auth or scheme.lower() != "bearer" or not RTOKEN_RE.match(token):
+            return self._error(401, "sign in: this Mac's room token is needed")
+        outcome = self.check(token)
+        if outcome == "down":
+            return self._error(503, "sign-in is unavailable: try again")
+        if outcome != "ok":
+            return self._error(401, "that room token isn't good for this bridge")
+
+        if self.service == "kura":
+            headers.append(("Authorization", "Bearer " + token))
             upstream = self.config.kura
         else:
-            scheme, _, token = (auth[0] if auth else "").strip().partition(" ")
-            token = token.strip()
-            if not auth or scheme.lower() != "bearer" or not RTOKEN_RE.match(token):
-                return self._error(401, "sign in: this Mac's room token is needed")
-            outcome = self.check(token)
-            if outcome == "down":
-                return self._error(503, "sign-in is unavailable: try again")
-            if outcome != "ok":
-                return self._error(401, "that room token isn't good for this bridge")
             try:
                 with open(self.config.token_file, encoding="ascii") as f:
                     hister_token = f.read().strip()

@@ -57,9 +57,10 @@ the original M0110 keyboard has no arrows: use Tab and the Search menu.)
     on your LAN, one port for Hister and one for Kura, passes a few
     read-only paths on over HTTPS, and holds Hister's token itself. The Mac
     holds only a **room token** (`mht_…`, from the sign-in helper's
-    sessions page, with the scopes `kura` and the bridge's): Kura checks
-    it, and the bridge checks it with the helper before swapping in
-    Hister's own token, which never reaches the LAN. List your Mac's
+    sessions page, with the scopes `kura` and the bridge's): the bridge
+    checks it with the helper on both ports, then passes it to Kura (which
+    checks it too) or swaps in Hister's own token, which never reaches the
+    LAN. List your Mac's
     address in `BRIDGE_ALLOW`.
 
 ## Hister over plain HTTP
