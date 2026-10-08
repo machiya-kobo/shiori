@@ -2,7 +2,7 @@
 
 [Machiya](https://github.com/machiya-kobo/machiya) is a set of small self-hosted apps for finding what you've read: your pages ([Hister](https://github.com/asciimoo/hister)), the web ([SearXNG](https://github.com/searxng/searxng)), your notes ([Obsidian](https://obsidian.md)) and your code ([Forgejo](https://forgejo.org) or [GitHub](https://github.com)).
 
-Shiori (栞, bookmark) is Machiya's search app. Search Hister and SearXNG from an iPhone, iPad, Mac, Linux, Haiku, a Classic Macintosh or the web. It's also a Hister extension for Safari on macOS and iOS: Hister's own extension, patched at build time, a design and Safari shims from Nick Burns's [hister-safari](https://github.com/nburns/hister-safari). Or use Hister's [official](https://hister.org/docs/browser-extension) or that [community](https://github.com/nburns/hister-safari) extension.
+Shiori (栞, bookmark) is Machiya's search app. Search Hister and SearXNG from an iPhone, iPad, Mac, Linux, Haiku, a Classic Macintosh or the web. It's also a Hister extension for Safari on macOS and iOS, built on Hister's own and on Nick Burns's [hister-safari](https://github.com/nburns/hister-safari). You can use Hister's [official extensions](https://hister.org/docs/browser-extension) or hister-safari instead.
 
 Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
