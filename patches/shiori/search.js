@@ -1201,7 +1201,7 @@
       body.push(
         el('div', { class: 'group' },
           el('div', { class: 'setting' }, el('span', {}, 'Source'), el('a', { href: source, target: '_blank', rel: 'noopener noreferrer' }, 'View the source')),
-          el('div', { class: 'setting' }, el('span', {}, 'Licence'), el('span', {}, S.LICENCE))),
+          el('div', { class: 'setting' }, el('span', {}, 'License'), el('span', {}, S.LICENSE))),
       );
     }
     $('settings-body').replaceChildren(...body);

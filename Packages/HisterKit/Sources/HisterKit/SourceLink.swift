@@ -5,7 +5,7 @@ import Foundation
 /// or spaces; otherwise nothing is shown. search-core's `sourceLink` is the
 /// twin, with the same tests.
 public enum SourceLink {
-    public static let licence = "GNU AGPL-3.0-or-later"
+    public static let license = "GNU AGPL-3.0-or-later"
 
     public static func url(_ raw: String?) -> URL? {
         let text = (raw ?? "").trimmingCharacters(in: .whitespaces)

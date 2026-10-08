@@ -841,7 +841,7 @@ test('the source link: only a plain web address (HisterKit SourceLink twin)', ()
   assert.equal(S.sourceLink('https://user:pw@example.com/'), '');
   assert.equal(S.sourceLink('https://exa mple.com/'), '');
   assert.equal(S.sourceLink('__SHIORI_SOURCE_URL__'), '');
-  assert.equal(S.LICENCE, 'GNU AGPL-3.0-or-later');
+  assert.equal(S.LICENSE, 'GNU AGPL-3.0-or-later');
 });
 
 test('a link to a file is not a page (HisterKit SaveLinks.looksLikeFile twin)', () => {

@@ -2323,8 +2323,8 @@
     }
   }
 
-  /** Shiori's licence, as the About sections name it. */
-  const LICENCE = 'GNU AGPL-3.0-or-later';
+  /** Shiori's license, as the About sections name it. */
+  const LICENSE = 'GNU AGPL-3.0-or-later';
 
   /** Not web pages: packages, archives, disk images, media, PDFs for now (HisterKit's `SaveLinks.fileExtensions`). */
   const FILE_EXTENSIONS = new Set(
@@ -2770,7 +2770,7 @@
     vaultChip,
     linkLooksLikeFile,
     sourceLink,
-    LICENCE,
+    LICENSE,
     saveLinkRows,
     tagLabelCandidates,
     fromBuild,

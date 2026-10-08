@@ -3,7 +3,7 @@ Third-party software shipped with Shiori
 
 Shiori is licensed under the GNU Affero General Public License, version 3 or
 (at your option) any later version (see LICENSE). It ships or uses the
-following third-party software, each under its own licence.
+following third-party software, each under its own license.
 
 --------------------------------------------------------------------------------
 Hister (vendor/hister, a git submodule at an upstream tag)
@@ -13,7 +13,7 @@ https://github.com/asciimoo/hister
 Shiori's Safari extension is Hister's own browser extension (webui/ext),
 built from the submodule and patched at build time by scripts/build-extension.sh
 (patches/); its source is never modified. Hister is licensed under the GNU
-Affero General Public License v3.0, the same licence as Shiori (see LICENSE).
+Affero General Public License v3.0, the same license as Shiori (see LICENSE).
 Its source is at the upstream tag the submodule points to.
 
 This repository carries no Hister logo: the Rooms switcher shows a neutral
@@ -43,7 +43,7 @@ code.
 
 The Safari extension's built bundle (the Hister extension's dist/, copied
 into the app's extension) contains the following npm packages, compiled in by
-Vite. Their notices follow, each from the package's own licence file.
+Vite. Their notices follow, each from the package's own license file.
 
 --------------------------------------------------------------------------------
 Svelte 5.57.0 (svelte, MIT)
@@ -796,7 +796,7 @@ The Machiya room icons (assets/rooms/)
 Shiori's, Konbini's, Niwa's and Kura's icons are copied from the Machiya
 repository's icons/; the neutral glyphs for Hister and SearXNG are in
 assets/rooms/neutral/ (the default). All are Machiya's own, under the same
-licence as Shiori (AGPL-3.0-or-later).
+license as Shiori (AGPL-3.0-or-later).
 
 --------------------------------------------------------------------------------
 Tokyo Night colours

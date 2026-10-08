@@ -4,7 +4,7 @@
 #   make && ./package.sh            (writes shiori-<version>-1-<arch>.hpkg here)
 #
 # The version is Shiori's one version (project.yml). The package holds the
-# app, a Deskbar menu entry, the licence and the third-party notices; the
+# app, a Deskbar menu entry, the license and the third-party notices; the
 # netservices2 HTTP code is linked in, so it needs nothing beyond Haiku.
 # Releases attach it to the tag's GitHub release.
 set -eu
@@ -22,7 +22,7 @@ cp "$APP" "$STAGE/apps/Shiori"
 # The binary's resources (the icon, the version) travel with it.
 ln -s ../../../../apps/Shiori "$STAGE/data/deskbar/menu/Applications/Shiori"
 cp ../LICENSE "$STAGE/documentation/packages/shiori/LICENSE"
-# A package's licence must be in it when Haiku doesn't carry the text (no AGPL there).
+# A package's license must be in it when Haiku doesn't carry the text (no AGPL there).
 mkdir -p "$STAGE/data/licenses"
 cp ../LICENSE "$STAGE/data/licenses/GNU AGPL v3"
 [ -f ../THIRD_PARTY_NOTICES ] && cp ../THIRD_PARTY_NOTICES "$STAGE/documentation/packages/shiori/"

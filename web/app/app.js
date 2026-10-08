@@ -2376,7 +2376,7 @@ function viewSettings() {
         statusURL ? h('div', { class: 'item' }, h('span', {}, 'Server'), statusLink()) : null,
         // The source (AGPL-3.0 section 13), only when the build names it.
         SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'Source'), h('a', { href: SOURCE_URL, target: '_blank', rel: 'noopener noreferrer' }, 'View the source')) : null,
-        SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'Licence'), h('span', { style: 'color:var(--secondary)' }, S.LICENCE)) : null,
+        SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'License'), h('span', { style: 'color:var(--secondary)' }, S.LICENSE)) : null,
       ],
         'Install this as an app: Share → Add to Home Screen (iPhone, iPad), File → Add to Dock (Safari on the Mac), or Install in the browser’s menu (Chrome, Edge).'),
     ),

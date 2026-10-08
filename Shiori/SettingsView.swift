@@ -433,7 +433,7 @@ struct SettingsView: View {
                 if let source = SourceLink.url(Bundle.main.object(forInfoDictionaryKey: "ShioriSourceURL") as? String) {
                     Link("View the Source", destination: source)
                 }
-                Text("Shiori is free software under the \(SourceLink.licence).")
+                Text("Shiori is free software under the \(SourceLink.license).")
                     .textStyle(.footnote)
                     .foregroundStyle(palette.secondaryText)
             }
