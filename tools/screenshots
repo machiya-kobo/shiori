@@ -22,8 +22,8 @@ capture: run it again to refresh them.
 
 With --site DIR, the same run also takes Machiya's site images into DIR, light and dark, sharper than the screen:
 hero (the web app, "washi", a page open; 1280x800 at 2x), hero-phone (the same at 390x844, 2x), web (the search page,
-"kyoto lanterns"; 1280x720 at 1.5x), pages (its Pages tab, "lantern"; 810x720 at 1.5x) and code (its Code tab,
-"flicker"; 810x660 at 1.5x). Two invented code results (an issue on a sample GitHub repo and one on a sample Forgejo
+"kyoto lanterns"; 1280x720 at 1.5x), pages (its Pages tab, "lantern"; 810x720 at 1.5x), pages-phone (the same at
+390x844, 2x) and code (its Code tab, "flicker"; 810x660 at 1.5x). Two invented code results (an issue on a sample GitHub repo and one on a sample Forgejo
 repo, at .example addresses) go into Hister for every run, so the Code tab has something to show.
 
 Needs Playwright for Python with its Chromium (`pip install playwright pillow && playwright install chromium`, in
@@ -376,6 +376,7 @@ def main():
                     site("hero-phone", app_url + "/#/search?q=washi&w=1", PHONE, "How washi paper is made", (), 2)
                     site("web", site_url + "/?q=kyoto+lanterns", SITE_WEB, "Kyoto's summer lantern festival", (open_sections,))
                     site("pages", site_url + "/?q=lantern&cat=hister", SITE_PAGES, "Folding a chōchin lantern")
+                    site("pages-phone", site_url + "/?q=lantern&cat=hister", PHONE, "Folding a chōchin lantern", (), 2)
                     site("code", site_url + "/?q=flicker", SITE_CODE, "Candle or LED inside a paper lantern?", (code_tab,))
             browser.close()
     finally:
