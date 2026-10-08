@@ -5,6 +5,32 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.0.0 (2026-10-08)
+
+The first public release. Shiori is a search app for your own
+[Hister](https://github.com/asciimoo/hister): the iPhone, iPad and Mac apps
+with a Safari extension, a search page and a web app, and apps for Linux,
+Haiku and Classic Macintosh. Everything since 0.18.0 is below; docs/features.md
+lists what it does.
+
+### Changed
+
+- **"N New Items" has a refresh icon**, not an up arrow: a tap reloads the
+  list and goes to the top (apps and web app).
+- **"License"**, spelled the American way, in the About screens and the
+  docs.
+- **The README and CLAUDE.md are written for a first-time reader.**
+  CLAUDE.md is short at the root, with each folder's traps beside its code.
+  The README says plainly that the Safari extension is Hister's own,
+  patched at build time, in the design Nick Burns's hister-safari uses
+  (credited in the README, About and docs/extension.md).
+
+### Fixed
+
+- **The release files install on a clean system.** The Flatpak bundle names
+  Flathub for its GNOME runtime, and the classic Mac `.hqx` carries
+  BinHex's standard header (so decoders read it).
+
 ## 0.18.0 (2026-10-07)
 
 ### Added
