@@ -610,7 +610,7 @@ struct OfflineNote: View {
     }
 }
 
-/// "↑ 3 New Items": what arrived since the list loaded, over its top. A tap
+/// "3 New Items" with a refresh icon: what arrived since the list loaded, over its top. A tap
 /// reloads it and goes to the top; until then the list stays as it was.
 struct NewItemsBanner: View {
     let count: Int
@@ -619,7 +619,7 @@ struct NewItemsBanner: View {
 
     var body: some View {
         Button(action: action) {
-            Label(count == 1 ? "1 New Item" : "\(count.formatted()) New Items", systemImage: "arrow.up")
+            Label(count == 1 ? "1 New Item" : "\(count.formatted()) New Items", systemImage: "arrow.clockwise")
                 .textStyle(.subheadline, weight: .semibold)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)

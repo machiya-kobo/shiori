@@ -651,7 +651,7 @@ html.pull-settle .pull { transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.3,
 @keyframes pull-spin { from { transform: rotate(270deg); } to { transform: rotate(630deg); } }
 @media (prefers-reduced-motion: reduce) { .pull.loading svg { animation: none; } }
 
-/* "↑ 3 New Items": what arrived since the list loaded, over its top (a
+/* "↻ 3 New Items": what arrived since the list loaded, over its top (a
    zero-height sticky row, so the rows don't move); a click reloads it. */
 .new-items-wrap { position: sticky; top: 8px; height: 0; z-index: 5; display: flex; justify-content: center; align-items: flex-start; overflow: visible; }
 .new-items {

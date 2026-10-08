@@ -960,7 +960,7 @@ function resultsList(container, options) {
       if (document.visibilityState !== 'visible' || loading || !list.isConnected) return;
       const n = await count().catch(() => null);
       if (n === null || container.dataset.watch !== token) return;
-      banner.textContent = `↑ ${n === 1 ? '1 New Item' : `${n.toLocaleString()} New Items`}`;
+      banner.textContent = `↻ ${n === 1 ? '1 New Item' : `${n.toLocaleString()} New Items`}`;
       banner.hidden = n < 1;
       if (n > 0 && !wrap.isConnected) container.prepend(wrap);
     }, NEW_ITEMS_POLL_MS);
