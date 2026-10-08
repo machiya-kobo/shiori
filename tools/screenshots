@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """screenshots - make the README's screenshots from invented sample data.
 
-    tools/screenshots [--kura URL] [--hister URL] [out_dir]          # default: docs/screenshots
+    tools/screenshots [--kura URL] [--hister URL] [--site DIR] [out_dir]          # default: docs/screenshots
 
 Starts a throwaway Hister in a container (podman or docker) on a free port, fills it with the Quickstart's sample
 pages (tools/quickstart/seed-hister.py), builds the search page and the web app, serves them with web/dev-server.py
@@ -19,6 +19,12 @@ the web app's Library with a page open (1280x800, light and dark), Shiori for "l
 and dark), the web app's Notes with a note open (1280x800, light), the web app's Settings (1280x800, dark), and the
 web app's Library at phone width (390x844, light). Dates in them ("2 days ago") are relative to the day of the
 capture: run it again to refresh them.
+
+With --site DIR, the same run also takes Machiya's site images into DIR, light and dark, sharper than the screen:
+hero (the web app, "washi", a page open; 1280x800 at 2x), hero-phone (the same at 390x844, 2x), web (the search page,
+"kyoto lanterns"; 1280x720 at 1.5x), pages (its Pages tab, "lantern"; 810x720 at 1.5x) and code (its Code tab,
+"flicker"; 810x660 at 1.5x). Two invented code results (an issue on a sample GitHub repo and one on a sample Forgejo
+repo, at .example addresses) go into Hister for every run, so the Code tab has something to show.
 
 Needs Playwright for Python with its Chromium (`pip install playwright pillow && playwright install chromium`, in
 any virtual environment); run it with that environment's python3. Standard library, Playwright and Pillow only.
@@ -41,6 +47,42 @@ LIMIT = 200 * 1024
 DESKTOP = {"width": 1280, "height": 800}
 PHONE = {"width": 390, "height": 844}
 HISTER_IMAGE = "ghcr.io/asciimoo/hister:v0.20.0"
+# Machiya's site images: (name, viewport, scale).
+SITE_HERO = {"width": 1280, "height": 800}
+SITE_WEB = {"width": 1280, "height": 720}
+SITE_PAGES = {"width": 810, "height": 720}
+SITE_CODE = {"width": 810, "height": 660}
+
+# Two invented code results, as code-import writes them (machiya stack/code-import): an open issue on a sample
+# GitHub repo and one on a sample Forgejo repo, at .example addresses. They hold no lantern words, so the
+# Quickstart's searches and the README's shots find what they did.
+CODE = [
+    ("https://github.example/workshop/lamp/issues/1", "Flicker at 10% brightness · workshop/lamp#1",
+     "Issue #1 · open · workshop/lamp · GitHub", "The PWM step is too coarse below 10%: the strip visibly flickers.",
+     "github", "workshop__lamp", "workshop/lamp", "false", 1),
+    ("https://forge.example/workshop/dotfiles/issues/1", "The prompt flickers in tmux · workshop/dotfiles#1",
+     "Issue #1 · open · workshop/dotfiles · Forgejo", "Seen in a split pane with the dark theme; fine outside tmux.",
+     "forgejo", "workshop__dotfiles", "workshop/dotfiles", "false", 2),
+]
+
+
+def add_code(hister):
+    """Adds CODE to the throwaway Hister seed-hister.py just filled (its own address, never another)."""
+    import json
+    now = int(time.time())
+    for url, title, line, body, host, repo, name, private, days in CODE:
+        doc = {"url": url, "title": title, "text": "%s\n%s\n\n%s" % (title, line, body),
+               "html": "<!doctype html><html><head><title>%s</title></head><body><h1>%s</h1><p>%s</p><p>%s</p></body></html>"
+                       % (title, title, line, body),
+               "added": now - days * 86400,
+               "metadata": {"source": "code", "client": "code-import", "ignore_skip_rules": True, "code_host": host,
+                            "code_repo": repo, "code_repo_name": name, "code_kind": "issue", "code_private": private,
+                            "code_state": "open", "code_number": "1", "code_updated": now - days * 86400}}
+        request = urllib.request.Request(hister + "api/add", data=json.dumps(doc).encode(),
+                                         headers={"Origin": "hister://", "Content-Type": "application/json"})
+        with urllib.request.urlopen(request, timeout=10) as reply:
+            if reply.status >= 300:
+                sys.exit("screenshots: %s answered %d" % (url, reply.status))
 
 
 def free_port():
@@ -218,6 +260,7 @@ def main():
     ap.add_argument("--kura", default="", help="a Kura serving Machiya's sample vault, for the notes")
     ap.add_argument("--hister", default="", help="a throwaway Hister already running on this machine, instead of a container")
     ap.add_argument("--keep", action="store_true", help="leave Hister and the pages up afterwards, and say where")
+    ap.add_argument("--site", default="", help="also take Machiya's site images into this folder")
     ap.add_argument("out", nargs="?", default=os.path.join(ROOT, "docs", "screenshots"))
     a = ap.parse_args()
     engine = shutil.which("podman") or shutil.which("docker")
@@ -240,6 +283,7 @@ def main():
                            check=True, capture_output=True)
             hister = "http://127.0.0.1:%d/" % hister_port
         subprocess.run([os.path.join(ROOT, "tools", "quickstart", "seed-hister.py"), hister], check=True, env=env)
+        add_code(hister)
         site, app = os.path.join(work, "site"), os.path.join(work, "app")
         kura = a.kura or "http://127.0.0.1:%d/" % stand_in_kura().server_address[1]
         build_env = dict(env, SHIORI_KURA_URL=kura)
@@ -264,9 +308,14 @@ def main():
         with sync_playwright() as p:
             browser = p.chromium.launch()
 
-            def shot(what, url, viewport, scheme, ready, steps=()):
-                context = browser.new_context(viewport=viewport, color_scheme=scheme, device_scale_factor=1,
+            def shot(what, url, viewport, scheme, ready, steps=(), scale=1, out_dir=None, name=None):
+                context = browser.new_context(viewport=viewport, color_scheme=scheme, device_scale_factor=scale,
                                               timezone_id="UTC", locale="en-US")
+                # Opening a page from a search tells Hister (Remember What You Open), which then keeps it out of
+                # that search's results: off, so every shot finds what the one before it did.
+                context.add_init_script("try { localStorage.setItem('shioriAppSettings', "
+                                        "JSON.stringify({ ...JSON.parse(localStorage.getItem('shioriAppSettings') || '{}'), "
+                                        "rememberOpened: false })) } catch (e) {}")
                 page = context.new_page()
                 page.goto(url)
                 # Visible only: the search page keeps hidden headings (#hister-title) with the same words.
@@ -275,16 +324,28 @@ def main():
                     step(page)
                 page.mouse.move(viewport["width"] - 2, viewport["height"] - 2)  # no hover underline
                 page.wait_for_timeout(1200)
-                out = os.path.join(a.out, "shiori-%s-%s.png" % (what, scheme))
+                out = os.path.join(out_dir or a.out, name or "shiori-%s-%s.png" % (what, scheme))
                 page.screenshot(path=out)
                 context.close()
-                squeeze(out)
+                if not out_dir:
+                    squeeze(out)
                 print("%s  %d KB" % (out, os.path.getsize(out) // 1024))
 
             def open_page(page):
                 page.get_by_text("A chōchin collapses flat").first.click()  # the row; its title opens the page itself
                 page.frame_locator("iframe").get_by_text("A chōchin collapses flat").first.wait_for(timeout=15000)
                 page.evaluate("document.querySelectorAll('#list, main, body').forEach((e) => e.scrollTo(0, 0))")
+
+            def open_washi(page):
+                page.get_by_text("Kozo bark is soaked").first.click()  # the row; its title opens the page itself
+                page.frame_locator("iframe").get_by_text("Kozo bark is soaked").first.wait_for(timeout=15000)
+                page.evaluate("document.querySelectorAll('#list, main, body').forEach((e) => e.scrollTo(0, 0))")
+
+            def code_tab(page):
+                # A fresh load can't open on Code (the tab exists once Hister says it has code): pick the pill.
+                page.locator("button, a", has_text="Code").last.click()
+                page.locator("text=Flicker at 10% brightness >> visible=true").first.wait_for(timeout=30000)
+                page.evaluate("window.scrollTo(0, 0)")
 
             def open_note(page):
                 page.get_by_text("Everything for the summer lantern festival").first.click()  # the row; its title opens Kura
@@ -306,6 +367,16 @@ def main():
             shot("notes", app_url + "/#/library?s=notes", DESKTOP, "light", "Lantern festival kit", (open_note,))
             shot("settings", app_url + "/#/settings", DESKTOP, "dark", "Appearance")
             shot("library-phone", app_url + "/", PHONE, "light", "Folding a chōchin lantern")
+            if a.site:
+                os.makedirs(a.site, exist_ok=True)
+                for scheme in ("light", "dark"):
+                    def site(name, url, viewport, ready, steps=(), scale=1.5):
+                        shot(name, url, viewport, scheme, ready, steps, scale, a.site, "%s-%s.png" % (name, scheme))
+                    site("hero", app_url + "/#/search?q=washi&w=1", SITE_HERO, "How washi paper is made", (open_washi,), 2)
+                    site("hero-phone", app_url + "/#/search?q=washi&w=1", PHONE, "How washi paper is made", (), 2)
+                    site("web", site_url + "/?q=kyoto+lanterns", SITE_WEB, "Kyoto's summer lantern festival", (open_sections,))
+                    site("pages", site_url + "/?q=lantern&cat=hister", SITE_PAGES, "Folding a chōchin lantern")
+                    site("code", site_url + "/?q=flicker", SITE_CODE, "Candle or LED inside a paper lantern?", (code_tab,))
             browser.close()
     finally:
         if a.keep:
