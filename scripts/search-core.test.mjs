@@ -366,6 +366,18 @@ test('a host with no feed service offers no feed for what only that service make
   assert.equal(S.feedURL(base, { query: 'rust', title: 'rust', feedService: true }), 'https://shiori.example/shiori/feed?q=rust&exclude_label=vault');
 });
 
+test('the Notes tab needs Kura or a chosen Hister source; account sync is off with Hister\'s own sign-in', () => {
+  assert.equal(S.notesTabShown(false, ''), false);
+  assert.equal(S.notesTabShown(true, ''), true);
+  assert.equal(S.notesTabShown(false, 'hister'), true);
+  assert.equal(S.accountSync(), true);
+  const ctx = {};
+  ctx.globalThis = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(source.replace(/__SHIORI_SIGNIN__/g, 'hister'), ctx);
+  assert.equal(ctx.ShioriSearch.accountSync(), false);
+});
+
 test("Hister's own sign-in (the shiori-web image without the helper): its /auth and /profile on this origin", () => {
   // Unstamped, or stamped for the helper: the helper's pages, from the rooms' Hister address.
   const rooms = 'hister=https://hister.example/';

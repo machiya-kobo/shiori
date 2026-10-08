@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.1.1 (2026-10-08)
+
+- **The container hides what isn't set up.** Without Kura the Notes tab
+  stays out (unless Notes From Hister is chosen), without a small-web
+  gateway the Small Web tab does, and with Hister's own sign-in the pages
+  no longer ask for `/machiya/api/prefs`, so there is no 404 on every
+  load. Settings then say they stay in this browser.
+- README and web/README: Kura's allowed host names, the compose start,
+  and Hister's https cookie.
+
 ## 1.1.0 (2026-10-08)
 
 - **Shiori in a container.** `ghcr.io/machiya-kobo/shiori-web` serves the

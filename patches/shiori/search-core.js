@@ -2557,6 +2557,16 @@
     return url ? url.replace(/signin\?.*$/, 'sessions') : '';
   }
 
+  /** Whether this host keeps settings in an account (the helper's /machiya/api/prefs): not with Hister's own sign-in. */
+  function accountSync() {
+    return fromBuild('__SHIORI_SIGNIN__') !== 'hister';
+  }
+
+  /** Whether the Notes tab shows: Kura is set up, or Notes From Hister was chosen (an unset Kura hides it). */
+  function notesTabShown(kuraSetUp, notesSource) {
+    return !!kuraSetUp || notesSource === 'hister';
+  }
+
   /** What a Hister answer asks of a hosted page: 'signin' (401, 403), 'unavailable' (500), or ''. */
   function signInAsked(status) {
     if (status === 401 || status === 403) return 'signin';
@@ -2865,6 +2875,8 @@
     codeNotePath,
     histerSignInURL,
     histerSessionsURL,
+    accountSync,
+    notesTabShown,
     signInAsked,
     signInDue,
     histerAccount,

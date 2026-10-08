@@ -57,11 +57,13 @@ docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
 
 Open http://localhost:8080 to search, or http://localhost:8081 for the web app. If your Hister has users, sign in with your Hister account.
 
+Starting from scratch? [Machiya's compose file](https://github.com/machiya-kobo/machiya) runs Hister, SearXNG and Shiori together: `mkdir -p data/hister && docker compose -f shiori.yml up -d`.
+
 **Add more.** Each extra is its own app with a public image on ghcr.io/machiya-kobo. Run it, then give Shiori its address:
 
 | To search | Run | Then set on Shiori |
 |---|---|---|
-| Your Obsidian notes | Kura, on your vault | `SHIORI_KURA_URL` |
+| Your Obsidian notes | Kura, on your vault | `SHIORI_KURA_URL` (and Shiori's name for Kura in Kura's `KURA_ALLOWED_HOSTS`) |
 | Your projects | Konbini, on the same vault | `SHIORI_KONBINI_URL` |
 | Your code on Forgejo or GitHub | code-import, which copies your repos into Hister | nothing: the Code tab appears |
 | The small web (Gemini, Gopher) | smallweb | `SHIORI_SMALLWEB_URL` |

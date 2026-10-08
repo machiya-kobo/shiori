@@ -306,7 +306,7 @@
     ['general', 'All'],
     // Your pages are "Pages", as in the app; "Hister" is the server.
     ...(settings.histerTab ? [['hister', 'Pages']] : []),
-    ...(settings.vaultTab ? [['vault', 'Notes']] : []),
+    ...(settings.vaultTab && S.notesTabShown(kuraSetUp, settings.notesSource) ? [['vault', 'Notes']] : []),
     ...(settings.webResults
       ? [
           // The web alone: All without your pages and notes (no count).
@@ -1233,6 +1233,7 @@
   function prefsStateLine() {
     return {
       app: 'Shiori’s app keeps these in step with your account.',
+      local: 'These stay in this browser.',
       synced: 'Signed in: these follow you.',
       signedOut: 'Sign in (Account, below) and these follow you; until then they stay in this browser.',
       unavailable: 'Sign-in is unavailable right now: these stay in this browser, and go once it answers.',
@@ -1257,6 +1258,8 @@
   const stateOf = (status) => (status === 200 || status === 304 ? 'synced' : status === 401 ? 'signedOut' : 'unavailable');
   function contactAccount() {
     if (!HOSTED) return Promise.resolve(prefsState);
+    // Hister's own sign-in has no account store to ask: settings stay in this browser.
+    if (!S.accountSync()) return Promise.resolve((prefsState = 'local'));
     prefsRunning ||= contactOnce().finally(() => (prefsRunning = null));
     return prefsRunning;
   }

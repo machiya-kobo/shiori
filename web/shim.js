@@ -29,6 +29,8 @@
   // there (SHIORI_AI=1): without it the page never asks, so a host without
   // one logs no 404s.
   const AI_BUILD = '__SHIORI_AI__';
+  // The small-web gateway, when the build names one (else /smallweb/ isn't routed and the tab stays out).
+  const SMALLWEB_BUILD = '__SHIORI_SMALLWEB_URL__';
 
   function load() {
     try {
@@ -63,7 +65,7 @@
     // Kura is set up when this host has a Kura home (the build's, or this
     // browser's): /kura/ is always routed, so its address alone can't say.
     // Notes From follows it until the person picks (S.notesSource).
-    return { ...merged, searxngURL: ROOT + 'searx/', konbiniAPIURL: ROOT + 'konbini/', aiURL: AI_BUILD === '1' ? ROOT + 'shiori/ai/' : '', kuraAPIURL: ROOT + 'kura/', kuraConfigured: !!merged.niwaURL, smallwebAPIURL: ROOT + 'smallweb/' };
+    return { ...merged, searxngURL: ROOT + 'searx/', konbiniAPIURL: ROOT + 'konbini/', aiURL: AI_BUILD === '1' ? ROOT + 'shiori/ai/' : '', kuraAPIURL: ROOT + 'kura/', kuraConfigured: !!merged.niwaURL, smallwebAPIURL: SMALLWEB_BUILD.startsWith('__') ? '' : ROOT + 'smallweb/' };
   }
 
   const storage = {

@@ -160,6 +160,10 @@ shared flow takes over, as in the table above. A browser's other cookies are nev
 session, Kura and Konbini the rooms' session cookie, SearXNG and the rest none. `Origin` and the `Sec-Fetch-*` headers
 pass through untouched and are never added, so Hister's same-origin check still protects it.
 
+Over http, Hister's `base_url` doesn't have to match the address you open Shiori at. Over https it does matter: an https
+`base_url` makes Hister's cookie Secure, so Shiori must be served over https too. To make a Hister user, run
+`hister create-user` on a terminal: it asks for the password there.
+
 **Verify the image** (each release is signed by its workflow, no key to fetch):
 
 ```bash

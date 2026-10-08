@@ -318,6 +318,8 @@ const prefsStateOf = (status) => (status === 200 || status === 304 ? 'synced' : 
 /** One contact at a time: a second ask while one runs shares it. */
 let prefsRunning = null;
 function contactAccount() {
+  // Hister's own sign-in has no account store to ask: settings stay in this browser.
+  if (!S.accountSync()) return Promise.resolve((prefsState = 'local'));
   prefsRunning ||= contactOnce().finally(() => (prefsRunning = null));
   return prefsRunning;
 }
@@ -1518,7 +1520,7 @@ function viewList(params) {
 // Code: your repos (code-import's), red, the one hue left.
 const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['opened', 'Opened', 'purple']];
 /** The pills: Opened only while Show Opened is on (off by default); Files only while Hister has some. */
-const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || settings.smallWebTab !== false) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs));
+const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'notes' || S.notesTabShown(!!settings.niwaURL, settings.notesSource)) && (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || (SMALLWEB && settings.smallWebTab !== false)) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs));
 /** The pill's key in the shared vocabulary (S.PILLS). */
 const pillKey = (scope) => (scope === 'hister' ? 'pages' : scope);
 /** The pills in the order set in Settings → Pills, less the ones switched off (S.orderPills). */
@@ -2430,6 +2432,7 @@ function accountGroup(group) {
 /** Settings' state line for Appearance (the contract's). */
 function prefsStateLine() {
   return {
+    local: 'These stay in this browser.',
     synced: 'Signed in: these follow you.',
     signedOut: 'Sign in (Settings → Account) and these follow you; until then they stay in this browser.',
     unavailable: 'Sign-in is unavailable right now: these stay in this browser, and go once it answers.',
