@@ -65,6 +65,17 @@ Each tag's GitHub release carries builds anyone can test. Make each one from the
 
 Before uploading, unpack each file and search it for your own addresses, hostnames, names and team ID. Then attach the files and a `SHA256SUMS` with `gh release create vX.Y.Z …`. iOS has no release file: sideloading needs a paid Apple Developer Program team.
 
+Release tags and each release's `SHA256SUMS` are signed, with SSH, as the GitHub bot user [machiya-bot](https://github.com/machiya-bot), so GitHub shows a tag as Verified. Each signing machine has its own key, registered on machiya-bot as a Signing Key; the Machiya team's release tooling makes the tag and `SHA256SUMS.sig`. Commits aren't signed. To check a download yourself, build an allowed-signers file from the keys GitHub lists for machiya-bot, then verify:
+
+```sh
+gh api users/machiya-bot/ssh_signing_keys --jq '.[].key' \
+  | sed 's/^/339386069+machiya-bot@users.noreply.github.com namespaces="git,file" /' > allowed_signers
+ssh-keygen -Y verify -f allowed_signers -I 339386069+machiya-bot@users.noreply.github.com \
+  -n file -s SHA256SUMS.sig < SHA256SUMS
+shasum -a 256 -c SHA256SUMS
+git -c gpg.ssh.allowedSignersFile=allowed_signers tag -v vX.Y.Z    # in a clone
+```
+
 ## Generated files
 
 Never edit `Shiori.xcodeproj/` or `ShioriExtension/Resources/`: both are generated. Change `project.yml` or `patches/` instead. Shiori's icons (the app, its Light alternate and the extension's) come from `scripts/generate-shiori-icons.py`.
