@@ -42,6 +42,9 @@ PUBLIC_RE = re.compile(r"^https?://[^\s'\"\\<>`{}|^\x00-\x1f\x7f]+$")
 HOST_RE = re.compile(r"^[A-Za-z0-9._-]+(?::[0-9]{1,5})?$")
 COOKIE_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 ROOM_ORIGIN_RE = re.compile(r"^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$")
+VERSION_RE = re.compile(r"^[A-Za-z0-9._+-]{1,64}$")
+# The most of an upstream's answer the start-up probe reads: SearXNG's JSON for one search is often past 64 KiB.
+PROBE_MAX = 2 << 20
 
 
 class ConfigError(Exception):
@@ -136,6 +139,10 @@ def settings(env):
     s["status"] = public(env, "SHIORI_STATUS_URL")
     s["vault"] = env.get("SHIORI_OBSIDIAN_VAULT", "").strip()
     s["frontends"] = env.get("SHIORI_FRONTENDS", "").strip()
+    # The Hister release status.json names, when it isn't the one the image was built against.
+    s["hister_version"] = env.get("SHIORI_HISTER_VERSION", "").strip()
+    if s["hister_version"] and not VERSION_RE.match(s["hister_version"]):
+        raise ConfigError(f"SHIORI_HISTER_VERSION: {s['hister_version']!r} is not a version (for example v0.20.0)")
     return s
 
 
@@ -485,6 +492,15 @@ def stamp_pages(s, dist, out, scripts):
         with open(os.path.join(www, key, "_shiori", "config.json"), "w", encoding="utf-8") as f:
             json.dump(report(s), f, indent=2)
             f.write("\n")
+        # status.json (scripts/status-json.py): the Hister release this run names, when one is set.
+        status = os.path.join(www, key, "_shiori", "status.json")
+        if s["hister_version"] and os.path.exists(status):
+            with open(status, encoding="utf-8") as f:
+                doc = json.load(f)
+            doc["hister"] = s["hister_version"]
+            with open(status, "w", encoding="utf-8") as f:
+                json.dump(doc, f)
+                f.write("\n")
 
 
 def report(s):
@@ -527,7 +543,8 @@ def startup_line(s):
 
 
 def fetch(up, path, verify, timeout=4):
-    """(status, body) of a GET to an upstream; status None when nothing answered."""
+    """(status, content type, body) of a GET to an upstream, the body cut at PROBE_MAX + 1 bytes; status None when
+    nothing answered."""
     ctx = None
     if up["scheme"] == "https":
         ctx = ssl.create_default_context()
@@ -537,21 +554,32 @@ def fetch(up, path, verify, timeout=4):
     req = urllib.request.Request(up["base"] + path, headers={"Accept": "application/json", "User-Agent": "shiori-web"})
     try:
         with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
-            return r.status, r.read(1 << 16)
+            return r.status, r.headers.get_content_type(), r.read(PROBE_MAX + 1)
     except urllib.error.HTTPError as e:
-        return e.code, b""
+        return e.code, "", b""
     except (OSError, ValueError):
-        return None, b""
+        return None, "", b""
+
+
+def json_answer(ctype, body):
+    """Whether an answer is JSON: parsed whole when it fits in PROBE_MAX, else known by its content type."""
+    if len(body) > PROBE_MAX:
+        return ctype == "application/json"
+    try:
+        json.loads(body.decode("utf-8", "replace"))
+        return True
+    except ValueError:
+        return False
 
 
 def probe(s):
     """Says plainly what's wrong with Hister or SearXNG, once, at start. Never stops the start: they may still be
     coming up, and the pages say the same thing (and recover) when they're asked."""
     lines = []
-    status, _ = fetch(s["hister"], "/", s["tls_verify"])
+    status, _, _ = fetch(s["hister"], "/", s["tls_verify"])
     if status is None:
         lines.append(f"  ! Hister isn't answering at {s['hister']['base']} yet: check SHIORI_HISTER_URL, and that Hister is running.")
-    status, body = fetch(s["searxng"], "/search?q=shiori&format=json", s["tls_verify"])
+    status, ctype, body = fetch(s["searxng"], "/search?q=shiori&format=json", s["tls_verify"])
     if status is None:
         lines.append(f"  ! SearXNG isn't answering at {s['searxng']['base']} yet: check SHIORI_SEARXNG_URL, and that SearXNG is running.")
     elif status == 403:
@@ -559,11 +587,8 @@ def probe(s):
                      "(formats: [html, json]) and restart it.")
     elif status >= 400:
         lines.append(f"  ! SearXNG answered {status} to a JSON search: check its settings.")
-    else:
-        try:
-            json.loads(body.decode("utf-8", "replace"))
-        except ValueError:
-            lines.append("  ! SearXNG's answer to a JSON search wasn't JSON: check `formats` in its settings.yml.")
+    elif not json_answer(ctype, body):
+        lines.append("  ! SearXNG's answer to a JSON search wasn't JSON: check `formats` in its settings.yml.")
     return lines or ["  Hister and SearXNG answer."]
 
 

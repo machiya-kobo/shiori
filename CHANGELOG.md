@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.1.2 (2026-10-08)
+
+- **The container's start-up check reads SearXNG's whole answer.** It read
+  only the first 64 KiB, so a real JSON answer warned "wasn't JSON".
+- **status.json names the Hister release again** in the image (`v0.20.0`,
+  not empty or a commit). `SHIORI_HISTER_VERSION` sets it when Hister runs
+  another release.
+
 ## 1.1.1 (2026-10-08)
 
 - **The container hides what isn't set up.** Without Kura the Notes tab

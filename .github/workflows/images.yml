@@ -44,8 +44,12 @@ jobs:
           [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::$TAG is not a vX.Y.Z release tag"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "build=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-          # The Hister release the pages are built against: the submodule's pinned commit.
-          echo "hister=$(git ls-tree HEAD vendor/hister | awk '{print substr($3,1,7)}')" >> "$GITHUB_OUTPUT"
+          # The Hister release the pages are built against: the upstream tag on the submodule's pinned commit, else the
+          # commit's short hash.
+          pinned=$(git ls-tree HEAD vendor/hister | awk '{print $3}')
+          hister=$(git ls-remote --tags https://github.com/asciimoo/hister.git \
+            | awk -v c="$pinned" '$1 == c { sub("refs/tags/", "", $2); sub(/\^\{\}$/, "", $2); print $2; exit }')
+          echo "hister=${hister:-${pinned:0:7}}" >> "$GITHUB_OUTPUT"
 
       - name: The tag is signed by a release key
         run: |

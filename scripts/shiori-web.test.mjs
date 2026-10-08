@@ -2,7 +2,8 @@
 // copy of the pages built once with placeholders, and writes nginx's routes. Run here with no container engine; the
 // container itself is tools/container-test. Run: node --test scripts/*.test.mjs
 
-import { spawnSync, execFileSync } from 'node:child_process';
+import { spawn, spawnSync, execFileSync } from 'node:child_process';
+import { createServer } from 'node:http';
 import { mkdtempSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -51,7 +52,7 @@ test('settings that could break the config or a page are refused, by name', { sk
     ['SHIORI_HISTER_URL', 'http://hister:4433 {'], ['SHIORI_KURA_URL', 'http://kura/\n}'], ['SHIORI_AI_URL', 'http://ai:99999'],
     ['SHIORI_HISTER_HOST', 'bad host'], ['SHIORI_ROOM_COOKIE', 'a;b'], ['SHIORI_SEARCH_PORT', '80'], ['SHIORI_APP_PORT', '8080'],
     ['SHIORI_SOURCE_URL', "https://x.example/'+alert(1)+'"], ['SHIORI_KURA_PUBLIC_URL', 'https://x.example/\\'],
-    ['SHIORI_APP_URL', 'https://app.example/path'],
+    ['SHIORI_APP_URL', 'https://app.example/path'], ['SHIORI_HISTER_VERSION', 'v0.20.0 (abc)'],
   ];
   for (const [name, value] of bad) {
     const x = run({ ...BASE, [name]: value });
@@ -208,4 +209,57 @@ test('an https upstream is verified unless told not to; the start-up line names 
   const y = run({ ...BASE, SHIORI_HISTER_URL: 'https://hister.example', SHIORI_HISTER_HOST: 'hister.internal' });
   assert.match(y.sites(), /proxy_set_header Host hister\.internal;/);
   y.cleanup();
+});
+
+test("status.json names the Hister release: the build's, or SHIORI_HISTER_VERSION's", { skip }, () => {
+  const a = run(BASE);
+  const b = run({ ...BASE, SHIORI_HISTER_VERSION: 'v0.20.0' });
+  try {
+    for (const key of ['search', 'app']) {
+      const built = JSON.parse(readFileSync(join(dist, key, '_shiori', 'status.json'), 'utf8'));
+      assert.deepEqual(JSON.parse(a.read(`www/${key}/_shiori/status.json`)), built);
+      assert.deepEqual(JSON.parse(b.read(`www/${key}/_shiori/status.json`)), { ...built, hister: 'v0.20.0' });
+    }
+  } finally {
+    a.cleanup();
+    b.cleanup();
+  }
+});
+
+// The start-up probe, against a fake Hister and SearXNG on this machine.
+async function probe(answer) {
+  const server = createServer((req, res) => {
+    if (!req.url.startsWith('/search?')) return res.end('ok');
+    res.writeHead(answer.status ?? 200, { 'Content-Type': answer.type ?? 'application/json' });
+    res.end(answer.body);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const up = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const child = spawn(python, ['docker/shiori-web/configure.py', '--check'],
+      { cwd: repo, env: { ...env0, SHIORI_HISTER_URL: up, SHIORI_SEARXNG_URL: up } });
+    let stdout = '';
+    child.stdout.on('data', (d) => { stdout += d; });
+    const code = await new Promise((resolve) => child.on('close', resolve));
+    return { code, stdout };
+  } finally {
+    server.close();
+  }
+}
+
+test("the probe reads SearXNG's whole JSON answer, however long, and says when it isn't JSON", { skip }, async () => {
+  const results = Array.from({ length: 400 }, (_, i) => ({ url: `https://example.com/${i}`, title: `Result ${i}`, content: 'x'.repeat(300) }));
+  const big = JSON.stringify({ query: 'shiori', results });
+  assert.ok(big.length > 1 << 16);
+  let p = await probe({ body: big });
+  assert.equal(p.code, 0);
+  assert.match(p.stdout, /Hister and SearXNG answer\./);
+  assert.doesNotMatch(p.stdout, /wasn't JSON/);
+  // Past the cap, the content type says it.
+  p = await probe({ body: JSON.stringify({ results: [{ content: 'x'.repeat(3 << 20) }] }) });
+  assert.match(p.stdout, /Hister and SearXNG answer\./);
+  p = await probe({ body: '<!doctype html><title>SearXNG</title>', type: 'text/html' });
+  assert.match(p.stdout, /SearXNG's answer to a JSON search wasn't JSON/);
+  p = await probe({ status: 403, body: 'Forbidden', type: 'text/plain' });
+  assert.match(p.stdout, /doesn't allow JSON results/);
 });
