@@ -22,6 +22,10 @@ export const TEXT = ['text', 'secondary', 'accent', 'kept', 'visited', 'tab-gene
 // Every tinted surface: the cards (pages, notes, opened, files, code, Small
 // Web) and the heading rows and panels (All, Web).
 export const TINTS = ['accent', 'notes', 'tab-news', 'tab-general', 'web', 'kept', 'tab-videos', 'smallweb'];
+// The pills' colours: under the pointer a pill lifts onto --raised, its colour
+// moved to --<pill>-raised, the shade that reads at 4.5:1 there (the apps'
+// Palette.tintOnRaised, twins).
+export const PILLS = ['tab-general', 'accent', 'notes', 'web', 'tab-images', 'tab-videos', 'tab-news', 'smallweb', 'kept'];
 
 function rgb(hex) { return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255); }
 function hex(c) { return '#' + c.map((v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join(''); }
@@ -84,6 +88,7 @@ export function variant(room, mode) {
   }
   ['accent', 'visited', 'konbini', 'kept', 'notes', 'danger', 'hit', 'obsidian']
     .forEach((t, i) => { v[`chip${i}`] = v[t]; });
+  for (const t of PILLS) v[`${t}-raised`] = readableOn(v[t], [v.raised], light);
   // The Rooms menu, as the rooms draw it (vaultkit's switcher): their --dark
   // panel, the current row on their --hl, in either variant. Its text is
   // the rooms' --fg and its roles their --muted, each moved in lightness
@@ -112,6 +117,7 @@ function decl(v, light) {
     ['notes', 'konbini', 'niwa', 'web', 'obsidian', 'smallweb', 'danger'],
     ['chip0', 'chip1', 'chip2', 'chip3', 'chip4', 'chip5', 'chip6', 'chip7'],
     ['rooms-bg', 'rooms-on', 'rooms-text', 'rooms-muted'],
+    PILLS.map((t) => `${t}-raised`),
   ].map((keys) => keys.map((k) => `--${k}: ${v[k]};`).join(' '));
   rows.push(`--rooms-shadow: ${roomsShadow(v, light)};`);
   rows.push(`--highlight: rgb(${r} ${g} ${b} / ${light ? '0.22' : '0.30'}); --tint-mix: ${v['tint-mix']}%;`);

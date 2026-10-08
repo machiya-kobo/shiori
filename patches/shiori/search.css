@@ -28,6 +28,8 @@
   --chip4: #ff9e64; --chip5: #f7768e; --chip6: #e0af68; --chip7: #1abc9c;
   /* The Rooms menu, as the rooms draw it (scripts/palettes.mjs's rooms-* for Tokyo Night: vaultkit's --menu-fg). */
   --rooms-bg: #16161e; --rooms-on: #292e42; --rooms-text: #c0caf5; --rooms-muted: #8d94b8;
+  /* A hovered pill's colour, readable on --raised (scripts/palettes.mjs PILLS). */
+  --tab-general-raised: #7dcfff; --accent-raised: #7aa2f7; --notes-raised: #ff9e64; --web-raised: #e0af68; --tab-images-raised: #9ece6a; --tab-videos-raised: #f7768e; --tab-news-raised: #bb9af7; --smallweb-raised: #73daca; --kept-raised: #9ece6a;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   color-scheme: dark;
 }
@@ -43,6 +45,8 @@
     --chip0: #155fc5; --chip1: #006b8f; --chip2: #802cee; --chip3: #506b34;
     --chip4: #9a5000; --chip5: #bd204c; --chip6: #7a5e36; --chip7: #0d6e5c;
     --rooms-bg: #d0d5e3; --rooms-on: #eef0f6; --rooms-text: #3258af; --rooms-muted: #4c5a8f;
+    /* A hovered pill's colour, readable on --raised (scripts/palettes.mjs PILLS). */
+    --tab-general-raised: #006385; --accent-raised: #1459b9; --notes-raised: #8d4900; --web-raised: #715732; --tab-images-raised: #4b6431; --tab-videos-raised: #b21e48; --tab-news-raised: #761bed; --smallweb-raised: #0c6958; --kept-raised: #4b6431;
     --rooms-shadow: 0 1px 2px rgb(55 96 191 / 0.12), 0 6px 18px rgb(55 96 191 / 0.12);
     color-scheme: light;
   }
@@ -58,6 +62,8 @@
   --chip0: #155fc5; --chip1: #006b8f; --chip2: #802cee; --chip3: #506b34;
   --chip4: #9a5000; --chip5: #bd204c; --chip6: #7a5e36; --chip7: #0d6e5c;
   --rooms-bg: #d0d5e3; --rooms-on: #eef0f6; --rooms-text: #3258af; --rooms-muted: #4c5a8f;
+  /* A hovered pill's colour, readable on --raised (scripts/palettes.mjs PILLS). */
+  --tab-general-raised: #006385; --accent-raised: #1459b9; --notes-raised: #8d4900; --web-raised: #715732; --tab-images-raised: #4b6431; --tab-videos-raised: #b21e48; --tab-news-raised: #761bed; --smallweb-raised: #0c6958; --kept-raised: #4b6431;
   --rooms-shadow: 0 1px 2px rgb(55 96 191 / 0.12), 0 6px 18px rgb(55 96 191 / 0.12);
   color-scheme: light;
 }
@@ -201,19 +207,25 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
   color: var(--tab); border: 1.5px solid var(--tab); background: transparent;
 }
 #categories a[aria-current="page"] { color: var(--bg); background: var(--tab); border-color: var(--tab); }
-/* Under the pointer, a light fill of the pill's own colour (the apps' hoverFill). */
-#categories a:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--tab) 26%, transparent); }
-#categories a[data-cat="general"] { --tab: var(--tab-general); }
-#categories a[data-cat="hister"] { --tab: var(--accent); }
-#categories a[data-cat="vault"] { --tab: var(--notes); }
-#categories a[data-cat="web"] { --tab: var(--web); }
-#categories a[data-cat="images"] { --tab: var(--tab-images); }
-#categories a[data-cat="videos"] { --tab: var(--tab-videos); }
-#categories a[data-cat="news"] { --tab: var(--tab-news); }
-#categories a[data-cat="smallweb"] { --tab: var(--smallweb); }
+/* Under the pointer a pill that isn't chosen lifts onto --raised with a small
+   shadow, its colour moved to the shade that reads there (the rooms' rule; the
+   apps' PillFace): a fill of its own colour couldn't be read in most themes. */
+#categories a:not([aria-current="page"]):hover {
+  background: var(--raised); color: var(--tab-raised); border-color: var(--tab-raised);
+  box-shadow: var(--shadow, 0 1px 2px rgb(0 0 0 / 0.3));
+}
+#categories a { --tab-raised: var(--accent-raised); }
+#categories a[data-cat="general"] { --tab: var(--tab-general); --tab-raised: var(--tab-general-raised); }
+#categories a[data-cat="hister"] { --tab: var(--accent); --tab-raised: var(--accent-raised); }
+#categories a[data-cat="vault"] { --tab: var(--notes); --tab-raised: var(--notes-raised); }
+#categories a[data-cat="web"] { --tab: var(--web); --tab-raised: var(--web-raised); }
+#categories a[data-cat="images"] { --tab: var(--tab-images); --tab-raised: var(--tab-images-raised); }
+#categories a[data-cat="videos"] { --tab: var(--tab-videos); --tab-raised: var(--tab-videos-raised); }
+#categories a[data-cat="news"] { --tab: var(--tab-news); --tab-raised: var(--tab-news-raised); }
+#categories a[data-cat="smallweb"] { --tab: var(--smallweb); --tab-raised: var(--smallweb-raised); }
 /* The folders Hister watches: green, a hue no room wears. */
-#categories a[data-cat="files"] { --tab: var(--kept); }
-#categories a[data-cat="code"] { --tab: var(--tab-videos); }
+#categories a[data-cat="files"] { --tab: var(--kept); --tab-raised: var(--kept-raised); }
+#categories a[data-cat="code"] { --tab: var(--tab-videos); --tab-raised: var(--tab-videos-raised); }
 .card.smallweb-card .url .origin { color: var(--smallweb); font-weight: 600; }
 .smallweb-card .places { align-items: center; }
 .smallweb-card .places .engines { font: -apple-system-caption1; color: var(--secondary); }

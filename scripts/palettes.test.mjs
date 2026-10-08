@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { TABLE_PATH, CSS_PATH, SWIFT_PATH, TEXT, TINTS, css, swift, bars, variant, roomsShadow, ratio, mix, luminance } from './palettes.mjs';
+import { TABLE_PATH, CSS_PATH, SWIFT_PATH, TEXT, TINTS, PILLS, css, swift, bars, variant, roomsShadow, ratio, mix, luminance } from './palettes.mjs';
 
 const table = JSON.parse(readFileSync(TABLE_PATH, 'utf8'));
 const read = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -132,4 +132,28 @@ test('the app offers the ten as Theme, System / Light / Dark as Appearance, and 
   assert.match(read('../web/app/index.html'), /<link rel="stylesheet" href="\/_shiori\/palettes\.css" \/>/);
   assert.match(read('../web/app/sw.js'), /'\/_shiori\/palettes\.css'/);
   assert.match(read('../scripts/build-pwa.sh'), /web\/app\/palettes\.css/);
+});
+
+test('a hovered pill reads on --raised: every theme, every pill (--<pill>-raised; the apps\' tintOnRaised)', () => {
+  for (const [key, p] of Object.entries(table)) {
+    for (const mode of ['dark', 'light']) {
+      const v = variant(p[mode], mode);
+      for (const t of PILLS) assert.ok(ratio(v[`${t}-raised`], v.raised) >= 4.5, `${key} ${mode} ${t}: ${v[`${t}-raised`]} on ${v.raised}`);
+    }
+  }
+  // search.css's Tokyo Night carries the generator's, and they read on its own --raised.
+  const css = read('../patches/shiori/search.css');
+  const block = (selector) => {
+    const at = css.indexOf(selector);
+    return css.slice(css.indexOf('{', at) + 1, css.indexOf('}', at));
+  };
+  for (const [selector, mode] of [[':root {', 'dark'], [':root:not([data-theme="night"]) {', 'light'], [':root[data-theme="day"] {', 'light']]) {
+    const body = block(selector);
+    const tokens = Object.fromEntries([...body.matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+    const v = variant(table['tokyo-night'][mode], mode);
+    for (const t of PILLS) {
+      assert.equal(tokens[`${t}-raised`], v[`${t}-raised`], `${selector} ${t}-raised`);
+      assert.ok(ratio(tokens[`${t}-raised`], tokens.raised) >= 4.5, `${selector} ${t}-raised on ${tokens.raised}`);
+    }
+  }
 });

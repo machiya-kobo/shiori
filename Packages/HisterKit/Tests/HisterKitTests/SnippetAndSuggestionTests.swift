@@ -158,6 +158,18 @@ struct ThemeTests {
         }
     }
 
+    /// A pill under the pointer lifts onto `raised`, its colour moved to
+    /// the shade that reads there (as the web's `--<tint>-raised`).
+    @Test(arguments: variants)
+    func hoveredPillsReadOnTheRaisedShade(name: String, palette: Palette) {
+        for tint in [Palette.Tint.blue, .cyan, .purple, .green, .orange, .red, .yellow, .teal] {
+            let ink = palette.tintOnRaisedHex(tint)
+            #expect(Palette.contrast(ink, palette.hex.raised) >= 4.5, "\(name) \(tint): \(Palette.css(ink)) on \(Palette.css(palette.hex.raised))")
+        }
+        // A colour that already reads is left as it is.
+        #expect(Palette.readable(0x000000, on: 0xFFFFFF, lighter: false) == 0x000000)
+    }
+
     @Test func aLabelAlwaysGetsTheSameChipColour() {
         #expect(Palette.night.chipColor(for: "books") == Palette.night.chipColor(for: "books"))
     }

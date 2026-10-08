@@ -629,20 +629,10 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
 
     private func pill(_ choice: Choice) -> some View {
         let on = selection.wrappedValue == choice
-        let color = palette.tint(tint(choice))
         return Button {
             selection.wrappedValue = choice
         } label: {
-            pillText(choice)
-                .textStyle(.subheadline, weight: .semibold)
-                .foregroundStyle(on ? palette.background : color)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(on ? color : .clear))
-                // Stronger than a row's: a pill is small, and 14% hardly showed.
-                .hoverFill(Capsule(), color: color, active: !on, strength: 0.26)
-                .overlay(Capsule().strokeBorder(color, lineWidth: 1.5))
-                .contentShape(Capsule())
+            PillFace(text: pillText(choice), tint: tint(choice), on: on)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
@@ -653,5 +643,34 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
     private func pillText(_ choice: Choice) -> Text {
         guard let n = count(choice) else { return Text(title(choice)) }
         return Text(title(choice)) + Text(" \(n.formatted())").fontWeight(.regular)
+    }
+}
+
+/// A pill over a list: outlined in its colour, filled when chosen. Under the
+/// pointer one that isn't chosen lifts onto the raised shade with a small
+/// shadow, its colour moved to the shade that reads at 4.5:1 there
+/// (`tintOnRaised`), as the web pages and the rooms draw it: a fill of its
+/// own colour behind it couldn't be read in most themes.
+private struct PillFace: View {
+    let text: Text
+    let tint: Palette.Tint
+    let on: Bool
+    @Environment(\.palette) private var palette
+    @State private var hovering = false
+
+    var body: some View {
+        let color = palette.tint(tint)
+        let lifted = hovering && !on
+        let ink = lifted ? palette.tintOnRaised(tint) : color
+        text
+            .textStyle(.subheadline, weight: .semibold)
+            .foregroundStyle(on ? palette.background : ink)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(on ? color : lifted ? palette.raised : .clear))
+            .overlay(Capsule().strokeBorder(on ? color : ink, lineWidth: 1.5))
+            .shadow(color: .black.opacity(lifted ? (palette.isDark ? 0.35 : 0.12) : 0), radius: 1, y: 1)
+            .contentShape(Capsule())
+            .onHover { hovering = $0 }
     }
 }

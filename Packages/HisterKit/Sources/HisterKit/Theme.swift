@@ -157,6 +157,73 @@ public struct Palette: Sendable {
         hex.chips.indices.contains(tint.rawValue) ? Color(hex: hex.chips[tint.rawValue]) : accent
     }
 
+    /// A tint as text on `raised` (a pill under the pointer lifts onto it):
+    /// its own colour moved in lightness only until it reads at 4.5:1 there,
+    /// as scripts/palettes.mjs makes the web's `--<tint>-raised` (twins).
+    public func tintOnRaised(_ tint: Tint) -> Color {
+        Color(hex: tintOnRaisedHex(tint))
+    }
+
+    public func tintOnRaisedHex(_ tint: Tint) -> UInt32 {
+        let colour = hex.chips.indices.contains(tint.rawValue) ? hex.chips[tint.rawValue] : hex.accent
+        return Palette.readable(colour, on: hex.raised, lighter: isDark)
+    }
+
+    /// WCAG's contrast ratio between two colours.
+    public static func contrast(_ a: UInt32, _ b: UInt32) -> Double {
+        func luminance(_ value: UInt32) -> Double {
+            let channels = [16, 8, 0].map { Double((value >> UInt32($0)) & 0xFF) / 255 }
+                .map { $0 <= 0.03928 ? $0 / 12.92 : pow(($0 + 0.055) / 1.055, 2.4) }
+            return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+        }
+        let (hi, lo) = (max(luminance(a), luminance(b)), min(luminance(a), luminance(b)))
+        return (hi + 0.05) / (lo + 0.05)
+    }
+
+    /// `colour` moved in HSL lightness only (lighter on a dark theme, darker
+    /// on a light one), half a percent a step, until 4.5:1 on `surface`;
+    /// palettes.mjs's readableOn.
+    static func readable(_ colour: UInt32, on surface: UInt32, lighter: Bool) -> UInt32 {
+        if contrast(colour, surface) >= 4.5 { return colour }
+        let rgb = [16, 8, 0].map { Double((colour >> UInt32($0)) & 0xFF) / 255 }
+        let (h, l0, s) = toHLS(rgb[0], rgb[1], rgb[2])
+        var l = l0
+        while l >= 0 && l <= 1 {
+            let (r, g, b) = fromHLS(h, l, s)
+            let out = [r, g, b].reduce(UInt32(0)) { ($0 << 8) | UInt32(($1 * 255).rounded()) }
+            if contrast(out, surface) >= 4.5 { return out }
+            l += lighter ? 0.005 : -0.005
+        }
+        return lighter ? 0xFFFFFF : 0x000000
+    }
+
+    /// Python's colorsys.rgb_to_hls, as palettes.mjs has it.
+    private static func toHLS(_ r: Double, _ g: Double, _ b: Double) -> (Double, Double, Double) {
+        let maxC = max(r, g, b), minC = min(r, g, b), l = (maxC + minC) / 2
+        if maxC == minC { return (0, l, 0) }
+        let d = maxC - minC
+        let s = l <= 0.5 ? d / (maxC + minC) : d / (2 - maxC - minC)
+        var h: Double
+        if maxC == r { h = ((g - b) / d).truncatingRemainder(dividingBy: 6) }
+        else if maxC == g { h = (b - r) / d + 2 }
+        else { h = (r - g) / d + 4 }
+        h = ((h / 6) + 1).truncatingRemainder(dividingBy: 1)
+        return (h, l, s)
+    }
+
+    private static func fromHLS(_ h: Double, _ l: Double, _ s: Double) -> (Double, Double, Double) {
+        if s == 0 { return (l, l, l) }
+        let q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q
+        func f(_ t0: Double) -> Double {
+            let t = (t0 + 1).truncatingRemainder(dividingBy: 1)
+            if t < 1.0 / 6 { return p + (q - p) * 6 * t }
+            if t < 0.5 { return q }
+            if t < 2.0 / 3 { return p + (q - p) * (2.0 / 3 - t) * 6 }
+            return p
+        }
+        return (f(h + 1.0 / 3), f(h), f(h - 1.0 / 3))
+    }
+
     /// A stable chip colour for a label, so `books` is always the same hue.
     public func chipColor(for label: String) -> Color {
         Color(hex: chipHex(for: label))
