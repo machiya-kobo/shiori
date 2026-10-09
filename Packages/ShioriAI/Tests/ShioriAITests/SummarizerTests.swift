@@ -31,6 +31,12 @@ final class RecordingEngine: AIEngine, @unchecked Sendable {
         #expect(PageText.plain(fromHTML: html) == "Title\nFirst & bold.\n• one\n• two\ncaf&eacute; — — end")
     }
 
+    @Test func scriptsStylesAndCommentsGoEvenAcrossLines() {
+        let html = "<script>\nvar a = 1 > 0;\n</script><style>\nbody { color: red }\n</style>"
+            + "<!--\nhidden > text\n--><p>kept</p>"
+        #expect(PageText.plain(fromHTML: html) == "kept")
+    }
+
     @Test func prefixCutsAtAParagraphOrSentenceNearTheLimit() {
         let text = String(repeating: "word ", count: 30) + "\n" + String(repeating: "more ", count: 30)
         let (head, cut) = PageText.prefix(text, limit: 160)

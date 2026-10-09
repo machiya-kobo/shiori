@@ -5,12 +5,12 @@ import Foundation
 public enum PageText {
     public static func plain(fromHTML html: String) -> String {
         var text = html
-        // Whole elements whose text isn't the page's.
+        // Whole elements whose text isn't the page's, across lines too ((?s): "." takes a line break).
         for tag in ["script", "style", "noscript", "svg", "template"] {
             text = text.replacingOccurrences(
-                of: "<\(tag)\\b[^>]*>.*?</\(tag)\\s*>", with: " ", options: [.regularExpression, .caseInsensitive])
+                of: "(?s)<\(tag)\\b[^>]*>.*?</\(tag)\\s*>", with: " ", options: [.regularExpression, .caseInsensitive])
         }
-        text = text.replacingOccurrences(of: "<!--.*?-->", with: " ", options: .regularExpression)
+        text = text.replacingOccurrences(of: "(?s)<!--.*?-->", with: " ", options: .regularExpression)
         // Block ends and breaks become line breaks, list items bullets.
         text = text.replacingOccurrences(of: "<li\\b[^>]*>", with: "\n• ", options: [.regularExpression, .caseInsensitive])
         text = text.replacingOccurrences(
