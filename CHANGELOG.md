@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.1.3 (2026-10-08)
+
+- **`shiori save` on Linux no longer hangs** on a page whose title holds a
+  numeric entity past U+10FFFF; the entity stays as written.
+- **Safari's Save Link decodes a title once:** "Tom &amp;lt;3" is saved as
+  "Tom &lt;3", not "Tom <3".
+- **AI summaries and answers leave out scripts, styles and comments** that
+  span several lines; before, their text could reach the model.
+
 ## 1.1.2 (2026-10-08)
 
 - **The container's start-up check reads SearXNG's whole answer.** It read
