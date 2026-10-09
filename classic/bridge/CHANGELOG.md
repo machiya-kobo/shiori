@@ -1,5 +1,11 @@
 # mac-bridge changelog
 
+## 0.1.2 (2026-10-08)
+
+- A reply header from Hister or Kura whose value isn't printable ASCII (a
+  folded line or a control character) is dropped, as a forwarded one is
+  refused; any value with a line break left is a 500, never sent.
+
 ## 0.1.1 (2026-10-07)
 
 - The Kura port checks the room token with hister-login too, as the

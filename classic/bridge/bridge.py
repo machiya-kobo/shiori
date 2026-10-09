@@ -16,7 +16,8 @@ token service; a request without one is refused before any upstream is asked, an
 
 Everything else is refused: another method, another path (matched exactly, before any decoding), a source address off
 BRIDGE_ALLOW, `vault=all` or a vault off BRIDGE_VAULTS. Only an allow-list of headers goes upstream, each value plain printable
-ASCII (no control characters, no folded lines), and only a short list comes back (never Set-Cookie). Replies to the Mac are HTTP/1.0 with Content-Length (never chunked); a reply over
+ASCII (no control characters, no folded lines), and only a short list comes back, held to the same rule (never
+Set-Cookie). Replies to the Mac are HTTP/1.0 with Content-Length (never chunked); a reply over
 BRIDGE_MAX_BYTES is a 413, a redirect is passed back as is, never followed. Nothing is cached but the token check, and
 the log holds the path only: never a query string (search words), a header or a body.
 
@@ -50,7 +51,7 @@ import threading
 import time
 from urllib.parse import parse_qsl, urlsplit
 
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 
 HISTER_PATHS = frozenset({"/search", "/api/preview", "/api/config"})
 KURA_PATHS = frozenset({"/api/search", "/api/recent", "/api/note", "/api/vaults"})
@@ -208,6 +209,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
     # -- replies ----------------------------------------------------------------------------------------------------
 
     def _reply(self, status, body, headers=()):
+        if any("\r" in value or "\n" in value for _, value in headers):
+            # A backstop: no header value may start a line of its own on the Mac's connection.
+            status, body, headers = 500, b'{"error": "a bad reply header"}', [("Content-Type", "application/json")]
         self.send_response(status)
         for name, value in headers:
             self.send_header(name, value)
@@ -369,7 +373,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if size > self.config.max_bytes:
                     return self._error(413, "too large for this Mac (over %d bytes)" % self.config.max_bytes)
                 chunks.append(chunk)
-            back = [(n, r.getheader(n)) for n in REPLY_HEADERS if r.getheader(n)]
+            # Only printable ASCII comes back: http.client keeps a folded or control-character value as it came.
+            back = [(n, v) for n in REPLY_HEADERS for v in [r.getheader(n)] if v and HEADER_VALUE_RE.match(v)]
             return self._reply(r.status, b"".join(chunks), back)
         except socket.timeout:
             return self._error(504, "%s didn't answer in time" % ("Hister" if self.service == "hister" else "Kura"))

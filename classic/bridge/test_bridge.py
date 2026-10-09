@@ -287,6 +287,28 @@ class BridgeTest(unittest.TestCase):
         self.assertEqual(headers["content-length"], ["2"])
         self.assertNotIn("transfer-encoding", headers)
 
+    def test_a_reply_header_with_a_fold_or_control_character_is_dropped(self):
+        self.answer = lambda p: (200, [("Content-Type", "application/json"), ("Location", "/a\r\n X-Evil: 1"),
+                                       ("ETag", '"1\x01"')], b"{}", False, 0)
+        port = self.bridges[1].server_address[1]
+        with socket.create_connection(("127.0.0.1", port), timeout=5) as s:
+            s.sendall(("GET /api/recent HTTP/1.0\r\nHost: bridge\r\nAuthorization: Bearer %s\r\n\r\n" % GOOD).encode())
+            data = b""
+            while chunk := s.recv(65536):
+                data += chunk
+        head, _, body = data.partition(b"\r\n\r\n")
+        lines = head.split(b"\r\n")
+        self.assertTrue(lines[0].startswith(b"HTTP/1.0 200"), lines[0])
+        for line in lines[1:]:
+            self.assertFalse(line[:1].isspace(), line)          # no folded line
+            self.assertTrue(all(0x20 <= c < 0x7f for c in line), line)
+        names = [line.partition(b":")[0].lower() for line in lines[1:]]
+        self.assertNotIn(b"location", names)
+        self.assertNotIn(b"etag", names)
+        self.assertNotIn(b"x-evil", names)
+        self.assertIn(b"content-type: application/json", [line.lower() for line in lines[1:]])
+        self.assertEqual(body, b"{}")
+
     # -- the token swap on Hister's port ----------------------------------------------------------------------------
 
     def test_without_a_room_token_is_401_and_never_reaches_an_upstream(self):
