@@ -58,9 +58,11 @@
     return docs.some((d) => wanted.has(d.url));
   }
 
+  // Entities decoded in one pass, so "&amp;lt;" stays "&lt;" (one decode, as a browser would show it).
+  const TITLE_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" };
   const titleIn = (html) => {
     const m = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
-    return m ? m[1].replace(/\s+/g, ' ').trim().replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'") : '';
+    return m ? m[1].replace(/\s+/g, ' ').trim().replace(/&(amp|lt|gt|quot|#39);/g, (_, name) => TITLE_ENTITIES[name]) : '';
   };
   const capped = (html) => {
     if (html.length <= MAX_HTML) return html;

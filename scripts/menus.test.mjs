@@ -93,6 +93,13 @@ test('a fresh page is downloaded without cookies and saved, with its title and w
   assert.deepEqual(plain(t.added), [{ url: 'https://a.example/lanterns', title: 'Paper & Lanterns', html: HTML, metadata: { via: 'context-menu' } }]);
 });
 
+test("a title's entities are decoded once: &amp;lt; is saved as &lt;", async () => {
+  const page = '<!doctype html><title>Tom &amp;lt;3 &amp;amp; co</title><p>x</p>';
+  const t = load({ web: (url) => (url === BASE + 'api/add' ? new Response('{}', { status: 201 }) : html(page)) });
+  assert.deepEqual(plain(await t.menus.saveLink('https://a.example/tom')), { outcome: 'saved' });
+  assert.equal(t.added[0].title, 'Tom &lt;3 &amp; co');
+});
+
 test('skip rules hold: no ignore_skip_rules, and a 406 says skipped', async () => {
   const t = load({ web: (url) => (url === BASE + 'api/add' ? new Response('{}', { status: 406 }) : html()) });
   assert.deepEqual(plain(await t.menus.saveLink('https://bank.example/')), { outcome: 'skipped' });
