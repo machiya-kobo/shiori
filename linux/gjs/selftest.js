@@ -50,6 +50,7 @@ check('kuraURL', S.kuraURL('https://kura.example/', 'hister', { limit: 5 }), 'ht
 check('feedURL', S.feedURL('https://s.example/', { query: 'rust', title: 'Rust' }), 'https://s.example/shiori/feed?q=rust&exclude_label=vault&title=Rust');
 check('smallwebSearchURL', S.smallwebSearchURL('https://sw.example/', 'gemini capsule'), 'https://sw.example/api/search?q=gemini+capsule&page=1');
 check('titleIn', titleIn('<title>Caf&eacute; &amp; 町家</title>'), 'Caf&eacute; & 町家');
+check('titleIn (past U+10FFFF)', titleIn('<title>a &#x110000; b &#99999999999999999999; c</title>'), 'a &#x110000; b &#99999999999999999999; c');
 check('addRequest', addRequest('https://h.example', newPage({ url: 'https://a.example/', title: 'A' })).headers.Origin, 'hister://');
 check('parseArgs', parseArgs(['save', 'https://a.example/', 'books']), { command: 'save', url: 'https://a.example/', label: 'books' });
 check('providerResults', providerResults({ documents: [{ url: 'https://a.example/', title: 'A' }] }, null).map((r) => r.id), ['page:https://a.example/']);

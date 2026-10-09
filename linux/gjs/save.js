@@ -80,7 +80,12 @@ export function fetchPage(url) {
           let at = 0;
           for (const c of chunks) all.set(c, (at += c.length) - c.length);
           const html = new TextDecoder().decode(all.subarray(0, MAX_BYTES));
-          resolve({ url: message.get_uri().to_string(), title: titleIn(html), html: capped(html) });
+          // Nothing thrown in here may leave the promise unsettled (the command would hang).
+          let title = '';
+          try {
+            title = titleIn(html);
+          } catch (_) {}
+          resolve({ url: message.get_uri().to_string(), title, html: capped(html) });
         });
       next();
     });

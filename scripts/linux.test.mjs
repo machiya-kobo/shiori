@@ -92,6 +92,8 @@ test('a save is a deliberate, tagged add with Origin hister://', () => {
   assert.throws(() => newPage({ url: 'file:///etc/passwd' }));
   assert.equal(titleIn('<html><head><TITLE> Caf&eacute; &amp; &#x2014; <b>x</b>\n </title>'), 'Caf&eacute; & — x');
   assert.equal(titleIn('<p>none</p>'), '');
+  // A numeric entity past U+10FFFF stays as written (fromCodePoint would throw, and the save would hang).
+  assert.equal(titleIn('<title>a &#x110000; b &#99999999999999999999; c</title>'), 'a &#x110000; b &#99999999999999999999; c');
   const big = '<p>' + 'x'.repeat(MAX_HTML_CHARACTERS) + '</p>';
   assert.ok(capped(big).endsWith('<p>') && capped(big).length <= MAX_HTML_CHARACTERS);
 });
