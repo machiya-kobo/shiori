@@ -1354,6 +1354,18 @@ function setTitle(text, back = false) {
   $('back').hidden = !back;
 }
 
+/**
+ * A box of its own in the list for this draw. A reply that lands after
+ * another pill was picked (Notes' pages, All's notes) writes into the box it
+ * was started with, which is gone by then, so it never shows under the
+ * results of the pill picked since.
+ */
+function freshList() {
+  const host = h('div', { class: 'list-host' });
+  $('list').replaceChildren(host);
+  return host;
+}
+
 function viewLibrary(params) {
   const filter = scopeOf(params);
   setTitle('Library');
@@ -1363,7 +1375,7 @@ function viewLibrary(params) {
     segments(scopes(), filter, (s) => go('library', { s }, { replace: true })),
     filter === 'opened' || filter === 'web' ? null : controls('library', params, { notes: filter === 'notes' }),
   );
-  const list = $('list');
+  const list = freshList();
   if (filter === 'opened') {
     shownList = { title: 'Opened', feed: S.feedURL(location.origin, { opened: true }) };
     return viewOpened(list);
@@ -1473,7 +1485,7 @@ function viewList(params) {
     const c = listChoices(params, { search: !!words });
     const query = withWord(words ? `${q} ${words}` : q, c.word);
     shownList = { title, query, sort: c.hister, feed: S.feedURL(location.origin, { query, title, feedService: FEED_SERVICE }) };
-    resultsList($('list'), {
+    resultsList(freshList(), {
       query, sort: c.hister, group: c.group, opened: false,
       empty: words ? `Nothing in ${title} matches “${words}”.` : 'No pages have this yet.',
     });
@@ -1566,6 +1578,7 @@ function viewSearch(params) {
   const web = params.get('w') === '1';
   const keep = (next) => ({ q, ...(web ? { w: '1' } : {}), ...next });
   const listed = scope === 'hister' || scope === 'notes';
+  const list = freshList();
   fill($('list-top'), 
     segments(scopes(), scope, (s) => go('search', keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), { replace: true })),
     listed ? controls('search', params, { search: true, notes: scope === 'notes' }) : null,
@@ -1579,7 +1592,7 @@ function viewSearch(params) {
   shownList = { title: q, query: withWord(text, c.word), sort: c.hister, source, feed: S.feedURL(location.origin, { query: withWord(text, c.word), title: q, source, kuraBase: notesFromHister() ? '' : KURA_BASE, feedService: FEED_SERVICE }) };
   if (listed) {
     const notes = scope === 'notes';
-    resultsList($('list'), {
+    resultsList(list, {
       query: withWord(text, c.word),
       sort: c.hister,
       group: c.group,
@@ -1589,17 +1602,17 @@ function viewSearch(params) {
       respell: { text: q, wrap: (t) => withWord(t, c.word), title: notes ? 'Your Notes' : 'Your Pages' },
     });
   } else if (scope === 'web') {
-    if (web) webList($('list'), q);
-    else $('list').replaceChildren(status('Search the Web', 'Press Return to search the web for this.'));
-  } else if (scope === 'smallweb') smallwebList($('list'), q);
-  else if (scope === 'code') codeList($('list'), q);
+    if (web) webList(list, q);
+    else list.replaceChildren(status('Search the Web', 'Press Return to search the web for this.'));
+  } else if (scope === 'smallweb') smallwebList(list, q);
+  else if (scope === 'code') codeList(list, q);
   else if (scope === 'files') {
     shownList = { title: q };
-    resultsList($('list'), { query: S.filesQuery(q), sort: '', group: '', source: 'pages', empty: `No files match “${q}”.` });
+    resultsList(list, { query: S.filesQuery(q), sort: '', group: '', source: 'pages', empty: `No files match “${q}”.` });
   } else if (scope === 'opened') {
     shownList = { title: 'Opened', feed: S.feedURL(location.origin, { opened: true }) };
-    viewOpened($('list'), q);
-  } else searchAll($('list'), q, { web });
+    viewOpened(list, q);
+  } else searchAll(list, q, { web });
 }
 
 /**

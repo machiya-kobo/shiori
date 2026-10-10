@@ -66,6 +66,8 @@ button { font: inherit; color: inherit; }
 /* Its scrollbar starts under the bars, not behind them (it was half
    hidden): WebKit's track takes a top margin. Thin and in
    the theme's colours; browsers without the pseudo-elements keep theirs. */
+/* Each draw's own box (freshList): no box of its own. */
+.list-host { display: contents; }
 #list::-webkit-scrollbar { width: 11px; }
 #list::-webkit-scrollbar-track { background: transparent; margin-top: var(--bars, 0px); }
 #list::-webkit-scrollbar-thumb {

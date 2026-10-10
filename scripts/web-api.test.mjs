@@ -448,7 +448,7 @@ test('the web is searched only on purpose: Return, a recent search, Did you mean
   assert.match(app, /keep\(\{ s, \.\.\.\(s === 'web' \? \{ w: '1' \} : \{\}\) \}\)/);
   // All and Web ask the web only with it.
   assert.match(app, /if \(!settings\.webResults \|\| !web\) \{/);
-  assert.match(app, /if \(web\) webList\(\$\('list'\), q\);/);
+  assert.match(app, /if \(web\) webList\(list, q\);/);
   // Respellings come from the autocompleter, never a web search.
   assert.doesNotMatch(app, /api\.web\([^)]*\)\.then\(\(d\) => d\.suggestions/);
 });
@@ -550,4 +550,13 @@ test('identical reads in flight are sent once, each caller gets its own copy, an
   server.calls = [];
   await Promise.all([api.recordOpened('https://a.example/', 'A', 'a'), api.recordOpened('https://a.example/', 'A', 'a')]);
   assert.equal(server.calls.filter((c) => c.url === '/api/history').length, 2);
+});
+
+test('each draw of the list gets a box of its own, so a late reply from another pill never shows under this one', () => {
+  const app = read('../web/app/app.js');
+  assert.match(app, /function freshList\(\) \{[\s\S]*?\$\('list'\)\.replaceChildren\(host\);/);
+  const search = app.slice(app.indexOf('function viewSearch('), app.indexOf('"Did you mean'));
+  assert.match(search, /const list = freshList\(\);/);
+  // Only the no-pull attribute still goes to #list itself.
+  assert.equal((search.match(/\$\('list'\)/g) || []).length, 1);
 });

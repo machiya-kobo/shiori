@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.1.5 (2026-10-10)
+
+- **Switching pills in the web app no longer shows the last pill's
+  results.** Notes (or All's pages and notes) that finished loading after a
+  switch to Web sat under the Web pill until the web answered.
+
 ## 1.1.4 (2026-10-10)
 
 - **The loading line sits above the result placeholders** on the search
