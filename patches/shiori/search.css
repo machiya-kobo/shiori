@@ -704,9 +704,9 @@ body.home header {
 .home-brand img { width: 2.4rem; height: 2.4rem; border-radius: 0.55rem; display: block; flex: none; }
 .home-brand h1 { margin: 0; font-size: 2rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
 .home-brand p { margin: 4px 0 0; color: var(--secondary); }
-body.home #search { max-width: 36rem; margin: 0 auto; text-align: left; }
-body.home #q { font-size: 1.15em; padding-top: 14px; padding-bottom: 14px; }
-.home-recent { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 18px auto 0; max-width: 36rem; }
+body.home #search { max-width: 31rem; margin: 0 auto; text-align: left; }
+body.home #q { font-size: 1.05em; padding-top: 11px; padding-bottom: 11px; }
+.home-recent { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 18px auto 0; max-width: 31rem; }
 .home-chip {
   padding: 6px 12px; border-radius: 999px; text-decoration: none; color: var(--text);
   background: var(--card); border: 1px solid var(--line); font-size: 0.9em;

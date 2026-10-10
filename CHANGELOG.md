@@ -5,6 +5,11 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.1.7 (2026-10-10)
+
+- **The search page's start box is smaller:** narrower, with a slightly
+  smaller field, and the recent searches under it match its width.
+
 ## 1.1.6 (2026-10-10)
 
 - **All waits for the web before it shows your notes** in the iPhone, iPad
