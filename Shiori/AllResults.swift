@@ -25,6 +25,11 @@ struct AllResults: View {
     /// Hister answers both in about 50 ms, so the list
     /// appears once, laid out. The web comes later, in its own section.
     @State private var holding = true
+    /// While the web is on its way, All shows its spinner rather than yours
+    /// alone, which then moved when the web's results landed among them
+    /// (1.5 s at most, as the search page's `settling`). Set once that has
+    /// passed, so a web joining after Return never blanks what's shown.
+    @State private var webWaited = false
     /// How many code documents match, for the Code pill's count (never
     /// listed here: code shows only on its own pill).
     @State private var codeTotal = 0
@@ -63,6 +68,10 @@ struct AllResults: View {
             .task {
                 try? await Task.sleep(for: .milliseconds(600))
                 holding = false
+            }
+            .task {
+                try? await Task.sleep(for: .milliseconds(1500))
+                webWaited = true
             }
             .pullToRefresh { await load() }
             .topBar {
@@ -116,6 +125,12 @@ struct AllResults: View {
         [pages.phase, notes.phase].contains { $0 == .idle || $0 == .loading }
     }
 
+    /// The web is on its way and not yet waited out: nothing of yours shows
+    /// ahead of it.
+    private var holdingForWeb: Bool {
+        webOn && !webWaited && (web.phase == .idle || web.phase == .loading)
+    }
+
     private var stillLoading: Bool {
         mineLoading || (webOn && (web.phase == .idle || web.phase == .loading))
     }
@@ -143,7 +158,7 @@ struct AllResults: View {
         let mine = yourPages()
         let vault = shown(notes, count: Self.count)
         let webResults = webOn ? web.results : []
-        if (mine.isEmpty && vault.isEmpty && webResults.isEmpty) || (holding && mineLoading) {
+        if (mine.isEmpty && vault.isEmpty && webResults.isEmpty) || (holding && mineLoading) || holdingForWeb {
             Group {
                 if stillLoading {
                     ProgressView()

@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.1.6 (2026-10-10)
+
+- **All waits for the web before it shows your notes** in the iPhone, iPad
+  and Mac apps (1.5 s at most), as the search page does. Your pages and notes
+  showed first, then moved when the web's results landed among them.
+
 ## 1.1.5 (2026-10-10)
 
 - **Switching pills in the web app no longer shows the last pill's
