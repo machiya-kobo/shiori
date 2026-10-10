@@ -127,3 +127,14 @@ test("the installed app's bar colours are the rooms' (#16161e Night, #d0d5e3 Day
   assert.equal(manifest.theme_color, '#16161e');
   assert.equal(manifest.background_color, '#1a1b26');
 });
+
+// The wordmark in the header is the accent colour (the rooms' header), and
+// its hover shade, on the frosted header, which is the page's colour.
+for (const [name, v] of Object.entries(themes)) {
+  test(`${name}: the header's wordmark, accent and its hover shade, is at least 4.5:1 on the frosted header`, () => {
+    for (const fg of ['accent', 'accent-hover']) {
+      const r = ratio(v[fg], v.bg);
+      assert.ok(r >= 4.5, `--${fg} on --bg is ${r.toFixed(2)}:1`);
+    }
+  });
+}

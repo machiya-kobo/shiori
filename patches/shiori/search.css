@@ -83,7 +83,7 @@ a { color: var(--accent); }
 
 /* Header: search field, categories, filters */
 header {
-  position: sticky; top: 0; z-index: 2; padding: 10px 0 0;
+  position: sticky; top: 0; z-index: 2; padding: 0;
   background: var(--frost);
   -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
   border-bottom: 1px solid var(--line);
@@ -91,13 +91,32 @@ header {
 .field { position: relative; }
 /* The brand row: the mark and name on the left; the rooms, time range
    (or sort) and Settings on the right. */
-.brand-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.brand-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; }
+/* The rooms' header (vaultkit's ui/machiya.css): the mark, then the name in
+   the room's colour, 18px and 700; 16px between the header's items. */
 .brand {
   display: flex; align-items: center; gap: 8px; min-width: 0;
-  color: var(--text); text-decoration: none; font-weight: 700; font-size: 1.15em; letter-spacing: -0.01em;
+  color: var(--accent); text-decoration: none; font-weight: 700; font-size: 1.125rem; letter-spacing: -0.01em;
 }
 .brand img { width: 28px; height: 28px; border-radius: 7px; flex: none; }
-.brand:hover span, .brand:focus-visible span { color: var(--accent); }
+.brand:hover span, .brand:focus-visible span { color: var(--accent-hover); }
+/* From 1100px up the field sits in the header's top row, between the brand
+   and the icons, centred as the rooms' search is (560px, shrinking); the
+   pills and the time range keep their own rows under it. Below that, and
+   on the start page, the field is the row under the brand as before. */
+@media (min-width: 1100px) {
+  body:not(.home) header {
+    display: grid; grid-template-columns: minmax(auto, 1fr) minmax(0, 560px) minmax(auto, 1fr);
+    column-gap: 16px; align-items: center;
+  }
+  body:not(.home) .brand-row { display: contents; }
+  body:not(.home) .brand { grid-column: 1; grid-row: 1; justify-self: start; }
+  body:not(.home) .filters { grid-column: 3; grid-row: 1; justify-self: end; }
+  body:not(.home) #search { grid-column: 2; grid-row: 1; padding: 6px 0; }
+  body:not(.home) #q { padding: 10px 44px 10px 16px; border-color: var(--line2); }
+  body:not(.home) #q:focus { border-color: var(--accent); }
+  body:not(.home) .tabs-row, body:not(.home) .tools-row { grid-column: 1 / -1; }
+}
 
 /* Recent searches, under the field while it has focus. */
 .recent {
@@ -232,7 +251,7 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
 .chip.gemini, .chip.gateway { color: var(--smallweb); }
 .filters { display: flex; justify-content: flex-end; align-items: center; gap: 6px; flex: none; }
 .icon-button {
-  width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; flex: none;
+  width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; flex: none;
   -webkit-tap-highlight-color: transparent;
 }
 #settings-open::before {
@@ -240,13 +259,14 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
-#settings-open:hover::before, #settings-open:focus-visible::before { background: var(--accent); }
+#settings-open:hover::before, #settings-open:focus-visible::before { background: var(--text); }
+.icon-button:hover, .icon-button:focus-visible { background: var(--raised); }
 /* The Machiya rooms' switcher: a house beside the gear,
    its menu listing the rooms front to back, then the neighbours, each in
    its room's colour. The web app draws the same (app.css). */
 .rooms { position: relative; display: flex; }
 .rooms-open svg { display: block; width: 18px; height: 18px; margin: auto; fill: none; stroke: var(--secondary); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.rooms-open:hover svg, .rooms-open:focus-visible svg, .rooms-open[aria-expanded="true"] svg { stroke: var(--accent); }
+.rooms-open:hover svg, .rooms-open:focus-visible svg, .rooms-open[aria-expanded="true"] svg { stroke: var(--text); }
 /* The menu, as the rooms draw theirs (vaultkit's switcher): their --dark
    panel and --hl current row (--rooms-*), each room's icon tile, name and
    one-word role, the neighbours' line glyphs after a rule, then Settings. */
@@ -625,7 +645,7 @@ body.pending footer { visibility: hidden; }
   body.two-col[data-cat="images"]:not(.with-preview) > main > * { grid-column: 1 / -1; }
   body.two-col:not(.with-preview) > main > #infobox-slot {
     grid-column: 2; grid-row: 1 / span 99; align-self: start;
-    position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto;
+    position: sticky; top: calc(var(--header-h, 0px) + 12px); max-height: calc(100vh - var(--header-h, 0px) - 24px); overflow-y: auto;
     /* Room for the card's border and shadow: a scrolling column clips
        anything past its edge, and cut the card's bottom border. The
        margins keep the card's own edges where they were. */

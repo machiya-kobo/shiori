@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.2.0 (2026-10-10)
+
+- **The search page's header matches the Machiya rooms':** the name in the
+  accent color, 18px, a 48px top row, 32px icon buttons. From 1100px up the
+  search field sits in that row between the name and the icons, centered;
+  below that, and on phones, it stays under the name. The pills stay in their
+  own row, and the start page is as it was.
+- **The Info card sticks under the header** instead of behind it.
+
 ## 1.1.7 (2026-10-10)
 
 - **The search page's start box is smaller:** narrower, with a slightly
