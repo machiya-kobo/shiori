@@ -1506,12 +1506,13 @@
     fitUnits();
   }
 
-  /** --z (the body's zoom) and --vw (the visible width in the zoomed page's pixels) for the header. */
+  /** --z (the body's zoom), --vw and --vh (the visible size in the zoomed page's pixels): 100vw and 100vh are zoomed too. */
   function fitUnits() {
     const root = document.documentElement;
     const z = parseFloat(document.body.style.zoom) || 1;
     root.style.setProperty('--z', String(z));
     root.style.setProperty('--vw', `${root.clientWidth / z}px`);
+    root.style.setProperty('--vh', `${window.innerHeight / z}px`);
   }
 
   function pageZoom(textSize) {

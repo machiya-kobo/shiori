@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.1 (2026-10-11)
+
+- **The search field is back in its own row above the pills** on the
+  search page, at the results' width as before; only the name and the icons
+  span the window.
+- **The start page's field is in the middle of the window:** the Text Size
+  zoom had made the page 20% taller than the window on the Mac, so the field
+  sat low.
+
 ## 1.5.0 (2026-10-11)
 
 - **The search page's header spans the window, as the rooms':** the mark
