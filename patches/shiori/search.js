@@ -1011,8 +1011,15 @@
   // moves the first result without changing main's size.
   const aligner = new ResizeObserver(() => alignInfo());
   for (const el of [document.querySelector('main'), $('hister'), $('vault'), $('web'), $('infobox-slot')]) aligner.observe(el);
-  document.fonts?.ready.then(() => alignInfo());
-  addEventListener('resize', () => alignInfo());
+  document.fonts?.ready.then(() => { alignInfo(); alignField(); });
+  addEventListener('resize', () => { alignInfo(); alignField(); });
+  // The field follows the column it's over: the layout classes (two-col,
+  // with-preview, home) and the zoom both change it without a resize.
+  let fieldFrame = 0;
+  new MutationObserver(() => {
+    if (!fieldFrame) fieldFrame = requestAnimationFrame(() => { fieldFrame = 0; alignField(); });
+  }).observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
+  new ResizeObserver(() => alignField()).observe($('brand'));
 
   // --- Settings (the gear): the app's options for this page ---------------------
   // Changes go to the app's App Group through the background, so the app
@@ -1513,6 +1520,7 @@
     root.style.setProperty('--z', String(z));
     root.style.setProperty('--vw', `${root.clientWidth / z}px`);
     root.style.setProperty('--vh', `${window.innerHeight / z}px`);
+    alignField();
   }
 
   function pageZoom(textSize) {
@@ -2916,12 +2924,59 @@
     }
     slot.classList.toggle('side', side);
     alignInfo();
+    alignField();
     // And again once the move and the results around it have been laid out:
     // measured in the same turn, the column landed a few pixels low.
     requestAnimationFrame(() => alignInfo());
     setTimeout(() => alignInfo(), 600);
   }
   matchMedia('(min-width: 1100px)').addEventListener('change', () => placeSide());
+
+  /**
+   * From 1100px up the field is in the top row over the results' column: as
+   * wide as it, and level with its left edge (just after the name where the
+   * name leaves no room). It's measured from the column as drawn, not
+   * worked out from the page's own sums, so a browser that sizes the grid's
+   * tracks or the zoomed units a little differently still lines up. Below
+   * 1100px, and on the start page, the stylesheet places it.
+   */
+  function alignField() {
+    const field = $('search');
+    const props = ['grid-column', 'grid-row', 'justify-self', 'margin-left', 'margin-right', 'width', 'max-width', 'padding'];
+    for (const p of props) field.style.removeProperty(p);
+    if (document.body.classList.contains('home') || !matchMedia('(min-width: 1100px)').matches) return;
+    const main = document.querySelector('main');
+    const header = document.querySelector('header');
+    const name = document.querySelector('#brand span');
+    const filters = document.querySelector('.filters');
+    if (!main || !header || !name || !filters) return;
+    // The zoomed page's own pixels (what a CSS length is) against the
+    // screen's (what a rect is).
+    const z = parseFloat(document.body.style.zoom) || 1;
+    const column = main.getBoundingClientRect();
+    let left = column.left;
+    let right = column.right;
+    // Two columns: main is a grid of the results and the Info card, and its
+    // first track is the results' (a computed track is in the zoomed px).
+    const style = getComputedStyle(main);
+    if (style.display === 'grid') {
+      const first = parseFloat(style.gridTemplateColumns.split(' ')[0]);
+      if (first > 0) right = column.left + first * z;
+    }
+    left = Math.max(left, name.getBoundingClientRect().right + 16);
+    right = Math.min(right, filters.getBoundingClientRect().left - 16);
+    if (!(right - left > 160)) return;
+    const box = header.getBoundingClientRect();
+    const inner = box.left + (parseFloat(getComputedStyle(header).paddingLeft) || 0) * z;
+    field.style.setProperty('grid-column', '1 / -1');
+    field.style.setProperty('grid-row', '1');
+    field.style.setProperty('justify-self', 'start');
+    field.style.setProperty('margin-left', `${(left - inner) / z}px`);
+    field.style.setProperty('margin-right', '0');
+    field.style.setProperty('width', `${(right - left) / z}px`);
+    field.style.setProperty('max-width', 'none');
+    field.style.setProperty('padding', '0');
+  }
 
   function alignInfo() {
     const slot = $('infobox-slot');
@@ -2964,6 +3019,7 @@
     settle(); // everything's drawn: show it
     reveal();
     alignInfo(); // once more, as finally drawn
+    alignField();
     if (!cached || !cached.y) return;
     const y = cached.y;
     window.scrollTo(0, y);

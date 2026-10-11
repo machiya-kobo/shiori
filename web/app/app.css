@@ -293,7 +293,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .link-button:disabled { color: var(--secondary); cursor: default; }
 .searchfield input {
   width: 100%; font-family: inherit; font-size: 1.0625rem; color: var(--text); background: var(--card);
-  border: 1px solid var(--line2); border-radius: 12px; padding: 13px 14px; min-height: 48px;
+  border: 1px solid var(--line2); border-radius: 999px; padding: 13px 14px 13px 16px; min-height: 48px;
 }
 
 /* Rows */

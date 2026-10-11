@@ -568,6 +568,23 @@ test('a note preview\'s table cells break at word edges, not anywhere (columns n
   }
 });
 
+test('the web app\'s search field is a pill, as the rooms\' (vaultkit form.search.searchbar)', () => {
+  const css = read('../web/app/app.css');
+  assert.match(css, /\.searchfield input \{[^}]*border-radius:\s*999px/);
+});
+
+test('the search page sizes its field to the results\' column as drawn (alignField), from 1100px up', () => {
+  const src = read('../patches/shiori/search.js');
+  const body = src.slice(src.indexOf('function alignField('), src.indexOf('function alignInfo('));
+  assert.match(body, /min-width: 1100px/);
+  assert.match(body, /gridTemplateColumns/);
+  assert.match(body, /setProperty\('width'/);
+  assert.match(body, /setProperty\('margin-left'/);
+  // Re-measured when the layout classes, the zoom or the size change.
+  assert.match(src, /new MutationObserver\([\s\S]*?alignField\(\)[\s\S]*?attributeFilter: \['class', 'style'\]/);
+  assert.match(src.slice(src.indexOf('function fitUnits(')), /alignField\(\)/);
+});
+
 test('a refresh applies a waiting service worker without the toast (the toast stays for a page left open)', () => {
   const app = read('../web/app/app.js');
   const watch = app.slice(app.indexOf('function watchForUpdates('));

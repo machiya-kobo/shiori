@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.3 (2026-10-11)
+
+- **The search page's field is sized to the results' column as drawn.** It
+  is measured from the column on screen and placed over it, so it is always
+  as wide as the results and level with their left edge (from 1100px up),
+  whatever the browser's text size or zoom.
+- **The web app's search field is a pill,** as the rooms' (Kura, Niwa and
+  Konbini). Its width and place are as they were.
+
 ## 1.5.2 (2026-10-11)
 
 - **The search field is in the top row, next to the name,** from 1100px up,
