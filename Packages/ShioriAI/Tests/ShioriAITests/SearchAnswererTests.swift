@@ -47,6 +47,16 @@ final class AnsweringEngine: AIEngine, @unchecked Sendable {
         #expect(request.content == .page)
     }
 
+    @Test func answersInTheQuerysLanguageWhenPlain_elseTheReaders() {
+        // Two words, its results romanized Korean: the reader's language, not a guess ("Indonesian").
+        #expect(SearchAnswerer.language(forQuery: "dak galbi", preferred: ["en-US"]) == "English")
+        #expect(SearchAnswerer.language(forQuery: "moon", preferred: ["de-DE", "en"]) == "German")
+        // A plain query in another language than the device's.
+        #expect(SearchAnswerer.language(forQuery: "wie funktioniert ein Kühlschrank genau", preferred: ["en-US"]) == "German")
+        #expect(SearchAnswerer.language(forQuery: "how does a refrigerator work", preferred: ["de-DE"]) == "English")
+        #expect(SearchAnswerer.language(forQuery: "dak galbi", preferred: []) == nil)
+    }
+
     @Test func snippetsShrinkToFitASmallEngine() {
         let long = String(repeating: "word ", count: 200)
         let sources = SearchAnswerer.sources(from: (1...8).map { ("Title \($0)", "https://example.com/\($0)", long) })

@@ -1,3 +1,4 @@
+import NaturalLanguage
 import Foundation
 
 /// One web result as the answerer sees it: its number in the answer's
@@ -86,7 +87,7 @@ public struct SearchAnswerer: Sendable {
     public func answer(query: String, results: [(title: String, url: String, snippet: String)]) async throws -> SearchAnswer {
         let sources = Self.sources(from: results)
         guard !sources.isEmpty else { throw AIError.emptyContent }
-        let language = Summarizer.language(of: query + "\n" + sources.map(\.snippet).joined(separator: "\n"))
+        let language = Self.language(forQuery: query)
         let ((text, points), provider) = try await chain.run(for: .page) { engine in
             let small = engine.inputBudget < Self.smallBudget
             let read = small ? Array(sources.prefix(5)) : sources
@@ -97,6 +98,24 @@ public struct SearchAnswerer: Sendable {
             return (try await engine.respond(to: request), points)
         }
         return SearchAnswer(text: Summarizer.tidy(text, maxPoints: points), sources: sources, provider: provider)
+    }
+
+    /// The language to answer in, by name: the query's, when it's plainly in
+    /// one (three words or more, the recognizer at least 80% sure), else the
+    /// reader's (the device's first language). Never guessed from the
+    /// results: "dak galbi" and its romanized-Korean snippets came back as
+    /// an Indonesian answer for an English reader.
+    static func language(forQuery query: String, preferred: [String] = Locale.preferredLanguages) -> String? {
+        let name = { (code: String) in Locale(identifier: "en").localizedString(forLanguageCode: code) }
+        if query.split(whereSeparator: \.isWhitespace).count >= 3 {
+            let recognizer = NLLanguageRecognizer()
+            recognizer.processString(query)
+            if let (language, confidence) = recognizer.languageHypotheses(withMaximum: 1).first, confidence >= 0.8 {
+                return name(language.rawValue)
+            }
+        }
+        guard let first = preferred.first else { return nil }
+        return name(Locale(identifier: first).language.languageCode?.identifier ?? first)
     }
 
     static func sources(from results: [(title: String, url: String, snippet: String)]) -> [AnswerSource] {
