@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.12 (2026-10-11)
+
+- **The tab icon is the rooms' set,** on the search page and in the web
+  app: an SVG (a dark rounded tile with the ribbon and lens made bold and
+  kept in from the edge, so nothing touches it at 16px), an .ico with 16,
+  32 and 48px frames, and the square touch icon. The corners of the old 64px
+  PNG were stored as transparent black, which Safari's scaling bled into a
+  dark fringe; the new frames store them white and transparent.
+
 ## 1.5.11 (2026-10-11)
 
 - **On a Mac the web app's text styles are the Mac app's sizes.** Body and

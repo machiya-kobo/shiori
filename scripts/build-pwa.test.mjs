@@ -44,9 +44,15 @@ test('the build copies only the icons the web app uses', () => {
   const out = build();
   try {
     const icons = readdirSync(join(out, '_shiori')).filter((f) => f.endsWith('.png')).sort();
-    assert.deepEqual(icons, ['icon-256.png', 'web-icon-192.png', 'web-icon-512.png', 'web-icon-64.png', 'web-maskable-512.png']);
+    assert.deepEqual(icons, ['icon-256.png', 'web-icon-192.png', 'web-icon-512.png', 'web-maskable-512.png']);
+    // The tab's favicon, as the rooms': an SVG and an .ico, then the touch icon.
+    const files = readdirSync(join(out, '_shiori'));
+    assert.ok(files.includes('shiori-small.svg') && files.includes('shiori.ico'));
     const used = read('../web/app/index.html') + read('../web/app/manifest.webmanifest') + read('../web/app/sw.js');
-    for (const icon of icons) assert.ok(used.includes(`/_shiori/${icon}`), `${icon} is used`);
+    for (const icon of [...icons, 'shiori-small.svg', 'shiori.ico']) assert.ok(used.includes(`/_shiori/${icon}`), `${icon} is used`);
+    const html = read('../web/app/index.html');
+    assert.match(html, /<link rel="icon" href="\/_shiori\/shiori-small\.svg" type="image\/svg\+xml" \/>/);
+    assert.match(html, /<link rel="alternate icon" href="\/_shiori\/shiori\.ico" sizes="16x16 32x32 48x48" \/>/);
   } finally {
     rmSync(out, { recursive: true, force: true });
   }

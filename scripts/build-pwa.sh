@@ -30,7 +30,7 @@ if [ -n "${SHIORI_ROOM_LOGOS:-}" ]; then
 fi
 # The rounded web icons and the maskable one (scripts/generate-shiori-icons.py);
 # the apple-touch icon stays square, since iOS rounds it itself.
-cp -- assets/icon-256.png assets/web-icon-64.png assets/web-icon-192.png assets/web-icon-512.png assets/web-maskable-512.png "$out/_shiori/"
+cp -- assets/icon-256.png assets/shiori-small.svg assets/shiori.ico assets/web-icon-192.png assets/web-icon-512.png assets/web-maskable-512.png "$out/_shiori/"
 
 # The colours: search.css's tokens (its :root blocks, up to the first rule
 # that isn't one), so the app and the search page never drift apart.

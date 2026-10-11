@@ -34,6 +34,30 @@ function run(env, extra = []) {
   return { r, out, read, sites: () => read('sites.conf'), cleanup: () => rmSync(out, { recursive: true, force: true }) };
 }
 
+test("both pages' tab icon is the rooms' set: an SVG, an .ico and the touch icon, no black-cornered PNG", { skip }, () => {
+  for (const [page, file] of [['search', 'index.html'], ['app', 'index.html']]) {
+    const html = readFileSync(join(dist, page, file), 'utf8');
+    assert.match(html, /<link rel="icon" href="\/_shiori\/shiori-small\.svg" type="image\/svg\+xml" \/>/, page);
+    assert.match(html, /<link rel="alternate icon" href="\/_shiori\/shiori\.ico" sizes="16x16 32x32 48x48" \/>/, page);
+    assert.match(html, /<link rel="apple-touch-icon" href="\/_shiori\/icon-256\.png" \/>/, page);
+    assert.doesNotMatch(html, /web-icon-64/, page);
+    assert.ok(existsSync(join(dist, page, '_shiori', 'shiori-small.svg')) && existsSync(join(dist, page, '_shiori', 'shiori.ico')), page);
+  }
+  // The .ico's three frames keep their transparent corners white (255,255,255,0), never black.
+  const ico = readFileSync(join(repo, 'assets', 'shiori.ico'));
+  assert.equal(ico.readUInt16LE(2), 1);
+  const frames = ico.readUInt16LE(4);
+  assert.equal(frames, 3);
+  for (let i = 0; i < frames; i++) {
+    const size = ico.readUInt32LE(6 + 16 * i + 8), offset = ico.readUInt32LE(6 + 16 * i + 12);
+    const png = ico.subarray(offset, offset + size);
+    assert.equal(png.subarray(1, 4).toString(), 'PNG');
+  }
+  const svg = readFileSync(join(repo, 'assets', 'shiori-small.svg'), 'utf8');
+  assert.match(svg, /viewBox="0 0 512 512"/);
+  assert.match(svg, /<rect width="512" height="512" rx="112" fill="#1a1b26"\/>/);
+});
+
 test('Hister and SearXNG are required, and the message says how to set them', { skip }, () => {
   for (const env of [{}, { SHIORI_HISTER_URL: 'http://hister:4433' }, { SHIORI_SEARXNG_URL: 'http://searxng:8080' }]) {
     const x = run(env);

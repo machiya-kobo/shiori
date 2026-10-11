@@ -13,6 +13,13 @@ magnifying glass that enlarges it, in Tokyo Night colours.
   tile as the Machiya rooms draw theirs (corner radius 112 of 512), and web-maskable-512.png, the whole square with the
   mark shrunk into Android's safe zone (a circle of 80% of the width), so
   its mask never clips the lens.
+- assets/shiori-small.svg and shiori.ico: the browser tab's favicon, as the
+  rooms' (their `<room>-small.svg`): a rounded tile, the ribbon and lens
+  made bold and kept 32 of 512 units in from the edge, so nothing touches
+  it at 16px. The .ico holds 16, 32 and 48px frames drawn from the same
+  geometry, their transparent corners stored white (255,255,255,0), never
+  black: a scaler that blends the corners then leaves no dark fringe.
+  `generate-shiori-icons.py --favicon` writes only these two.
 
 Needs Pillow (python3 -m venv /tmp/v && /tmp/v/bin/pip install pillow).
 """
@@ -185,7 +192,87 @@ def write_preview(name, image):
                 '  "info" : {\n    "author" : "xcode",\n    "version" : 1\n  }\n}\n')
 
 
+# The favicon's art on the rooms' 512-unit grid (16px = 32 units a pixel).
+FAV_BG, FAV_RIBBON, FAV_GOLD = (26, 27, 38), (122, 162, 247), (224, 175, 104)
+FAV_RIBBON_POLY = [(96, 48), (256, 48), (256, 384), (176, 312), (96, 384)]
+FAV_LENS = (300, 300, 70, 44)  # centre x, centre y, inner radius, ring width
+FAV_HANDLE = ((365, 365), (432, 432), 52)  # from, to, width (round caps)
+FAV_TILE = 112  # corner radius of 512
+
+
+def favicon_svg():
+    cx, cy, r, w = FAV_LENS
+    (x0, y0), (x1, y1), hw = FAV_HANDLE
+    poly = " ".join(f"{x},{y}" for x, y in FAV_RIBBON_POLY)
+    gold = "#%02x%02x%02x" % FAV_GOLD
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">\n'
+        '<!-- Shiori icon for favicon sizes (16-48 px): the ribbon and the lens, bold, 32 units in from the '
+        'edge so nothing touches the tile at 16 px; drawn by scripts/generate-shiori-icons.py (--favicon) -->\n'
+        f'<rect width="512" height="512" rx="{FAV_TILE}" fill="#%02x%02x%02x"/>\n' % FAV_BG
+        + f'<polygon points="{poly}" fill="#%02x%02x%02x"/>\n' % FAV_RIBBON
+        + f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="#%02x%02x%02x"/>\n' % FAV_BG
+        + f'<line x1="{x0}" y1="{y0}" x2="{x1}" y2="{y1}" stroke="{gold}" stroke-width="{hw}" stroke-linecap="round"/>\n'
+        f'<circle cx="{cx}" cy="{cy}" r="{r + w // 2}" fill="none" stroke="{gold}" stroke-width="{w}"/>\n'
+        '</svg>\n'
+    )
+
+
+def favicon_frame(size):
+    """The tile at `size` px, transparent corners stored white (255,255,255,0)."""
+    k = 16  # supersampling
+    n = size * k
+    f = n / 512
+    img = Image.new("RGBA", (n, n), (255, 255, 255, 0))
+    tile = Image.new("L", (n, n), 0)
+    ImageDraw.Draw(tile).rounded_rectangle([0, 0, n - 1, n - 1], radius=FAV_TILE * f, fill=255)
+    img.paste(Image.new("RGBA", (n, n), FAV_BG + (255,)), (0, 0), tile)
+    d = ImageDraw.Draw(img)
+    d.polygon([(x * f, y * f) for x, y in FAV_RIBBON_POLY], fill=FAV_RIBBON + (255,))
+    cx, cy, r, w = FAV_LENS
+    d.ellipse([(cx - r) * f, (cy - r) * f, (cx + r) * f, (cy + r) * f], fill=FAV_BG + (255,))
+    (x0, y0), (x1, y1), hw = FAV_HANDLE
+    d.line([(x0 * f, y0 * f), (x1 * f, y1 * f)], fill=FAV_GOLD + (255,), width=round(hw * f))
+    for x, y in ((x0, y0), (x1, y1)):
+        d.ellipse([(x - hw / 2) * f, (y - hw / 2) * f, (x + hw / 2) * f, (y + hw / 2) * f], fill=FAV_GOLD + (255,))
+    ro = r + w  # the ring's outer edge: it runs from the glass's edge, `w` wide
+    d.ellipse([(cx - ro) * f, (cy - ro) * f, (cx + ro) * f, (cy + ro) * f], outline=FAV_GOLD + (255,), width=round(w * f))
+    out = img.resize((size, size), Image.LANCZOS)  # premultiplied inside Pillow
+    px = out.load()
+    for y in range(size):
+        for x in range(size):
+            if px[x, y][3] == 0:
+                px[x, y] = (255, 255, 255, 0)
+    return out
+
+
+def write_favicon():
+    import io
+    import struct
+    with open(os.path.join(ASSETS, "shiori-small.svg"), "w") as f:
+        f.write(favicon_svg())
+    frames = []
+    for size in (16, 32, 48):
+        buf = io.BytesIO()
+        favicon_frame(size).save(buf, format="PNG")
+        frames.append((size, buf.getvalue()))
+    head = struct.pack("<HHH", 0, 1, len(frames))
+    offset = 6 + 16 * len(frames)
+    entries, blobs = b"", b""
+    for size, data in frames:
+        entries += struct.pack("<BBBBHHII", size, size, 0, 0, 1, 32, len(data), offset)
+        offset += len(data)
+        blobs += data
+    with open(os.path.join(ASSETS, "shiori.ico"), "wb") as f:
+        f.write(head + entries + blobs)
+    print("wrote assets/shiori-small.svg and assets/shiori.ico")
+
+
 if __name__ == "__main__":
+    import sys
+    if "--favicon" in sys.argv:
+        write_favicon()
+        raise SystemExit
     night, day = app_icon(NIGHT), app_icon(DAY)
     write_iconset("AppIcon", night)
     write_iconset("AppIcon-Light", day)
@@ -194,10 +281,11 @@ if __name__ == "__main__":
     os.makedirs(ASSETS, exist_ok=True)
     for size in (48, 64, 96, 128, 256, 512):
         night.resize((size, size), Image.LANCZOS).save(os.path.join(ASSETS, f"icon-{size}.png"))
-    for size in (64, 192, 512):
+    for size in (192, 512):
         rounded(night, size).save(os.path.join(ASSETS, f"web-icon-{size}.png"))
     maskable(night, NIGHT).save(os.path.join(ASSETS, "web-maskable-512.png"))
     for size in (16, 32):
         toolbar_glyph(size).save(os.path.join(ASSETS, f"icon-{size}.png"))
         toolbar_glyph(size, grey=True).save(os.path.join(ASSETS, f"icon-grey-{size}.png"))
+    write_favicon()
     print("wrote AppIcon, AppIcon-Light, their previews, assets/icon-*.png and assets/web-*.png")

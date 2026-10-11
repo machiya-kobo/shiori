@@ -12,7 +12,8 @@ const SHELL = [
   '/_shiori/theme.css',
   '/_shiori/palettes.css',
   '/_shiori/search-core.js',
-  '/_shiori/web-icon-64.png',
+  '/_shiori/shiori-small.svg',
+  '/_shiori/shiori.ico',
   '/_shiori/icon-256.png',
 ];
 

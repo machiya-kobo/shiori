@@ -30,7 +30,7 @@ cp -- web/shim.js "$out/_shiori/web-shim.js"
 if [ -n "${SHIORI_ROOM_LOGOS:-}" ]; then
   python3 scripts/room-icons.py --logos "$SHIORI_ROOM_LOGOS" "$out/_shiori/search.css" >/dev/null
 fi
-cp -- assets/icon-32.png assets/icon-256.png assets/web-icon-64.png "$out/_shiori/"
+cp -- assets/icon-32.png assets/icon-256.png assets/shiori-small.svg assets/shiori.ico "$out/_shiori/"
 
 # The page, with its files under /_shiori/ (the root's other paths are
 # Hister's), the shim first, an icon, and the OpenSearch link. In Python:
@@ -46,7 +46,8 @@ for old, new in (
      '<script src="/_shiori/web-shim.js"></script>\n    <script src="/_shiori/search-core.js"></script>'),
     ('<script src="search.js"></script>', '<script src="/_shiori/search.js"></script>'),
     ('src="assets/icons/icon-256.png"', 'src="/_shiori/icon-256.png"'),
-    ('</title>', '</title>\n    <link rel="icon" href="/_shiori/web-icon-64.png" />'
+    ('</title>', '</title>\n    <link rel="icon" href="/_shiori/shiori-small.svg" type="image/svg+xml" />'
+                 '\n    <link rel="alternate icon" href="/_shiori/shiori.ico" sizes="16x16 32x32 48x48" />'
                  '\n    <link rel="apple-touch-icon" href="/_shiori/icon-256.png" />'
                  '\n    <link rel="search" type="application/opensearchdescription+xml" title="Shiori" href="/_shiori/opensearch.xml" />'),
 ):
