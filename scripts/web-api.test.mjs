@@ -604,8 +604,24 @@ test('the web app\'s Standard text size is 1.2 times the system\'s on a Mac (13p
   const app = read('../web/app/app.js');
   const fn = app.slice(app.indexOf('function systemTextScale('), app.indexOf('function applyLook('));
   assert.match(app, /const MAC_BASE = 1\.2;/);
-  assert.match(fn, /\/Mac\/\.test\(navigator\.platform\) && navigator\.maxTouchPoints < 2/);
-  assert.match(fn, /return \(px \/ 17\) \* \(mac \? MAC_BASE : 1\);/);
+  assert.match(app, /const IS_MAC = \/Mac\/\.test\(navigator\.platform\) && navigator\.maxTouchPoints < 2;/);
+  assert.match(fn, /return \(px \/ 17\) \* \(IS_MAC \? MAC_BASE : 1\);/);
+  assert.match(app, /classList\.toggle\('mac', IS_MAC\)/);
+});
+
+test('on a Mac the web app\'s text styles are the Mac app\'s sizes (TextStyleFont.macSize x 1.2), not the iPhone\'s', () => {
+  const css = read('../web/app/app.css');
+  const mac = css.slice(css.indexOf('html.mac {'));
+  // Standard's root is 92% of 16 = 14.72px; each value is the Mac app's size over it.
+  const root = 14.72;
+  const want = { '--fs-title': 22, '--fs-title3': 15, '--fs-body': 13, '--fs-callout': 12, '--fs-sub': 11, '--fs-foot': 10, '--fs-caption': 10, '--fs-caption2': 10 };
+  for (const [name, pt] of Object.entries(want)) {
+    const m = mac.match(new RegExp(name + ': ([0-9.]+)rem'));
+    assert.ok(m, name);
+    assert.ok(Math.abs(parseFloat(m[1]) * root - pt * 1.2) < 0.1, `${name}: ${parseFloat(m[1]) * root} vs ${pt * 1.2}`);
+  }
+  // Every text style is a variable, so none can stay at the iPhone's size on a Mac.
+  assert.doesNotMatch(css, /font-size: (0\.6875|0\.75|0\.8125|0\.9375|1\.0625|1\.25|1\.75)rem/);
 });
 
 test('the footer sits at the window\'s bottom on a short page and right after the content on a long one', () => {

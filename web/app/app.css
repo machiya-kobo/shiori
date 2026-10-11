@@ -19,6 +19,18 @@
      its icon and its line) or the 34px gear, whichever is taller. The search
      field is centered on it. */
   --top-row: max(34px, calc(14px + max(18px, 1.4875rem)));
+  /* The text styles, as the iPhone app's (17pt body: Dynamic Type's sizes). A
+     Mac has its own (below). */
+  --fs-title: 1.75rem; --fs-title3: 1.25rem; --fs-body: 1.0625rem; --fs-callout: 1rem;
+  --fs-sub: 0.9375rem; --fs-foot: 0.8125rem; --fs-caption: 0.75rem; --fs-caption2: 0.6875rem;
+}
+/* On a Mac, the Mac app's: macOS's text styles (body 13pt, subheadline 11,
+   footnote, caption and caption2 10, title3 15, title 22) at 1.2 times, over
+   the root's 14.72px at Standard (15.6 body, 13.2 subheadline, 12 for the
+   smallest three). app.js adds `mac` to the root. */
+html.mac {
+  --fs-title: 1.7935rem; --fs-title3: 1.2228rem; --fs-body: 1.0598rem; --fs-callout: 0.9783rem;
+  --fs-sub: 0.8967rem; --fs-foot: 0.8152rem; --fs-caption: 0.8152rem; --fs-caption2: 0.8152rem;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="night"]) {
@@ -42,7 +54,7 @@ body {
   /* Sizes are rem, so Settings → Text Size (the root's size, app.js)
      scales everything; Safari's system font keywords (-apple-system-body
      and the rest) set absolute sizes and defeated it. Standard follows the system's text size there. */
-  font-size: 1.0625rem; font-family: -apple-system, system-ui, sans-serif; line-height: 1.4;
+  font-size: var(--fs-body); font-family: -apple-system, system-ui, sans-serif; line-height: 1.4;
   -webkit-text-size-adjust: 100%;
 }
 a { color: var(--accent); }
@@ -91,12 +103,12 @@ button { font: inherit; color: inherit; }
    Copy, Regenerate and Close, the text, then who wrote it). */
 .summary { flex: none; max-height: 45%; overflow-y: auto; margin: 10px 12px; padding: 10px 14px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
 .summary-head { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
-.summary-title { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; font-weight: 600; font-size: 0.9375rem; color: var(--secondary); }
+.summary-title { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; font-weight: 600; font-size: var(--fs-sub); color: var(--secondary); }
 .summary-title svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; }
 .summary p { margin: 0 0 6px; line-height: 1.45; }
 .summary ul { margin: 0 0 6px; padding-left: 1.2em; line-height: 1.45; }
 .summary li { margin: 2px 0; }
-.summary-byline { font-size: 0.8125rem; color: var(--secondary); }
+.summary-byline { font-size: var(--fs-foot); color: var(--secondary); }
 .summary-working { display: flex; align-items: center; gap: 8px; color: var(--secondary); }
 .spinner.small { margin: 0; width: 14px; height: 14px; border-width: 2px; }
 /* The AI answer at the top of a search: a row that opens into the
@@ -108,7 +120,7 @@ button { font: inherit; color: inherit; }
 .answer-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; border: 0; background: none; cursor: pointer; font-weight: 600; color: var(--text); text-align: left; }
 /* A compact row, as the search page's AI Answer, Info and Related. */
 .answer-card { border-radius: 10px; }
-.answer-card > .answer-head { padding: 7px 12px; gap: 6px; font-size: 0.8125rem; }
+.answer-card > .answer-head { padding: 7px 12px; gap: 6px; font-size: var(--fs-foot); }
 .answer-card > .answer-head svg { width: 13px; height: 13px; }
 .answer-head svg { width: 16px; height: 16px; stroke: var(--secondary); fill: none; stroke-width: 1.8; }
 .answer-head .chevron-icon { display: inline-flex; transition: transform 0.15s; }
@@ -132,7 +144,7 @@ button { font: inherit; color: inherit; }
 }
 .section-head.tinted[data-tint="orange"] { --tint: var(--notes); }
 .section-head.tinted[data-tint="yellow"] { --tint: var(--web); }
-.section-head.tinted .count { margin-left: auto; font-weight: 400; font-size: 0.8125rem; }
+.section-head.tinted .count { margin-left: auto; font-weight: 400; font-size: var(--fs-foot); }
 .section-head.tinted a.count { color: inherit; text-decoration: none; font-weight: 600; }
 .text-button { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; }
 
@@ -171,7 +183,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
   background: var(--frost);
   -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
 }
-.bar h1 { flex: 1; margin: 0; font-size: 1.75rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar h1 { flex: 1; margin: 0; font-size: var(--fs-title); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #preview-bar { justify-content: flex-end; border-bottom: 1px solid var(--line); }
 #preview-bar .where { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -204,7 +216,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 }
 .segments button {
   --tab: var(--accent); --tab-hover-bg: var(--accent-hover-bg); --tab-hover: var(--accent-hover); flex: none; padding: 4px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap;
-  font-size: 0.8125rem; font-weight: 600;
+  font-size: var(--fs-foot); font-weight: 600;
   color: var(--tab); border: 1.5px solid var(--tab); background: transparent;
 }
 .segments button[aria-pressed="true"] { color: var(--bg); background: var(--tab); }
@@ -228,7 +240,7 @@ body.phone-preview #preview-column { display: flex; border: 0; }
 /* All: your top pages and notes among the web rows, each title led by whose it is. */
 .row.mixed .title::before {
   content: attr(data-label); display: block; margin-bottom: 2px; color: var(--tint);
-  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
+  font-size: var(--fs-caption); font-weight: 600; letter-spacing: 0.02em;
 }
 
 /* The field is 38px tall (the rooms'); the margins keep the 48px box it sat in. */
@@ -266,7 +278,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .controls { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 12px 10px; }
 .controls .quiet {
   display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 4px 0; cursor: pointer;
-  font-size: 0.9375rem; font-weight: 500; color: var(--secondary);
+  font-size: var(--fs-sub); font-weight: 500; color: var(--secondary);
 }
 .controls .quiet svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .controls .quiet.active { color: var(--accent); }
@@ -274,14 +286,14 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .menu-list .check { display: inline-block; width: 1.2em; color: var(--accent); }
 /* A menu's own search (Filter's labels): it narrows the items under it. */
 .menu-list .menu-find {
-  display: block; width: calc(100% - 8px); margin: 4px; padding: 8px 10px; font: inherit; font-size: 0.9375rem;
+  display: block; width: calc(100% - 8px); margin: 4px; padding: 8px 10px; font: inherit; font-size: var(--fs-sub);
   color: var(--text); background: var(--bg); border: 1px solid var(--line2); border-radius: 8px;
 }
 /* A folded run of one site (Fold Repeated Sites), as the apps' row. */
 .fold-row { list-style: none; border-bottom: 1px solid var(--line); }
 .fold-more {
   display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: transparent; padding: 10px 16px 10px 50px; cursor: pointer;
-  font-size: 0.9375rem; font-weight: 500; color: var(--accent); text-align: left;
+  font-size: var(--fs-sub); font-weight: 500; color: var(--accent); text-align: left;
 }
 .fold-more svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; transition: transform 160ms; }
 .fold-more[aria-expanded="true"] svg { transform: rotate(90deg); }
@@ -289,7 +301,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
 /* The page's places: symbols in one group, as the apps' toolbar. */
 .icon-group { display: inline-flex; gap: 0; background: var(--card); border-radius: 999px; padding: 0 4px; }
 .icon-group .icon-button { background: transparent; }
-.link-button { border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--accent); text-decoration: none; font-size: 1.0625rem; }
+.link-button { border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--accent); text-decoration: none; font-size: var(--fs-body); }
 .link-button:disabled { color: var(--secondary); cursor: default; }
 .searchfield input {
   width: 100%; font-family: inherit; font-size: max(16px, 1rem); color: var(--text); background: var(--card);
@@ -311,7 +323,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .rows { list-style: none; margin: 0; padding: 0; }
 .section-head {
   display: flex; justify-content: space-between; align-items: baseline;
-  margin: 14px 16px 4px; font-size: 0.9375rem; font-weight: 600; color: var(--secondary);
+  margin: 14px 16px 4px; font-size: var(--fs-sub); font-weight: 600; color: var(--secondary);
 }
 /* Section headings stay under the bars while their section scrolls by, as
    the apps' list headers do: Your Pages, Your
@@ -349,7 +361,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .code-glyph { display: inline-grid; place-items: center; color: var(--tab-videos); font-weight: 700; }
 .code-state { font-weight: 600; }
 /* Which forge a code row is on: a small outlined badge. */
-.code-host { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); }
+.code-host { display: inline-block; font-size: var(--fs-caption); font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); }
 .code-state.open { color: var(--kept); }
 /* The Code pill's filters, above the list. */
 .code-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 16px; }
@@ -385,17 +397,17 @@ a.title:hover { text-decoration: underline; }
 body[data-click-opens="preview"] .row.previewable { grid-template-columns: 22px minmax(0, 1fr); }
 body[data-click-opens="preview"] .row-preview { display: none; }
 .row .icon svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.6; }
-.row .title { font-size: 1.0625rem; font-weight: 600; color: var(--accent); overflow-wrap: anywhere; }
-.row .meta { font-size: 0.8125rem; color: var(--secondary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .title { font-size: var(--fs-body); font-weight: 600; color: var(--accent); overflow-wrap: anywhere; }
+.row .meta { font-size: var(--fs-foot); color: var(--secondary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .meta .domain { font-family: ui-monospace, monospace; }
 .row .snippet {
-  font-size: 0.9375rem; color: var(--secondary); margin-top: 4px;
+  font-size: var(--fs-sub); color: var(--secondary); margin-top: 4px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 mark { background: var(--highlight); color: inherit; border-radius: 2px; }
 .meta .saved-chip { margin-top: 0; vertical-align: 1px; }
 .chip {
-  display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; font-size: 0.6875rem; line-height: 1.5;
+  display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; font-size: var(--fs-caption2); line-height: 1.5;
   color: var(--chip); border: 1px solid currentColor; background: transparent;
 }
 /* A result's label tag opens that label's pages. */
@@ -404,7 +416,7 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 .web-row .thumb { width: 64px; height: 48px; object-fit: cover; border-radius: 6px; float: right; margin-left: 8px; }
 .more-row { display: block; padding: 12px 16px; color: var(--accent); text-decoration: none; cursor: pointer; }
 .status { padding: 32px 24px; text-align: center; color: var(--secondary); }
-.status h2 { color: var(--text); font-size: 1.25rem; font-weight: 600; margin: 0 0 6px; }
+.status h2 { color: var(--text); font-size: var(--fs-title3); font-weight: 600; margin: 0 0 6px; }
 .status button, .button {
   margin-top: 12px; border: 1px solid var(--line2); background: var(--card); color: var(--accent);
   border-radius: 10px; padding: 8px 14px; cursor: pointer;
@@ -415,7 +427,7 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 /* Sidebar */
 /* Headings at the rows' size, in the text colour, as the Mac app's (its
    small grey ones were hard to see). */
-#sidebar h2 { margin: 12px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 1rem; font-weight: 600; color: var(--smallweb); }
+#sidebar h2 { margin: 12px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); font-size: var(--fs-body); font-weight: 600; color: var(--smallweb); }
 /* The line between sections, as the Mac app's SidebarDivider. */
 #sidebar .sidebar-rule { margin: 12px 10px 0; padding-top: 4px; border-top: 1px solid var(--line); }
 #sidebar button {
@@ -424,7 +436,7 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 }
 #sidebar button[aria-current="page"] { background: var(--accent); color: var(--bg); }
 #sidebar button:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
-#sidebar .status-link { display: block; padding: 7px 10px; color: var(--secondary); text-decoration: none; font-size: 0.8125rem; }
+#sidebar .status-link { display: block; padding: 7px 10px; color: var(--secondary); text-decoration: none; font-size: var(--fs-foot); }
 #sidebar .status-link:hover { color: var(--accent); }
 /* Every icon, and a label's dot, in the same 18px square, so the names
    line up (the Mac app's RowIcon/RowDot). */
@@ -486,7 +498,7 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 #tabs button {
   flex: 1 1 0; min-width: 0;
   border: 0; background: transparent; border-radius: 999px; padding: 6px 2px; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.6875rem; color: var(--text); white-space: nowrap;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: var(--fs-caption2); color: var(--text); white-space: nowrap;
 }
 #tabs button > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 #tabs button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7; }
@@ -503,12 +515,12 @@ body.phone-preview #tabs { display: none; }
 }
 .menu-list button, .menu-list a {
   display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 12px; border-radius: 8px;
-  cursor: pointer; color: var(--text); text-decoration: none; font-size: 1.0625rem;
+  cursor: pointer; color: var(--text); text-decoration: none; font-size: var(--fs-body);
 }
 .menu-list button:hover, .menu-list a:hover { background: var(--raised); }
 .menu-list .danger { color: var(--danger); }
 .menu-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
-.menu-list .heading { padding: 6px 12px 2px; font-size: 0.75rem; color: var(--secondary); }
+.menu-list .heading { padding: 6px 12px 2px; font-size: var(--fs-caption); color: var(--secondary); }
 /* "New Version · Reload" (the rooms' shared toast): above the tabs on a phone. */
 .smallweb-row .scheme { color: var(--smallweb); font-weight: 600; }
 .smallweb-row .chip-link { color: var(--smallweb); text-decoration: none; }
@@ -540,7 +552,7 @@ body.phone-preview #tabs { display: none; }
 .rooms-menu hr { border: 0; border-top: 1px solid var(--line); margin: 6px 4px; }
 .rooms-menu .room {
   display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px;
-  color: var(--rooms-text); font-size: 0.8125rem; font-weight: 500; line-height: 1.4; text-decoration: none;
+  color: var(--rooms-text); font-size: var(--fs-foot); font-weight: 500; line-height: 1.4; text-decoration: none;
 }
 .rooms-menu a.room:hover, .rooms-menu a.room:focus-visible { background: var(--rooms-on); }
 .rooms-menu .room.here { background: var(--rooms-on); }
@@ -562,7 +574,7 @@ dialog {
 }
 dialog::backdrop { background: rgb(0 0 0 / 0.4); }
 dialog .dialog-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-dialog .dialog-head h2 { flex: 1; margin: 0; font-size: 1.0625rem; font-weight: 600; }
+dialog .dialog-head h2 { flex: 1; margin: 0; font-size: var(--fs-body); font-weight: 600; }
 dialog .dialog-body { padding: 8px 0 16px; overflow-y: auto; max-height: calc(80vh - 56px); }
 dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
 
@@ -573,12 +585,12 @@ dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
 .add-page .item:last-child { border-bottom: 0; }
 .add-page .item span { flex: none; width: 4.5em; }
 .add-page input {
-  flex: 1; min-width: 0; font-family: inherit; font-size: 1.0625rem; color: var(--text);
+  flex: 1; min-width: 0; font-family: inherit; font-size: var(--fs-body); color: var(--text);
   background: var(--bg); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 8px;
 }
 .add-page input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.add-page .footnote { font-size: 0.8125rem; color: var(--secondary); margin: 6px 6px 0; }
-.add-page .add-message { margin: 10px 6px 0; font-size: 0.9375rem; color: var(--text); }
+.add-page .footnote { font-size: var(--fs-foot); color: var(--secondary); margin: 6px 6px 0; }
+.add-page .add-message { margin: 10px 6px 0; font-size: var(--fs-sub); color: var(--text); }
 .add-page .add-message:empty { display: none; }
 .add-page .add-message.bad { color: var(--danger); }
 .add-page .add-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
@@ -590,7 +602,7 @@ dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
 
 /* Settings */
 .settings { padding: 0 12px 24px; }
-.settings h2 { font-size: 0.8125rem; font-weight: 600; color: var(--secondary); margin: 18px 6px 6px; text-transform: uppercase; }
+.settings h2 { font-size: var(--fs-foot); font-weight: 600; color: var(--secondary); margin: 18px 6px 6px; text-transform: uppercase; }
 .settings .group { background: var(--card); border-radius: 12px; overflow: hidden; }
 .settings .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 .settings .item:last-child { border-bottom: 0; }
@@ -606,10 +618,10 @@ dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
 .settings .pill-move:disabled { opacity: 0.35; cursor: default; }
 .settings .pill-row .switch:disabled { opacity: 0.45; cursor: default; }
 .settings input[type="text"], .settings input[type="url"], .settings select {
-  font-family: inherit; font-size: 1.0625rem; color: var(--text); background: var(--bg); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 8px; max-width: 60%;
+  font-family: inherit; font-size: var(--fs-body); color: var(--text); background: var(--bg); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 8px; max-width: 60%;
 }
 .settings .machiya-account { display: inline-flex; align-items: baseline; gap: 12px; color: var(--secondary); text-align: right; }
-.settings .footnote { font-size: 0.8125rem; color: var(--secondary); margin: 6px 6px 0; }
+.settings .footnote { font-size: var(--fs-foot); color: var(--secondary); margin: 6px 6px 0; }
 .switch { appearance: none; width: 46px; height: 28px; border-radius: 999px; background: var(--raised); position: relative; cursor: pointer; flex: none; }
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
 .switch:checked { background: var(--accent); }
@@ -630,8 +642,8 @@ dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
   background: var(--card); color: var(--text); border: 1px solid var(--line2); border-radius: 14px; padding: 12px 16px 14px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
 }
-.kbd-help h2 { margin: 0 0 8px; font-size: 0.9375rem; font-weight: 600; color: var(--secondary); }
-.kbd-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 0.8125rem; }
+.kbd-help h2 { margin: 0 0 8px; font-size: var(--fs-sub); font-weight: 600; color: var(--secondary); }
+.kbd-help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: var(--fs-foot); }
 .kbd-help dt, .kbd-help dd { margin: 0; }
 .kbd-help dd { color: var(--secondary); }
 .kbd-help kbd {

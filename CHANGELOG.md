@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.11 (2026-10-11)
+
+- **On a Mac the web app's text styles are the Mac app's sizes.** Body and
+  titles 15.6px, subheadlines (snippets, Sort · Group · Filter) 13.2px, and
+  the smallest three styles (footnotes, captions, the pills) 12px, where the
+  iPhone's scale had put the captions at 11 and 10px. Sidebar headings are
+  the rows' size, as in the app. Other devices keep the iPhone's sizes, and
+  Settings → Text Size scales all of them.
+
 ## 1.5.10 (2026-10-11)
 
 - **The web app's text starts larger on a Mac.** Standard followed the

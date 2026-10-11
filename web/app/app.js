@@ -267,14 +267,14 @@ const TEXT_SCALE = { xSmall: 12 / 14, small: 13 / 14, medium: 0.96, large: 15 / 
  * An iPad also says "Mac", with a touch screen.
  */
 const MAC_BASE = 1.2;
+const IS_MAC = /Mac/.test(navigator.platform) && navigator.maxTouchPoints < 2;
 function systemTextScale() {
   if (!(window.CSS && CSS.supports && CSS.supports('font', '-apple-system-body'))) return 1;
   const probe = h('span', { style: 'font: -apple-system-body; position: absolute; visibility: hidden' }, 'x');
   document.body.append(probe);
   const px = parseFloat(getComputedStyle(probe).fontSize) || 17;
   probe.remove();
-  const mac = /Mac/.test(navigator.platform) && navigator.maxTouchPoints < 2;
-  return (px / 17) * (mac ? MAC_BASE : 1);
+  return (px / 17) * (IS_MAC ? MAC_BASE : 1);
 }
 function applyLook() {
   const theme = settings.theme === 'day' || settings.theme === 'night' ? settings.theme : '';
@@ -300,6 +300,8 @@ function applyLook() {
   // This device's own size (Use This Device's Size), else the shared one.
   const size = deviceTextSize() || settings.textSize;
   document.documentElement.style.fontSize = `${Math.round(100 * (TEXT_SCALE[size] || systemTextScale()))}%`;
+  // A Mac's text styles are its own sizes (app.css: html.mac).
+  document.documentElement.classList.toggle('mac', IS_MAC);
 }
 
 // --- Settings that follow the person (machiya docs/contracts/prefs.md) ------------
