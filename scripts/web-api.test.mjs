@@ -581,14 +581,15 @@ test('the search field has one focus ring, drawn inside it, at every width (sear
   assert.match(app, /\.searchfield input:focus-visible \{ outline-offset: -2px; border-color: var\(--accent\); \}/);
 });
 
-test('the field\'s text is the tabs\' size from 1100px, 16px or more below it (search page and web app), 44.4px tall', () => {
+test('the field is a set 38px tall, its text 15px from 1100px and 16px or more below it (search page and web app)', () => {
   const css = read('../patches/shiori/search.css');
-  const wide = css.slice(css.indexOf('@media (min-width: 1100px) {'));
-  assert.match(wide, /body:not\(\.home\) #q \{ font: -apple-system-footnote; font-weight: 500; line-height: max\(calc\(22\.4 \* var\(--u\)\), 1\.4em\); \}/);
+  assert.match(css, /body:not\(\.home\) #q \{\s*height: calc\(38 \* var\(--u\)\); padding: 0 calc\(44 \* var\(--u\)\) 0 calc\(16 \* var\(--u\)\); line-height: normal;/);
   assert.match(css, /body:not\(\.home\) #q \{ font-size: calc\(16 \* var\(--u\)\); \}/);
+  const wide = css.slice(css.indexOf('@media (min-width: 1100px) {'));
+  assert.match(wide, /body:not\(\.home\) #q \{ font-size: calc\(15 \* var\(--u\)\); font-weight: 500; \}/);
   const app = read('../web/app/app.css');
-  assert.match(app, /\.searchfield input \{[^}]*font-size: max\(16px, 1rem\); line-height: max\(22\.4px, 1\.4em\)[^}]*padding: 10px 14px 10px 16px;/);
-  assert.match(app, /@media \(min-width: 1100px\) \{\s*\.searchfield input \{ font-size: 0\.8125rem; font-weight: 500; \}/);
+  assert.match(app, /\.searchfield input \{[^}]*font-size: max\(16px, 1rem\);[^}]*height: 38px; padding: 0 14px 0 16px; line-height: normal;/);
+  assert.match(app, /@media \(min-width: 1100px\) \{\s*\.searchfield input \{ font-size: 15px; font-weight: 500; \}/);
 });
 
 test('the footer sits at the window\'s bottom on a short page and right after the content on a long one', () => {

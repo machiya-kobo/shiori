@@ -101,7 +101,9 @@ header {
 .brand img { width: calc(28 * var(--u)); height: calc(28 * var(--u)); border-radius: calc(7 * var(--u)); flex: none; }
 .brand:hover span, .brand:focus-visible span { color: var(--accent-hover); }
 /* The rooms' sizes are pixels (18px name, 16px field), not the text size's:
-   the Mac's larger Standard size made this header bigger than theirs. */
+   the Mac's larger Standard size made this header bigger than theirs. The
+   field is 38px tall, whatever the zoom or the font's line: a set height, no
+   padding above or below the text, so no engine can add or take a pixel. */
 body:not(.home) #q { font-size: calc(16 * var(--u)); }
 /* The header spans the window, as the rooms': the mark a gutter in from the
    left edge, the house and gear a gutter in from the right, whatever the
@@ -123,8 +125,11 @@ body:not(.home) header > :is(#search, .tabs-row, .tools-row) {
   justify-self: center;
   width: min(calc(var(--vw) - 24px), calc(var(--body-max) - 24px));
 }
-body:not(.home) header > #search { padding: calc(2 * var(--u)) 0 calc(10 * var(--u)); }
-body:not(.home) #q { padding: calc(10 * var(--u)) calc(44 * var(--u)) calc(10 * var(--u)) calc(16 * var(--u)); border-color: var(--line2); }
+body:not(.home) header > #search { padding: calc(5.2 * var(--u)) 0 calc(13.2 * var(--u)); }
+body:not(.home) #q {
+  height: calc(38 * var(--u)); padding: 0 calc(44 * var(--u)) 0 calc(16 * var(--u)); line-height: normal;
+  -webkit-appearance: none; appearance: none; border-color: var(--line2);
+}
 body:not(.home) #q:focus { border-color: var(--accent); }
 body:not(.home) .field-button { width: calc(32 * var(--u)); height: calc(32 * var(--u)); right: calc(8 * var(--u)); }
 body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 * var(--u)); }
@@ -155,11 +160,10 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
   body:not(.home) header > #search { grid-column: 2; grid-row: 1; width: auto; justify-self: stretch; padding: 0; margin-left: calc(16 * var(--u)); }
   body:not(.home) .brand-row > .filters { grid-column: 3; grid-row: 1; justify-self: end; }
   body:not(.home) header > :is(.tabs-row, .tools-row) { grid-column: 1 / -1; }
-  /* The field's text is the tabs' size and 500 weight, as the rooms'
-     (their field and menus agree); a phone and anything under 1100px keep
-     16px, which iOS needs to not zoom into the field. The line keeps the
-     field its 44.4px. */
-  body:not(.home) #q { font: -apple-system-footnote; font-weight: 500; line-height: max(calc(22.4 * var(--u)), 1.4em); }
+  /* The field's text is 15px at weight 500, as the rooms'; a phone and
+     anything under 1100px keep 16px, which iOS needs to not zoom into the
+     field. */
+  body:not(.home) #q { font-size: calc(15 * var(--u)); font-weight: 500; }
 }
 
 /* Recent searches, under the field while it has focus. */

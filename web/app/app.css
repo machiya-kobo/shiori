@@ -154,7 +154,7 @@ button { font: inherit; color: inherit; }
   }
   /* The field centred in that 62px row (it sat 12px down, its focus ring
      cut off by the bar under it), and above that bar, so its ring shows. */
-  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top .searchfield { margin-top: 8.8px; margin-bottom: 8.8px; }
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top .searchfield { margin-top: 12px; margin-bottom: 12px; }
   #search-top { z-index: 3; }
   #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]) + #list-top { padding-top: 8px; }
 }
@@ -232,8 +232,8 @@ body.phone-preview #preview-column { display: flex; border: 0; }
   font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
 }
 
-/* The field is 44.4px tall (the rooms'); the margins keep the 48px box it sat in. */
-.searchfield { margin: 1.8px 12px 15.8px; position: relative; }
+/* The field is 38px tall (the rooms'); the margins keep the 48px box it sat in. */
+.searchfield { margin: 5px 12px 19px; position: relative; }
 /* Type-ahead: the typed text again, invisible, then the rest in grey, laid
    over the field in its own type and padding. Only the grey takes a tap. */
 .searchfield .ghost { position: absolute; inset: 0; display: block; white-space: pre; overflow: hidden; pointer-events: none; }
@@ -293,16 +293,19 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .link-button { border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--accent); text-decoration: none; font-size: 1.0625rem; }
 .link-button:disabled { color: var(--secondary); cursor: default; }
 .searchfield input {
-  width: 100%; font-family: inherit; font-size: max(16px, 1rem); line-height: max(22.4px, 1.4em); color: var(--text); background: var(--card);
-  border: 1px solid var(--line2); border-radius: 999px; padding: 10px 14px 10px 16px;
+  width: 100%; font-family: inherit; font-size: max(16px, 1rem); color: var(--text); background: var(--card);
+  border: 1px solid var(--line2); border-radius: 999px;
+  /* A set height and no padding above or below the text: 38px whatever the
+     font's line, so no engine can add or take a pixel. */
+  height: 38px; padding: 0 14px 0 16px; line-height: normal; -webkit-appearance: none; appearance: none;
 }
 /* One ring on the field's edge: inside, over the border (outside it was a
    second ring beside the border). */
 .searchfield input:focus-visible { outline-offset: -2px; border-color: var(--accent); }
-/* From 1100px the text is the pills' size and 500 weight, as the rooms' field
-   and menus; narrower keeps 16px, which iOS needs to not zoom into the field. */
+/* From 1100px the text is 15px at weight 500, as the rooms' field; narrower
+   keeps 16px or more, which iOS needs to not zoom into the field. */
 @media (min-width: 1100px) {
-  .searchfield input { font-size: 0.8125rem; font-weight: 500; }
+  .searchfield input { font-size: 15px; font-weight: 500; }
 }
 
 /* Rows */
@@ -442,7 +445,7 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 #title.sidebar-says { display: none; }
 #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) { display: none; }
 @media (min-width: 760px) {
-  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top .searchfield { margin-top: 13.8px; }
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top .searchfield { margin-top: 17px; }
 }
 /* A phone: the first bar shown takes the top inset the title row had. */
 @media (max-width: 759px) {

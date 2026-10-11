@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.6 (2026-10-11)
+
+- **The search field is a set 38px tall,** on the search page and in the web
+  app, as the rooms'. The height is fixed (no padding above or below the
+  text), so a browser's line height or the page's zoom can't change it; it
+  was 44px by the sums but drew shorter in Safari. Its text is 15px from
+  1100px and 16px or more below, at weight 500 from 1100px. Its place,
+  width and single focus ring are as they were.
+
 ## 1.5.5 (2026-10-11)
 
 - **The search field's text matches the tabs beside it,** as the rooms'
