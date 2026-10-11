@@ -193,14 +193,24 @@ def routes(s):
     h = s["hister"]
     out = []
     add = out.append
+    # nginx.conf includes no mime.types, so this block is every type the pages are served as (a file with none
+    # is application/octet-stream, which Safari refuses for an SVG favicon and a manifest).
     add('''types {
     text/html                 html;
     text/css                  css;
     text/javascript           js mjs;
     application/xml           xml;
-    image/png                 png;
     application/json          json;
+    application/manifest+json webmanifest;
     text/markdown             md;
+    text/plain                txt;
+    image/png                 png;
+    image/svg+xml             svg;
+    image/x-icon              ico;
+    image/webp                webp;
+    image/jpeg                jpg jpeg;
+    image/gif                 gif;
+    font/woff2                woff2;
 }
 ''')
     # The sign-in.

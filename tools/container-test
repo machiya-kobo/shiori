@@ -10,7 +10,8 @@ SearXNG, Kura, Konbini, shiori-feed, shiori-ai, the small-web gateway and hister
 and checks:
 
   - it refuses to start without Hister and SearXNG, and says what to set;
-  - with only those two, both pages answer, /_shiori/config.json says what is on, the optional routes answer 404;
+  - with only those two, both pages answer, /_shiori/config.json says what is on, the optional routes answer 404, and
+    the favicon SVG and .ico, the manifest, the images, styles and scripts carry their Content-Type;
   - a proxied route reaches its own service, and `Origin` (and Sec-Fetch-*) pass through untouched, never added;
   - a browser's cookies reach only their own service (Hister's session to Hister; nothing to SearXNG);
   - Hister's own sign-in: the feed and AI routes ask Hister whether the session is good;
@@ -149,6 +150,14 @@ def main():
         s, h, body = get(p2, "/")
         check(s == 200 and "manifest.webmanifest" in body, "the web app answers")
         check(get(p2, "/sw.js")[0] == 200 and get(p2, "/manifest.webmanifest")[0] == 200, "its service worker and manifest")
+        # nginx has no mime.types here: a file whose extension isn't in configure.py's block is octet-stream, which
+        # Safari refuses for an SVG favicon (the tab then keeps the old icon).
+        for port, path, want in ((p1, "/_shiori/shiori-small.svg", "image/svg+xml"), (p1, "/_shiori/shiori.ico", "image/x-icon"),
+                                 (p2, "/_shiori/shiori-small.svg", "image/svg+xml"), (p2, "/_shiori/shiori.ico", "image/x-icon"),
+                                 (p2, "/manifest.webmanifest", "application/manifest+json"), (p2, "/_shiori/icon-256.png", "image/png"),
+                                 (p1, "/_shiori/search.css", "text/css"), (p1, "/_shiori/search.js", "text/javascript")):
+            s_, h_, _ = get(port, path)
+            check(s_ == 200 and h_.get("content-type", "").split(";")[0] == want, f"{path} is served as {want}", f"{s_} {h_.get('content-type')}")
         cfg = get(p1, "/_shiori/config.json")[2]
         check(isinstance(cfg, dict) and cfg["signin"] == "hister" and cfg["services"]["kura"] is False
               and cfg["services"]["searxng"] is True, "config.json says Hister's own sign-in, Kura off", str(cfg)[:120])

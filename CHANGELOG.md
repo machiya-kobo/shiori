@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.13 (2026-10-11)
+
+- **The tab icon is served as an image.** The hosted pages' server had no
+  type for `.svg` and `.ico`, so the new favicon went out as a plain
+  download and Safari ignored it. The server now lists SVG, ICO and the
+  other image, text and font types the pages can ship, and a test checks
+  every file in both pages has one (the container test checks what the
+  running image sends).
+
 ## 1.5.12 (2026-10-11)
 
 - **The tab icon is the rooms' set,** on the search page and in the web

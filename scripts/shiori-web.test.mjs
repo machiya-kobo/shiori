@@ -58,6 +58,34 @@ test("both pages' tab icon is the rooms' set: an SVG, an .ico and the touch icon
   assert.match(svg, /<rect width="512" height="512" rx="112" fill="#1a1b26"\/>/);
 });
 
+test("every file the pages ship has a Content-Type: nginx has no mime.types, so an unlisted extension is octet-stream", { skip }, () => {
+  const x = run(BASE);
+  try {
+    const conf = x.sites();
+    // Some locations reset the types (`types { }`): the shared block is the one with entries.
+    const blocks = [...conf.matchAll(/\btypes \{([^}]*)\}/g)].map((m) => m[1]).filter((b) => b.trim());
+    assert.ok(blocks.length > 0, 'a types block');
+    const types = new Map();
+    for (const line of blocks[0].split('\n')) {
+      const m = line.trim().match(/^([\w.+-]+\/[\w.+-]+)\s+([\w\s]+);$/);
+      if (m) for (const ext of m[2].trim().split(/\s+/)) types.set(ext, m[1]);
+    }
+    // The favicon, as Safari wants it: an SVG favicon that isn't image/svg+xml is ignored.
+    assert.equal(types.get('svg'), 'image/svg+xml');
+    assert.equal(types.get('ico'), 'image/x-icon');
+    assert.equal(types.get('webmanifest'), 'application/manifest+json');
+    const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(join(dir, d.name)) : [join(dir, d.name)]));
+    const unmapped = [];
+    for (const file of [...walk(join(dist, 'search')), ...walk(join(dist, 'app'))]) {
+      const ext = file.includes('.') ? file.split('.').pop() : '';
+      if (ext && !types.has(ext)) unmapped.push(file.slice(dist.length + 1));
+    }
+    assert.deepEqual(unmapped, []);
+  } finally {
+    x.cleanup();
+  }
+});
+
 test('Hister and SearXNG are required, and the message says how to set them', { skip }, () => {
   for (const env of [{}, { SHIORI_HISTER_URL: 'http://hister:4433' }, { SHIORI_SEARXNG_URL: 'http://searxng:8080' }]) {
     const x = run(env);
