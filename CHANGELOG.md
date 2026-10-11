@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.4.2 (2026-10-11)
+
+- **The web app's search field shows its whole focus ring** in a wide
+  window: it sat 12px down in a 62px row, and the bar under it cut off the
+  ring's bottom. The field is centered in the row, above that bar.
+
 ## 1.4.1 (2026-10-11)
 
 - **A table in a preview keeps its columns readable:** a wide note table

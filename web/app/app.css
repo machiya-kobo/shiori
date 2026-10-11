@@ -152,6 +152,10 @@ button { font: inherit; color: inherit; }
   #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]) {
     height: 62px;
   }
+  /* The field centred in that 62px row (it sat 12px down, its focus ring
+     cut off by the bar under it), and above that bar, so its ring shows. */
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top .searchfield { margin-top: 7px; margin-bottom: 7px; }
+  #search-top { z-index: 3; }
   #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]) + #list-top { padding-top: 8px; }
 }
 /* A narrow screen shows the page in place of the list. */
