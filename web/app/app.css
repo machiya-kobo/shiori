@@ -464,6 +464,11 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
     margin-top: calc(var(--top-row) / 2 - 7px); margin-bottom: 2px;
   }
   #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]) + #list-top { padding-top: 8px; }
+  /* The sidebar's first search starts level with the pills: the pills' top is
+     --top-row / 2 + 41px (the field's 12px above its row less the row's
+     2px, its 38px, 2px and the list's 8px), the row's the sidebar's 12px
+     padding and --top-row. */
+  #sidebar > .sidebar-top + button { margin-top: max(0px, calc(29px - var(--top-row) / 2)); }
 }
 /* A phone: the first bar shown takes the top inset the title row had. */
 @media (max-width: 759px) {

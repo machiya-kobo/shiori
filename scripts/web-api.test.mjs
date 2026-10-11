@@ -624,6 +624,11 @@ test('on a Mac the web app\'s text styles are the Mac app\'s sizes (TextStyleFon
   assert.doesNotMatch(css, /font-size: (0\.6875|0\.75|0\.8125|0\.9375|1\.0625|1\.25|1\.75)rem/);
 });
 
+test('the sidebar\'s first search starts level with the pills (the same --top-row sum)', () => {
+  const css = read('../web/app/app.css');
+  assert.match(css, /#sidebar > \.sidebar-top \+ button \{ margin-top: max\(0px, calc\(29px - var\(--top-row\) \/ 2\)\); \}/);
+});
+
 test('the footer sits at the window\'s bottom on a short page and right after the content on a long one', () => {
   const css = read('../patches/shiori/search.css');
   assert.match(css, /body:not\(\.home\):not\(\.with-preview\) \{ display: flex; flex-direction: column; min-height: var\(--vh\); \}/);

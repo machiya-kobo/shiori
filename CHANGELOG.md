@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.14 (2026-10-11)
+
+- **The web app's first recent search starts level with the pills.** It sat
+  about 12px higher than All / Pages / Notes; its top is now the pills' at
+  every width from 760px and at any text size (one shared sum).
+
 ## 1.5.13 (2026-10-11)
 
 - **The tab icon is served as an image.** The hosted pages' server had no
