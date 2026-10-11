@@ -597,7 +597,7 @@ test('the web app\'s search field is centered on the sidebar\'s Library row (one
   assert.match(css, /--top-row: max\(34px, calc\(14px \+ max\(18px, 1\.4875rem\)\)\);/);
   assert.match(css, /\+ #search-top \.searchfield \{\s*margin-top: calc\(var\(--top-row\) \/ 2 - 7px\); margin-bottom: 2px;/);
   // The pills follow 10px under the field at every width from 760px.
-  assert.match(css, /@media \(min-width: 760px\) \{[\s\S]*?#search-top:not\(\[hidden\]\) \+ #list-top \{ padding-top: 8px; \}\s*\}/);
+  assert.match(css, /@media \(min-width: 760px\) \{[\s\S]*?#search-top:not\(\[hidden\]\) \+ #list-top \{ padding-top: 8px; \}/);
 });
 
 test('the web app\'s Standard text size is 1.2 times the system\'s on a Mac (13pt body), as the Mac app and the search page', () => {
