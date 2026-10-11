@@ -5,6 +5,11 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.15 (2026-10-11)
+
+- Same as 1.5.14, with the tests green: one check of the stylesheet's
+  pattern had gone stale. Nothing changes for the pages.
+
 ## 1.5.14 (2026-10-11)
 
 - **The web app's first recent search starts level with the pills.** It sat
