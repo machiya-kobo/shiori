@@ -36,77 +36,12 @@ struct AISettingsPage: View {
         Section {
             Toggle("AI Features", isOn: $app.ai.enabled)
         } footer: {
-            Text("Off until you turn it on. The engines below are tried in order; settings and keys stay on this device.")
+            Text("Off until you turn it on. Settings and keys stay on this device.")
         }
         .listRowBackground(palette.surface)
         .onChange(of: app.ai.autoLabel || app.ai.autoCollections) { _, on in
             if on { app.labeller.start(app: app) } else { app.labeller.stop() }
         }
-
-        Section {
-            Toggle("Use Apple Intelligence", isOn: $app.ai.appleIntelligence)
-            let status = AppleIntelligenceEngine.status
-            LabeledContent("Status", value: status.label)
-            if status == .available {
-                Button("Try Apple Intelligence") { Task { await tryApple() } }
-                    .disabled(appleCheck == .checking)
-                checkRow(appleCheck)
-            }
-        } header: {
-            Text("1 · Apple Intelligence")
-        } footer: {
-            Text(AppleIntelligenceEngine.status.detail ?? "Runs on this device: nothing leaves it.")
-        }
-        .listRowBackground(palette.surface)
-
-        Section {
-            Toggle("Use a Local Server", isOn: $app.ai.localEnabled)
-            if app.ai.localEnabled {
-                TextField("Address", text: $app.ai.localURL, prompt: Text("https://server.example.ts.net/v1"))
-                    .urlField()
-                TextField("Model", text: $app.ai.localModel, prompt: Text("e.g. qwen3"))
-                    .monospacedField()
-                keyField("Token", prompt: "Optional", text: $localToken, account: .local)
-                Button("Test Connection") { Task { await testLocal() } }
-                    .disabled(localCheck == .checking || app.ai.localBaseURL == nil || app.ai.localModel.isEmpty)
-                checkRow(localCheck) { app.ai.localModel = $0 }
-            }
-        } header: {
-            Text("2 · Local Server")
-        } footer: {
-            Text("An Ollama or LM Studio server of your own, at its OpenAI-compatible address. Pages and notes go only to it.")
-        }
-        .listRowBackground(palette.surface)
-
-        Section {
-            Picker("Provider", selection: $app.ai.cloud) {
-                ForEach(AISettings.Cloud.allCases) { Text($0.label).tag($0) }
-            }
-            switch app.ai.cloud {
-            case .none:
-                EmptyView()
-            case .anthropic:
-                keyField("API Key", prompt: "sk-ant-…", text: $anthropicKey, account: .anthropic)
-                TextField("Model", text: $app.ai.anthropicModel, prompt: Text(AISettings.defaultAnthropicModel))
-                    .monospacedField()
-                removeKeyButton(.anthropic)
-            case .openAI:
-                keyField("API Key", prompt: "sk-…", text: $openAIKey, account: .openAI)
-                TextField("Model", text: $app.ai.openAIModel, prompt: Text(AISettings.defaultOpenAIModel))
-                    .monospacedField()
-                removeKeyButton(.openAI)
-            }
-            // Each provider's own test, whichever one is in use: the saved
-            // key and model, one small request.
-            testRow(.anthropic)
-            testRow(.openAI)
-        } header: {
-            Text("3 · AI Provider")
-        } footer: {
-            Text(cloudFooter)
-        }
-        .listRowBackground(palette.surface)
-
         .onAppear(perform: loadKeys)
         .onDisappear { revealed = [] }
         .onChange(of: app.ai.anthropicModel) { _, _ in anthropicCheck = .idle }
@@ -115,14 +50,80 @@ struct AISettingsPage: View {
         .onChange(of: openAIKey) { _, key in keyChanged(key, .openAI) }
         .onChange(of: localToken) { _, key in keyChanged(key, .local) }
 
+        // What AI does for you, in one place.
+        Section {
+            LabeledContent("Summarize", value: "Always")
+            LabeledContent("Suggested Labels", value: "Always")
+            Toggle("AI Answer", isOn: $app.searchPage.aiAnswer)
+            Toggle("Label New Pages", isOn: $app.ai.autoLabel)
+            Toggle("Keep Collections Current", isOn: $app.ai.autoCollections)
+        } header: {
+            Text("Used For")
+        } footer: {
+            Text(usedForFooter)
+        }
+        .listRowBackground(palette.surface)
+
+        Section {
+            Toggle("Use Apple Intelligence", isOn: $app.ai.appleIntelligence)
+            let status = AppleIntelligenceEngine.status
+            LabeledContent("Status", value: status.label)
+            if status == .available {
+                Button("Test Apple Intelligence") { Task { await tryApple() } }
+                    .disabled(appleCheck == .checking)
+                checkRow(appleCheck)
+            }
+            Toggle("Use a Local Server", isOn: $app.ai.localEnabled)
+            if app.ai.localEnabled {
+                TextField("Address", text: $app.ai.localURL, prompt: Text("https://server.example.ts.net/v1"))
+                    .urlField()
+                TextField("Model", text: $app.ai.localModel, prompt: Text("e.g. qwen3"))
+                    .monospacedField()
+                keyField("Token", prompt: "Optional", text: $localToken, account: .local)
+                Button("Test Local Server") { Task { await testLocal() } }
+                    .disabled(localCheck == .checking || app.ai.localBaseURL == nil || app.ai.localModel.isEmpty)
+                checkRow(localCheck) { app.ai.localModel = $0 }
+            }
+        } header: {
+            Text("Engines, Tried in This Order")
+        } footer: {
+            Text("Apple Intelligence first, then your local server (an Ollama or LM Studio at its OpenAI-compatible address), then the cloud engine. " + (AppleIntelligenceEngine.status.detail ?? "Apple Intelligence runs on this device."))
+        }
+        .listRowBackground(palette.surface)
+
+        Section {
+            Picker("Use", selection: $app.ai.cloud) {
+                ForEach(AISettings.Cloud.allCases) { Text($0.label).tag($0) }
+            }
+        } header: {
+            Text("Cloud Engine")
+        } footer: {
+            Text(cloudFooter)
+        }
+        .listRowBackground(palette.surface)
+
+        providerSection(.anthropic, title: "Anthropic", keyPrompt: "sk-ant-…", model: $app.ai.anthropicModel,
+                        modelPrompt: AISettings.defaultAnthropicModel)
+        providerSection(.openAI, title: "OpenAI", keyPrompt: "sk-…", model: $app.ai.openAIModel,
+                        modelPrompt: AISettings.defaultOpenAIModel)
+
+        Section {
+            Label("Your notes never go to a cloud engine.", systemImage: "lock")
+            Label("Keys stay in this device's Keychain.", systemImage: "key")
+            Label("Settings stay on this device.", systemImage: "iphone")
+        } header: {
+            Text("Privacy")
+        } footer: {
+            Text("Page text goes to a cloud engine only when the engines above can't answer.")
+        }
+        .listRowBackground(palette.surface)
+
         // Automatic Labels after the engines it runs on; only with AI on.
         if app.ai.enabled {
             Section {
-                Toggle("Label New Pages", isOn: $app.ai.autoLabel)
                 if app.ai.autoLabel, app.ai.appleIntelligence {
                     Toggle("Apply Apple Intelligence's Labels", isOn: $app.ai.applyAppleLabels)
                 }
-                Toggle("Keep Collections Current", isOn: $app.ai.autoCollections)
                 SuggestCollectionsButton()
                 DisclosureGroup {
                     NeverSuggestedGrid()
@@ -131,6 +132,7 @@ struct AISettingsPage: View {
                     Text(app.ai.neverSuggest.isEmpty ? "Never Suggested: none" : "Never Suggested: \(app.ai.neverSuggest.joined(separator: ", "))")
                         .lineLimit(2)
                 }
+                LabeledContent("Requests Today", value: "\(requestsToday) of \(AutoLabeller.dailyCloudLimit)")
                 // What it has done and learnt: occasional, so folded away.
                 if hasLearning {
                     DisclosureGroup("Learning") {
@@ -144,6 +146,45 @@ struct AISettingsPage: View {
             }
             .listRowBackground(palette.surface)
         }
+    }
+
+    /// One provider's block, always shown: its key, model, test and the
+    /// result in place; Remove Key when a key is saved.
+    @ViewBuilder private func providerSection(
+        _ account: AIKeychain.Account, title: String, keyPrompt: String, model: Binding<String>, modelPrompt: String
+    ) -> some View {
+        Section {
+            keyField("API Key", prompt: keyPrompt, text: keyBinding(account), account: account)
+            TextField("Model", text: model, prompt: Text(modelPrompt))
+                .monospacedField()
+            testRow(account)
+            removeKeyButton(account)
+        } header: {
+            Text(title)
+        }
+        .listRowBackground(palette.surface)
+    }
+
+    private func keyBinding(_ account: AIKeychain.Account) -> Binding<String> {
+        switch account {
+        case .anthropic: $anthropicKey
+        case .openAI: $openAIKey
+        case .local: $localToken
+        }
+    }
+
+    /// Cloud requests made today against the day's cap (Label New Pages
+    /// and Keep Collections Current; the summaries and answers on a cloud
+    /// engine are not counted).
+    private var requestsToday: Int {
+        let today = Date().formatted(.iso8601.year().month().day())
+        return app.labeller.state.cloudDay == today ? app.labeller.state.cloudCount : 0
+    }
+
+    private var usedForFooter: String {
+        app.searchPage.webResults
+            ? "Summarize and Suggested Labels are in a page's menu and Edit Label. AI Answer waits until opened."
+            : "Summarize and Suggested Labels are in a page's menu and Edit Label. AI Answer needs Web Results (Settings → Search)."
     }
 
     private var trust: LabelTrust { LabelStat.trust(app.labeller.state.stats) }
@@ -190,12 +231,9 @@ struct AISettingsPage: View {
 
     private var cloudFooter: String {
         switch app.ai.cloud {
-        case .none:
-            "None: pages stay on your devices and servers."
-        case .anthropic:
-            "When the engines above can't answer, page text goes to Anthropic. Your notes never do; the key stays in this device's Keychain."
-        case .openAI:
-            "When the engines above can't answer, page text goes to OpenAI. Your notes never do; the key stays in this device's Keychain."
+        case .none: "None: pages stay on your devices and servers."
+        case .anthropic: "Anthropic answers when the engines above can't. Fill in its key below."
+        case .openAI: "OpenAI answers when the engines above can't. Fill in its key below."
         }
     }
 

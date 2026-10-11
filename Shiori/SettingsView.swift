@@ -194,14 +194,10 @@ struct SettingsView: View {
                     .onSubmit(saveSearxng)
                 unencryptedNote(searxngDraft)
                 Toggle("Web Results", isOn: $app.searchPage.webResults)
-                // An answer from the web results, only when opened.
-                if app.searchPage.webResults {
-                    Toggle("AI Answer", isOn: $app.searchPage.aiAnswer)
-                }
             } header: {
                 Text("Web")
             } footer: {
-                Text("Your SearXNG: the web results in Shiori and in Safari's results. Thumbnails come only through its image proxy.")
+                Text("Your SearXNG: the web results in Shiori and in Safari's results. Thumbnails come only through its image proxy. AI Answer is under Settings → AI.")
             }
             .listRowBackground(palette.surface)
 

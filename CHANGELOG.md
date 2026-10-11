@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.4.0 (2026-10-11)
+
+- **Settings → AI is reordered** in the iPhone, iPad and Mac apps: AI
+  Features, Used For, Engines (Tried in This Order), Cloud Engine, Privacy,
+  Automatic Labels. Both cloud providers show their key, model and test at
+  once, and a Use row picks which one answers. The AI Answer switch moved
+  here from Search; Requests Today shows the day's cloud requests against the
+  cap, and one Privacy note replaces three footers.
+
 ## 1.3.0 (2026-10-11)
 
 - **Test Anthropic and Test OpenAI** in Settings → AI: each tries that

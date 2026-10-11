@@ -16,7 +16,10 @@ run, on-device first and the cloud last. Four jobs:
 
 Plus an **AI Answer** for a web search, on request only.
 
-Everything is set on **Settings → AI**. API keys live in the Keychain, never
+Everything is set on **Settings → AI**, in this order: AI Features, Used
+For (including the AI Answer switch), Engines (Apple Intelligence, a local
+server), Cloud Engine (None, Anthropic or OpenAI, each with its own key,
+model and test), Privacy, Automatic Labels. API keys live in the Keychain, never
 in settings files. AI settings are per device, and a web page can never
 turn AI on (they're not in `SharedSettings.apply`'s whitelist).
 
