@@ -592,6 +592,12 @@ test('the field is a set 38px tall, its text 15px from 1100px and 16px or more b
   assert.match(app, /@media \(min-width: 1100px\) \{\s*\.searchfield input \{ font-size: 15px; \}/);
 });
 
+test('the web app\'s search field is centered on the sidebar\'s Library row (one shared --top-row sum)', () => {
+  const css = read('../web/app/app.css');
+  assert.match(css, /--top-row: max\(34px, calc\(14px \+ max\(18px, 1\.4875rem\)\)\);/);
+  assert.match(css, /\+ #search-top \.searchfield \{\s*margin-top: calc\(var\(--top-row\) \/ 2 - 7px\); margin-bottom: calc\(43px - var\(--top-row\) \/ 2\);/);
+});
+
 test('the footer sits at the window\'s bottom on a short page and right after the content on a long one', () => {
   const css = read('../patches/shiori/search.css');
   assert.match(css, /body:not\(\.home\):not\(\.with-preview\) \{ display: flex; flex-direction: column; min-height: var\(--vh\); \}/);

@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.9 (2026-10-11)
+
+- **The web app's search field is level with the sidebar's Library row.**
+  The field sat 7px lower; its center is now the row's at every width from
+  760px and at any text size (the row's height is one shared sum), and the
+  list under it doesn't move.
+
 ## 1.5.8 (2026-10-11)
 
 - **On the Mac, the pills row is level with the sidebar's Library row.**
