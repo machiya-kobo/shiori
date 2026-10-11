@@ -595,7 +595,17 @@ test('the field is a set 38px tall, its text 15px from 1100px and 16px or more b
 test('the web app\'s search field is centered on the sidebar\'s Library row (one shared --top-row sum)', () => {
   const css = read('../web/app/app.css');
   assert.match(css, /--top-row: max\(34px, calc\(14px \+ max\(18px, 1\.4875rem\)\)\);/);
-  assert.match(css, /\+ #search-top \.searchfield \{\s*margin-top: calc\(var\(--top-row\) \/ 2 - 7px\); margin-bottom: calc\(43px - var\(--top-row\) \/ 2\);/);
+  assert.match(css, /\+ #search-top \.searchfield \{\s*margin-top: calc\(var\(--top-row\) \/ 2 - 7px\); margin-bottom: 2px;/);
+  // The pills follow 10px under the field at every width from 760px.
+  assert.match(css, /@media \(min-width: 760px\) \{[\s\S]*?#search-top:not\(\[hidden\]\) \+ #list-top \{ padding-top: 8px; \}\s*\}/);
+});
+
+test('the web app\'s Standard text size is 1.2 times the system\'s on a Mac (13pt body), as the Mac app and the search page', () => {
+  const app = read('../web/app/app.js');
+  const fn = app.slice(app.indexOf('function systemTextScale('), app.indexOf('function applyLook('));
+  assert.match(app, /const MAC_BASE = 1\.2;/);
+  assert.match(fn, /\/Mac\/\.test\(navigator\.platform\) && navigator\.maxTouchPoints < 2/);
+  assert.match(fn, /return \(px \/ 17\) \* \(mac \? MAC_BASE : 1\);/);
 });
 
 test('the footer sits at the window\'s bottom on a short page and right after the content on a long one', () => {

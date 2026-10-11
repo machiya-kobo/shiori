@@ -261,15 +261,20 @@ const TEXT_SCALE = { xSmall: 12 / 14, small: 13 / 14, medium: 0.96, large: 15 / 
 /**
  * Standard's scale: 1, or in Safari the system's text size (Dynamic Type)
  * over its default body size (17 px), read from the system body font. The
- * app's sizes are rem, so the root's size scales them all.
+ * app's sizes are rem, so the root's size scales them all. A Mac's system
+ * text is 13 points, which read small: Standard starts 1.2 times larger
+ * there, as the Mac app (TextSize.macBase) and the search page (MAC_BASE).
+ * An iPad also says "Mac", with a touch screen.
  */
+const MAC_BASE = 1.2;
 function systemTextScale() {
   if (!(window.CSS && CSS.supports && CSS.supports('font', '-apple-system-body'))) return 1;
   const probe = h('span', { style: 'font: -apple-system-body; position: absolute; visibility: hidden' }, 'x');
   document.body.append(probe);
   const px = parseFloat(getComputedStyle(probe).fontSize) || 17;
   probe.remove();
-  return px / 17;
+  const mac = /Mac/.test(navigator.platform) && navigator.maxTouchPoints < 2;
+  return (px / 17) * (mac ? MAC_BASE : 1);
 }
 function applyLook() {
   const theme = settings.theme === 'day' || settings.theme === 'night' ? settings.theme : '';

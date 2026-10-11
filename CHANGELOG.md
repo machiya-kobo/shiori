@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.10 (2026-10-11)
+
+- **The web app's text starts larger on a Mac.** Standard followed the
+  system's text size, 13 points there, so the menus and results read small
+  (a root of 12px against the iPhone's 16). It starts 1.2 times larger, as
+  the Mac app and the search page do: 15.6px body text. Other sizes in
+  Settings → Text Size are as they were.
+- **The pills row sits closer to the search field,** 10px under it at every
+  width from 760px (it was 22px at the wide layout).
+
 ## 1.5.9 (2026-10-11)
 
 - **The web app's search field is level with the sidebar's Library row.**

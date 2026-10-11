@@ -153,13 +153,9 @@ button { font: inherit; color: inherit; }
      toolbar, with no line under it; the divider between the list and the
      preview runs the full height. */
   #preview-column > #preview-bar { min-height: 62px; border-bottom: 0; }
-  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]) {
-    height: 62px;
-  }
   /* The field is above that bar, so its ring shows (its place in the row
      is the rule under "No title row", level with the sidebar's Library). */
   #search-top { z-index: 3; }
-  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]) + #list-top { padding-top: 8px; }
 }
 /* A narrow screen shows the page in place of the list. */
 body.phone-preview #list-column { display: none; }
@@ -450,10 +446,12 @@ button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: c
 @media (min-width: 760px) {
   /* The field's center is the Library row's: the sidebar's 12px top padding,
      then half the row (--top-row: the tallest of the gear and the button).
-     The margins add up to what they did, so nothing below moves. */
+     The pills follow 10px under the field: its 2px margin and the list's
+     8px of padding (the same at every width from 760px). */
   #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top .searchfield {
-    margin-top: calc(var(--top-row) / 2 - 7px); margin-bottom: calc(43px - var(--top-row) / 2);
+    margin-top: calc(var(--top-row) / 2 - 7px); margin-bottom: 2px;
   }
+  #list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) + #search-top:not([hidden]) + #list-top { padding-top: 8px; }
 }
 /* A phone: the first bar shown takes the top inset the title row had. */
 @media (max-width: 759px) {
