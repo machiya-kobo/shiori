@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.3.0 (2026-10-11)
+
+- **Test Anthropic and Test OpenAI** in Settings → AI: each tries that
+  provider's saved key and model, whichever one is in use, with one small
+  request. It shows the model that answered and how long it took, or what's
+  wrong in plain words: a refused key, no access to the model, a rate limit,
+  a provider fault, no network. Off with no key set.
+
 ## 1.2.1 (2026-10-11)
 
 - **The apps' AI Answer follows your language, not the results':** it

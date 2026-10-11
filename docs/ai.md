@@ -31,9 +31,10 @@ turn AI on (they're not in `SharedSettings.apply`'s whitelist).
 - **A local server** (any OpenAI-compatible server: Ollama, LM Studio).
 - **One cloud engine**: Anthropic (Messages API) or OpenAI (chat
   completions), raw HTTPS, no SDK. Default models: Claude Sonnet 5.5
-  (`claude-sonnet-5-5`) and GPT-6 Luna (`gpt-6-luna`); Test Connection
-  lists the provider's models and offers the closest when the chosen one
-  isn't there.
+  (`claude-sonnet-5-5`) and GPT-6 Luna (`gpt-6-luna`). Test Anthropic and
+  Test OpenAI each try that provider's saved key and model, whichever is in
+  use, and say what's wrong in plain words. They list the provider's models
+  and offer the closest when the chosen one isn't there.
 
 **The order is fixed:** Apple Intelligence, the local server, then the
 cloud engine. Another engine tries only after "couldn't answer" (no

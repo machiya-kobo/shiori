@@ -19,7 +19,8 @@ struct AISettingsPage: View {
     @State private var loaded = false
     @State private var revealed: Set<AIKeychain.Account> = []
     @State private var appleCheck: Check = .idle
-    @State private var cloudCheck: Check = .idle
+    @State private var anthropicCheck: Check = .idle
+    @State private var openAICheck: Check = .idle
     @State private var localCheck: Check = .idle
 
     enum Check: Equatable {
@@ -88,13 +89,17 @@ struct AISettingsPage: View {
                 keyField("API Key", prompt: "sk-ant-…", text: $anthropicKey, account: .anthropic)
                 TextField("Model", text: $app.ai.anthropicModel, prompt: Text(AISettings.defaultAnthropicModel))
                     .monospacedField()
-                cloudButtons(.anthropic)
+                removeKeyButton(.anthropic)
             case .openAI:
                 keyField("API Key", prompt: "sk-…", text: $openAIKey, account: .openAI)
                 TextField("Model", text: $app.ai.openAIModel, prompt: Text(AISettings.defaultOpenAIModel))
                     .monospacedField()
-                cloudButtons(.openAI)
+                removeKeyButton(.openAI)
             }
+            // Each provider's own test, whichever one is in use: the saved
+            // key and model, one small request.
+            testRow(.anthropic)
+            testRow(.openAI)
         } header: {
             Text("3 · AI Provider")
         } footer: {
@@ -104,7 +109,8 @@ struct AISettingsPage: View {
 
         .onAppear(perform: loadKeys)
         .onDisappear { revealed = [] }
-        .onChange(of: app.ai.cloud) { _, _ in cloudCheck = .idle }
+        .onChange(of: app.ai.anthropicModel) { _, _ in anthropicCheck = .idle }
+        .onChange(of: app.ai.openAIModel) { _, _ in openAICheck = .idle }
         .onChange(of: anthropicKey) { _, key in keyChanged(key, .anthropic) }
         .onChange(of: openAIKey) { _, key in keyChanged(key, .openAI) }
         .onChange(of: localToken) { _, key in keyChanged(key, .local) }
@@ -193,19 +199,29 @@ struct AISettingsPage: View {
         }
     }
 
-    @ViewBuilder private func cloudButtons(_ account: AIKeychain.Account) -> some View {
-        Button("Test Connection") { Task { await testCloud() } }
-            .disabled(cloudCheck == .checking || draft(account).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        checkRow(cloudCheck) { model in
-            if app.ai.cloud == .anthropic { app.ai.anthropicModel = model } else { app.ai.openAIModel = model }
-            cloudCheck = .idle
-        }
+    @ViewBuilder private func removeKeyButton(_ account: AIKeychain.Account) -> some View {
         if !draft(account).isEmpty {
             Button("Remove Key", role: .destructive) {
                 setDraft("", account)
-                cloudCheck = .idle
             }
             .tint(palette.danger)
+        }
+    }
+
+    /// "Test Anthropic" / "Test OpenAI": the provider's saved key and model,
+    /// whichever provider is in use. Off while a test runs or no key is set.
+    @ViewBuilder private func testRow(_ account: AIKeychain.Account) -> some View {
+        let check = account == .anthropic ? anthropicCheck : openAICheck
+        Button(account == .anthropic ? "Test Anthropic" : "Test OpenAI") { Task { await testProvider(account) } }
+            .disabled(check == .checking || draft(account).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        checkRow(check) { model in
+            if account == .anthropic {
+                app.ai.anthropicModel = model
+                anthropicCheck = .idle
+            } else {
+                app.ai.openAIModel = model
+                openAICheck = .idle
+            }
         }
     }
 
@@ -308,7 +324,11 @@ struct AISettingsPage: View {
     private func keyChanged(_ key: String, _ account: AIKeychain.Account) {
         guard loaded, key != AIKeychain.read(account) else { return }
         AIKeychain.save(key, for: account)
-        if account == .local { localCheck = .idle } else { cloudCheck = .idle }
+        switch account {
+        case .local: localCheck = .idle
+        case .anthropic: anthropicCheck = .idle
+        case .openAI: openAICheck = .idle
+        }
     }
 
     // MARK: Tests
@@ -324,10 +344,17 @@ struct AISettingsPage: View {
         }
     }
 
-    private func testCloud() async {
-        guard let engine = app.ai.cloudEngine else { return }
-        cloudCheck = .checking
-        cloudCheck = await run(engine)
+    private func testProvider(_ account: AIKeychain.Account) async {
+        switch account {
+        case .anthropic:
+            anthropicCheck = .checking
+            anthropicCheck = await run(AnthropicClient(apiKey: AIKeychain.read(.anthropic), model: app.ai.anthropicModel))
+        case .openAI:
+            openAICheck = .checking
+            openAICheck = await run(OpenAICompatibleClient(apiKey: AIKeychain.read(.openAI), model: app.ai.openAIModel))
+        case .local:
+            break
+        }
     }
 
     private func testLocal() async {
@@ -351,7 +378,7 @@ struct AISettingsPage: View {
                     nearest)
             }
         } catch {
-            return .failed(error.localizedDescription)
+            return .failed(ConnectionTest.plainWords(for: error, provider: engine.provider.displayName, model: engine.model))
         }
     }
 
