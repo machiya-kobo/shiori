@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.7 (2026-10-11)
+
+- **The search field's text is the normal weight** from 1100px, as the
+  rooms' field (it was 500), on the search page and in the web app. Its size
+  (15px from 1100px, 16px or more below) is as it was.
+
 ## 1.5.6 (2026-10-11)
 
 - **The search field is a set 38px tall,** on the search page and in the web

@@ -160,10 +160,10 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
   body:not(.home) header > #search { grid-column: 2; grid-row: 1; width: auto; justify-self: stretch; padding: 0; margin-left: calc(16 * var(--u)); }
   body:not(.home) .brand-row > .filters { grid-column: 3; grid-row: 1; justify-self: end; }
   body:not(.home) header > :is(.tabs-row, .tools-row) { grid-column: 1 / -1; }
-  /* The field's text is 15px at weight 500, as the rooms'; a phone and
-     anything under 1100px keep 16px, which iOS needs to not zoom into the
-     field. */
-  body:not(.home) #q { font-size: calc(15 * var(--u)); font-weight: 500; }
+  /* The field's text is 15px at the normal weight, as the rooms'; a phone
+     and anything under 1100px keep 16px, which iOS needs to not zoom into
+     the field. */
+  body:not(.home) #q { font-size: calc(15 * var(--u)); }
 }
 
 /* Recent searches, under the field while it has focus. */

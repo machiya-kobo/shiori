@@ -302,10 +302,10 @@ input:placeholder-shown ~ .field-clear { display: none; }
 /* One ring on the field's edge: inside, over the border (outside it was a
    second ring beside the border). */
 .searchfield input:focus-visible { outline-offset: -2px; border-color: var(--accent); }
-/* From 1100px the text is 15px at weight 500, as the rooms' field; narrower
-   keeps 16px or more, which iOS needs to not zoom into the field. */
+/* From 1100px the text is 15px at the normal weight, as the rooms' field;
+   narrower keeps 16px or more, which iOS needs to not zoom into the field. */
 @media (min-width: 1100px) {
-  .searchfield input { font-size: 15px; font-weight: 500; }
+  .searchfield input { font-size: 15px; }
 }
 
 /* Rows */
