@@ -96,10 +96,13 @@ header {
    the room's colour, 18px and 700; 16px between the header's items. */
 .brand {
   display: flex; align-items: center; gap: 8px; min-width: 0;
-  color: var(--accent); text-decoration: none; font-weight: 700; font-size: 1.125rem; letter-spacing: -0.01em;
+  color: var(--accent); text-decoration: none; font-weight: 700; font-size: 18px; letter-spacing: -0.01em;
 }
 .brand img { width: 28px; height: 28px; border-radius: 7px; flex: none; }
 .brand:hover span, .brand:focus-visible span { color: var(--accent-hover); }
+/* The rooms' sizes are pixels (18px name, 16px field), not the text size's:
+   the Mac's larger Standard size made this header bigger than theirs. */
+body:not(.home) #q { font-size: 16px; }
 /* From 1100px up the field sits in the header's top row, between the brand
    and the icons, centred as the rooms' search is (560px, shrinking); the
    pills and the time range keep their own rows under it. Below that, and
@@ -251,7 +254,7 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
 .chip.gemini, .chip.gateway { color: var(--smallweb); }
 .filters { display: flex; justify-content: flex-end; align-items: center; gap: 6px; flex: none; }
 .icon-button {
-  width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; flex: none;
+  width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; flex: none;
   -webkit-tap-highlight-color: transparent;
 }
 #settings-open::before {

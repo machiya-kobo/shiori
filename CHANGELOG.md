@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.4.3 (2026-10-11)
+
+- **The search page's header is the rooms' size at any text size:** the name
+  is 18px and the field 16px, not scaled by Text Size (the Mac's larger
+  Standard made them bigger than the rooms'), and the icon buttons have the
+  rooms' 8px corners.
+
 ## 1.4.2 (2026-10-11)
 
 - **The web app's search field shows its whole focus ring** in a wide
