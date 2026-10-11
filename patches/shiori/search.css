@@ -105,9 +105,9 @@ header {
 body:not(.home) #q { font-size: calc(16 * var(--u)); }
 /* The header spans the window, as the rooms': the mark a gutter in from the
    left edge, the house and gear a gutter in from the right, whatever the
-   column the results sit in. The field, pills and time range stay in the
-   results' column, the field in its own row above the pills (Shiori's search
-   is the page, so it isn't moved up into the brand row as the rooms' is). */
+   column the results sit in. The pills and time range stay in the results'
+   column; the field is in the top row from 1100px up, in line with the
+   results (below that it's the row under the name). */
 /* Text Size is a `zoom` on the body (--z, set by search.js, 1.2 on the Mac's
    Standard), which would make this header bigger than the rooms': its sizes
    are N * var(--u), the rooms' pixels whatever the zoom; --vw is the visible
@@ -130,6 +130,31 @@ body:not(.home) .field-button { width: calc(32 * var(--u)); height: calc(32 * va
 body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 * var(--u)); }
 @media (min-width: 1100px) {
   body.two-col, body.with-preview { --body-max: calc(76rem + 48px); }
+  /* From 1100px up the field is in the top row, next to the name and in line
+     with the results: its right edge is the results column's, its left edge
+     the column's too where the name leaves room (else just after the name).
+     --col-l / --col-w / --col-r are the page's own grid: the column, 24px,
+     then the Info card's 28rem (with a preview open, 34rem). */
+  body:not(.home) {
+    --content-w: min(var(--vw) - 24px, var(--body-max) - 24px);
+    --col-l: calc((var(--vw) - var(--content-w)) / 2);
+    --col-w: var(--content-w);
+  }
+  body.two-col:not(.with-preview):not(.home) { --col-w: calc(var(--content-w) - 28rem - 24px); }
+  body.with-preview:not(.home) { --col-w: 34rem; }
+  body:not(.home) header {
+    --col-r: calc(var(--col-l) + var(--col-w));
+    grid-template-columns:
+      minmax(max-content, calc(var(--col-l) - var(--gutter) - 16 * var(--u)))
+      minmax(0, 1fr)
+      calc(var(--vw) - var(--gutter) - var(--col-r));
+    column-gap: 0;
+  }
+  body:not(.home) .brand-row { display: contents; }
+  body:not(.home) .brand-row > .brand { grid-column: 1; grid-row: 1; }
+  body:not(.home) header > #search { grid-column: 2; grid-row: 1; width: auto; justify-self: stretch; padding: 0; margin-left: calc(16 * var(--u)); }
+  body:not(.home) .brand-row > .filters { grid-column: 3; grid-row: 1; justify-self: end; }
+  body:not(.home) header > :is(.tabs-row, .tools-row) { grid-column: 1 / -1; }
 }
 
 /* Recent searches, under the field while it has focus. */

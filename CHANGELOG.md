@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.2 (2026-10-11)
+
+- **The search field is in the top row, next to the name,** from 1100px up,
+  as wide as the results' column and ending where it ends. Its left edge is
+  the results' where the name leaves room, else just after the name. Below
+  1100px it's the row under the name.
+
 ## 1.5.1 (2026-10-11)
 
 - **The search field is back in its own row above the pills** on the
