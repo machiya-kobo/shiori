@@ -573,6 +573,12 @@ test('the web app\'s search field is a pill, as the rooms\' (vaultkit form.searc
   assert.match(css, /\.searchfield input \{[^}]*border-radius:\s*999px/);
 });
 
+test('the search field\'s focus ring is drawn inside it in the top row (outside, the window clipped its top edge)', () => {
+  const css = read('../patches/shiori/search.css');
+  const wide = css.slice(css.indexOf('@media (min-width: 1100px) {'));
+  assert.match(wide, /body:not\(\.home\) #q:focus-visible \{ outline-offset: -2px; \}/);
+});
+
 test('the search page sizes its field to the results\' column as drawn (alignField), from 1100px up', () => {
   const src = read('../patches/shiori/search.js');
   const body = src.slice(src.indexOf('function alignField('), src.indexOf('function alignInfo('));

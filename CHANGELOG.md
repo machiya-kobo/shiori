@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.4 (2026-10-11)
+
+- **The search field's focus ring shows in full.** In the top row the
+  field sits just under the window's edge, so its ring lost its top edge
+  there. From 1100px up the ring is now drawn inside the field; the field
+  and the row keep their size and place.
+
 ## 1.5.3 (2026-10-11)
 
 - **The search page's field is sized to the results' column as drawn.** It
