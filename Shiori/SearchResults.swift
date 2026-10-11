@@ -608,8 +608,17 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
                                 ForEach(choices) { pill($0).id($0.id) }
                             }
                             .padding(.horizontal)
+                            #if os(macOS)
+                            // The Mac's sidebar row (Library, 32 points) is
+                            // level with the pills (24): 4 points less above
+                            // and 4 more below puts their centers together
+                            // and leaves the bar as tall as before.
+                            .padding(.top, 4)
+                            .padding(.bottom, 10)
+                            #else
                             .padding(.top, 8)
                             .padding(.bottom, 6)
+                            #endif
                         }
                         .fadesOverflow()
                         .onAppear { proxy.scrollTo(selection.wrappedValue.id) }

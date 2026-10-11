@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.8 (2026-10-11)
+
+- **On the Mac, the pills row is level with the sidebar's Library row.**
+  All / Pages / Notes sat 4 points lower; their centers now line up, and the
+  bar below them is as tall as it was.
+
 ## 1.5.7 (2026-10-11)
 
 - **The search field's text is the normal weight** from 1100px, as the
