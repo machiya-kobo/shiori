@@ -567,3 +567,11 @@ test('a note preview\'s table cells break at word edges, not anywhere (columns n
     assert.match(src, /td,\s*th\s*\{[^\n]*overflow-wrap:\s*break-word/, file);
   }
 });
+
+test('a refresh applies a waiting service worker without the toast (the toast stays for a page left open)', () => {
+  const app = read('../web/app/app.js');
+  const watch = app.slice(app.indexOf('function watchForUpdates('));
+  assert.match(watch, /getEntriesByType\('navigation'\)\[0\][^;]*\.type === 'reload'/);
+  assert.match(watch, /if \(reg\.waiting && refreshed\) \{[\s\S]*?postMessage\(\{ type: 'SKIP_WAITING' \}\)/);
+  assert.match(watch, /else if \(reg\.waiting && navigator\.serviceWorker\.controller\) toast\(reg\.waiting\)/);
+});

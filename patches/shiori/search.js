@@ -1440,6 +1440,11 @@
     if (header && window.ResizeObserver) new ResizeObserver(keep).observe(header);
     keep();
   }
+  // The header spans the visible window and keeps the rooms' pixel sizes
+  // whatever Text Size zooms the page by (search.css, --z and --vw).
+  fitUnits();
+  if (window.ResizeObserver) new ResizeObserver(fitUnits).observe(document.documentElement);
+  addEventListener('resize', fitUnits);
 
   function drawHeader({ theme, palette, categories, webResults, textSize }) {
     applyLook(theme, textSize, palette);
@@ -1498,6 +1503,15 @@
     else delete document.documentElement.dataset.palette;
     const zoom = pageZoom(textSize);
     document.body.style.zoom = Math.abs(zoom - 1) < 0.01 ? '' : String(zoom);
+    fitUnits();
+  }
+
+  /** --z (the body's zoom) and --vw (the visible width in the zoomed page's pixels) for the header. */
+  function fitUnits() {
+    const root = document.documentElement;
+    const z = parseFloat(document.body.style.zoom) || 1;
+    root.style.setProperty('--z', String(z));
+    root.style.setProperty('--vw', `${root.clientWidth / z}px`);
   }
 
   function pageZoom(textSize) {

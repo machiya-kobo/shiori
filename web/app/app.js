@@ -3001,7 +3001,8 @@ if ('serviceWorker' in navigator) {
  * on its own, so a rebuild can't swap files under an open page. Reload
  * tells it to (SKIP_WAITING) and reloads once it has. The app checks for
  * a new build when it comes back to the foreground, at most once a
- * minute, since iOS rarely closes an installed app.
+ * minute, since iOS rarely closes an installed app. A refresh applies a
+ * waiting version without the toast.
  */
 function watchForUpdates(reg) {
   let asked = false;
@@ -3022,7 +3023,14 @@ function watchForUpdates(reg) {
     document.body.append(h('div', { class: 'update-toast', role: 'status' }, h('span', {}, 'New Version'), reload));
   };
   navigator.serviceWorker.addEventListener('controllerchange', () => asked && location.reload());
-  if (reg.waiting && navigator.serviceWorker.controller) toast(reg.waiting);
+  // A refresh (plain or hard) applies the waiting version as well: the
+  // toast is for a page left open. The page the old worker served reloads
+  // once more after controllerchange; a hard refresh has no controller.
+  const refreshed = (performance.getEntriesByType('navigation')[0] || {}).type === 'reload';
+  if (reg.waiting && refreshed) {
+    asked = !!navigator.serviceWorker.controller;
+    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  } else if (reg.waiting && navigator.serviceWorker.controller) toast(reg.waiting);
   reg.addEventListener('updatefound', () => {
     const w = reg.installing;
     if (w) w.addEventListener('statechange', () => w.state === 'installed' && navigator.serviceWorker.controller && toast(w));

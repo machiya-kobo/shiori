@@ -91,34 +91,57 @@ header {
 .field { position: relative; }
 /* The brand row: the mark and name on the left; the rooms, time range
    (or sort) and Settings on the right. */
-.brand-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; }
+.brand-row { display: flex; align-items: center; justify-content: space-between; gap: calc(16 * var(--u)); min-height: calc(48 * var(--u)); }
 /* The rooms' header (vaultkit's ui/machiya.css): the mark, then the name in
    the room's colour, 18px and 700; 16px between the header's items. */
 .brand {
-  display: flex; align-items: center; gap: 8px; min-width: 0;
-  color: var(--accent); text-decoration: none; font-weight: 700; font-size: 18px; letter-spacing: -0.01em;
+  display: flex; align-items: center; gap: calc(8 * var(--u)); min-width: 0;
+  color: var(--accent); text-decoration: none; font-weight: 700; font-size: calc(18 * var(--u)); letter-spacing: -0.01em;
 }
-.brand img { width: 28px; height: 28px; border-radius: 7px; flex: none; }
+.brand img { width: calc(28 * var(--u)); height: calc(28 * var(--u)); border-radius: calc(7 * var(--u)); flex: none; }
 .brand:hover span, .brand:focus-visible span { color: var(--accent-hover); }
 /* The rooms' sizes are pixels (18px name, 16px field), not the text size's:
    the Mac's larger Standard size made this header bigger than theirs. */
-body:not(.home) #q { font-size: 16px; }
-/* From 1100px up the field sits in the header's top row, between the brand
-   and the icons, centred as the rooms' search is (560px, shrinking); the
-   pills and the time range keep their own rows under it. Below that, and
-   on the start page, the field is the row under the brand as before. */
+body:not(.home) #q { font-size: calc(16 * var(--u)); }
+/* The header spans the window, as the rooms': the mark a gutter in from the
+   left edge, the house and gear a gutter in from the right, whatever the
+   column the results sit in (--sbw is the scrollbar's width, set by
+   search.js, so 100vw is the visible width). The field, pills and time
+   range keep the results' column. From 1100px up the field is in the top
+   row, just left of the icons, 560px wide when there's room, as the rooms'
+   pill (clamp(240px, 100vw - 720px, 560px)); below that it's the row under
+   the brand. */
+/* Text Size is a `zoom` on the body (--z, set by search.js, 1.2 on the Mac's
+   Standard), which would make this header bigger than the rooms': its sizes
+   are N * var(--u), the rooms' pixels whatever the zoom; --vw is the visible
+   width in the page's own pixels. */
+html { --z: 1; --u: calc(1px / var(--z)); --vw: 100vw; --gutter: calc(20 * var(--u)); --body-max: 48rem; }
+@media (max-width: 759px) { html { --gutter: 12px; } }
+body:not(.home) header {
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(calc(48 * var(--u)), auto); align-items: center;
+  margin-inline: calc((100% - var(--vw)) / 2);
+  padding-inline: var(--gutter);
+}
+body:not(.home) header > :is(#search, .tabs-row, .tools-row) {
+  justify-self: center;
+  width: min(calc(var(--vw) - 24px), calc(var(--body-max) - 24px));
+}
+body:not(.home) header > #search { padding: calc(2 * var(--u)) 0 calc(10 * var(--u)); }
+body:not(.home) #q { padding: calc(10 * var(--u)) calc(44 * var(--u)) calc(10 * var(--u)) calc(16 * var(--u)); border-color: var(--line2); }
+body:not(.home) #q:focus { border-color: var(--accent); }
+body:not(.home) .field-button { width: calc(32 * var(--u)); height: calc(32 * var(--u)); right: calc(8 * var(--u)); }
+body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 * var(--u)); }
 @media (min-width: 1100px) {
+  body.two-col, body.with-preview { --body-max: calc(76rem + 48px); }
   body:not(.home) header {
-    display: grid; grid-template-columns: minmax(auto, 1fr) minmax(0, 560px) minmax(auto, 1fr);
-    column-gap: 16px; align-items: center;
+    grid-template-columns: auto minmax(0, 1fr) clamp(calc(240 * var(--u)), calc(var(--vw) - 720 * var(--u)), calc(560 * var(--u))) auto;
+    column-gap: calc(16 * var(--u));
   }
   body:not(.home) .brand-row { display: contents; }
-  body:not(.home) .brand { grid-column: 1; grid-row: 1; justify-self: start; }
-  body:not(.home) .filters { grid-column: 3; grid-row: 1; justify-self: end; }
-  body:not(.home) #search { grid-column: 2; grid-row: 1; padding: 6px 0; }
-  body:not(.home) #q { padding: 10px 44px 10px 16px; border-color: var(--line2); }
-  body:not(.home) #q:focus { border-color: var(--accent); }
-  body:not(.home) .tabs-row, body:not(.home) .tools-row { grid-column: 1 / -1; }
+  body:not(.home) .brand-row > .brand { grid-column: 1; grid-row: 1; }
+  body:not(.home) header > #search { grid-column: 3; grid-row: 1; width: auto; justify-self: stretch; padding: 0; }
+  body:not(.home) .brand-row > .filters { grid-column: 4; grid-row: 1; justify-self: end; }
+  body:not(.home) header > :is(.tabs-row, .tools-row) { grid-column: 1 / -1; }
 }
 
 /* Recent searches, under the field while it has focus. */
@@ -252,13 +275,13 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
 .smallweb-card .places { align-items: center; }
 .smallweb-card .places .engines { font: -apple-system-caption1; color: var(--secondary); }
 .chip.gemini, .chip.gateway { color: var(--smallweb); }
-.filters { display: flex; justify-content: flex-end; align-items: center; gap: 6px; flex: none; }
+.filters { display: flex; justify-content: flex-end; align-items: center; gap: calc(10 * var(--u)); flex: none; }
 .icon-button {
-  width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; flex: none;
+  width: calc(32 * var(--u)); height: calc(32 * var(--u)); border: 0; border-radius: calc(8 * var(--u)); background: transparent; cursor: pointer; flex: none;
   -webkit-tap-highlight-color: transparent;
 }
 #settings-open::before {
-  content: ""; display: block; width: 18px; height: 18px; margin: auto; background: var(--secondary);
+  content: ""; display: block; width: calc(18 * var(--u)); height: calc(18 * var(--u)); margin: auto; background: var(--secondary);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
@@ -268,7 +291,7 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
    its menu listing the rooms front to back, then the neighbours, each in
    its room's colour. The web app draws the same (app.css). */
 .rooms { position: relative; display: flex; }
-.rooms-open svg { display: block; width: 18px; height: 18px; margin: auto; fill: none; stroke: var(--secondary); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rooms-open svg { display: block; width: calc(18 * var(--u)); height: calc(18 * var(--u)); margin: auto; fill: none; stroke: var(--secondary); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .rooms-open:hover svg, .rooms-open:focus-visible svg, .rooms-open[aria-expanded="true"] svg { stroke: var(--text); }
 /* The menu, as the rooms draw theirs (vaultkit's switcher): their --dark
    panel and --hl current row (--rooms-*), each room's icon tile, name and
@@ -719,8 +742,17 @@ body.with-preview .card[data-preview]:hover { border-color: var(--line); }
    under it, Settings in the corner. Tabs and time range wait for results. */
 body.home header {
   position: static; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none;
-  padding-top: max(12vh, 40px); text-align: center;
+  text-align: center;
+  /* The field in the middle of the window, as other search engines'
+     start pages (the mark above it, the recent searches below, each in
+     its own half, so neither moves it). */
+  height: 100vh; height: 100dvh; padding: 0;
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr auto 1fr;
 }
+body.home { padding-bottom: 0; }
+body.home .home-brand { grid-row: 1; align-self: end; }
+body.home #search { grid-row: 2; width: 100%; }
+body.home .home-recent { grid-row: 3; align-self: start; }
 /* The mark and the name on one row, centred, the mark the title's line
    high: the rooms' brand (logo, then word), larger. */
 .home-brand { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 22px; }

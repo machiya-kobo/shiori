@@ -5,6 +5,20 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.0 (2026-10-11)
+
+- **The search page's header spans the window, as the rooms':** the mark
+  20px in from the left edge, the house and gear 20px in from the right,
+  the search pill just left of them from 1100px up (240 to 560px wide, as
+  theirs). Below that the field is the row under the name. The pills and
+  time range keep the results' column.
+- **The header keeps the rooms' pixel sizes at any Text Size:** the Mac's
+  larger Standard no longer scales the name, field and icons.
+- **The start page's field is in the middle of the window**, the mark above
+  it and the recent searches below.
+- **The web app applies a waiting new version on a refresh** (plain or hard);
+  the New Version · Reload toast stays for a page left open.
+
 ## 1.4.3 (2026-10-11)
 
 - **The search page's header is the rooms' size at any text size:** the name
