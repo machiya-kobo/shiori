@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.4.1 (2026-10-11)
+
+- **A table in a preview keeps its columns readable:** a wide note table
+  (a change log's Date, Category, Status) squeezed its narrow columns to a
+  letter wide ("Categor y"). Cells now wrap at word edges, in the apps, the
+  web app and the search page's preview.
+
 ## 1.4.0 (2026-10-11)
 
 - **Settings → AI is reordered** in the iPhone, iPad and Mac apps: AI

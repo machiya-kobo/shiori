@@ -560,3 +560,10 @@ test('each draw of the list gets a box of its own, so a late reply from another 
   // Only the no-pull attribute still goes to #list itself.
   assert.equal((search.match(/\$\('list'\)/g) || []).length, 1);
 });
+
+test('a note preview\'s table cells break at word edges, not anywhere (columns never shrink to a letter)', () => {
+  for (const file of ['../web/app/app.js', '../patches/shiori/search.js', '../Shiori/PreviewWebView.swift']) {
+    const src = read(file);
+    assert.match(src, /td,\s*th\s*\{[^\n]*overflow-wrap:\s*break-word/, file);
+  }
+});

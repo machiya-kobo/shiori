@@ -76,7 +76,9 @@ enum PreviewPage {
             pre code { padding: 0; background: none; }
             blockquote { margin: 1em 0; padding-left: 1em; border-left: 3px solid var(--raised); color: var(--secondary); }
             table { border-collapse: collapse; display: block; overflow-x: auto; }
-            td, th { border: 1px solid var(--raised); padding: 4px 8px; }
+            /* break-word, not the body's anywhere: that one lets a column shrink to a
+               character wide ("Categor y"). */
+            td, th { border: 1px solid var(--raised); padding: 4px 8px; overflow-wrap: break-word; }
             hr { border: none; border-top: 1px solid var(--raised); }
             mark { background: color-mix(in srgb, var(--highlight) calc(var(--highlight-opacity) * 100%), transparent); color: inherit; }
             </style>

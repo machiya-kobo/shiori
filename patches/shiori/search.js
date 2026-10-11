@@ -764,7 +764,7 @@
         .meta{color:${v('--secondary')};font:-apple-system-footnote;margin:0 0 1.2em;padding-bottom:.8em;border-bottom:1px solid ${v('--line')}}
         a{color:${v('--accent')}} img{max-width:100%;height:auto;border-radius:6px}
         svg,video,picture,figure,canvas,iframe,object,embed{max-width:100%;height:auto} figure{margin:1em 0}
-        pre,code{white-space:pre-wrap} table{border-collapse:collapse;max-width:100%}`;
+        pre,code{white-space:pre-wrap} table{border-collapse:collapse;max-width:100%} td,th{overflow-wrap:break-word}`;
     }
     async function show(url, card) {
       if (current === url) return;
