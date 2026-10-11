@@ -155,11 +155,11 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
   body:not(.home) header > #search { grid-column: 2; grid-row: 1; width: auto; justify-self: stretch; padding: 0; margin-left: calc(16 * var(--u)); }
   body:not(.home) .brand-row > .filters { grid-column: 3; grid-row: 1; justify-self: end; }
   body:not(.home) header > :is(.tabs-row, .tools-row) { grid-column: 1 / -1; }
-  /* The field sits 2px below the window's top in this row, so a ring drawn
-     outside it (outline-offset 2px, 2px wide) lost its top edge there. Drawn
-     inside the border instead, the whole ring shows and the field keeps its
-     place and the row its height. */
-  body:not(.home) #q:focus-visible { outline-offset: -2px; }
+  /* The field's text is the tabs' size and 500 weight, as the rooms'
+     (their field and menus agree); a phone and anything under 1100px keep
+     16px, which iOS needs to not zoom into the field. The line keeps the
+     field its 44.4px. */
+  body:not(.home) #q { font: -apple-system-footnote; font-weight: 500; line-height: max(calc(22.4 * var(--u)), 1.4em); }
 }
 
 /* Recent searches, under the field while it has focus. */
@@ -213,8 +213,10 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
   font: inherit; outline: none; box-shadow: var(--shadow);
 }
 #q:focus { border-color: var(--accent); }
-/* A clear ring for keyboard focus (Full Keyboard Access), as the switches have. */
-#q:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* One ring on the field's edge at every width: drawn inside, over the
+   border, so it's a single solid line and nothing near the window's top
+   clips it (outside the field it was a second ring beside the border). */
+#q:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 #q::-webkit-search-cancel-button { display: none; }
 /* The field's buttons, as the rooms' (vaultkit's form.search.bar) and
    Kagi's: the X once there's text, and on a phone a magnifier that
@@ -586,6 +588,13 @@ body[data-cat="files"] #web-title { color: var(--kept); }
 }
 .page-button.primary { margin-left: auto; background: var(--accent); color: var(--bg); }
 footer { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 8px; text-align: center; }
+/* The footer sits at the bottom of the window when the page is shorter than
+   it, and right after the content otherwise: the results' box takes what's
+   left of a window-high page (--vh: the visible height in the zoomed page's
+   pixels). The start page has its own, fixed. */
+body:not(.home):not(.with-preview) { display: flex; flex-direction: column; min-height: var(--vh); }
+body:not(.home):not(.with-preview) > main { flex: 1 0 auto; align-content: start; }
+body.with-preview { min-height: var(--vh); grid-template-rows: auto 1fr auto; }
 footer p { margin: 6px 0; }
 .show-more { border: 0; margin: 12px auto 0; display: block; }
 

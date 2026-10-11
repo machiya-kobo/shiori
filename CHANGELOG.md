@@ -5,6 +5,18 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.5 (2026-10-11)
+
+- **The search field's text matches the tabs beside it,** as the rooms'
+  now do: the tabs' size at weight 500 from 1100px up (the search page and
+  the web app); narrower, 16px or more, so iOS doesn't zoom into it. The
+  field is 44.4px tall in both, in the same place and width.
+- **One focus ring on the field's edge at every width,** drawn inside over
+  the border, where under 1100px it had been a border and a second ring
+  outside it.
+- **The search page's footer sits at the bottom of the window when the page
+  is shorter than it,** and right after the content otherwise.
+
 ## 1.5.4 (2026-10-11)
 
 - **The search field's focus ring shows in full.** In the top row the
