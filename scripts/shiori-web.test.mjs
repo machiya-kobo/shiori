@@ -315,3 +315,63 @@ test("the probe reads SearXNG's whole JSON answer, however long, and says when i
   p = await probe({ status: 403, body: 'Forbidden', type: 'text/plain' });
   assert.match(p.stdout, /doesn't allow JSON results/);
 });
+
+test('the timing log is off unless SHIORI_TIMING_LOG names a file, and never writes a query, a word or an address', { skip }, () => {
+  const off = run(BASE);
+  try {
+    assert.equal(off.r.status, 0, off.r.stderr);
+    assert.match(off.r.stdout, /timing log: off/);
+    assert.doesNotMatch(off.sites(), /timing/);
+  } finally {
+    off.cleanup();
+  }
+  const on = run({ ...BASE, SHIORI_TIMING_LOG: '/tmp/timing.log' });
+  try {
+    assert.equal(on.r.status, 0, on.r.stderr);
+    assert.match(on.r.stdout, /timing log: \/tmp\/timing\.log/);
+    const conf = on.sites();
+    // Both sites, beside the usual access log.
+    assert.equal(conf.match(/access_log \/tmp\/timing\.log timing;/g).length, 2);
+    assert.equal(conf.match(/access_log \/dev\/stdout nosearch;/g).length, 2);
+    // The line: time, host, a fixed bucket, status, seconds. Nothing from the request itself.
+    const format = conf.match(/log_format timing '([^']*)';/)[1];
+    assert.equal(format, '$msec $host $timing_path $status $request_time');
+    // The bucket comes from the address as asked ($request_uri): /searx/ is stripped by a rewrite before logging.
+    const map = conf.match(/map \$request_uri \$timing_path \{([^}]*)\}/)[1];
+    const buckets = [...map.matchAll(/^\s*(\S+)\s+(\S+);$/gm)].map((m) => [m[1], m[2]]);
+    const bucketOf = (uri) => {
+      for (const [pattern, bucket] of buckets) {
+        if (pattern === 'default') continue;
+        if (new RegExp(pattern.slice(1)).test(uri)) return bucket;
+      }
+      return buckets.find(([p]) => p === 'default')[1];
+    };
+    const want = {
+      '/searx/search?q=private+words&format=json': '/searx/search',
+      '/searx/autocompleter?q=priv': '/searx/autocompleter',
+      '/search?format=json&query=%7B%7D': '/search',
+      '/searchable': 'other',
+      '/api/search?q=x': '/api/search',
+      '/api/preview?url=https%3A%2F%2Fexample.com%2F': '/api/preview',
+      '/kura/api/search?q=x': '/kura/api/search',
+      '/kura/api/note?path=a.md': '/kura/api/note',
+      '/smallweb/api/search?q=x': '/smallweb/api/search',
+      '/shiori/ai/answer': '/shiori/ai',
+      '/': 'other',
+      '/_shiori/search.js?v=abc': 'other',
+    };
+    for (const [uri, bucket] of Object.entries(want)) assert.equal(bucketOf(uri), bucket, uri);
+    for (const [, bucket] of buckets) assert.match(bucket, /^(\/[a-z/]+|other)$/, 'a bucket is a fixed path, never a variable');
+  } finally {
+    on.cleanup();
+  }
+  for (const bad of ['timing.log', '/tmp/', '/tmp/../etc/passwd', '/tmp/a b.log', '/tmp/x;log', '/tmp/$host']) {
+    const x = run({ ...BASE, SHIORI_TIMING_LOG: bad });
+    try {
+      assert.notEqual(x.r.status, 0, bad);
+      assert.match(x.r.stderr + x.r.stdout, /SHIORI_TIMING_LOG/, bad);
+    } finally {
+      x.cleanup();
+    }
+  }
+});

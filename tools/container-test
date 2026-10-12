@@ -185,10 +185,12 @@ def main():
         check(s == 200 and echo.get("service") == "hister" and hd.get("cookie") == "hister=goodabcdefgh", "Hister gets its own session cookie and nothing else", str(hd.get("cookie")))
         check("hister=fromupstream" in h.get("set-cookie", ""), "Hister's own Set-Cookie reaches the browser (its sign-in works here)")
         check("origin" not in hd, "no Origin is added for Hister either")
+        check(e.run("exec", "shiori-web-min", "sh", "-c", "ls /tmp/*.log 2>/dev/null", check_=False).stdout.strip() == "",
+              "no timing log unless SHIORI_TIMING_LOG is set")
         e.rm("shiori-web-min")
 
         print("== every service on; Hister's own sign-in gates the feed and AI routes")
-        e.start("shiori-web-full", image, env=full, ports=[8080, 8081])
+        e.start("shiori-web-full", image, env={**full, "SHIORI_TIMING_LOG": "/tmp/timing.log"}, ports=[8080, 8081])
         started.append("shiori-web-full")
         p1 = e.port("shiori-web-full", 8080)
         check(wait(p1), "it comes up")
@@ -206,6 +208,28 @@ def main():
         check(get(p1, "/shiori/ai/summarize", {"Cookie": "hister=bad"})[0] == 403, "and AI summaries too")
         s, h, echo = get(p1, "/kura/api/search?q=x", {"Cookie": "hister=goodabcdefgh; machiya_session=roomsession123"})
         check(echo.get("headers", {}).get("cookie") == "machiya_session=roomsession123", "Kura gets only the rooms' session cookie")
+        # The timing log: a fixed bucket per request, never the words searched; a collector can rotate it as the
+        # user `exec` runs as.
+        p2 = e.port("shiori-web-full", 8081)
+        for port, path in ((p1, "/searx/search?q=lanternsecret&format=json"), (p1, "/search?query=lanternsecret"),
+                           (p2, "/kura/api/search?q=lanternsecret"), (p2, "/api/preview?url=https%3A%2F%2Flanternsecret.example%2F")):
+            get(port, path)
+        timing = e.run("exec", "shiori-web-full", "cat", "/tmp/timing.log", check_=False).stdout
+        lines = timing.strip().splitlines()
+        line_re = re.compile(r"^\d+\.\d{3} \S+ (/[a-z/]+|other) \d{3} \d+\.\d{3}$")
+        check(lines and all(line_re.match(line) for line in lines), "each timing line is time, host, bucket, status, seconds", timing[:300])
+        buckets = [line.split()[2] for line in lines]
+        check(all(b in buckets for b in ("/searx/search", "/search", "/kura/api/search", "/api/preview")),
+              "SearXNG's and Hister's searches land in their own buckets (the /searx/ rewrite doesn't merge them)", str(buckets))
+        check("lanternsecret" not in timing and "?" not in timing, "no query string or search word in the timing log")
+        rotate = e.run("exec", "shiori-web-full", "sh", "-c",
+                       "mv /tmp/timing.log /tmp/timing.log.1 && nginx -c /opt/shiori/nginx.conf -s reopen && cat /tmp/timing.log.1"
+                       " && rm /tmp/timing.log.1", check_=False)
+        check(rotate.returncode == 0 and rotate.stdout.strip(), "the exec user can rotate it (mv, nginx -s reopen)", rotate.stderr[:200])
+        time.sleep(1)
+        get(p1, "/searx/search?q=x&format=json")
+        after = e.run("exec", "shiori-web-full", "cat", "/tmp/timing.log", check_=False).stdout
+        check("/searx/search" in after, "and nginx writes to the new file after the reopen", after[:200])
         e.rm("shiori-web-full")
 
         print("== with hister-login")

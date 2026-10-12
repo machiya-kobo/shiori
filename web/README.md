@@ -153,6 +153,7 @@ port shows the same (the sign-in mode and which services are on), and `/healthz`
 | `SHIORI_HISTER_HOST` | The `Host` Hister expects, if it isn't the address above | the address above |
 | `SHIORI_HISTER_VERSION` | The Hister release `/_shiori/status.json` names, when it isn't the one the image was built against | the image's |
 | `SHIORI_UPSTREAM_TLS_VERIFY` | `0` to accept an https upstream's certificate unchecked | `1` |
+| `SHIORI_TIMING_LOG` | A file (for example `/tmp/timing.log`) that gets one line per request for a metrics collector: `<epoch.ms> <host> <bucket> <status> <seconds>`. The bucket is one of `/searx/search`, `/searx/autocompleter`, `/search`, `/api/search`, `/api/preview`, `/kura/api/search`, `/kura/api/note`, `/smallweb/api/search`, `/shiori/ai` or `other`: never a query string, a search word or a client address. Rotate it with `mv`, then `nginx -c /opt/shiori/nginx.conf -s reopen` | off |
 | `SHIORI_OBSIDIAN_VAULT`, `SHIORI_SOURCE_URL`, `SHIORI_STATUS_URL`, `SHIORI_FRONTENDS` | As in the build configuration (CLAUDE.md) | empty |
 
 **Signing in.** Without `SHIORI_LOGIN_URL` the sign-in is Hister's own: Hister's `/auth` page is proxied on this origin,

@@ -43,6 +43,7 @@ HOST_RE = re.compile(r"^[A-Za-z0-9._-]+(?::[0-9]{1,5})?$")
 COOKIE_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 ROOM_ORIGIN_RE = re.compile(r"^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$")
 VERSION_RE = re.compile(r"^[A-Za-z0-9._+-]{1,64}$")
+TIMING_LOG_RE = re.compile(r"^/[A-Za-z0-9._/-]{1,200}$")
 # The most of an upstream's answer the start-up probe reads: SearXNG's JSON for one search is often past 64 KiB.
 PROBE_MAX = 2 << 20
 
@@ -140,6 +141,10 @@ def settings(env):
     s["vault"] = env.get("SHIORI_OBSIDIAN_VAULT", "").strip()
     s["frontends"] = env.get("SHIORI_FRONTENDS", "").strip()
     # The Hister release status.json names, when it isn't the one the image was built against.
+    s["timing_log"] = env.get("SHIORI_TIMING_LOG", "").strip()
+    if s["timing_log"] and (not TIMING_LOG_RE.match(s["timing_log"]) or "/../" in s["timing_log"] + "/"
+                            or s["timing_log"].endswith("/")):
+        raise ConfigError(f"SHIORI_TIMING_LOG: {s['timing_log']!r} is not a file's absolute path (for example /tmp/timing.log)")
     s["hister_version"] = env.get("SHIORI_HISTER_VERSION", "").strip()
     if s["hister_version"] and not VERSION_RE.match(s["hister_version"]):
         raise ConfigError(f"SHIORI_HISTER_VERSION: {s['hister_version']!r} is not a version (for example v0.20.0)")
@@ -378,6 +383,26 @@ map $http_cookie $machiya_room_sid {{
 }}
 '''
 
+# SHIORI_TIMING_LOG (off unless set): how long each request took, for a collector. One line per request,
+# "<epoch.ms> <host> <bucket> <status> <seconds>". The bucket is one of a fixed set, so no query string, search word,
+# client address or user is ever written. It comes from $request_uri, the address as asked: a rewrite (/searx/
+# stripped) changes $uri before the log line is written. Regexes match in order.
+TIMING = '''
+map $request_uri $timing_path {
+    ~^/searx/search(?:[?/]|$)          /searx/search;
+    ~^/searx/autocompleter(?:[?/]|$)   /searx/autocompleter;
+    ~^/kura/api/search(?:[?/]|$)       /kura/api/search;
+    ~^/kura/api/note(?:[?/]|$)         /kura/api/note;
+    ~^/smallweb/api/search(?:[?/]|$)   /smallweb/api/search;
+    ~^/search(?:[?/]|$)                /search;
+    ~^/api/search(?:[?/]|$)            /api/search;
+    ~^/api/preview(?:[?/]|$)           /api/preview;
+    ~^/shiori/ai/                      /shiori/ai;
+    default                            other;
+}
+log_format timing '$msec $host $timing_path $status $request_time';
+'''
+
 OWN_MAPS = '''
 # Hister's own session cookie, and the rooms' session cookie: the only cookies that go to anything.
 map $http_cookie $hister_cookie_own {
@@ -394,6 +419,8 @@ map $http_cookie $machiya_session_cookie {
 def sites(s, resolver, root):
     maps = MAPS.format(resolver=resolver, signin_maps=(
         LOGIN_MAPS.format(cookie=s["room_cookie"]) if s["signin"] == "hister-login" else OWN_MAPS))
+    if s["timing_log"]:
+        maps += TIMING
     body = routes(s)
     out = [maps]
     for key in ("search", "app"):
@@ -421,9 +448,10 @@ def sites(s, resolver, root):
     }
 '''
         indented = "\n".join(("    " + line if line.strip() else line) for line in body.splitlines())
+        timing = f"    access_log {s['timing_log']} timing;\n" if s["timing_log"] else ""
         out.append(f"""server {{
     access_log /dev/stdout nosearch;
-    listen {site['port']};
+{timing}    listen {site['port']};
     server_name _;
     set $site_origin {site['origin']};
     root {root}/{key};
@@ -549,6 +577,7 @@ def startup_line(s):
         f"  on:  {', '.join(on) or 'nothing else'}",
         f"  off: {', '.join(off) or 'nothing'}",
         f"  sign-in: {signin}",
+        f"  timing log: {s['timing_log'] or 'off'}",
     ])
 
 
