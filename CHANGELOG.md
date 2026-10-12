@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.16 (2026-10-11)
+
+- iPhone and iPad: result cards line up with the search field, the pills
+  and Sort · Group · Filter, 16 points in from the edges; their contents
+  move in to match.
+- Web app: result cards line up with the search field and the pills too
+  (they stuck out 2px each side).
+
 ## 1.5.15 (2026-10-11)
 
 - Same as 1.5.14, with the tests green: one check of the stylesheet's

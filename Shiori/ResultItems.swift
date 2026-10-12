@@ -123,6 +123,20 @@ struct ResultBar: View {
 
     private var color: Color { palette.tint(tint) }
 
+    /// How far a card sits in from the list's sides. On iOS 26 its edges
+    /// line up with the search field, the pills and Sort · Group · Filter
+    /// (16 points in), and its row's content moves in to match
+    /// (`resultSeparator`). Elsewhere 6, with the row's own insets.
+    static var cardInset: CGFloat {
+        #if os(iOS)
+        if #available(iOS 26, *) { return 16 }
+        #endif
+        return 6
+    }
+
+    /// The row's content inside a card: 12 points in from its edge.
+    static var contentInset: CGFloat { cardInset + 12 }
+
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
         let selection = selected ? palette.accent.opacity(0.22) : Color.clear
@@ -150,7 +164,7 @@ struct ResultBar: View {
                 .fill(palette.isDark ? palette.raised : palette.surface)
                 .overlay(shape.fill(selected ? palette.accent.opacity(0.22) : .clear))
                 .overlay(shape.strokeBorder(palette.secondaryText.opacity(0.25)))
-                .padding(.horizontal, 6)
+                .padding(.horizontal, Self.cardInset)
                 .padding(.vertical, 3)
         }
     }
@@ -163,7 +177,7 @@ struct ResultBar: View {
                 .overlay(shape.fill(color.opacity(palette.tintOpacity)))
                 .overlay(shape.fill(selected ? palette.accent.opacity(0.22) : .clear))
                 .overlay(shape.strokeBorder(color.opacity(0.55)))
-                .padding(.horizontal, 6)
+                .padding(.horizontal, Self.cardInset)
                 .padding(.vertical, 3)
         }
     }
@@ -172,9 +186,20 @@ struct ResultBar: View {
 extension View {
     /// No separator lines between cards (Tint, Solid): each card's own edge
     /// parts it from the next. Plain rows
-    /// (Left Bar, None) keep them.
+    /// (Left Bar, None) keep them. On iOS 26 a card's content moves in with
+    /// the card (`ResultBar.cardInset`).
+    @ViewBuilder
     func resultSeparator(_ style: String) -> some View {
-        listRowSeparator(style == "tint" || style == "solid" || style.isEmpty ? .hidden : .automatic)
+        let cards = style == "tint" || style == "solid" || style.isEmpty
+        #if os(iOS)
+        if #available(iOS 26, *), cards {
+            listRowSeparator(.hidden).listRowInsets(.horizontal, ResultBar.contentInset)
+        } else {
+            listRowSeparator(cards ? .hidden : .automatic)
+        }
+        #else
+        listRowSeparator(cards ? .hidden : .automatic)
+        #endif
     }
 }
 

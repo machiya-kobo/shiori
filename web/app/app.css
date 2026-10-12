@@ -346,9 +346,10 @@ input:placeholder-shown ~ .field-clear { display: none; }
 /* Each result a card tinted in its pill's colour, blue for your pages,
    orange for notes, purple for pages you opened, with an outline in it, as
    the search page's. On the card colour, not the page's:
-   there any tint left the light theme's text under 4.5:1. */
+   there any tint left the light theme's text under 4.5:1. Its sides line up
+   with the search field, the pills and Sort · Group · Filter (12px in). */
 .doc-row {
-  --tint: var(--accent); margin: 5px 10px; border-radius: 10px;
+  --tint: var(--accent); margin: 5px 12px; border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--tint) 55%, transparent);
   background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card));
 }
