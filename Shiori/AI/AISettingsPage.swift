@@ -124,6 +124,7 @@ struct AISettingsPage: View {
                 if app.ai.autoLabel, app.ai.appleIntelligence {
                     Toggle("Apply Apple Intelligence's Labels", isOn: $app.ai.applyAppleLabels)
                 }
+                SuggestLabelsButton()
                 SuggestCollectionsButton()
                 DisclosureGroup {
                     NeverSuggestedGrid()

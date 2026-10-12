@@ -99,6 +99,10 @@ says so ("Summarized by Claude").
   agree; everything else waits in Suggested Labels with the reason. Every
   applied label is logged with Undo, and a label undone twice is held for
   review. The page's label is re-read before writing.
+- **Suggest Labels** (Settings → AI, and Suggested Labels) runs the same
+  asking once, on request, with Label New Pages on or off: the newest
+  unlabelled pages not looked at before, every answer waiting in Suggested
+  Labels, nothing applied. A page you skipped stays skipped.
 - **Apply Apple Intelligence's Labels** (off by default): when Anthropic
   doesn't settle a page, or isn't used, Apple Intelligence's first choice is
   applied instead of suggested, and so is its choice for each waiting

@@ -34,20 +34,28 @@ public enum LabelPolicy {
     /// when the cloud didn't settle it, Apple Intelligence's first choice is
     /// applied rather than suggested, unless the user keeps undoing that
     /// label (held).
+    ///
+    /// `suggestOnly` (Suggest Labels, on request): nothing is applied; the
+    /// label that would have been leads the offer.
     public static func decide(
-        cloud: LabelSuggestion?, onDevice: LabelSuggestion?, trust: LabelTrust = LabelTrust(), applyOnDevice: Bool = false
+        cloud: LabelSuggestion?, onDevice: LabelSuggestion?, trust: LabelTrust = LabelTrust(), applyOnDevice: Bool = false,
+        suggestOnly: Bool = false
     ) -> LabelDecision {
-        if let cloud, trusted.contains(cloud.provider), let label = cloud.labels.first, !trust.held.contains(label) {
+        var ordered: [String] = []
+        if suggestOnly {
+            if case .apply(let label, _, _) = decide(cloud: cloud, onDevice: onDevice, trust: trust, applyOnDevice: applyOnDevice) {
+                ordered.append(label)
+            }
+        } else if let cloud, trusted.contains(cloud.provider), let label = cloud.labels.first, !trust.held.contains(label) {
             if cloud.confidence == .high { return .apply(label: label, by: cloud.provider, agreed: onDevice?.labels.first == label) }
             if onDevice?.labels.first == label { return .apply(label: label, by: cloud.provider, agreed: true) }
             if cloud.confidence == .medium, trust.trustedAtMedium.contains(label) {
                 return .apply(label: label, by: cloud.provider, agreed: false)
             }
         }
-        if applyOnDevice, let first = onDevice?.labels.first, !trust.held.contains(first) {
+        if !suggestOnly, applyOnDevice, let first = onDevice?.labels.first, !trust.held.contains(first) {
             return .apply(label: first, by: .appleIntelligence, agreed: cloud?.labels.first == first)
         }
-        var ordered: [String] = []
         if let first = onDevice?.labels.first { ordered.append(first) }
         if let first = cloud?.labels.first { ordered.append(first) }
         ordered += onDevice?.labels.dropFirst() ?? []

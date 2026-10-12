@@ -47,6 +47,9 @@ struct SuggestedLabelsView: View {
                 ForEach(labeller.state.pending) { suggestion in
                     pendingRow(suggestion)
                 }
+                if app.ai.enabled {
+                    SuggestLabelsButton()
+                }
             } header: {
                 Text("Suggested")
             } footer: {
@@ -296,9 +299,30 @@ struct SuggestedLabelsView: View {
     }
 }
 
+/// Suggest Labels, on demand (docs/ai.md): works whether or not Label New
+/// Pages is on, and only ever suggests.
+struct SuggestLabelsButton: View {
+    @Environment(AppState.self) private var app
+
+    var body: some View {
+        SuggestButton(title: "Suggest Labels") { await app.labeller.suggestLabels(app: app) }
+    }
+}
+
 /// Suggest Collections, on demand (docs/ai.md): works
 /// whether or not Keep Collections Current is on, and only ever asks.
 struct SuggestCollectionsButton: View {
+    @Environment(AppState.self) private var app
+
+    var body: some View {
+        SuggestButton(title: "Suggest Collections") { await app.labeller.suggestCollections(app: app) }
+    }
+}
+
+/// A run on request, with what it found under the button.
+private struct SuggestButton: View {
+    let title: String
+    let run: () async -> String
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
     @State private var result: String?
@@ -306,8 +330,8 @@ struct SuggestCollectionsButton: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Button("Suggest Collections") {
-                    Task { result = await app.labeller.suggestCollections(app: app) }
+                Button(title) {
+                    Task { result = await run() }
                 }
                 .disabled(!app.ai.enabled || app.labeller.running)
                 if let result, !result.isEmpty {

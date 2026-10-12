@@ -183,12 +183,30 @@ struct LabellingState: Codable {
         await keepCollectionsCurrent(app: app)
     }
 
-    private func labelNewPages(app: AppState) async {
+    /// Suggest Labels (Settings → AI), whether or not Label New Pages is
+    /// on: the newest unlabelled pages not yet looked at are asked about
+    /// now, and every answer waits in Suggested Labels, never applied,
+    /// since the user asked for suggestions. A page skipped before stays
+    /// skipped. Returns what it found.
+    func suggestLabels(app: AppState) async -> String {
+        guard !running, app.ai.enabled else { return "" }
+        running = true
+        lastMessage = nil
+        defer {
+            running = false
+            save()
+        }
+        await labelNewPages(app: app, onDemand: true)
+        return lastMessage ?? ""
+    }
+
+    private func labelNewPages(app: AppState, onDemand: Bool = false) async {
         guard let client = app.client else { return }
         await app.loadRulesIfNeeded()
         let excluded = Set(app.ai.neverSuggest)
         let labels = app.rules.labels.filter { !LabelClassifier.notTopics.contains($0) && !excluded.contains($0) }
-        await revisitWaiting(app: app, excluded: excluded)
+        // Waiting suggestions may be applied there: not on request.
+        if !onDemand { await revisitWaiting(app: app, excluded: excluded) }
         guard !labels.isEmpty else {
             lastMessage = "No labels from Hister yet."
             return
@@ -209,7 +227,7 @@ struct LabellingState: Codable {
         var applied = 0
         var suggested = 0
         pages: for document in candidates {
-            guard app.ai.enabled, app.ai.autoLabel, !Task.isCancelled else { break }
+            guard app.ai.enabled, onDemand || app.ai.autoLabel, !Task.isCancelled else { break }
             let preview: PagePreview
             do {
                 preview = try await client.preview(of: document.url)
@@ -251,7 +269,8 @@ struct LabellingState: Codable {
             }
 
             switch LabelPolicy.decide(
-                cloud: cloud, onDevice: onDevice, trust: LabelStat.trust(state.stats), applyOnDevice: app.ai.applyAppleLabels
+                cloud: cloud, onDevice: onDevice, trust: LabelStat.trust(state.stats), applyOnDevice: app.ai.applyAppleLabels,
+                suggestOnly: onDemand
             ) {
             case .apply(let label, let by, let agreed):
                 do {
@@ -283,7 +302,7 @@ struct LabellingState: Codable {
             save()
         }
         if lastMessage == nil || applied + suggested > 0 {
-            lastMessage = "Labelled \(applied), suggested \(suggested)."
+            lastMessage = onDemand ? "Suggested \(suggested)." : "Labelled \(applied), suggested \(suggested)."
         }
         log.info("Labelling run: \(applied) applied, \(suggested) suggested")
     }

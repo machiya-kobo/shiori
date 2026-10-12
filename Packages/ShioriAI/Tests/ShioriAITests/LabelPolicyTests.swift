@@ -32,6 +32,23 @@ import Testing
         #expect(LabelPolicy.decide(cloud: nil, onDevice: nil, applyOnDevice: true) == .nothing)
     }
 
+    @Test func suggestOnlyNeverAppliesAndWhatWouldHaveBeenLeads() {
+        // Anthropic sure: its label leads, Apple's follows.
+        #expect(LabelPolicy.decide(cloud: answer(["alpha"], .high, .anthropic), onDevice: answer(["beta"], .high, .appleIntelligence), suggestOnly: true)
+            == .suggest(labels: ["alpha", "beta"], newLabel: nil))
+        // Both agree: one label.
+        #expect(LabelPolicy.decide(cloud: answer(["tech"], .low, .anthropic), onDevice: answer(["tech"], .high, .appleIntelligence), suggestOnly: true)
+            == .suggest(labels: ["tech"], newLabel: nil))
+        // Apply Apple Intelligence's Labels on: still only suggested.
+        #expect(LabelPolicy.decide(cloud: nil, onDevice: answer(["alpha", "beta"], .low, .appleIntelligence), applyOnDevice: true, suggestOnly: true)
+            == .suggest(labels: ["alpha", "beta"], newLabel: nil))
+        // Unsure: the same offer as a run makes.
+        #expect(LabelPolicy.decide(
+            cloud: answer(["vintage-tech", "gamma"], .medium, .anthropic), onDevice: answer(["gamma", "hardware"], .high, .appleIntelligence), suggestOnly: true)
+            == .suggest(labels: ["gamma", "vintage-tech"], newLabel: nil))
+        #expect(LabelPolicy.decide(cloud: nil, onDevice: nil, suggestOnly: true) == .nothing)
+    }
+
     @Test func anUnmeasuredCloudEngineOnlySuggests() {
         let decision = LabelPolicy.decide(cloud: answer(["gamma"], .high, .openAI), onDevice: nil)
         #expect(decision == .suggest(labels: ["gamma"], newLabel: nil))
