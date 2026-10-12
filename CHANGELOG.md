@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.7.0 (2026-10-12)
+
+- Web results say which engines didn't answer ("No answer from …") in the
+  web app and the apps too, as the search page did.
+- shiori-web: an opt-in timing log (`SHIORI_TIMING_LOG`) for a metrics
+  collector: one line per request with a fixed path bucket, status and
+  seconds; never a query string, a search word or a client address.
+
 ## 1.6.0 (2026-10-12)
 
 - Suggest Labels (the apps' Settings → AI, and Suggested Labels): asks
