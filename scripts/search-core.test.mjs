@@ -1333,3 +1333,15 @@ test("Hister's notes in Kura's shape, other vaults dropped", () => {
   assert.ok(got.documents.every((d) => d.label === 'vault' && d.vault === ''));
   assert.equal(JSON.stringify(S.histerNoteDocuments(null)), JSON.stringify({ total: 0, documents: [] }));
 });
+
+// The web engines that didn't answer: the twins' shared cases.
+const engineCases = JSON.parse(readFileSync(fileURLToPath(new URL('./engine-health-cases.json', import.meta.url)), 'utf8'));
+
+test("the web engines that didn't answer, and the line that says so", () => {
+  for (const c of engineCases.cases) {
+    const names = S.unansweredEngines(c.reply);
+    assert.deepEqual([...names], c.names, JSON.stringify(c.reply));
+    assert.equal(S.engineHealthLine(names), c.line, JSON.stringify(c.reply));
+  }
+  assert.deepEqual([...S.unansweredEngines(null)], []);
+});

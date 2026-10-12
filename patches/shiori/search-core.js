@@ -1341,6 +1341,28 @@
   }
 
   /**
+   * The web engines that didn't answer a SearXNG search, from its reply's
+   * `unresponsive_engines` ([[name, reason], …], or plain names): each
+   * name once, in order, blanks and anything else left out. Twin of
+   * HisterKit's EngineHealth.names, on scripts/engine-health-cases.json.
+   */
+  function unansweredEngines(reply) {
+    const raw = reply && Array.isArray(reply.unresponsive_engines) ? reply.unresponsive_engines : [];
+    const names = [];
+    for (const entry of raw) {
+      const name = typeof entry === 'string' ? entry : Array.isArray(entry) && typeof entry[0] === 'string' ? entry[0] : '';
+      const trimmed = name.trim();
+      if (trimmed && !names.includes(trimmed)) names.push(trimmed);
+    }
+    return names;
+  }
+
+  /** The line above the web's results: "No answer from alpha, beta", or "". */
+  function engineHealthLine(names) {
+    return names && names.length ? `No answer from ${names.join(', ')}` : '';
+  }
+
+  /**
    * The snippet in runs, [{text, marked}]: `marks` are [start, end) in
    * Unicode code points (the gateway is Python). Bad offsets are skipped.
    */
@@ -2837,6 +2859,8 @@
     useVaults,
     smallwebSearchURL,
     smallwebResults,
+    unansweredEngines,
+    engineHealthLine,
     markRuns,
     smallwebOpen,
     rooms,

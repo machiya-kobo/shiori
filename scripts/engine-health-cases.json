@@ -1,0 +1,15 @@
+{
+  "cases": [
+    { "reply": {}, "names": [], "line": "" },
+    { "reply": { "unresponsive_engines": [] }, "names": [], "line": "" },
+    { "reply": { "unresponsive_engines": [["alpha", "timeout"]] }, "names": ["alpha"], "line": "No answer from alpha" },
+    {
+      "reply": { "unresponsive_engines": [["beta search", "HTTP error"], ["gamma", "timeout"], ["beta search", "timeout"]] },
+      "names": ["beta search", "gamma"],
+      "line": "No answer from beta search, gamma"
+    },
+    { "reply": { "unresponsive_engines": ["delta", "  epsilon  ", ""] }, "names": ["delta", "epsilon"], "line": "No answer from delta, epsilon" },
+    { "reply": { "unresponsive_engines": [[], [3, "x"], null, 7, ["zeta"]] }, "names": ["zeta"], "line": "No answer from zeta" },
+    { "reply": { "unresponsive_engines": "alpha" }, "names": [], "line": "" }
+  ]
+}

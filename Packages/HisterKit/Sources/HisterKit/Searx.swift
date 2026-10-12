@@ -30,6 +30,67 @@ public struct WebPage: Sendable, Equatable {
     public var results: [WebResult]
     public var suggestions: [String]
     public var corrections: [String]
+    /// The engines that didn't answer this search (`EngineHealth.names`).
+    public var unanswered: [String] = []
+
+    public init(results: [WebResult], suggestions: [String], corrections: [String], unanswered: [String] = []) {
+        self.results = results
+        self.suggestions = suggestions
+        self.corrections = corrections
+        self.unanswered = unanswered
+    }
+}
+
+/// The web engines that didn't answer a SearXNG search, from its reply's
+/// `unresponsive_engines` (`[[name, reason], …]`, or plain names). Twin of
+/// search-core's `S.unansweredEngines` / `S.engineHealthLine`, on
+/// scripts/engine-health-cases.json.
+public enum EngineHealth {
+    /// One entry of `unresponsive_engines`, whatever its shape: never
+    /// fails, so an odd entry can't sink the reply.
+    struct Entry: Decodable {
+        var name: String?
+
+        init(from decoder: Decoder) throws {
+            if let single = try? decoder.singleValueContainer(), let text = try? single.decode(String.self) {
+                name = text
+            } else if var list = try? decoder.unkeyedContainer(), !list.isAtEnd {
+                name = try? list.decode(String.self)
+            }
+        }
+    }
+
+    /// A reply's field on its own, for reading it apart from the results.
+    struct Field: Decodable {
+        var entries: [Entry]?
+
+        enum CodingKeys: String, CodingKey { case entries = "unresponsive_engines" }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            entries = try? c.decodeIfPresent([Entry].self, forKey: .entries)
+        }
+    }
+
+    /// Each name once, in order, blanks left out.
+    static func names(_ entries: [Entry]) -> [String] {
+        var names: [String] = []
+        for entry in entries {
+            let name = (entry.name ?? "").trimmingCharacters(in: .whitespaces)
+            if !name.isEmpty, !names.contains(name) { names.append(name) }
+        }
+        return names
+    }
+
+    /// The names from a whole SearXNG reply.
+    public static func names(inReply data: Data) -> [String] {
+        names((try? JSONDecoder().decode(Field.self, from: data))?.entries ?? [])
+    }
+
+    /// The line above the web's results: "No answer from alpha, beta", or "".
+    public static func line(_ names: [String]) -> String {
+        names.isEmpty ? "" : "No answer from \(names.joined(separator: ", "))"
+    }
 }
 
 /// A client for a SearXNG instance's JSON search. No Origin header or auth
@@ -106,7 +167,9 @@ public struct SearxClient: Sendable {
                 thumbnail: [r.thumbnail, r.thumbnail_src, r.img_src].lazy.compactMap { self.proxied($0) }.first,
                 published: r.publishedDate.flatMap(Self.date))
         }
-        return WebPage(results: results, suggestions: reply.suggestions ?? [], corrections: reply.corrections ?? [])
+        return WebPage(
+            results: results, suggestions: reply.suggestions ?? [], corrections: reply.corrections ?? [],
+            unanswered: EngineHealth.names(inReply: data))
     }
 
     /// An image URL served by this SearXNG (its image proxy), else nil.

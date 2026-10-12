@@ -8,6 +8,8 @@ final class WebResultsModel {
     let query: String
     private(set) var results: [WebResult] = []
     private(set) var suggestions: [String] = []
+    /// The engines that didn't answer the first page ("No answer from …").
+    private(set) var unanswered: [String] = []
     private(set) var phase: ResultsModel.Phase = .idle
     private(set) var isLoadingMore = false
     /// What Hister has of these results: URL → label ("" = visited).
@@ -36,6 +38,7 @@ final class WebResultsModel {
             known = Set(results.map(\.url))
             firstPageCount = results.count
             suggestions = first.suggestions.filter { $0 != query }
+            unanswered = first.unanswered
             page = 1
             exhausted = first.results.isEmpty
             phase = .loaded
@@ -126,8 +129,12 @@ struct WebResultsList: View {
                 .themedBackground()
             }
         case .loaded:
-            if model.results.isEmpty {
+            if model.results.isEmpty, model.unanswered.isEmpty {
                 ContentUnavailableView.search(text: model.query)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .themedBackground()
+            } else if model.results.isEmpty {
+                ContentUnavailableView("No Web Results", systemImage: "magnifyingglass", description: Text(EngineHealth.line(model.unanswered)))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .themedBackground()
             } else {
@@ -142,6 +149,7 @@ struct WebResultsList: View {
             if AIAnswerSection.offered(in: app, results: model.results) {
                 AIAnswerSection(query: model.query, results: model.results)
             }
+            EngineHealthRow(names: model.unanswered)
             if !model.suggestions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack {
@@ -169,6 +177,23 @@ struct WebResultsList: View {
         }
         .listStyle(.plain)
         .themedBackground()
+    }
+}
+
+/// The web engines that didn't answer, above the results, as Small Web
+/// says its own and the web pages say this: nothing when all answered.
+struct EngineHealthRow: View {
+    let names: [String]
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        if !names.isEmpty {
+            Text(EngineHealth.line(names))
+                .textStyle(.footnote)
+                .foregroundStyle(palette.secondaryText)
+                .listRowBackground(palette.background)
+                .listRowSeparator(.hidden)
+        }
     }
 }
 

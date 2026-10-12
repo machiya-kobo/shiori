@@ -2819,8 +2819,7 @@
   // (on All, your pages and notes among them).
   if (webLike) $('web-title').hidden = true;
   $('timing').textContent = cached ? count.replace(/ · $/, '') : `${count}${seconds} s`;
-  const slow = (data.unresponsive_engines || []).map((e) => (Array.isArray(e) ? e[0] : e));
-  $('engines').textContent = slow.length ? `No answer from ${slow.join(', ')}` : '';
+  $('engines').textContent = S.engineHealthLine(S.unansweredEngines(data));
 
   if (!results.length) {
     showStatus('No web results.');

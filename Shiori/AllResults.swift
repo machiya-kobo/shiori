@@ -227,6 +227,7 @@ struct AllResults: View {
                 .listRowBackground(palette.background)
             ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
         case .loaded:
+            EngineHealthRow(names: web.unanswered)
             if results.isEmpty {
                 if yours.isEmpty {
                     Text("No web results.")

@@ -1756,7 +1756,7 @@ async function smallwebList(container, q) {
       const reply = await api.smallweb(q, page);
       if (page === 1) {
         if (!reply.results.length) return container.replaceChildren(status('No Small Web Results', reply.failures.join(' · ')));
-        container.replaceChildren(reply.failures.length ? h('p', { class: 'correction' }, reply.failures.join(' · ')) : '', list, more);
+        container.replaceChildren(reply.failures.length ? h('p', { class: 'engine-health' }, reply.failures.join(' · ')) : '', list, more);
         dropStaleSelection(container);
       }
       for (const r of reply.results) if (!seen.has(r.url)) (seen.add(r.url), list.append(row(r)));
@@ -1809,7 +1809,9 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
   try {
     const data = await api.web(wq);
     const results = (await wikipediaFirst(data.results || [], wq)).filter((r) => typeof r.url === 'string' && /^https?:/.test(r.url));
-    if (!results.length) return mix.some(Boolean) ? mineOnly() : container.replaceChildren(status('No Web Results', ''));
+    // The engines that didn't answer, as the search page says it.
+    const health = S.engineHealthLine(S.unansweredEngines(data));
+    if (!results.length) return mix.some(Boolean) ? mineOnly(health ? h('p', { class: 'engine-health' }, health) : null) : container.replaceChildren(status('No Web Results', health));
     const list = h('ul', { class: 'rows' });
     const shown = results.slice(0, embedded ? 10 : 30);
     for (const r of shown) {
@@ -1841,7 +1843,7 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
     if (!webRows.length) list.append(...mix);
     // Not `null` as a child: replaceChildren writes it out as the text "null"
     // (it showed under All's Web heading).
-    container.replaceChildren(...[embedded ? null : answerCard(q), list].filter(Boolean));
+    container.replaceChildren(...[embedded ? null : answerCard(q), health ? h('p', { class: 'engine-health' }, health) : null, list].filter(Boolean));
     if (!embedded) dropStaleSelection(container);
     markSaved(list, shown.map((r) => r.url));
   } catch (error) {

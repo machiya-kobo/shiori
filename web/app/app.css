@@ -135,6 +135,8 @@ button { font: inherit; color: inherit; }
 .answer .summary-head { margin: 0; }
 /* "Did you mean …?" under the pills. */
 #list-top .correction { margin: 0 14px 8px; color: var(--secondary); }
+/* Web engines (or Small Web's) that didn't answer, above their results. */
+.engine-health { margin: 4px 12px 6px; color: var(--secondary); font-size: var(--fs-foot); }
 /* All's Your Pages and Your Notes: a row in the pill's colour (a faint
    tint, the text and an outline), with the full count, as the search page. */
 .section-head.tinted {
