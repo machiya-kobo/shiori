@@ -2101,7 +2101,8 @@ a{color:${v('--accent')}} img,video,figure{max-width:100%;height:auto;border-rad
 svg,picture,canvas,iframe,object,embed{max-width:100%;height:auto} figure{margin:1em 0}
 pre,code{font-family:ui-monospace,monospace;font-size:.9em;background:${v('--card')};border-radius:6px}pre{padding:12px;overflow-x:auto}
 blockquote{margin:1em 0;padding-left:1em;border-left:3px solid ${v('--line')};color:${v('--secondary')}}
-table{border-collapse:collapse;display:block;overflow-x:auto}td,th{border:1px solid ${v('--line')};padding:4px 8px;overflow-wrap:break-word}
+table{border-collapse:collapse;display:block;overflow-x:auto;font-size:.875em}td,th{border:1px solid ${v('--line')};padding:4px 6px;overflow-wrap:break-word}
+td a,td code,th a,th code{overflow-wrap:anywhere}@media (max-width:480px){table{font-size:.8em}td,th{padding:3px 4px}}
 .chip{display:inline-block;margin-top:.5em;padding:1px 9px;border-radius:999px;border:1px solid currentColor;background:transparent;font-size:.8em;color:${labelColor || v('--kept')}}
 </style></head><body><header>
 <h1>${escapeHTML(p.title || doc.title || (n && n.path ? n.path.replace(/\.md$/, '').split('/').pop() : '') || doc.url)}</h1>

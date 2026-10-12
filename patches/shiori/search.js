@@ -755,6 +755,8 @@
     function escapeHTML(t) {
       return String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
     }
+    // A wide table fits the pane, as in the apps (PreviewWebView): smaller
+    // text, addresses and code may break anywhere, words stay whole.
     function pageCSS() {
       const css = getComputedStyle(document.documentElement);
       const v = (name) => css.getPropertyValue(name).trim();
@@ -764,7 +766,9 @@
         .meta{color:${v('--secondary')};font:-apple-system-footnote;margin:0 0 1.2em;padding-bottom:.8em;border-bottom:1px solid ${v('--line')}}
         a{color:${v('--accent')}} img{max-width:100%;height:auto;border-radius:6px}
         svg,video,picture,figure,canvas,iframe,object,embed{max-width:100%;height:auto} figure{margin:1em 0}
-        pre,code{white-space:pre-wrap} table{border-collapse:collapse;max-width:100%} td,th{overflow-wrap:break-word}`;
+        pre,code{white-space:pre-wrap}
+        table{border-collapse:collapse;display:block;overflow-x:auto;font-size:.875em} td,th{border:1px solid ${v('--line')};padding:4px 6px;overflow-wrap:break-word}
+        td a,td code,th a,th code{overflow-wrap:anywhere} @media (max-width:480px){table{font-size:.8em} td,th{padding:3px 4px}}`;
     }
     async function show(url, card) {
       if (current === url) return;

@@ -75,10 +75,15 @@ enum PreviewPage {
             code { padding: 1px 4px; }
             pre code { padding: 0; background: none; }
             blockquote { margin: 1em 0; padding-left: 1em; border-left: 3px solid var(--raised); color: var(--secondary); }
-            table { border-collapse: collapse; display: block; overflow-x: auto; }
-            /* break-word, not the body's anywhere: that one lets a column shrink to a
-               character wide ("Categor y"). */
-            td, th { border: 1px solid var(--raised); padding: 4px 8px; overflow-wrap: break-word; }
+            /* A wide table fits the screen: smaller text, and an address or
+               code may break anywhere (they set a table's least width). Words
+               stay whole: anywhere in every cell let a column shrink to a
+               character wide ("Categor y"). Only a table whose words alone
+               don't fit scrolls sideways, inside itself. */
+            table { border-collapse: collapse; display: block; overflow-x: auto; font-size: 0.875em; }
+            td, th { border: 1px solid var(--raised); padding: 4px 6px; overflow-wrap: break-word; }
+            td a, td code, th a, th code { overflow-wrap: anywhere; }
+            @media (max-width: 480px) { table { font-size: 0.8em; } td, th { padding: 3px 4px; } }
             hr { border: none; border-top: 1px solid var(--raised); }
             mark { background: color-mix(in srgb, var(--highlight) calc(var(--highlight-opacity) * 100%), transparent); color: inherit; }
             </style>
