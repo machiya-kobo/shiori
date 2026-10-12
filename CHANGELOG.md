@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.5.17 (2026-10-11)
+
+- Same as 1.5.16, with the hosted pages' nginx base image pinned to its
+  current digest (the old one moved upstream, so 1.5.16's image couldn't
+  be built).
+
 ## 1.5.16 (2026-10-11)
 
 - iPhone and iPad: result cards line up with the search field, the pills
