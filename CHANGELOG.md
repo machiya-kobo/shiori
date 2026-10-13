@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.7.1 (2026-10-13)
+
+- Hosted pages: Kura's Sign In works. On the search page it was a link
+  inside the heading's button, which Safari never followed; with
+  Hister's sign-in it now renews this host's sign-in and comes back.
+- Search page: a slow web no longer sends you to DuckDuckGo when none of
+  your pages or notes match. It says "Web results didn't answer", with
+  Try Again and a DuckDuckGo link; only with nothing answering at all
+  (Tailscale off) does it go to DuckDuckGo.
+
 ## 1.7.0 (2026-10-12)
 
 - Web results say which engines didn't answer ("No answer from …") in the
