@@ -20,6 +20,13 @@
   const PAGE_CACHE_KEY = 'shioriPageCache';
   const PAGE_CACHE_MS = 30 * 60_000;
   const PAGE_CACHE_MAX = 12;
+  // Leaving the page (the sign-in, a new search, a link) cancels its
+  // requests in flight: that's not a failure to report, nor a reason to go
+  // to DuckDuckGo, which would take over the navigation that cancelled them.
+  let leaving = false;
+  window.addEventListener('beforeunload', () => (leaving = true));
+  window.addEventListener('pagehide', () => (leaving = true));
+  window.addEventListener('pageshow', () => (leaving = false));
 
   const params = new URLSearchParams(location.search);
   const q = (params.get('q') || '').trim();
@@ -1578,7 +1585,8 @@
   // `room`: Kura or Konbini, which may want the Machiya sign-in (roomInit).
   async function fetchJSON(url, { timeout = 8000, headers = {}, room = false } = {}) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
+    let timedOut = false;
+    const timer = setTimeout(() => ((timedOut = true), controller.abort()), timeout);
     try {
       // The hosted page's own host carries its sign-in (the cookie its
       // nginx asks the helper about); anywhere else, no cookies.
@@ -1599,6 +1607,10 @@
       }
       // Hister can leave raw control characters in text; blank them.
       return JSON.parse((await r.text()).replace(/[\u0000-\u001f]/g, ' '));
+    } catch (error) {
+      // Our own wait ran out (an abort for any other reason is a cancel).
+      if (timedOut && error && typeof error === 'object') error.timedOut = true;
+      throw error;
     } finally {
       clearTimeout(timer);
     }
@@ -1630,7 +1642,10 @@
       try {
         storage = sessionStorage;
       } catch (_) {}
-      if (S.signInDue(storage)) location.assign(where);
+      if (S.signInDue(storage)) {
+        leaving = true;
+        location.assign(where);
+      }
     } else if (asked === 'unavailable' && !refused.said) {
       let seen = false;
       try {
@@ -2745,6 +2760,9 @@
       saveState();
     } catch (err) {
       webArrived(null);
+      // Cancelled (the page being left, or an abort other than our wait):
+      // not the web failing. Nothing to say, and nowhere to go.
+      if (leaving || (err && err.name === 'AbortError' && !err.timedOut)) return;
       // A stock SearXNG answers 403 to format=json: say so, rather than empty results or a jump to DuckDuckGo.
       if (err && err.status === 403) {
         await histerDone;
@@ -2765,6 +2783,7 @@
         // trace here. With your pages or notes on screen, or Hister or Kura
         // answering (nothing found, a sign-in asked), stay and say so: a
         // slow web alone sent the page away (the jump away was jarring).
+        if (leaving) return;
         if (!histerDocs.length && !vaultDocs.length && !answered) {
           location.replace(S.fallbackURL(q));
           return;
