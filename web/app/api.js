@@ -20,6 +20,8 @@ export class HisterError extends Error {
     this.status = status;
     /** The server's own error code, when it sent one (the AI endpoint does). */
     this.code = code;
+    /** A room on Hister's sign-in named the helper's sign-in in its 401 (S.roomSignInURL). */
+    this.helperSignIn = false;
   }
   get unreachable() {
     return this.status === 0;
@@ -73,12 +75,16 @@ async function send(path, { method = 'GET', body, timeout = 12000, keepalive = f
     } catch (_) {}
     let message = '';
     let code = '';
+    let helperSignIn = false;
     try {
       const reply = JSON.parse(text);
       code = reply.error || '';
       message = reply.message || reply.error || '';
+      helperSignIn = response.status === 401 && typeof reply.signin === 'string';
     } catch (_) {}
-    throw new HisterError(message || `The server answered ${response.status}.`, response.status, code);
+    const error = new HisterError(message || `The server answered ${response.status}.`, response.status, code);
+    error.helperSignIn = helperSignIn;
+    throw error;
   }
   if (!text) return null;
   try {
@@ -260,7 +266,7 @@ export async function kuraPrefs() {
     const prefs = reply && reply.prefs && typeof reply.prefs === 'object' ? reply.prefs : {};
     return { status: 200, prefs };
   } catch (error) {
-    return { status: error.status || 0, prefs: {} };
+    return { status: error.status || 0, prefs: {}, helperSignIn: !!error.helperSignIn };
   }
 }
 

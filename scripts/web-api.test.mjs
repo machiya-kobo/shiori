@@ -200,14 +200,29 @@ test("the web app's Settings say whether Kura knows you, and All says when it as
   const app = read('../web/app/app.js');
   const row = app.slice(app.indexOf('function machiyaRow()'), app.indexOf('/**\n * Settings → Feeds & Export'));
   assert.match(row, /200: \['Signed in'/);
-  assert.match(row, /401: \['Not signed in', link\(signIn, 'Sign In'\)\]/);
+  assert.match(row, /401: \['Not signed in', link\(S\.roomSignInURL\(kuraAccount\.helperSignIn, settings\.niwaURL, ROOMS_STAMP, location\.origin, location\.href\), 'Sign In'\)\]/);
   assert.match(row, /loadKuraStatus\(\)\.then/, 'asked afresh');
   // In Account, with Hister's rows (the house's order).
   assert.match(app.slice(app.indexOf('function accountGroup('), app.indexOf('function prefsStateLine(')), /const machiya = machiyaRow\(\);/);
   // All: a 401 from Kura is the Notes pill's notice, not silence.
-  assert.match(app, /error\.status === 401 \? \{ signIn: true/);
+  assert.match(app, /error\.status === 401 \? \{ signIn: error/);
   assert.match(app, /if \(notes && notes\.signIn\) container\.append\(h\('section', \{ class: 'list-section' \}, signInStatus\(/);
-  assert.match(app, /if \(error\.status === 401\) notesWantSignIn = true;/);
+  assert.match(app, /if \(error\.status === 401\) notesWantSignIn = error;/);
+  // On Hister's sign-in, Kura's Sign In renews this host's sign-in (S.roomSignInURL), not Kura's own host.
+  assert.match(app, /S\.roomSignInURL\(!!\(error && error\.helperSignIn\), settings\.niwaURL, ROOMS_STAMP/);
+});
+
+test("the search page's Sign In for Kura is a link Safari follows", () => {
+  const page = read('../patches/shiori/search.js');
+  const css = read('../patches/shiori/search.css');
+  // Never inside the heading's <button> (Safari doesn't follow a link there):
+  // the heading becomes a plain row, the link clickable and not faded.
+  assert.match(page, /const row = el\('div', \{ class: 'fold-head' \}, \.\.\.head\.childNodes\);\s*head\.replaceWith\(row\);/);
+  assert.match(page, /\$\('vault'\)\.classList\.add\('signin'\);/);
+  assert.match(css, /\.fold\.empty\.signin \{ opacity: 1; \}/);
+  assert.match(css, /\.fold\.signin \.fold-head a \{ pointer-events: auto;/);
+  // Hister's sign-in: this host's sign-in, from Kura's 401 (S.roomSignInURL).
+  assert.match(page, /S\.roomSignInURL\(!!\(error && error\.helperSignIn\), niwaBase, '__SHIORI_ROOMS__', location\.origin, location\.href\)/);
 });
 
 test("the web app marks web results you already have, with the search page's lookup", () => {

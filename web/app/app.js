@@ -402,8 +402,8 @@ function setDeviceTextSize(house) {
 /** Where you stand with Kura's own sign-in (the Machiya row): {status} from api.kuraPrefs (-1: not asked yet). */
 let kuraAccount = { status: -1 };
 async function loadKuraStatus() {
-  const { status } = await api.kuraPrefs();
-  kuraAccount = { status };
+  const { status, helperSignIn } = await api.kuraPrefs();
+  kuraAccount = { status, helperSignIn };
 }
 
 function recordSearch(q) {
@@ -728,12 +728,14 @@ function status(title, text, retry, link = null) {
 }
 
 /**
- * A room that wants the Machiya sign-in (401, with the identity file): the
- * room's own sign-in page, whose machiya_session cookie then rides along on
- * this host's same-origin /kura/ and /konbini/ (docs/signing-in.md).
+ * A room that wants the sign-in (401): on Hister's sign-in, the helper's
+ * sign-in for this host, whose room cookie /kura/ and /konbini/ pass on;
+ * with the identity file, the room's own sign-in page, whose
+ * machiya_session cookie then rides along on this host's same-origin /kura/
+ * and /konbini/ (S.roomSignInURL, docs/signing-in.md). `error`: the 401.
  */
-function signInStatus(retry) {
-  const href = S.machiyaSignInURL(settings.niwaURL);
+function signInStatus(retry, error) {
+  const href = S.roomSignInURL(!!(error && error.helperSignIn), settings.niwaURL, ROOMS_STAMP, location.origin, location.href);
   return status('Sign In to See Your Notes', 'Kura asks who you are. Sign in there, then come back.', retry, href ? { href, text: 'Sign In to Kura' } : null);
 }
 
@@ -832,7 +834,7 @@ function resultsList(container, options) {
     if (!merging) return api.search(query, { sort, pageKey: first ? '' : next });
     // Kura asking who you are (401) leaves the notes out, and says so.
     const notesPage = (key) => notesList('*', { sort: 'date', pageKey: key }).catch((error) => {
-      if (error.status === 401) notesWantSignIn = true;
+      if (error.status === 401) notesWantSignIn = error;
       return null;
     });
     const addNotes = (n) => (n ? merger.addNotes(n.documents, n.next) : merger.endNotes());
@@ -896,7 +898,7 @@ function resultsList(container, options) {
       if (first) {
         firstTotal = reply.total || 0;
         container.replaceChildren();
-        if (notesWantSignIn) container.append(signInStatus(() => resultsList(container, options)));
+        if (notesWantSignIn) container.append(signInStatus(() => resultsList(container, options), notesWantSignIn));
         if (heading) container.append(h('div', { class: 'section-head' }, heading));
         if (opened && settings.showOpened === true && reply.opened.length) {
           container.append(h('div', { class: 'section-head' }, 'You Opened'));
@@ -921,14 +923,14 @@ function resultsList(container, options) {
         for (const f of groups.values()) f.flush();
       }
       if (first) dropStaleSelection(container);
-      if (first && !seen.size && !reply.opened.length) container.replaceChildren(...[notesWantSignIn ? signInStatus(() => resultsList(container, options)) : null, status('Nothing Found', empty)].filter(Boolean));
+      if (first && !seen.size && !reply.opened.length) container.replaceChildren(...[notesWantSignIn ? signInStatus(() => resultsList(container, options), notesWantSignIn) : null, status('Nothing Found', empty)].filter(Boolean));
       loading = false;
       // A short page (all seen, or a merge waiting on the other list): keep going.
       if (!done && (added === 0 || list.querySelectorAll('.row').length < 15)) page(false);
     } catch (error) {
       loading = false;
       const retry = () => resultsList(container, options);
-      if (first) container.replaceChildren(error.status === 401 && source !== 'pages' ? signInStatus(retry) : status(error.unreachable ? "Can't Reach Hister" : 'Something Went Wrong', error.message, retry));
+      if (first) container.replaceChildren(error.status === 401 && source !== 'pages' ? signInStatus(retry, error) : status(error.unreachable ? "Can't Reach Hister" : 'Something Went Wrong', error.message, retry));
     }
   }
   new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && page(false), { root: $('list'), rootMargin: '600px' }).observe(sentinel);
@@ -1647,7 +1649,7 @@ async function searchAll(container, q, { web = true } = {}) {
   const both = (text) => Promise.all([
     api.search(text, { limit: ALL_COUNT }).catch(() => null),
     // Kura asking who you are (401): a Sign In notice where the notes go.
-    notesList(text, { limit: ALL_COUNT }).catch((error) => (error.status === 401 ? { signIn: true, total: 0, documents: [], opened: [] } : null)),
+    notesList(text, { limit: ALL_COUNT }).catch((error) => (error.status === 401 ? { signIn: error, total: 0, documents: [], opened: [] } : null)),
   ]);
   let [pages, notes] = await both(q);
   const found = (r) => r && (r.total || r.documents.length || r.opened.length);
@@ -1694,7 +1696,7 @@ async function searchAll(container, q, { web = true } = {}) {
   const myNotes = notes && notes.signIn ? [] : mine(notes, 'Your note');
   const mix = S.alternate(myPages, myNotes);
   const rows = mix;
-  if (notes && notes.signIn) container.append(h('section', { class: 'list-section' }, signInStatus(() => searchAll(container, q, { web }))));
+  if (notes && notes.signIn) container.append(h('section', { class: 'list-section' }, signInStatus(() => searchAll(container, q, { web }), notes.signIn)));
   dropStaleSelection(container);
   if (!settings.webResults || !web) {
     if (rows.length) container.append(h('ul', { class: 'rows' }, rows));
@@ -2512,11 +2514,11 @@ function machiyaRow() {
   const action = h('span', {});
   const row = h('div', { class: 'item' }, h('span', {}, 'Machiya'), h('span', { class: 'machiya-account' }, state, action));
   const draw = () => {
-    const signIn = S.machiyaSignInURL(settings.niwaURL);
+    const own = S.machiyaSignInURL(settings.niwaURL);
     const link = (href, text) => (href ? h('a', { class: 'link-button', href }, text) : null);
     const [text, a] = {
-      200: ['Signed in', link(signIn && signIn.replace(/signin$/, 'settings'), 'Sign Out…')],
-      401: ['Not signed in', link(signIn, 'Sign In')],
+      200: ['Signed in', link(own && own.replace(/signin$/, 'settings'), 'Sign Out…')],
+      401: ['Not signed in', link(S.roomSignInURL(kuraAccount.helperSignIn, settings.niwaURL, ROOMS_STAMP, location.origin, location.href), 'Sign In')],
       404: ['Kura doesn’t ask who you are', null],
       0: ['Kura didn’t answer', null],
     }[kuraAccount.status] || ['Checking…', null];

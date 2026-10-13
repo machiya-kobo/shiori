@@ -864,6 +864,11 @@ body.settling #skeleton { display: block; position: absolute; inset: 0 0 auto 0;
 .fold.empty .fold-body, .fold.empty .more { display: none; }
 .fold.empty .fold-head { pointer-events: none; }
 .fold.empty .chevron { visibility: hidden; }
+/* Kura asking for the sign-in: a plain heading row (no fold) at full
+   strength, its Sign In link the one thing to click. */
+.fold.empty.signin { opacity: 1; }
+.fold.signin .fold-head { cursor: default; }
+.fold.signin .fold-head a { pointer-events: auto; cursor: pointer; }
 
 /* Tighter cards: the tags go up onto the date line, at its
    right, instead of a row of their own; the snippet follows below. A web

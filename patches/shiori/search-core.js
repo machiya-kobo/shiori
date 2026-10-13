@@ -2790,6 +2790,17 @@
     return String(base).trim().replace(/\/?$/, '/') + 'signin';
   }
 
+  /**
+   * Where a hosted page sends a room's 401. A room on Hister's sign-in says so
+   * (its reply names the helper's `signin`): the helper's sign-in for this
+   * page's own host, whose room cookie /kura/ and /konbini/ pass on (the
+   * room's own /signin would sign in the room's host only). Else the room's
+   * own /signin (the identity file's cookie covers this host). '' for neither.
+   */
+  function roomSignInURL(helperSignIn, roomBase, stamped, here, back) {
+    return (helperSignIn && histerSignInURL(stamped, here, back)) || machiyaSignInURL(roomBase);
+  }
+
   root.ShioriSearch = {
     machiyaCode,
     machiyaToken,
@@ -2802,6 +2813,7 @@
     machiyaPairError,
     machiyaPair,
     machiyaSignInURL,
+    roomSignInURL,
     machiyaEntry,
     machiyaStatusText,
     isSmallWebLink,

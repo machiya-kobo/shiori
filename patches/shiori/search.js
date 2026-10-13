@@ -253,9 +253,12 @@
     // The app's id (mhs_) or the identity file's token: never Hister's token to a room.
     return S.machiyaFetchOptions(url, await machiyaTokenReady, machiyaRooms, init);
   }
-  /** What to say when a room answers 401: sign in (the room's own page here, Settings in the extension). */
-  function signInNote(room) {
-    const where = sameOrigin(kuraBase) ? S.machiyaSignInURL(niwaBase) : '';
+  /**
+   * What to say when a room answers 401: sign in (here, the sign-in that
+   * renews this host's room cookie: S.roomSignInURL), or Settings in the extension.
+   */
+  function signInNote(room, error) {
+    const where = sameOrigin(kuraBase) ? S.roomSignInURL(!!(error && error.helperSignIn), niwaBase, '__SHIORI_ROOMS__', location.origin, location.href) : '';
     return where
       ? [`${room} asks you to sign in. `, el('a', { href: where }, 'Sign In')]
       : [`${room} asks you to sign in: Settings → Account → Sign in to Machiya.`];
@@ -1585,7 +1588,14 @@
       const r = await fetch(url, room ? await roomInit(url, init) : init);
       if (!r.ok) {
         refused(r.status, url);
-        throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status });
+        // A room on Hister's sign-in names the helper's sign-in in its 401 (S.roomSignInURL).
+        let helperSignIn = false;
+        if (room && r.status === 401) {
+          try {
+            helperSignIn = typeof JSON.parse(await r.text()).signin === 'string';
+          } catch (_) {}
+        }
+        throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status, helperSignIn });
       }
       // Hister can leave raw control characters in text; blank them.
       return JSON.parse((await r.text()).replace(/[\u0000-\u001f]/g, ' '));
@@ -2391,7 +2401,7 @@
         pageState[category] = result;
         saveState();
       } catch (error) {
-        if (error && error.status === 401) return showStatus(...signInNote('Kura'));
+        if (error && error.status === 401) return showStatus(...signInNote('Kura', error));
         return showStatus('Kura could not be reached.');
       }
     }
@@ -2676,10 +2686,16 @@
       myNotes = vaultDocs.slice(0, ALL_COUNT).map((d) => vaultCard(d, cards));
       setPillCount('vault', Math.max(result.total || 0, vaultDocs.length));
     } catch (error) {
-      // Kura wants the sign-in: said where the notes would be.
+      // Kura wants the sign-in: said where the notes would be. Not inside
+      // the heading's button, whose link Safari would never follow: the
+      // heading becomes a plain row (nothing to fold).
       if (error && error.status === 401) {
+        const head = $('vault').querySelector('.fold-head');
+        const row = el('div', { class: 'fold-head' }, ...head.childNodes);
+        head.replaceWith(row);
         emptySection($('vault'), $('vault-count'), '');
-        $('vault-count').replaceChildren(...signInNote('Kura'));
+        $('vault').classList.add('signin');
+        $('vault-count').replaceChildren(...signInNote('Kura', error));
       }
     }
   })();

@@ -1104,6 +1104,12 @@ test('the hosted pages: where to sign in, what an answer asks, and no loop', () 
   assert.equal(S.histerSignInURL('hister=http://hister.lan/', '', back), '');
   assert.equal(S.histerSignInURL('__SHIORI_ROOMS__', '', back), '');
   assert.equal(S.histerSessionsURL(stamped, ''), 'https://hister.example.ts.net/machiya/sessions');
+  // A room's 401: on Hister's sign-in, this host's sign-in and back; else the room's own.
+  assert.equal(S.roomSignInURL(true, 'https://kura.example.ts.net/', stamped, 'https://shiori.example.ts.net/', back),
+    'https://hister.example.ts.net/machiya/signin?return=https%3A%2F%2Fshiori.example.ts.net%2F%23%2Fsearch%3Fq%3Da+b');
+  assert.equal(S.roomSignInURL(false, 'https://kura.example.ts.net/', stamped, 'https://shiori.example.ts.net/', back), 'https://kura.example.ts.net/signin');
+  assert.equal(S.roomSignInURL(true, 'https://kura.example.ts.net/', '__SHIORI_ROOMS__', '', back), 'https://kura.example.ts.net/signin');
+  assert.equal(S.roomSignInURL(false, '', stamped, '', back), '');
   assert.equal(S.signInAsked(401), 'signin');
   assert.equal(S.signInAsked(403), 'signin');
   assert.equal(S.signInAsked(500), 'unavailable');
