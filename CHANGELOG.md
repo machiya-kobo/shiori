@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.7.2 (2026-10-13)
+
+- Search page: leaving it while the web is still loading (the sign-in, a
+  new search, a link) no longer lands you on DuckDuckGo. A signed-out
+  browser now reaches the sign-in.
+
 ## 1.7.1 (2026-10-13)
 
 - Hosted pages: Kura's Sign In works. On the search page it was a link
