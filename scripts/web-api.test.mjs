@@ -225,6 +225,13 @@ test("the search page's Sign In for Kura is a link Safari follows", () => {
   assert.match(page, /S\.roomSignInURL\(!!\(error && error\.helperSignIn\), niwaBase, '__SHIORI_ROOMS__', location\.origin, location\.href\)/);
 });
 
+test('a slow web sends the search page to DuckDuckGo only when nothing answered', () => {
+  const page = read('../patches/shiori/search.js');
+  // Hister or Kura answering (nothing found, a sign-in asked) keeps the page.
+  assert.match(page, /if \(!histerDocs\.length && !vaultDocs\.length && !answered\) \{\s*location\.replace\(S\.fallbackURL\(q\)\);/);
+  assert.equal((page.match(/answered = true;/g) || []).length, 4);
+});
+
 test("the web app marks web results you already have, with the search page's lookup", () => {
   const app = read('../web/app/app.js');
   assert.match(app, /markSaved\(list, shown\.map\(\(r\) => r\.url\)\);/);

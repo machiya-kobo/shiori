@@ -2640,6 +2640,10 @@
     section.hidden = false;
   }
 
+  // Whether Hister or Kura answered at all (found nothing, or asked for the
+  // sign-in): then the server is in reach, and a slow web doesn't send the
+  // page away to DuckDuckGo.
+  let answered = false;
   const histerDone = (async () => {
     if (!showHister) return;
     try {
@@ -2650,6 +2654,7 @@
         pageState.hister = result;
         saveState();
       }
+      answered = true;
       histerDocs = (result.documents || []).slice(0, ALL_COUNT);
       if (result.closeMatches) $('hister-title').textContent = `Your Pages · for “${result.closeMatches}”`;
       if (!histerDocs.length && !(result.history || []).length) return;
@@ -2666,8 +2671,9 @@
       // Opened off), they leave the count too.
       const hiddenOpened = settings.showOpened === true ? 0 : (result.history || []).filter((h) => isHTTP(h.url) && !S.isNoteURL(h.url, niwaBase, konbiniBase)).length;
       setPillCount('hister', Math.max((result.total || 0) - hiddenOpened, shown));
-    } catch (_) {
+    } catch (error) {
       // Hister unreachable: the web block (or the fallback) carries on.
+      if (error && error.status) answered = true;
     }
   })();
 
@@ -2679,6 +2685,7 @@
     try {
       const result = await vaultResult;
       if (!result) return;
+      answered = true;
       vaultDocs = result.documents || [];
       if (result.closeMatches) $('vault-title').textContent = `Your Notes · for “${result.closeMatches}”`;
       if (!vaultDocs.length) return;
@@ -2686,6 +2693,7 @@
       myNotes = vaultDocs.slice(0, ALL_COUNT).map((d) => vaultCard(d, cards));
       setPillCount('vault', Math.max(result.total || 0, vaultDocs.length));
     } catch (error) {
+      if (error && error.status) answered = true;
       // Kura wants the sign-in: said where the notes would be. Not inside
       // the heading's button, whose link Safari would never follow: the
       // heading becomes a plain row (nothing to fold).
@@ -2753,10 +2761,11 @@
       if (page === 1 && webLike) {
         await histerDone;
         await vaultDone;
-        // Unreachable (VPN off) or broken, and nothing of yours to show:
-        // plain DuckDuckGo, without a trace here. With your pages or notes
-        // already on screen, keep them (the jump away was jarring).
-        if (!histerDocs.length && !vaultDocs.length) {
+        // Nothing answered at all (VPN off): plain DuckDuckGo, without a
+        // trace here. With your pages or notes on screen, or Hister or Kura
+        // answering (nothing found, a sign-in asked), stay and say so: a
+        // slow web alone sent the page away (the jump away was jarring).
+        if (!histerDocs.length && !vaultDocs.length && !answered) {
           location.replace(S.fallbackURL(q));
           return;
         }

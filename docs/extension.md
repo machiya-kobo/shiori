@@ -14,7 +14,7 @@ Settings → Safari → Search with Shiori, on by default.
 
 - Keep DuckDuckGo as Safari's search engine. Address-bar searches open Shiori instead: your pages and notes first, then the web from your SearXNG.
 - `!bangs` still go to DuckDuckGo.
-- If SearXNG doesn't answer, your own pages stay. With none, you land on DuckDuckGo.
+- If SearXNG doesn't answer, Shiori says so, with Try Again and a DuckDuckGo link. Only when nothing answers (Tailscale off) do you land on DuckDuckGo.
 - Thumbnails come only through your SearXNG's `/image_proxy`, so the device never contacts the engines' image hosts. Stock SearXNG proxies images only in its HTML, so its JSON needs a plugin (not in this repository). Without one, there are no thumbnails.
 
 ## Safari-only behavior
