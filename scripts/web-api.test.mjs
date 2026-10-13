@@ -235,14 +235,16 @@ test('a slow web sends the search page to DuckDuckGo only when nothing answered'
 test("leaving the search page never turns into a jump to DuckDuckGo", () => {
   const page = read('../patches/shiori/search.js');
   // Declared before anything can fetch, set on every way out, the sign-in's included.
-  assert.ok(page.indexOf('let leaving = false;') < page.indexOf('async function fetchJSON('));
-  assert.match(page, /addEventListener\('beforeunload', \(\) => \(leaving = true\)\)/);
-  assert.match(page, /addEventListener\('pagehide', \(\) => \(leaving = true\)\)/);
-  assert.match(page, /leaving = true;\s*location\.assign\(where\);/);
+  assert.ok(page.indexOf('let pageLeft = false;') < page.indexOf('async function fetchJSON('));
+  // beforeunload alone (a link that never leaves) counts for 3 s; pagehide holds.
+  assert.match(page, /const leaving = \(\) => pageLeft \|\| Date\.now\(\) - unloadingAt < 3000;/);
+  assert.match(page, /addEventListener\('beforeunload', \(\) => \(unloadingAt = Date\.now\(\)\)\)/);
+  assert.match(page, /addEventListener\('pagehide', \(\) => \(pageLeft = true\)\)/);
+  assert.match(page, /pageLeft = true;\s*location\.assign\(where\);/);
   // Only the page's own wait counts as the web not answering; a cancel is ignored.
   assert.match(page, /setTimeout\(\(\) => \(\(timedOut = true\), controller\.abort\(\)\), timeout\)/);
-  assert.match(page, /if \(leaving \|\| \(err && err\.name === 'AbortError' && !err\.timedOut\)\) return;/);
-  assert.match(page, /if \(leaving\) return;\s*if \(!histerDocs\.length && !vaultDocs\.length && !answered\)/);
+  assert.match(page, /if \(leaving\(\) \|\| \(err && err\.name === 'AbortError' && !err\.timedOut\)\) return;/);
+  assert.match(page, /if \(leaving\(\)\) return;\s*if \(!histerDocs\.length && !vaultDocs\.length && !answered\)/);
 });
 
 test("the web app marks web results you already have, with the search page's lookup", () => {

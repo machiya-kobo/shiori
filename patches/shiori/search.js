@@ -23,10 +23,15 @@
   // Leaving the page (the sign-in, a new search, a link) cancels its
   // requests in flight: that's not a failure to report, nor a reason to go
   // to DuckDuckGo, which would take over the navigation that cancelled them.
-  let leaving = false;
-  window.addEventListener('beforeunload', () => (leaving = true));
-  window.addEventListener('pagehide', () => (leaving = true));
-  window.addEventListener('pageshow', () => (leaving = false));
+  // beforeunload also fires for a link that never leaves (obsidian:,
+  // mailto:, a download), so it counts for 3 s only; pagehide and the
+  // sign-in hold until the page shows again.
+  let pageLeft = false;
+  let unloadingAt = 0;
+  const leaving = () => pageLeft || Date.now() - unloadingAt < 3000;
+  window.addEventListener('beforeunload', () => (unloadingAt = Date.now()));
+  window.addEventListener('pagehide', () => (pageLeft = true));
+  window.addEventListener('pageshow', () => ((pageLeft = false), (unloadingAt = 0)));
 
   const params = new URLSearchParams(location.search);
   const q = (params.get('q') || '').trim();
@@ -1643,7 +1648,7 @@
         storage = sessionStorage;
       } catch (_) {}
       if (S.signInDue(storage)) {
-        leaving = true;
+        pageLeft = true;
         location.assign(where);
       }
     } else if (asked === 'unavailable' && !refused.said) {
@@ -2762,7 +2767,7 @@
       webArrived(null);
       // Cancelled (the page being left, or an abort other than our wait):
       // not the web failing. Nothing to say, and nowhere to go.
-      if (leaving || (err && err.name === 'AbortError' && !err.timedOut)) return;
+      if (leaving() || (err && err.name === 'AbortError' && !err.timedOut)) return;
       // A stock SearXNG answers 403 to format=json: say so, rather than empty results or a jump to DuckDuckGo.
       if (err && err.status === 403) {
         await histerDone;
@@ -2783,7 +2788,7 @@
         // trace here. With your pages or notes on screen, or Hister or Kura
         // answering (nothing found, a sign-in asked), stay and say so: a
         // slow web alone sent the page away (the jump away was jarring).
-        if (leaving) return;
+        if (leaving()) return;
         if (!histerDocs.length && !vaultDocs.length && !answered) {
           location.replace(S.fallbackURL(q));
           return;
