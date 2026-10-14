@@ -11,6 +11,12 @@ struct ImageViewer: View {
     @Environment(\.palette) private var palette
     @State private var zoom: CGFloat = 1
     @GestureState private var pinch: CGFloat = 1
+    /// The scroll view's size: the image is laid out at that times the zoom,
+    /// so a zoomed image scrolls to its edges (a scale effect drew past
+    /// what could be scrolled to).
+    @State private var viewport: CGSize = .zero
+    /// The image's size fitted to the viewport (zoom 1).
+    @State private var fitted: CGSize = .zero
 
     static let zoomRange: ClosedRange<CGFloat> = 1...6
 
@@ -32,18 +38,29 @@ struct ImageViewer: View {
                 AsyncImage(url: source) { phase in
                     switch phase {
                     case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFit()
-                            .scaleEffect(zoom * pinch)
-                            .accessibilityLabel("Image from the page")
-                            .accessibilityZoomAction { action in
-                                switch action.direction {
-                                case .zoomIn: zoomIn()
-                                case .zoomOut: zoomOut()
-                                @unknown default: break
+                        ZStack {
+                            // Measures the image fitted to the window, unseen.
+                            image
+                                .resizable()
+                                .scaledToFit()
+                                .onGeometryChange(for: CGSize.self) { $0.size } action: { fitted = $0 }
+                                .frame(width: max(viewport.width, 1), height: max(viewport.height, 1))
+                                .hidden()
+                                .accessibilityHidden(true)
+                            image
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: fitted.width > 0 ? fitted.width * zoom * pinch : nil,
+                                       height: fitted.height > 0 ? fitted.height * zoom * pinch : nil)
+                                .accessibilityLabel("Image from the page")
+                                .accessibilityZoomAction { action in
+                                    switch action.direction {
+                                    case .zoomIn: zoomIn()
+                                    case .zoomOut: zoomOut()
+                                    @unknown default: break
+                                    }
                                 }
-                            }
+                        }
                     case .failure:
                         ContentUnavailableView("Image Not Loaded", systemImage: "photo.badge.exclamationmark")
                     default:
@@ -58,6 +75,7 @@ struct ImageViewer: View {
                 )
                 .onTapGesture(count: 2) { zoom = zoom > 1 ? 1 : 2.5 }
             }
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { viewport = $0 }
             .background(palette.background)
             .navigationTitle(source.lastPathComponent)
             #if os(iOS)
