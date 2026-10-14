@@ -22,8 +22,9 @@ service is optional. With none set up, there's no Media pill.
 - **Filters:** Kind (Films, TV, Music, Other), Never Played, and Rating (4★+,
   3★+, Any Rating, Unrated).
 - **Before a search:** Now Playing, Recently Played and Watched, your top
-  artists, albums and tracks for a week, month, year or all time, your
-  watchlist and Recently Added.
+  artists, albums and tracks for a week, month, year or all time (Sort → Top
+  Lists), your watchlist and Recently Added. Group → Day or Month instead puts
+  date headings over everything, by when you played it.
 - **On All:** Your Media, the top five, with the count leading to the pill.
 - **A card opens in its service:** Koito or Movary first, then Jellyfin, then
   Plex. Its other places are links: the other services, IMDb, TMDB, Letterboxd

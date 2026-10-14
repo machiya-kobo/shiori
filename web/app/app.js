@@ -1848,8 +1848,9 @@ function mediaControls(view, params, { search, items = [] }) {
     { class: 'controls' },
     dropMenu(quiet('sort', named(orders, c.order) || orders[0][1], false), () => [
       ...orders.map(([k, t]) => ({ text: t, checked: k === c.order, pick: () => set({ mo: k }) })),
-      // Browsing: the top lists' period, here rather than a control of its own.
-      ...(search ? [] : ['-', ...MEDIA_PERIODS.map(([k, t]) => ({ text: `Your Top: ${t}`, checked: k === c.period, pick: () => set({ p: k === 'month' ? '' : k }) }))]),
+      // Browsing: the period of Top Artists, Albums and Tracks, each choice
+      // named for them: bare periods under the sorts read as Group's Day and Month.
+      ...(search ? [] : ['-', ...MEDIA_PERIODS.map(([k, t]) => ({ text: `Top Lists: ${t}`, checked: k === c.period, pick: () => set({ p: k === 'month' ? '' : k }) }))]),
     ]),
     dropMenu(quiet('group', c.grouping ? named(c.groupings, c.grouping) : 'Group', !!c.grouping && c.grouping !== 'shelves'), () =>
       // Day and Month follow when you played: they sort Newest (unless Oldest), as on the other pills.

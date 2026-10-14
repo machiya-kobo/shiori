@@ -108,7 +108,7 @@ struct MediaResults: View {
 
 /// Media's bar, the other pills' Sort · Group · Filter: Sort (Best Match on
 /// a search, Newest, Oldest, Most Played, Top Rated, Title, Year, Recently
-/// Added; browsing, the top lists' period too), Group (Shelves when
+/// Added; browsing, the top lists' period in a submenu), Group (Shelves when
 /// browsing, No Groups, Day, Month, Kind, Played), and Filter, a sheet with a
 /// count beside every choice (Date, Kind, Played, Rating, Service), with
 /// chips to remove each and Clear.
@@ -173,12 +173,17 @@ struct MediaControls: View {
                 ForEach(orders, id: \.0) { Text($0.1).tag($0.0) }
             }
             .pickerStyle(.inline)
-            // Browsing: the top lists' period, here rather than a control of its own.
+            // Browsing: the period of Top Artists, Albums and Tracks, in a
+            // submenu that names it: four bare periods under the sorts read
+            // as Group's Day and Month.
             if let period {
-                Picker("Your Top", selection: period) {
-                    ForEach(Self.periods, id: \.0) { Text($0.1).tag($0.0) }
+                Divider()
+                Menu("Top Lists: \(Self.periods.first { $0.0 == period.wrappedValue }?.1 ?? "This Month")") {
+                    Picker("Top Lists", selection: period) {
+                        ForEach(Self.periods, id: \.0) { Text($0.1).tag($0.0) }
+                    }
+                    .pickerStyle(.inline)
                 }
-                .pickerStyle(.inline)
             }
         } label: {
             Label(name, systemImage: "arrow.up.arrow.down")
