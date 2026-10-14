@@ -458,6 +458,7 @@ struct DocumentRow: View {
                         session?.scope = .notes
                     } label: { LabelChip(label: chip.text).tapArea(vertical: 8, horizontal: 6) }
                         .buttonStyle(.borderless)
+                        .keepsFocusRing()
                         .help(chip.name.isEmpty ? "A note" : "Notes in \(chip.text)")
                         .accessibilityHint("Shows the notes in this vault")
                         .padding(.top, 2)
@@ -466,6 +467,7 @@ struct DocumentRow: View {
                     // still opens the page).
                     Button { actions.showLabel(label) } label: { LabelChip(label: label).tapArea(vertical: 8, horizontal: 6) }
                         .buttonStyle(.borderless)
+                        .keepsFocusRing()
                         .help("Pages labelled \(label)")
                         .accessibilityHint("Shows every page with this label")
                         .padding(.top, 2)

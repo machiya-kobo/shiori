@@ -364,7 +364,10 @@ struct ResultsListContainer<Content: View>: View {
                 if let document = documents.first { DocumentMenu(document: document) }
             }
             // The selected row's tint marks it, as on the Mac and the web
-            // app; the iPad also drew its keyboard-focus ring round it.
+            // app; the iPad also drew its keyboard-focus ring round it. The
+            // controls inside a row (its title, label and vault chips) turn
+            // their focus ring back on (`keepsFocusRing`), so the keyboard
+            // still shows where it is among them.
             .focusEffectDisabled()
             #endif
         } else {

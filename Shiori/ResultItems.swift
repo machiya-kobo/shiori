@@ -361,6 +361,15 @@ struct TitleLink: View {
         .pointerStyle(.link)
         #endif
         .help(help)
+        .keepsFocusRing()
+    }
+}
+
+extension View {
+    /// A control inside a result row: its keyboard focus ring shows, though
+    /// the selecting list turns the rows' own off (`focusEffectDisabled`).
+    func keepsFocusRing() -> some View {
+        focusEffectDisabled(false)
     }
 }
 
