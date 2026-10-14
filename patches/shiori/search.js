@@ -119,7 +119,7 @@
   // Every tab keeps All's width (Small Web, News and the rest shrank):
   // results in the first column, the second empty but for All's Info;
   // Images' tiles take both (search.css).
-  const wideCat = (cat) => ['general', 'web', 'hister', 'vault', 'images', 'videos', 'news', 'smallweb', 'files', 'code'].includes(cat || 'general');
+  const wideCat = (cat) => ['general', 'web', 'hister', 'vault', 'images', 'videos', 'news', 'smallweb', 'files', 'code', 'media'].includes(cat || 'general');
   document.body.classList.toggle('two-col', wideCat(params.get('cat')) && twoColumns(header || {}));
   document.body.dataset.cat = params.get('cat') || 'general';
 
@@ -211,6 +211,12 @@
   // else its own address (the app's setting).
   const smallwebBase = withSlash(settings.smallwebAPIURL || '') || withSlash(settings.smallwebURL || '');
   const searxBase = withSlash(settings.searxngURL || '');
+  // Media (docs/media.md): the hosted page's /jellyfin/, /plex/, /koito/ and /movary/, each adding its token there
+  // (web/shim.js passes the build's list). Safari's own page has none, so no Media there.
+  const mediaServices = S.mediaServicesFromBuild(settings.mediaBuild || '', location.origin + '/');
+  const mediaOn = /^https?:$/.test(location.protocol) && S.mediaConfigured(mediaServices);
+  // JSON asked for: Plex answers XML without it.
+  const mediaGet = (service, url) => fetchJSON(url, { timeout: 15000, headers: { Accept: 'application/json' } });
   const niwaBase = withSlash(settings.niwaURL || '');
   const konbiniBase = withSlash(settings.konbiniURL || '');
   // Where the card list is fetched: Konbini itself, or (the web page,
@@ -336,6 +342,8 @@
     ...(hasFiles && histerBase ? [['files', 'Files']] : []),
     // Your repos (code-import's), once Hister has some.
     ...(hasCode && histerBase ? [['code', 'Code']] : []),
+    // Your libraries and what you played (the hosted page only).
+    ...(mediaOn ? [['media', 'Media']] : []),
   ]);
   const category = CATEGORIES.some(([c]) => c === params.get('cat')) ? params.get('cat') : 'general';
   // All and Web are SearXNG's general results; Web without yours mixed in.
@@ -392,7 +400,7 @@
     const next = new URLSearchParams({ q: nq });
     if (cat !== 'general') next.set('cat', cat);
     if (cat === 'vault' && v && v !== 'all') next.set('vault', v);
-    if (t && !isNoteTab(cat)) next.set('time', t);
+    if (t && !isNoteTab(cat) && cat !== 'media') next.set('time', t);
     if (hs && isNoteTab(cat)) next.set('hs', hs);
     if (p > 1) next.set('page', String(p));
     if (hk) next.set('hk', hk);
@@ -1174,7 +1182,7 @@
         const id = `setting-${row.key || row.action}`;
         let control;
         if (row.action === 'pills') {
-          const items = S.PILLS.filter(([key]) => key !== 'opened' && (key !== 'files' || hasFiles) && (key !== 'code' || hasCode));
+          const items = S.PILLS.filter(([key]) => key !== 'opened' && (key !== 'files' || hasFiles) && (key !== 'code' || hasCode) && (key !== 'media' || mediaOn));
           group.append(
             S.pillEditor(items, settings.pills, (next, control) => {
               change({ pills: next });
@@ -1486,7 +1494,7 @@
     fadeEdges($('categories'), true);
     $('time').value = time;
     // The Hister and Vault tabs sort instead of filtering by time.
-    $('time-label').hidden = isNoteTab(current) || !webResults;
+    $('time-label').hidden = isNoteTab(current) || current === 'media' || !webResults;
     $('sort-label').hidden = !isNoteTab(current);
     $('sort').value = histerSort;
   }
@@ -1635,7 +1643,7 @@
     try {
       path = new URL(url, location.href).pathname;
     } catch (_) {}
-    if (/^\/(kura|konbini|searx|smallweb)\//.test(path)) return;
+    if (/^\/(kura|konbini|searx|smallweb|jellyfin|plex|koito|movary)\//.test(path)) return;
     const asked = S.signInAsked(status);
     if (asked === 'signin') {
       const where = S.histerSignInURL('__SHIORI_ROOMS__', location.origin, location.href);
@@ -2054,6 +2062,75 @@
   function codeFiltersFromAddress() {
     return { kind: params.get('ck') || undefined, host: params.get('ch') || undefined, open: params.get('co') === '1', private: params.get('cp') === '1' };
   }
+  /** The Media tab's filters, from the address (mk, mp, mr), so Back and a reload keep them. */
+  function mediaFiltersFromAddress() {
+    const p = new URLSearchParams(location.search);
+    const pick = (key, allowed) => (allowed.includes(p.get(key)) ? p.get(key) : undefined);
+    return { kind: pick('mk', ['films', 'tv', 'music', 'other']), played: pick('mp', ['never']), rated: pick('mr', ['loved', 'liked', 'any', 'unrated']) };
+  }
+
+  /** Kind, Never Played and Rating: each change kept in the address and drawn in place (the services aren't asked again). */
+  function mediaFilterBar(draw) {
+    const f = mediaFiltersFromAddress();
+    const set = (key, value) => {
+      const next = new URLSearchParams(location.search);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      history.replaceState(history.state, '', '?' + next.toString());
+      draw();
+    };
+    const select = (key, choices, label, value) => {
+      const sel = el('select', { 'aria-label': label }, ...choices.map(([v, name]) => el('option', { value: v }, name)));
+      sel.value = value || '';
+      sel.addEventListener('change', () => set(key, sel.value));
+      return sel;
+    };
+    const never = el('button', { type: 'button', 'aria-pressed': f.played === 'never' ? 'true' : 'false' }, 'Never Played');
+    never.addEventListener('click', () => {
+      const on = never.getAttribute('aria-pressed') !== 'true';
+      never.setAttribute('aria-pressed', on ? 'true' : 'false');
+      set('mp', on ? 'never' : '');
+    });
+    return el('div', { class: 'code-filters media-filters', role: 'group', 'aria-label': 'Filters' },
+      select('mk', [['', 'All Kinds'], ['films', 'Films'], ['tv', 'TV'], ['music', 'Music'], ['other', 'Other']], 'Kind', f.kind),
+      never,
+      select('mr', [['', 'Rating'], ['loved', '4★+'], ['liked', '3★+'], ['any', 'Any Rating'], ['unrated', 'Unrated']], 'Rating', f.rated));
+  }
+
+  /**
+   * A media card: the title opening it in its service (Koito or Movary first),
+   * what it is, when you played it, your stars and the others' ratings, its
+   * art (with Images in Previews on) and its other places as chips.
+   */
+  function mediaCard(item) {
+    const { href, places: where } = S.mediaPlaces(item);
+    const link = S.linkHref(href, location.href);
+    const poster = ['film', 'show', 'episode', 'collection', 'other'].includes(item.kind);
+    let art = null;
+    if (settings.previewImages !== false && item.image) {
+      art = el('img', { class: `thumb media-art${poster ? ' poster' : ''}`, src: item.image, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' });
+      art.addEventListener('error', () => art.remove());
+    }
+    const played = S.mediaPlayedLine(item, -new Date().getTimezoneOffset());
+    const stars = S.mediaStars(item.rating);
+    const outside = S.mediaOutsideLine(item);
+    const line = [played, stars ? el('span', { class: 'media-stars', 'aria-label': `Your rating: ${item.rating / 2} of 5` }, stars) : null, outside ? el('span', { class: 'media-outside' }, outside) : null]
+      .filter(Boolean).flatMap((part, i) => (i ? [' · ', part] : [part]));
+    const chips = where.filter((p) => p.url !== href).map((p) => {
+      const to = S.linkHref(p.url, location.href);
+      return to ? el('a', { class: `chip link-chip media-place ${p.key}`, href: to, title: `Open in ${p.name}`, target: '_blank', rel: 'noopener noreferrer' }, p.name) : null;
+    });
+    return el(
+      'li',
+      { class: `card media-card${item.elsewhere ? ' elsewhere' : ''}` },
+      link ? el('a', { class: 'title', href: link, target: '_blank', rel: 'noopener noreferrer' }, item.title) : el('span', { class: 'title' }, item.title),
+      el('div', { class: 'url' }, el('span', { class: 'crumbs' }, S.mediaSubtitle(item))),
+      art,
+      line.length ? el('p', { class: 'snippet media-played' }, ...line) : null,
+      chips.some(Boolean) ? places(...chips) : null,
+    );
+  }
+
   function codeFilterBar() {
     const f = codeFiltersFromAddress();
     const go = (key, value) => {
@@ -2366,6 +2443,34 @@
     return restoreScroll();
   }
 
+  // --- the Media tab (docs/media.md) -----------------------------------------------
+  // Your libraries and what you played, one card per item; Kind, Never Played
+  // and Rating filter it in place. Private: never in the Back copy, never
+  // recorded as opened, never previewed.
+
+  if (category === 'media') {
+    $('web').hidden = false;
+    $('web-title').textContent = 'Your Media';
+    let res;
+    try {
+      res = await S.mediaSearch(mediaServices, q, mediaGet);
+    } catch (_) {
+      return showStatus("Your media didn't answer.");
+    }
+    if (res.failures.length) $('timing').textContent = res.failures.join(' · ');
+    if (!res.items.length) return showStatus('Nothing in your media matches.');
+    setPillCount('media', res.items.length);
+    const draw = () => {
+      const f = mediaFiltersFromAddress();
+      const items = S.mediaFilter(res.items, f);
+      $('web-results').replaceChildren(...items.map(mediaCard));
+      $('web-status').replaceChildren(items.length ? '' : 'Nothing matches these filters.');
+    };
+    $('web-results').before(mediaFilterBar(draw));
+    draw();
+    return restoreScroll();
+  }
+
   // --- the Hister and Vault tabs: the full search of your pages or notes --------
 
   if (isNoteTab(category)) {
@@ -2664,6 +2769,19 @@
   // sign-in): then the server is in reach, and a slow web doesn't send the
   // page away to DuckDuckGo.
   let answered = false;
+  // Your Media on All (first page): its top five in a section of its own, open until you fold it.
+  if (category === 'general' && page === 1 && mediaOn && q) {
+    S.mediaSearch(mediaServices, q, mediaGet).then((res) => {
+      if (!res.items.length) return;
+      answered = true;
+      setPillCount('media', res.items.length);
+      $('media-results').replaceChildren(...res.items.slice(0, 5).map(mediaCard));
+      $('media-count').textContent = `${res.items.length.toLocaleString()} ${res.items.length === 1 ? 'result' : 'results'}`;
+      $('media-more').href = link({ cat: 'media', p: 1 });
+      fold($('media'), true);
+      $('media').hidden = false;
+    }).catch(() => {});
+  }
   const histerDone = (async () => {
     if (!showHister) return;
     try {

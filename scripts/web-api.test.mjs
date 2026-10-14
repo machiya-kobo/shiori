@@ -229,7 +229,8 @@ test('a slow web sends the search page to DuckDuckGo only when nothing answered'
   const page = read('../patches/shiori/search.js');
   // Hister or Kura answering (nothing found, a sign-in asked) keeps the page.
   assert.match(page, /if \(!histerDocs\.length && !vaultDocs\.length && !answered\) \{\s*location\.replace\(S\.fallbackURL\(q\)\);/);
-  assert.equal((page.match(/answered = true;/g) || []).length, 4);
+  // Hister (twice), Kura (twice), and Your Media finding something.
+  assert.equal((page.match(/answered = true;/g) || []).length, 5);
 });
 
 test("leaving the search page never turns into a jump to DuckDuckGo", () => {
