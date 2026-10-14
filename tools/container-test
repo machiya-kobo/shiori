@@ -51,9 +51,11 @@ class Engine:
             sys.exit(f"container-test: {self.name} {' '.join(args[:3])} failed:\n{r.stderr.strip()}")
         return r
 
-    def start(self, name, image, env=None, entrypoint=None, volumes=(), ports=(), cmd=()):
+    def start(self, name, image, env=None, entrypoint=None, volumes=(), ports=(), cmd=(), user=None):
         args = ["run", "-d", "--name", name, "--network", NET, "--read-only", "--tmpfs", "/tmp", "--cap-drop=ALL",
                 "--security-opt=no-new-privileges"]
+        if user:
+            args += ["--user", user]
         for k, v in (env or {}).items():
             args += ["-e", f"{k}={v}"]
         if entrypoint:
@@ -262,6 +264,39 @@ def main():
         after = e.run("exec", "shiori-web-full", "cat", "/tmp/timing.log", check_=False).stdout
         check("/searx/search" in after, "and nginx writes to the new file after the reopen", after[:200])
         e.rm("shiori-web-full")
+
+        print("== a token file only its owner can read (0600, as rendered secrets are): run as its owner")
+        import tempfile
+        secrets = tempfile.mkdtemp(prefix="shiori-web-secrets-")
+        token = os.path.join(secrets, "koito")
+        with open(token, "w") as f:
+            f.write("koitofiletoken1\n")
+        os.chmod(token, 0o600)
+        os.chmod(secrets, 0o755)
+        mount = [f"{secrets}:/run/secrets:ro"]
+        tokened = {**house, "SHIORI_KOITO_URL": f"http://{FAKE}:9012", "SHIORI_KOITO_TOKEN_FILE": "/run/secrets/koito"}
+        # Who owns it as the container sees it (rootless podman maps this host's user to its root).
+        owner = e.run("run", "--rm", "--entrypoint", "stat", *sum((["-v", v] for v in mount), []), image, "-c", "%u:%g",
+                      "/run/secrets/koito", check_=False).stdout.strip()
+        check(owner and owner.split(":")[0] != "101", "the file is another user's than the image's (101)", owner)
+        e.start("shiori-web-secret-101", image, env=tokened, volumes=mount)
+        started.append("shiori-web-secret-101")
+        time.sleep(3)
+        state = e.run("inspect", "-f", "{{.State.Status}} {{.State.ExitCode}}", "shiori-web-secret-101").stdout.strip()
+        log = e.logs("shiori-web-secret-101")
+        check(state.startswith("exited") and not state.endswith(" 0"), "as 101 it stops, not zero", state)
+        check("SHIORI_KOITO_TOKEN_FILE" in log and "user:" in log and "koitofiletoken1" not in log,
+              "and says to run it as the file's owner, never printing the token", log[-300:])
+        e.rm("shiori-web-secret-101")
+        e.start("shiori-web-secret", image, env=tokened, volumes=mount, ports=[8080], user=owner)
+        started.append("shiori-web-secret")
+        p1 = e.port("shiori-web-secret", 8080)
+        check(wait(p1), f"as the file's owner ({owner}) it comes up, writing only to /tmp")
+        s, h, echo = get(p1, "/koito/apis/web/v1/search?q=x", {"Cookie": "hister=goodabcdefgh"})
+        check(s == 200 and echo.get("headers", {}).get("authorization") == "Token koitofiletoken1", "and the file's token reaches Koito", str(echo)[:150])
+        check(get(p1, "/")[0] == 200, "the search page answers")
+        e.rm("shiori-web-secret")
+        shutil.rmtree(secrets, ignore_errors=True)
 
         print("== with hister-login")
         e.start("shiori-web-login", image, env={**full, "SHIORI_LOGIN_URL": f"http://{FAKE}:9008", "SHIORI_LOGIN_AUTH_URL": f"http://{FAKE}:9009"},

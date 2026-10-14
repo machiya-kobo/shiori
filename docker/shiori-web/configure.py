@@ -112,6 +112,9 @@ def media_token(env, name):
         try:
             with open(path, encoding="utf-8") as f:
                 value = f.read().strip()
+        except PermissionError as e:
+            raise ConfigError(f"{var}_FILE: can't read {path!r} ({e.strerror}): this container runs as uid {os.getuid()}. "
+                              "Make the file readable by it, or run the container as the file's owner (compose `user:`)")
         except OSError as e:
             raise ConfigError(f"{var}_FILE: can't read {path!r} ({e.strerror})")
     if value and not TOKEN_RE.match(value):

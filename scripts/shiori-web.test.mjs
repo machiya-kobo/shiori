@@ -259,6 +259,16 @@ test('Media: each service needs its address and token; its read API only, GET on
   } finally {
     x.cleanup();
   }
+  // A token file this user can't read (rendered secrets are 0600 and another uid's): refused, saying how to fix it.
+  const locked = join(mkdtempSync(join(tmpdir(), 'shiori-web-tok-')), 'koito');
+  writeFileSync(locked, 'koitoTOKEN123\n', { mode: 0o000 });
+  if (process.getuid && process.getuid() !== 0) {
+    const denied = run({ ...BASE, SHIORI_KOITO_URL: 'http://koito:4110', SHIORI_KOITO_TOKEN_FILE: locked });
+    assert.equal(denied.r.status, 2);
+    assert.match(denied.r.stderr, /SHIORI_KOITO_TOKEN_FILE: can't read .*runs as uid \d+.*readable by it, or run the container as the file's owner \(compose `user:`\)/);
+    assert.doesNotMatch(denied.r.stderr, /TOKEN123/);
+    denied.cleanup();
+  }
   // Half set up, or a token that could break the config: refused, by name.
   for (const [env, name] of [
     [{ SHIORI_KOITO_URL: 'http://koito:4110' }, 'SHIORI_KOITO_TOKEN'], [{ SHIORI_PLEX_TOKEN: 'plexTOKEN123' }, 'SHIORI_PLEX_URL'],

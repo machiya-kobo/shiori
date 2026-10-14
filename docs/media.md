@@ -58,6 +58,9 @@ offers a read-only token, so give it the least you can:
   `SHIORI_<NAME>_TOKEN` (or `_TOKEN_FILE`) for each, and
   `SHIORI_<NAME>_PUBLIC_URL` for links ([web/README.md](../web/README.md)).
   The host adds the token on its own request; the browser never holds one.
+  A `_TOKEN_FILE` must be readable by the container's user: with secrets
+  that are 0600 and another uid's, run the container as that uid (`user:`).
+  It refuses to start, and says so, when it can't read one.
   Movary's public address must be the one Movary writes into its poster links
   (its `APPLICATION_URL`).
 
