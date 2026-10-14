@@ -79,6 +79,9 @@ final class SaveLinksModel {
     var label: String?
     private(set) var isSaving = false
     private(set) var savedCount = 0
+    /// The run under way, so Stop (and closing the sheet) ends it: every
+    /// save goes to Hister, which can't take one back.
+    private var running: Task<Void, Never>?
 
     init(target: SaveLinksTarget) {
         self.target = target
@@ -148,6 +151,19 @@ final class SaveLinksModel {
         for i in rows.indices where rows[i].status.isOpen { rows[i].selected = on }
     }
 
+    /// Starts saving the ticked links; `stop()` ends the run.
+    func start(app: AppState) {
+        guard !isSaving else { return }
+        running = Task { await save(app: app) }
+    }
+
+    /// Stop, or the sheet closing: the link being saved finishes or is
+    /// cancelled, and no other starts.
+    func stop() {
+        running?.cancel()
+        running = nil
+    }
+
     /// Saves the ticked links, one at a time. Skip rules hold: a 406 waits
     /// for Save Anyway.
     func save(app: AppState) async {
@@ -155,6 +171,7 @@ final class SaveLinksModel {
         isSaving = true
         defer { isSaving = false }
         for row in rows where row.selected && row.status.isOpen {
+            if Task.isCancelled { break }
             await save(row, anyway: false, client: client, app: app)
         }
         app.refreshWaiting()
@@ -162,6 +179,7 @@ final class SaveLinksModel {
         // page has arrived in Hister.
         guard let label else { return }
         for row in rows {
+            if Task.isCancelled { break }
             guard case .viaGateway(let url) = row.status else { continue }
             if await Saver.labelWhenSaved(url, label: label, client: client),
                let i = rows.firstIndex(where: { $0.id == row.id }) {
@@ -221,11 +239,17 @@ struct SaveLinksView: View {
                 #endif
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(model.savedCount > 0 ? "Done" : "Cancel") { dismiss() }
+                        // While saving, Stop ends the run and keeps the sheet;
+                        // closing it any other way stops it too (onDisappear).
+                        if model.isSaving {
+                            Button("Stop") { model.stop() }
+                        } else {
+                            Button(model.savedCount > 0 ? "Done" : "Cancel") { dismiss() }
+                        }
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button(model.selectedCount == 1 ? "Save 1 Link" : "Save \(model.selectedCount) Links") {
-                            Task { await model.save(app: app) }
+                            model.start(app: app)
                         }
                         .disabled(model.selectedCount == 0 || model.isSaving)
                     }
@@ -235,6 +259,7 @@ struct SaveLinksView: View {
         .frame(minWidth: 560, idealWidth: 640, minHeight: 480, idealHeight: 620)
         #endif
         .task { await model.load(app: app) }
+        .onDisappear { model.stop() }
     }
 
     private var navigationTitle: String {
