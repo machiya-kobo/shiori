@@ -74,22 +74,24 @@ struct AIAnswerSection: View {
             .buttonStyle(.plain)
             .accessibilityValue(open ? "Open" : "Closed")
             .listRowBackground(tinted)
-            if open {
-                answerBody
-                    .listRowBackground(tinted)
+            .onChange(of: query) {
+                stopAsking()
+                state = .none
+                if open { ask(fresh: false) }
             }
-        }
-        // Leaving stops the engine (cloud tokens, or the device's model):
-        // nothing is asked for an answer no one sees. Back on screen, an
-        // open section asks again (the cache has it if it finished).
-        .onAppear {
-            if open, state == .none { ask(fresh: false) }
-        }
-        .onDisappear { stopAsking() }
-        .onChange(of: query) {
-            stopAsking()
-            state = .none
-            if open { ask(fresh: false) }
+            if open {
+                // One view whatever the state, so only the row leaving counts.
+                VStack(alignment: .leading, spacing: 0) { answerBody }
+                    .listRowBackground(tinted)
+                    // The answer's row leaving (scrolled away, closed, the
+                    // search left) stops the engine: cloud tokens or the
+                    // device's model, for an answer no one sees. Back on
+                    // screen, it asks again (the cache has it if it finished).
+                    .onAppear {
+                        if state == .none { ask(fresh: false) }
+                    }
+                    .onDisappear { stopAsking() }
+            }
         }
     }
 
