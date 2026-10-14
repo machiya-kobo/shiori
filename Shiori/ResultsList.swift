@@ -456,7 +456,7 @@ struct DocumentRow: View {
                         guard !chip.name.isEmpty else { return }
                         app.notesVault = chip.name
                         session?.scope = .notes
-                    } label: { LabelChip(label: chip.text) }
+                    } label: { LabelChip(label: chip.text).tapArea(vertical: 8, horizontal: 6) }
                         .buttonStyle(.borderless)
                         .help(chip.name.isEmpty ? "A note" : "Notes in \(chip.text)")
                         .accessibilityHint("Shows the notes in this vault")
@@ -464,7 +464,7 @@ struct DocumentRow: View {
                 } else if !label.isEmpty {
                     // A tap shows every page with the label (the row's own tap
                     // still opens the page).
-                    Button { actions.showLabel(label) } label: { LabelChip(label: label) }
+                    Button { actions.showLabel(label) } label: { LabelChip(label: label).tapArea(vertical: 8, horizontal: 6) }
                         .buttonStyle(.borderless)
                         .help("Pages labelled \(label)")
                         .accessibilityHint("Shows every page with this label")

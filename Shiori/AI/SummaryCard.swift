@@ -20,11 +20,14 @@ struct SummaryCard: View {
                 if case .done(let summary) = state {
                     Button("Copy", systemImage: "doc.on.doc") { Pasteboard.copy(summary.text) }
                         .help("Copy the summary")
+                        .tapArea(vertical: 11, horizontal: 6)
                     Button("Regenerate", systemImage: "arrow.clockwise", action: regenerate)
                         .help("Summarize again")
+                        .tapArea(vertical: 11, horizontal: 6)
                 }
                 Button("Close", systemImage: "xmark", action: close)
                     .help("Hide the summary")
+                    .tapArea(vertical: 11, horizontal: 6)
             }
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)

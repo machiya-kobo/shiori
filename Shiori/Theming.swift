@@ -78,6 +78,19 @@ private struct ThemedBackground: ViewModifier {
     }
 }
 
+extension View {
+    /// A larger target to tap than the control draws (toward the 44 points
+    /// the HIG asks for): `vertical` and `horizontal` points more on each
+    /// side, the layout unchanged. On a Button, or its label.
+    func tapArea(vertical: CGFloat, horizontal: CGFloat = 0) -> some View {
+        padding(.vertical, vertical)
+            .padding(.horizontal, horizontal)
+            .contentShape(.rect)
+            .padding(.vertical, -vertical)
+            .padding(.horizontal, -horizontal)
+    }
+}
+
 /// A small capsule naming a page's topic label.
 struct LabelChip: View {
     let label: String

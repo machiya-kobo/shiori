@@ -327,21 +327,37 @@ struct SaveLinksView: View {
         }
     }
 
-    /// One label for the batch: none, a note's tag that names a label, or
-    /// any label from the picker.
-    private var labelRow: some View {
+    private var candidateChips: some View {
         HStack(spacing: 8) {
-            Text("Label").textStyle(.body)
-            Spacer()
             ForEach(model.candidates, id: \.self) { candidate in
                 Button {
                     model.label = model.label == candidate ? nil : candidate
                 } label: {
                     LabelChip(label: candidate)
                         .opacity(model.label == nil || model.label == candidate ? 1 : 0.45)
+                        .tapArea(vertical: 12, horizontal: 3)
                 }
                 .buttonStyle(.plain)
                 .help(model.label == candidate ? "Don't label them" : "Label them \(candidate)")
+                // The choice is shown by opacity alone: said for VoiceOver too.
+                .accessibilityAddTraits(model.label == candidate ? .isSelected : [])
+            }
+        }
+    }
+
+    /// One label for the batch: none, a note's tag that names a label, or
+    /// any label from the picker.
+    private var labelRow: some View {
+        HStack(spacing: 8) {
+            Text("Label").textStyle(.body)
+            Spacer()
+            // The notes' tags that name a label, in a row that scrolls when
+            // there are more than fit (it ran past the edge).
+            ViewThatFits(in: .horizontal) {
+                candidateChips
+                ScrollView(.horizontal, showsIndicators: false) { candidateChips.padding(.vertical, 12) }
+                    .padding(.vertical, -12)
+                    .fadesOverflow()
             }
             Menu {
                 Button("None") { model.label = nil }

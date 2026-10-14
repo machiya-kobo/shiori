@@ -33,7 +33,8 @@ private struct QuietControl: ViewModifier {
             .foregroundStyle(active ? palette.accent : palette.secondaryText)
             .tint(active ? palette.accent : palette.secondaryText)
             .padding(.vertical, 4)
-            .contentShape(.rect)
+            // A 44-point target round the 26-point control.
+            .tapArea(vertical: 9)
     }
 }
 

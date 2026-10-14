@@ -154,12 +154,12 @@ struct SuggestedLabelsView: View {
             .buttonStyle(.plain)
             HStack(spacing: 8) {
                 ForEach(suggestion.labels, id: \.self) { label in
-                    Button { accept(suggestion, label) } label: { LabelChip(label: label) }
+                    Button { accept(suggestion, label) } label: { LabelChip(label: label).tapArea(vertical: 12, horizontal: 3) }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Apply \(label)")
                 }
                 if let newLabel = suggestion.newLabel {
-                    Button { accept(suggestion, newLabel) } label: { LabelChip(label: "+ \(newLabel)") }
+                    Button { accept(suggestion, newLabel) } label: { LabelChip(label: "+ \(newLabel)").tapArea(vertical: 12, horizontal: 3) }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Apply the new label \(newLabel)")
                 }
@@ -167,9 +167,11 @@ struct SuggestedLabelsView: View {
                 Button("Other…") { choosing = suggestion }
                     .buttonStyle(.borderless)
                     .help("Choose any label")
+                    .tapArea(vertical: 12, horizontal: 4)
                 Button("Skip") { labeller.skip(suggestion) }
                     .buttonStyle(.borderless)
                     .foregroundStyle(palette.secondaryText)
+                    .tapArea(vertical: 12, horizontal: 4)
             }
             .disabled(busy.contains(suggestion.url))
             if !suggestion.reason.isEmpty {

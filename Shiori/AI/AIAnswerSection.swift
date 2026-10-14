@@ -145,8 +145,10 @@ struct AIAnswerSection: View {
                     Spacer()
                     Button("Copy", systemImage: "doc.on.doc") { Pasteboard.copy(answer.text) }
                         .help("Copy the answer")
+                        .tapArea(vertical: 11, horizontal: 5)
                     Button("Regenerate", systemImage: "arrow.clockwise") { ask(fresh: true) }
                         .help("Answer again")
+                        .tapArea(vertical: 11, horizontal: 5)
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)

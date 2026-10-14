@@ -798,6 +798,8 @@ private struct PillFace: View {
             .background(Capsule().fill(on ? color : lifted ? hover.fill : .clear))
             .overlay(Capsule().strokeBorder(on ? color : ink, lineWidth: 1.5))
             .shadow(color: .black.opacity(lifted ? (palette.isDark ? 0.35 : 0.12) : 0), radius: 1, y: 1)
+            // A 44-point target round a 28-point pill.
+            .tapArea(vertical: 8, horizontal: 2)
             .contentShape(Capsule())
             .onHover { hovering = $0 }
     }
