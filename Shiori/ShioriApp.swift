@@ -24,6 +24,9 @@ struct ShioriApp: App {
                 .modifier(TextSizeRoot(size: app.effectiveTextSize))
                 #if os(macOS)
                 .onAppear { MacAppIcon.apply() }
+                // A shiori:// link goes to a window already open, rather
+                // than opening another (a plain WindowGroup's default).
+                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 #endif
                 .onOpenURL { url in
                     if url.scheme == "shiori", url.host() == "settings" { app.settingsRequests += 1 }
