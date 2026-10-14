@@ -208,7 +208,7 @@
   // the cards' tint, bar or nothing off this.
   document.body.dataset.resultStyle = ['tint', 'solid', 'bar', 'none'].includes(settings.resultStyle) ? settings.resultStyle : 'tint';
   // Pill Row: the tabs wrap or scroll as chosen; Automatic leaves it to the width (search.css).
-  document.body.dataset.pillRow = ['all', 'scroll'].includes(settings.pillRow) ? settings.pillRow : 'auto';
+  document.body.dataset.pillRow = settings.pillRow === 'scroll' ? 'scroll' : 'auto';
   const histerBase = withSlash(stored.histerURL || '');
   // The gateway: on the page's own host for the hosted page (/smallweb/),
   // else its own address (the app's setting).
@@ -1071,9 +1071,9 @@
     ], () => `Follows you when signed in${HOSTED ? ', except This Device’s Size' : ''}. ${prefsStateLine()}`],
     // Their order, and which show (S.pillEditor).
     ['Pills', [
-      { key: 'pillRow', label: 'Pill Row', options: [['auto', 'Automatic'], ['all', 'Show All'], ['scroll', 'One Row']] },
+      { key: 'pillRow', label: 'Pill Row', options: [['auto', 'Automatic'], ['scroll', 'One Row']] },
       { action: 'pills' },
-    ], () => 'Pill Row is this device’s own: Show All wraps them, One Row scrolls sideways, Automatic shows all on a wide window.'],
+    ], () => 'Pill Row is this device’s own: Automatic wraps them to another row when they don’t fit, One Row scrolls sideways.'],
     ['Web', [
       { key: 'webResults', label: 'Web Results' },
       { key: 'showInfobox', label: 'Info Box', needs: 'webResults' },

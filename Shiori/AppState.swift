@@ -1024,7 +1024,7 @@ struct SearchPageOptions: Equatable {
     var smallwebURL = ""
     var smallWebTab = true
     var smallWebOpen = "gateway"
-    /// How the pills sit when they don't fit: "auto", "all" (wrap) or
+    /// How the pills sit when they don't fit: "auto" (they wrap) or
     /// "scroll" (`SharedSettings.Key.pillRow`). This device's own.
     var pillRow = "auto"
 

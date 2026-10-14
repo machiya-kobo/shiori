@@ -3208,7 +3208,7 @@
     resultStyle: ['tint', 'solid', 'bar', 'none'],
     smallWebOpen: ['gateway', 'direct'],
     // This device's own (never the account's): how the pills sit when they don't fit.
-    pillRow: ['auto', 'all', 'scroll'],
+    pillRow: ['auto', 'scroll'],
   };
 
   /**

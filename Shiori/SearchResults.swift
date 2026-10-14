@@ -606,9 +606,6 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
     let count: (Choice) -> Int?
     @Environment(\.palette) private var palette
     @Environment(AppState.self) private var app
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    #endif
     @State private var rowBelow = false
     @State private var position: ScrollPosition
 
@@ -623,22 +620,10 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
         _position = State(initialValue: ScrollPosition(x: PillRowMemory.offsets[label] ?? 0))
     }
 
-    /// Pills that don't fit wrap to a second row, every one in sight (one row
-    /// again once the column is wide enough), or scroll in one row, as
-    /// Settings → Search → Pill Row says. Automatic: they wrap on the Mac and
-    /// an iPad's wide layout, and scroll on the iPhone.
-    private var wraps: Bool {
-        switch app.searchPage.pillRow {
-        case "all": return true
-        case "scroll": return false
-        default:
-            #if os(iOS)
-            return sizeClass == .regular
-            #else
-            return true
-            #endif
-        }
-    }
+    /// Pills that don't fit wrap to another row, every one in sight (one row
+    /// again once there's room), unless Settings → Search → Pill Row says One
+    /// Row: then they scroll sideways.
+    private var wraps: Bool { app.searchPage.pillRow != "scroll" }
 
     func body(content: Content) -> some View {
         content

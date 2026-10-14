@@ -15,7 +15,6 @@ struct PillsSection: View {
         Section {
             Picker("Pill Row", selection: $app.searchPage.pillRow) {
                 Text("Automatic").tag("auto")
-                Text("Show All").tag("all")
                 Text("One Row").tag("scroll")
             }
             ForEach(Array(list.enumerated()), id: \.element.key) { index, pill in
@@ -50,7 +49,7 @@ struct PillsSection: View {
         } header: {
             Text("Pills")
         } footer: {
-            Text("Pill Row is this device's own: Show All wraps them, One Row scrolls sideways, Automatic shows all on a wide window. All always shows; Opened only with Show Opened, Small Web only with Small Web on.")
+            Text("Pill Row is this device's own: Automatic wraps them to another row when they don't fit, One Row scrolls sideways. All always shows; Opened only with Show Opened, Small Web only with Small Web on.")
         }
     }
 }

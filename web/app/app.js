@@ -179,7 +179,7 @@ const DEFAULTS = {
   niwaURL: fromBuild('__SHIORI_KURA_URL__'), konbiniURL: fromBuild('__SHIORI_KONBINI_URL__'),
   foldRepeats: true, searchFilters: true, labelSuggestions: true, newsBlurURL: '', aiAnswer: true,
   showOpened: false, resultStyle: 'tint', clickOpens: 'auto', smallWebTab: true, smallWebOpen: 'gateway',
-  // How the pills sit when they don't fit: 'auto', 'all' (wrap) or 'scroll'. This browser's own.
+  // How the pills sit when they don't fit: 'auto' (wrap) or 'scroll'. This browser's own.
   pillRow: 'auto',
   // Which of Kura's vaults the Notes lists search: 'all', or one's name.
   notesVault: 'all',
@@ -303,7 +303,7 @@ function applyLook() {
   }
   // How your pages, notes and opened pages stand apart: app.css keys off it.
   document.body.dataset.resultStyle = ['tint', 'solid', 'bar', 'none'].includes(settings.resultStyle) ? settings.resultStyle : 'tint';
-  document.body.dataset.pillRow = ['all', 'scroll'].includes(settings.pillRow) ? settings.pillRow : 'auto';
+  document.body.dataset.pillRow = settings.pillRow === 'scroll' ? 'scroll' : 'auto';
   // What a click on a row opens (rows read clickOpensOriginal); app.css shows the › for Shiori's page when it doesn't.
   document.body.dataset.clickOpens = ['auto', 'original', 'preview'].includes(settings.clickOpens) ? settings.clickOpens : 'auto';
   // This device's own size (Use This Device's Size), else the shared one.
@@ -2716,8 +2716,8 @@ function pillsGroup(group, choice) {
     }
   };
   draw();
-  return group('Pills', [choice('pillRow', 'Pill Row', [['auto', 'Automatic'], ['all', 'Show All'], ['scroll', 'One Row']]), box],
-    'Pill Row is this browser’s own: Show All wraps them, One Row scrolls sideways, Automatic shows all on a wide window. Then their order, and which show.');
+  return group('Pills', [choice('pillRow', 'Pill Row', [['auto', 'Automatic'], ['scroll', 'One Row']]), box],
+    'Pill Row is this browser’s own: Automatic wraps them to another row when they don’t fit, One Row scrolls sideways. Then their order, and which show.');
 }
 
 /**

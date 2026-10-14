@@ -255,11 +255,9 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
   overflow-x: auto; scrollbar-width: none; padding: 2px 0;
 }
 #categories::-webkit-scrollbar { display: none; }
-/* From 760px, tabs that don't fit wrap to a second row (every one in sight,
-   as the apps' and the web app's pills); a phone keeps one scrolling row. */
-@media (min-width: 760px) { #categories { flex-wrap: wrap; overflow-x: visible; } }
-/* Settings → Pill Row: Show All wraps at any width, One Row always scrolls. */
-body[data-pill-row="all"] #categories { flex-wrap: wrap; overflow-x: visible; }
+/* Tabs that don't fit wrap to another row, every one in sight, as the apps'
+   and the web app's pills; Settings → Pill Row → One Row keeps one scrolling row. */
+#categories { flex-wrap: wrap; overflow-x: visible; }
 body[data-pill-row="scroll"] #categories { flex-wrap: nowrap; overflow-x: auto; }
 [data-fade] { --fade: 28px; }
 [data-fade="end"] {
