@@ -2424,7 +2424,14 @@
     } catch (_) {
       return showStatus("The Small Web didn't answer.");
     }
-    if (!reply.results.length) return showStatus(['Nothing on the Small Web matches.', ...reply.failures].join(' '));
+    // Nothing found because the engines didn't answer: say so, with Try Again
+    // (a reload runs the search afresh).
+    if (!reply.results.length && reply.failures.length) {
+      const again = el('button', { type: 'button', class: 'page-button' }, 'Try Again');
+      again.addEventListener('click', () => location.reload());
+      return showStatus(`The Small Web didn't answer. ${reply.failures.join(' · ')} `, again);
+    }
+    if (!reply.results.length) return showStatus('Nothing on the Small Web matches.');
     // Safari's own page (not the hosted one) can't ask the gateway to save a
     // direct open: its origin isn't one the gateway accepts.
     const unsaved = direct && !settings.smallwebAPIURL ? ["Pages opened in a Gemini app from here aren't saved to Hister."] : [];
@@ -2811,6 +2818,16 @@
       $('media').hidden = false;
     }).catch(() => {});
   }
+  // Yours that failed while the rest shows: said under the results, with
+  // Try Again, rather than read as "none of yours".
+  const yoursFailed = [];
+  const sayYoursFailed = () => {
+    if (!yoursFailed.length) return;
+    const again = el('a', { href: location.href }, 'Try Again');
+    again.addEventListener('click', (e) => (e.preventDefault(), location.reload()));
+    $('web').hidden = false;
+    $('web-status').append(`${yoursFailed.join(' and ')} didn't load. `, again);
+  };
   const histerDone = (async () => {
     if (!showHister) return;
     try {
@@ -2841,6 +2858,7 @@
     } catch (error) {
       // Hister unreachable: the web block (or the fallback) carries on.
       if (error && error.status) answered = true;
+      yoursFailed.push('Your Pages');
     }
   })();
 
@@ -2861,6 +2879,7 @@
       setPillCount('vault', Math.max(result.total || 0, vaultDocs.length));
     } catch (error) {
       if (error && error.status) answered = true;
+      if (!(error && error.status === 401)) yoursFailed.push('Your Notes');
       // Kura wants the sign-in: said where the notes would be. Not inside
       // the heading's button, whose link Safari would never follow: the
       // heading becomes a plain row (nothing to fold).
@@ -2883,7 +2902,8 @@
     await histerDone;
     await vaultDone;
     mixIn();
-    if (!histerDocs.length && !vaultDocs.length) {
+    if (yoursFailed.length) sayYoursFailed();
+    else if (!histerDocs.length && !vaultDocs.length) {
       showStatus(settings.webResults ? 'No pages in Hister match.' : 'Nothing in your pages or notes matches.');
     }
     return restoreScroll();
@@ -2925,6 +2945,10 @@
           "SearXNG doesn't allow JSON results: turn on formats: json under search: in its settings.yml. ",
           el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'),
         );
+        if (yoursFailed.length) {
+          $('web-status').append(el('br'));
+          sayYoursFailed();
+        }
         mixIn();
         return restoreScroll();
       }
@@ -2951,6 +2975,10 @@
           ' · ',
           el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'),
         );
+        if (yoursFailed.length) {
+          $('web-status').append(el('br'));
+          sayYoursFailed();
+        }
         mixIn();
         return restoreScroll();
       }
@@ -2969,6 +2997,7 @@
   const seconds = ((performance.now() - started) / 1000).toFixed(1);
   await histerDone;
   await vaultDone;
+  sayYoursFailed();
 
   const corrections = (data.corrections || []).filter((c) => typeof c === 'string' && c !== wq);
   if (corrections.length) {

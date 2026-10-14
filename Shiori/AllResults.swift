@@ -129,6 +129,21 @@ struct AllResults: View {
         return nil
     }
 
+    /// Yours that failed while the rest showed: said above the results
+    /// rather than read as "none of yours".
+    private var partialFailure: String? {
+        var parts: [String] = []
+        if case .failed = pages.phase { parts.append("Your Pages") }
+        if case .failed = notes.phase { parts.append("Your Notes") }
+        return parts.isEmpty ? nil : parts.joined(separator: " and ") + " didn't load."
+    }
+
+    /// Asks again for yours that failed, never the web (each web search counts).
+    private func retryYours() async {
+        if case .failed = pages.phase { await pages.load(using: app.client) }
+        if case .failed = notes.phase { await notes.load(using: app.client) }
+    }
+
     private var mineLoading: Bool {
         [pages.phase, notes.phase].contains { $0 == .idle || $0 == .loading }
     }
@@ -185,6 +200,18 @@ struct AllResults: View {
             .themedBackground()
         } else {
             ResultsListContainer {
+                if let partialFailure {
+                    HStack {
+                        Label(partialFailure, systemImage: "exclamationmark.triangle")
+                            .textStyle(.footnote)
+                            .foregroundStyle(palette.secondaryText)
+                        Spacer()
+                        Button("Try Again") { Task { await retryYours() } }
+                            .buttonStyle(.borderless)
+                            .textStyle(.footnote, weight: .semibold)
+                    }
+                    .listRowBackground(palette.background)
+                }
                 // On request only: collapsed until opened.
                 if webOn, AIAnswerSection.offered(in: app, results: webResults) {
                     AIAnswerSection(query: web.query, results: webResults)

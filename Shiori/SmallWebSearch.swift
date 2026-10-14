@@ -90,7 +90,19 @@ struct SmallWebResultsList: View {
                 .themedBackground()
             }
         case .loaded:
-            if model.results.isEmpty {
+            if model.results.isEmpty, !model.failures.isEmpty {
+                // Nothing found because the engines didn't answer: say so,
+                // with Try Again (Return again is the same search, not a new one).
+                ContentUnavailableView {
+                    Label("The Small Web Didn't Answer", systemImage: "leaf")
+                } description: {
+                    Text(model.failures.joined(separator: " · "))
+                } actions: {
+                    Button("Try Again") { Task { await model.load(using: app.smallweb) } }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .themedBackground()
+            } else if model.results.isEmpty {
                 ContentUnavailableView.search(text: model.query)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .themedBackground()

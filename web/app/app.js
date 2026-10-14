@@ -1726,6 +1726,12 @@ async function searchAll(container, q, { web = true } = {}) {
   const mix = S.alternate(myPages, myNotes);
   const rows = mix;
   if (notes && notes.signIn) container.append(h('section', { class: 'list-section' }, signInStatus(() => searchAll(container, q, { web }), notes.signIn)));
+  // Yours that failed while the rest shows: said, rather than read as "none of yours".
+  const failed = [!pages && 'Your Pages', !notes && 'Your Notes'].filter(Boolean);
+  if (failed.length) {
+    container.append(h('p', { class: 'engine-health' }, `${failed.join(' and ')} didn’t load. `,
+      h('button', { type: 'button', class: 'link-button', onclick: () => searchAll(container, q, { web }) }, 'Try Again')));
+  }
   dropStaleSelection(container);
   if (!settings.webResults || !web) {
     if (rows.length) container.append(h('ul', { class: 'rows' }, rows));
@@ -1786,7 +1792,9 @@ async function smallwebList(container, q) {
     try {
       const reply = await api.smallweb(q, page);
       if (page === 1) {
-        if (!reply.results.length) return container.replaceChildren(status('No Small Web Results', reply.failures.join(' · ')));
+        // Nothing found because the engines didn't answer: say so, with Try Again.
+        if (!reply.results.length && reply.failures.length) return container.replaceChildren(status('The Small Web Didn’t Answer', reply.failures.join(' · '), () => smallwebList(container, q)));
+        if (!reply.results.length) return container.replaceChildren(status('No Small Web Results', ''));
         container.replaceChildren(reply.failures.length ? h('p', { class: 'engine-health' }, reply.failures.join(' · ')) : '', list, more);
         dropStaleSelection(container);
       }
