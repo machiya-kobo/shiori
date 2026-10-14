@@ -54,13 +54,13 @@ struct SettingsView: View {
         var summary: String {
             switch self {
             case .appearance: "Theme, appearance, text size, app icon"
-            case .search: "Pills, the web, Small Web and your notes"
+            case .search: "Hister, pills, the web, Small Web and your notes"
             case .results: "How results look and open, and your history"
             case .media: "Your libraries and what you played"
             case .safari: "The extension, and Shiori's results in Safari"
             case .ai: "Summaries, AI providers and keys; off unless you turn it on"
             case .feeds: "Feeds, NewsBlur, export"
-            case .account: "Hister, signing in, waiting pages, about"
+            case .account: "Signing in, waiting pages, about"
             }
         }
     }
@@ -182,6 +182,22 @@ struct SettingsView: View {
             .listRowBackground(palette.surface)
 
             case .search:
+            // Hister first: your pages, which everything else searches beside.
+            // Its sign-in stays under Account.
+            Section {
+                SettingsField(label: "Server", text: $draft, prompt: "https://hister.example/", submit: save)
+                Button("Test Connection", action: { Task { await checkConnection() } })
+                    .disabled(check == .checking || HisterClient(serverURL: draft) == nil)
+                connectionStatus
+                unencryptedNote(draft)
+                ServerStatsRow()
+            } header: {
+                Text("Hister")
+            } footer: {
+                Text("Your pages: Shiori searches and saves them here, and the Safari extension follows this address. Sign in under Account.")
+            }
+            .listRowBackground(palette.surface)
+
             PillsSection()
                 .listRowBackground(palette.surface)
 
@@ -342,20 +358,6 @@ struct SettingsView: View {
                 .listRowBackground(palette.surface)
 
             case .account:
-            Section {
-                SettingsField(label: "Server", text: $draft, prompt: "https://hister.example/", submit: save)
-                Button("Test Connection", action: { Task { await checkConnection() } })
-                    .disabled(check == .checking || HisterClient(serverURL: draft) == nil)
-                connectionStatus
-                unencryptedNote(draft)
-                ServerStatsRow()
-            } header: {
-                Text("Hister Server")
-            } footer: {
-                Text("Shiori talks only to this server. The Safari extension follows this address too.")
-            }
-            .listRowBackground(palette.surface)
-
             HisterSignInSection()
                 .listRowBackground(palette.surface)
 
