@@ -42,7 +42,7 @@ final class ShareModel {
         saveTask = nil
         guard outcome != .cancelled else { return }
         phase = .done(outcome)
-        if outcome == .saved || outcome == .queued {
+        if outcome.isKept {
             try? await Task.sleep(for: .seconds(1.2))
             finish()
         }
@@ -194,7 +194,7 @@ struct ShareView: View {
     private func symbol(for outcome: Saver.Outcome) -> String {
         switch outcome {
         case .saved: "checkmark.circle.fill"
-        case .queued: "clock.arrow.circlepath"
+        case .queued, .waiting: "clock.arrow.circlepath"
         case .rejected, .failed: "exclamationmark.triangle.fill"
         case .cancelled: "xmark.circle"
         }

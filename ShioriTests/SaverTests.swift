@@ -89,4 +89,37 @@ struct SaverTests {
         let outcome = await Saver.save(input, label: nil, via: "share", client: client, outbox: nil)
         #expect(outcome == .failed("Hister is out of reach, and the page couldn't be kept for later."))
     }
+
+    // A link shared from another app is downloaded first: the site's own
+    // error page is never saved as the page.
+    @Test func aSiteErrorPageIsRefusedNotSaved() async {
+        let link = Saver.Input(url: URL(string: "https://gone.example/page")!, title: nil, html: nil, text: nil)
+        StubProtocol.handle(Self.host) { _ in (201, Data()) }
+        let outcome = await Saver.save(link, label: nil, via: "share", client: client, outbox: outbox,
+                                       fetch: { _ in throw PageFetcher.SiteError(status: 404) })
+        #expect(outcome == .rejected("The site answered 404: not saved."))
+        #expect(StubProtocol.requests(Self.host).isEmpty)
+        #expect(outbox.status().count == 0)
+    }
+
+    @Test func aBusySiteWaitsAsItsLink() async throws {
+        let link = Saver.Input(url: URL(string: "https://busy.example/page")!, title: nil, html: nil, text: nil)
+        let outcome = await Saver.save(link, label: "books", via: "share", client: client, outbox: outbox,
+                                       fetch: { _ in throw PageFetcher.SiteError(status: 503) })
+        guard case .waiting = outcome else {
+            Issue.record("Expected waiting, got \(outcome)")
+            return
+        }
+        #expect(StubProtocol.requests(Self.host).isEmpty)
+        let kept = try #require(outbox.pages.first)
+        #expect(kept.url == "https://busy.example/page")
+        #expect((kept.html ?? "").isEmpty)
+    }
+
+    @Test func anotherVaultsNoteIsNeverFetched() async {
+        let note = Saver.Input(url: URL(string: "https://kura.example/v/work/n/plan")!, title: nil, html: nil, text: nil)
+        let outcome = await Saver.save(note, label: nil, via: "share", client: client, outbox: outbox,
+                                       fetch: { _ in Issue.record("fetched a private note"); throw URLError(.cancelled) })
+        #expect(outcome == .rejected("A note from another vault stays in Kura."))
+    }
 }

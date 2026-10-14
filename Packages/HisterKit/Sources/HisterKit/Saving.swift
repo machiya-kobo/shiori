@@ -104,6 +104,18 @@ public enum PageFetcher {
     public static let maxBytes = 3 * 1024 * 1024
     public static let maxHTMLCharacters = 2 * 1024 * 1024
 
+    /// The site answered with an error of its own (404, 403, a bot check,
+    /// 503): its error page is never saved as if it were the page.
+    public struct SiteError: Error, Sendable, Equatable {
+        public var status: Int
+        public init(status: Int) { self.status = status }
+        /// 429 and 5xx: the site may answer later.
+        public var isTemporary: Bool { status == 429 || status >= 500 }
+        public var message: String {
+            isTemporary ? "The site is busy (it answered \(status)): try again later." : "The site answered \(status): not saved."
+        }
+    }
+
     public struct Fetched: Sendable, Equatable {
         public var url: String
         public var title: String
@@ -131,6 +143,9 @@ public enum PageFetcher {
         request.setValue("text/html,application/xhtml+xml;q=0.9,*/*;q=0.5", forHTTPHeaderField: "Accept")
         let (bytes, response) = try await session.bytes(for: request)
         let finalURL = (response.url ?? url).absoluteString
+        if let status = (response as? HTTPURLResponse)?.statusCode, !(200..<300).contains(status) {
+            throw SiteError(status: status)
+        }
         if let type = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Type")?.lowercased(),
             !type.contains("html"), !type.contains("text/plain")
         {
@@ -258,9 +273,12 @@ public struct Outbox: Sendable {
 
     /// Sends oldest first. Stops at the first unreachable/5xx; drops pages
     /// Hister rejects for good (skip rule, too large, sensitive), and
-    /// pages older than `maxAge`.
+    /// pages older than `maxAge`. A page kept as its link alone (the site
+    /// or the network was down when it was shared) is downloaded with
+    /// `fetch` first: a site error drops it, a busy site keeps it a try.
     @discardableResult
-    public func drain(using client: HisterClient, now: Date = .now) async -> DrainResult {
+    public func drain(using client: HisterClient, now: Date = .now,
+                      fetch: (@Sendable (URL) async throws -> PageFetcher.Fetched)? = nil) async -> DrainResult {
         var sent = 0
         for file in files() {
             guard var entry = read(file) else {
@@ -274,6 +292,27 @@ public struct Outbox: Sendable {
                 Self.log.notice("Dropping an outbox entry older than \(Int(Self.maxAge / 86400)) days")
                 try? FileManager.default.removeItem(at: file)
                 continue
+            }
+            if let fetch, (entry.page.html ?? "").isEmpty, (entry.page.text ?? "").isEmpty, let url = URL(string: entry.page.url) {
+                do {
+                    let fetched = try await fetch(url)
+                    entry.page.html = fetched.html
+                    if !fetched.url.isEmpty { entry.page.url = fetched.url }
+                    if !fetched.title.isEmpty, entry.page.title.isEmpty || entry.page.title == url.host() { entry.page.title = fetched.title }
+                } catch let error as PageFetcher.SiteError where !error.isTemporary {
+                    Self.log.notice("Dropping an outbox entry: the site answered \(error.status)")
+                    try? FileManager.default.removeItem(at: file)
+                    continue
+                } catch {
+                    // Busy or out of reach: kept, a try counted, for the next drain.
+                    entry.attempts += 1
+                    if entry.attempts >= Self.maxAttempts {
+                        try? FileManager.default.removeItem(at: file)
+                    } else if let data = try? JSONEncoder().encode(entry) {
+                        try? data.write(to: file, options: Self.writeOptions)
+                    }
+                    continue
+                }
             }
             do {
                 try await client.add(entry.page)

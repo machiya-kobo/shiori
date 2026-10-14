@@ -162,4 +162,42 @@ struct SavingTests {
         StubProtocol.handle(host) { _ in (200, Data("%PDF".utf8)) }
         #expect(try await PageFetcher.fetch(url, session: session) == PageFetcher.Fetched(url: url.absoluteString, title: "", html: ""))
     }
+
+    @Test func aSiteErrorIsThrownNotReturnedAsThePage() async throws {
+        let host = "fetch-error.example"
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [StubProtocol.self]
+        let session = URLSession(configuration: config)
+        defer { StubProtocol.reset(host) }
+        let url = try #require(URL(string: "https://\(host)/page"))
+        StubProtocol.headers(host, ["Content-Type": "text/html"])
+        for status in [404, 403, 429, 503] {
+            StubProtocol.handle(host) { _ in (status, Data("<title>\(status) Error</title>".utf8)) }
+            await #expect(throws: PageFetcher.SiteError(status: status)) { try await PageFetcher.fetch(url, session: session) }
+        }
+        #expect(PageFetcher.SiteError(status: 404).isTemporary == false)
+        #expect(PageFetcher.SiteError(status: 429).isTemporary)
+        #expect(PageFetcher.SiteError(status: 502).isTemporary)
+    }
+
+    @Test func aLinkKeptAloneIsDownloadedWhenTheOutboxDrains() async throws {
+        let outbox = Outbox(directory: dir)
+        try outbox.enqueue(NewPage(url: "https://later.example/", title: "later.example", via: "share"))
+        try outbox.enqueue(NewPage(url: "https://gone.example/", title: "", via: "share"))
+        try outbox.enqueue(NewPage(url: "https://busy.example/", title: "", via: "share"))
+        StubProtocol.handle(Self.host) { _ in (201, Data()) }
+        let result = await outbox.drain(using: client, fetch: { url in
+            switch url.host() {
+            case "later.example": return PageFetcher.Fetched(url: "https://later.example/", title: "Later", html: "<p>later</p>")
+            case "gone.example": throw PageFetcher.SiteError(status: 410)
+            default: throw PageFetcher.SiteError(status: 503)
+            }
+        })
+        #expect(result == .sent(1))
+        let sent = try jsonBody(try #require(StubProtocol.requests(Self.host).first))
+        #expect(sent["title"] as? String == "Later")
+        #expect((sent["html"] as? String)?.contains("later") == true)
+        // The gone page is dropped; the busy one waits for the next drain.
+        #expect(outbox.pages.map(\.url) == ["https://busy.example/"])
+    }
 }

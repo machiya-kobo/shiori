@@ -698,7 +698,8 @@ final class AppState {
             return
         }
         isSending = true
-        let result = await outbox.drain(using: client)
+        // A page kept as its link alone is downloaded here first.
+        let result = await outbox.drain(using: client, fetch: { try await PageFetcher.fetch($0) })
         isSending = false
         sendStopped = if case .stopped = result { true } else { false }
         refreshWaiting()

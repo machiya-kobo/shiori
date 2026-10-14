@@ -342,7 +342,7 @@ struct SaveSheet: View {
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    if let back, outcome != .saved, outcome != .queued {
+                    if let back, outcome?.isKept != true {
                         Button("Back") {
                             saveTask?.cancel()
                             back()
@@ -378,7 +378,7 @@ struct SaveSheet: View {
         saving = false
         guard result != .cancelled else { return }
         outcome = result
-        if result == .saved || result == .queued {
+        if result.isKept {
             try? await Task.sleep(for: .seconds(1))
             dismiss()
         }

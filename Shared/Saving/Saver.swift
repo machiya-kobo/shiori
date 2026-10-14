@@ -8,15 +8,27 @@ nonisolated enum Saver {
     enum Outcome: Sendable, Equatable {
         case saved
         case queued
+        /// Kept on this device for a reason of the site's own (it was busy):
+        /// downloaded and sent later, as the outbox drains.
+        case waiting(String)
         case rejected(String)
         case failed(String)
         /// The user cancelled: nothing was saved, and nothing waits.
         case cancelled
 
+        /// Saved, or kept to send later: the sheet can close.
+        var isKept: Bool {
+            switch self {
+            case .saved, .queued, .waiting: true
+            default: false
+            }
+        }
+
         var message: String {
             switch self {
             case .saved: "Saved to Hister."
             case .queued: "Hister is out of reach. Saved on this device; it will be sent when Hister is back."
+            case .waiting(let reason): reason
             case .rejected(let reason): reason
             case .failed(let reason): reason
             case .cancelled: "Cancelled."
@@ -44,16 +56,31 @@ nonisolated enum Saver {
     }
 
     /// The same, with the server and the outbox given (the tests' way in).
-    static func save(_ input: Input, label: String?, via: String, client: HisterClient, outbox: Outbox?) async -> Outcome {
+    static func save(_ input: Input, label: String?, via: String, client: HisterClient, outbox: Outbox?,
+                     fetch: @Sendable (URL) async throws -> PageFetcher.Fetched = { try await PageFetcher.fetch($0) }) async -> Outcome {
+        // Another vault's note never, not even fetched (fail closed).
+        if Notes.otherVault(of: input.url.absoluteString) != nil {
+            return .rejected("A note from another vault stays in Kura.")
+        }
         var page = NewPage(
             url: input.url.absoluteString, title: input.title ?? "", html: input.html, text: input.text,
             label: label, via: via)
-        if (page.html ?? "").isEmpty && (page.text ?? "").isEmpty,
-            let fetched = try? await PageFetcher.fetch(input.url)
-        {
-            page.url = fetched.url
-            page.html = fetched.html
-            if page.title.isEmpty { page.title = fetched.title }
+        if (page.html ?? "").isEmpty && (page.text ?? "").isEmpty {
+            do {
+                let fetched = try await fetch(input.url)
+                page.url = fetched.url
+                page.html = fetched.html
+                if page.title.isEmpty { page.title = fetched.title }
+            } catch let error as PageFetcher.SiteError {
+                // The site's own error page is never saved as the page. A busy
+                // site: the link waits, and the outbox downloads it later.
+                guard error.isTemporary else { return .rejected(error.message) }
+                if page.title.isEmpty { page.title = input.url.host() ?? input.url.absoluteString }
+                let kept = queue(page, in: outbox)
+                return kept == .queued ? .waiting("The site is busy (it answered \(error.status)). Saved on this device; it will be tried again later.") : kept
+            } catch {
+                // Out of reach: saved as its link, and downloaded when the outbox drains.
+            }
         }
         if page.title.isEmpty { page.title = input.url.host() ?? input.url.absoluteString }
         // Another vault's note, shared or not, never from here (after
@@ -167,8 +194,17 @@ extension Saver {
             secure.scheme = "https"
             attempt = secure.url ?? url
         }
-        var fetchedPage = try? await fetch(attempt)
-        if fetchedPage == nil, attempt != url { fetchedPage = try? await fetch(url) }
+        var fetchedPage: PageFetcher.Fetched?
+        do {
+            fetchedPage = try await fetch(attempt)
+        } catch let error as PageFetcher.SiteError {
+            // The site's own error page (404, a bot check) is never saved as the page.
+            return .failed(error.message)
+        } catch {
+            if attempt != url {
+                do { fetchedPage = try await fetch(url) } catch let error as PageFetcher.SiteError { return .failed(error.message) } catch {}
+            }
+        }
         guard let fetched = fetchedPage else {
             if Task.isCancelled { return .cancelled }
             return .failed(url.scheme?.lowercased() == "http"
