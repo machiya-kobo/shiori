@@ -636,6 +636,7 @@ struct MediaSettingsPage: View {
                 if !app.mediaOff.contains(service) {
                     SettingsField(label: "Address", text: address(service), prompt: Self.prompts[service] ?? "",
                                   spoken: "\(service.name) Address", submit: saveAddresses)
+                    UnencryptedNote(address: addresses[service] ?? "", carries: "your token and what you played")
                     tokenField(service)
                     checkRow(service)
                 }

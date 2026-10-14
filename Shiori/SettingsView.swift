@@ -255,7 +255,9 @@ struct SettingsView: View {
                     Text("Hister").tag(NotesSource.hister.rawValue)
                 }
                 SettingsField(label: "Kura", text: $kuraDraft, prompt: "https://kura.example/", submit: saveRooms)
+                UnencryptedNote(address: kuraDraft, carries: "your sign-in and notes")
                 SettingsField(label: "Konbini", text: $konbiniDraft, prompt: "https://konbini.example/", submit: saveRooms)
+                UnencryptedNote(address: konbiniDraft, carries: "your sign-in and notes")
                 SettingsField(label: "Obsidian Vault", text: $app.searchPage.obsidianVault, prompt: "Your vault's name", address: false)
             } header: {
                 Text("Notes")
@@ -418,15 +420,8 @@ struct SettingsView: View {
         "\(Self.clickOpensTitle) and Preview Pane stay on this device; a result's menu always has both ways to open it. Off, Images in Previews keeps previews to your Hister."
     }
 
-    /// An http:// address sends pages and searches unencrypted (only a
-    /// VPN would cover them): said plainly, beside the address.
-    @ViewBuilder private func unencryptedNote(_ address: String) -> some View {
-        if address.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("http://") {
-            Label("Not encrypted: pages and searches go as plain HTTP. Use https:// if the server has it.",
-                  systemImage: "lock.open")
-                .textStyle(.footnote)
-                .foregroundStyle(palette.secondaryText)
-        }
+    private func unencryptedNote(_ address: String) -> some View {
+        UnencryptedNote(address: address, carries: "pages and searches")
     }
 
     @ViewBuilder private var connectionStatus: some View {
@@ -898,6 +893,24 @@ struct ServerStatsRow: View {
         .task(id: app.serverURL) {
             guard let client = app.client else { return }
             stats = try? await client.stats()
+        }
+    }
+}
+
+/// An http:// address sends what it carries unencrypted (only a VPN would
+/// cover it), a sign-in or token included: said plainly, under the address.
+struct UnencryptedNote: View {
+    let address: String
+    /// What goes there, for the sentence ("pages and searches").
+    let carries: String
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        if address.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("http://") {
+            Label("Not encrypted: \(carries) go as plain HTTP. Use https:// if the server has it.",
+                  systemImage: "lock.open")
+                .textStyle(.footnote)
+                .foregroundStyle(palette.secondaryText)
         }
     }
 }

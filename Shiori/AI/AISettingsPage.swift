@@ -76,6 +76,7 @@ struct AISettingsPage: View {
             Toggle("Use a Local Server", isOn: $app.ai.localEnabled)
             if app.ai.localEnabled {
                 SettingsField(label: "Address", text: $app.ai.localURL, prompt: "https://server.example.ts.net/v1")
+                UnencryptedNote(address: app.ai.localURL, carries: "your token, pages and questions")
                 SettingsField(label: "Model", text: $app.ai.localModel, prompt: "e.g. qwen3", address: false, monospaced: true)
                 keyField("Token", prompt: "Optional", text: $localToken, account: .local)
                 Button("Test Local Server") { Task { await testLocal() } }
