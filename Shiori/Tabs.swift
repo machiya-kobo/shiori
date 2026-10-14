@@ -9,8 +9,9 @@ struct QueryRoute: Hashable {
 
 /// The app's tabs: a tab bar on iPhone, a sidebar on iPad and Mac.
 struct RootView: View {
-    /// `add` is an action, not a place: choosing it opens Add Page and
-    /// stays on the tab you were on.
+    /// `add` is an action more than a place: choosing it opens Add Page,
+    /// lit while its sheet is up, and closing the sheet goes back to the
+    /// tab you were on.
     enum Tab: String, Hashable { case recent, labels, add, settings }
 
     @Environment(AppState.self) private var app
@@ -20,6 +21,11 @@ struct RootView: View {
     /// Held here, above the layout choice, so a layout switch keeps it.
     @State private var session = SearchSession()
     @State private var addingPage = false
+    /// The tab to go back to when Add Page's sheet closes.
+    @State private var tabBeforeAdd: Tab = .recent
+    /// The Library tab's pushed screens: a Shortcut's search pops them, or
+    /// it would run behind a page.
+    @State private var libraryPath = NavigationPath()
     /// Save This Note's Links on screen; `app.saveLinksRequest` waits until
     /// no other sheet is open (one can't open over another from here).
     @State private var savingLinks: SaveLinksTarget?
@@ -51,7 +57,9 @@ struct RootView: View {
             } message: {
                 Text(app.deletes.failure ?? "")
             }
-            .sheet(isPresented: $addingPage) { AddPageSheet() }
+            .sheet(isPresented: $addingPage, onDismiss: {
+                if selection == .add { selection = tabBeforeAdd }
+            }) { AddPageSheet() }
             .sheet(item: $savingLinks) { target in
                 SaveLinksView(target: target)
             }
@@ -134,10 +142,16 @@ struct RootView: View {
     /// row: the search field is the top of the Library.
     private var tabs: some View {
         TabView(selection: Binding(get: { selection }, set: { tab in
-            if tab == .add { addingPage = true } else { selection = tab }
+            if tab == .add {
+                if selection != .add { tabBeforeAdd = selection }
+                selection = .add
+                addingPage = true
+            } else {
+                selection = tab
+            }
         })) {
             SwiftUI.Tab("Library", systemImage: "books.vertical", value: Tab.recent) {
-                NavigationStack {
+                NavigationStack(path: $libraryPath) {
                     SearchScreen()
                         .withDestinations()
                         .tabRoot()
@@ -151,7 +165,8 @@ struct RootView: View {
                 }
             }
             SwiftUI.Tab("Add Page", systemImage: "plus", value: Tab.add) {
-                Color.clear
+                // Behind the sheet: the theme's background, not a blank.
+                palette.background.ignoresSafeArea()
             }
             // Theme, appearance, text size and the rest: one tap away.
             SwiftUI.Tab("Settings", systemImage: "gearshape", value: Tab.settings) {
@@ -168,9 +183,14 @@ struct RootView: View {
         .tabViewStyle(.sidebarAdaptable)
         .minimizingTabBarOnScroll()
         .onChange(of: SearchRequest.shared.pending, initial: true) { _, query in
-            // The Search Hister shortcut: to the Library, whose field runs it.
-            if query != nil { selection = .recent }
+            // The Search Hister shortcut: to the Library, whose field runs
+            // it, at its top rather than behind a pushed page.
+            guard query != nil else { return }
+            selection = .recent
+            libraryPath = NavigationPath()
         }
+        // Add Page kept as the tab from a run that ended with its sheet up.
+        .onAppear { if selection == .add, !addingPage { selection = .recent } }
     }
 }
 
