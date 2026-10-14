@@ -686,7 +686,7 @@ const shioriMachiya = (() => {
     textSize: 'system',
     previewImages: true,
     rememberOpened: true,
-    showOpened: false,
+    showOpened: true,
     resultStyle: 'tint',
     // The pills' order and which show (S.pillSetting): [] is the default.
     pills: [],

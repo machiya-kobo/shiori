@@ -1085,10 +1085,10 @@ struct SearchPageOptions: Equatable {
     var semanticSearch = false
     /// A run of pages from one site shows its first, then "N more".
     var foldRepeats = true
-    /// Pages you opened, shown (lifted into Your Pages, "You Opened", the
-    /// Opened pill); off, they're left out and not counted. Off by default:
-    /// they mostly cluttered things.
-    var showOpened = false
+    /// Pages you opened, marked as opened (lifted into Your Pages, "You
+    /// Opened", the Opened pill); off, they're ordinary results, still first.
+    /// On by default; a stored choice is kept.
+    var showOpened = true
     /// "tint", "solid", "bar" or "none": how your pages, notes and opened pages
     /// stand apart in lists (`ResultBar`).
     var resultStyle = "tint"

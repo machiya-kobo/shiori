@@ -182,7 +182,7 @@ const DEFAULTS = {
   // The notes' homes, from the build (the server passes them in).
   niwaURL: fromBuild('__SHIORI_KURA_URL__'), konbiniURL: fromBuild('__SHIORI_KONBINI_URL__'),
   foldRepeats: true, searchFilters: true, labelSuggestions: true, newsBlurURL: '', aiAnswer: true,
-  showOpened: false, resultStyle: 'tint', clickOpens: 'auto', smallWebTab: true, smallWebOpen: 'gateway',
+  showOpened: true, resultStyle: 'tint', clickOpens: 'auto', smallWebTab: true, smallWebOpen: 'gateway',
   // How the pills sit when they don't fit: 'auto' (wrap) or 'scroll'. This browser's own.
   pillRow: 'auto',
   // Which of Kura's vaults the Notes lists search: 'all', or one's name.
@@ -913,7 +913,7 @@ function resultsList(container, options) {
         container.replaceChildren();
         if (notesWantSignIn) container.append(signInStatus(() => resultsList(container, options), notesWantSignIn));
         if (heading) container.append(h('div', { class: 'section-head' }, heading));
-        if (opened && settings.showOpened === true && reply.opened.length) {
+        if (opened && settings.showOpened !== false && reply.opened.length) {
           container.append(h('div', { class: 'section-head' }, 'You Opened'));
           const openedList = h('ul', { class: 'rows' });
           for (const o of reply.opened) openedList.append(docRow({ url: o.url, title: o.title, updated: o.updated, domain: o.domain, opened: true }));
@@ -1563,8 +1563,8 @@ function viewList(params) {
 // Files: the folders Hister watches, green (a hue no room wears).
 // Code: your repos (code-import's), red, the one hue left.
 const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['media', 'Media', 'purple'], ['opened', 'Opened', 'purple']];
-/** The pills: Opened only while Show Opened is on (off by default); Files only while Hister has some. */
-const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'notes' || S.notesTabShown(!!settings.niwaURL, settings.notesSource)) && (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || (SMALLWEB && settings.smallWebTab !== false)) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs) && (v !== 'media' || S.mediaConfigured(MEDIA)));
+/** The pills: Opened only while Show Opened is on (on by default); Files only while Hister has some. */
+const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'notes' || S.notesTabShown(!!settings.niwaURL, settings.notesSource)) && (v !== 'opened' || settings.showOpened !== false) && (v !== 'smallweb' || (SMALLWEB && settings.smallWebTab !== false)) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs) && (v !== 'media' || S.mediaConfigured(MEDIA)));
 /** The pill's key in the shared vocabulary (S.PILLS). */
 const pillKey = (scope) => (scope === 'hister' ? 'pages' : scope);
 /** The pills in the order set in Settings → Pills, less the ones switched off (S.orderPills). */
@@ -1704,7 +1704,7 @@ async function searchAll(container, q, { web = true } = {}) {
     // counts them in the total and sends them apart), then the rest; marked
     // only with Show Opened on. Dropped, a page you opened went missing
     // from its own search.
-    const marked = settings.showOpened === true;
+    const marked = settings.showOpened !== false;
     pages.documents = S.openedFirst(pages.opened, pages.documents.filter(isPage), (u) => isPage({ url: u }))
       .map((d) => ({ ...d, opened: marked && !!d.opened }))
       .slice(0, ALL_COUNT);

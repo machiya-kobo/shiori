@@ -34,7 +34,7 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         // Your repos (code-import): red, the one hue left.
         case .code: .red
         // Your libraries and what you played: purple, which Opened only
-        // wears while Show Opened is on (off by default).
+        // wears while Show Opened is on (on by default).
         case .media: .purple
         case .opened: .purple
         }

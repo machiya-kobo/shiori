@@ -183,7 +183,7 @@
     rememberOpened: true,
     // Pages you opened, shown (lifted into Your Pages): off by default,
     // they mostly cluttered things.
-    showOpened: false,
+    showOpened: true,
     resultStyle: 'tint',
     foldRepeats: true,
     labelSuggestions: true,
@@ -1803,7 +1803,7 @@
    * note is known by its Niwa or Konbini address).
    */
   function withOpened(result, docs, { skipNotes = false } = {}) {
-    const marked = settings.showOpened === true;
+    const marked = settings.showOpened !== false;
     const opened = S.openedFirst(result.history, [], (u) => !(skipNotes && S.isNoteURL(u, niwaBase, konbiniBase)));
     const urls = new Set(opened.map((h) => h.url));
     const cards = opened.map((h) => {
