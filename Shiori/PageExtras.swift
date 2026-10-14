@@ -325,7 +325,8 @@ struct SearchCommands: Commands {
         CommandMenu("Search") {
             ForEach(Array(app.searchScopes.enumerated()), id: \.element) { index, scope in
                 Button("Search \(scope.title)") { session?.scope = scope }
-                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                    // ⌘1–⌘9: a tenth pill would have no digit (and trapped).
+                    .keyboardShortcut(index < 9 ? KeyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command) : nil)
                     .disabled(session == nil)
             }
         }
