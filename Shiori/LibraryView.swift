@@ -62,6 +62,9 @@ struct LibraryView: View {
     /// moving through the list fast, so each row passed over doesn't fetch
     /// its preview.
     @State private var previewed: StoredPage?
+    /// The two columns' pushed pages: emptied when another sidebar row is
+    /// picked, so it doesn't still show the last row's page.
+    @State private var narrowPath = NavigationPath()
     /// Set while `onAppear` restores the sidebar row, so the selected page
     /// (kept by `SearchSession` across a layout switch) isn't let go.
     @State private var keepSelection = false
@@ -103,17 +106,16 @@ struct LibraryView: View {
                 NavigationSplitView {
                     sidebar
                 } detail: {
-                    // The field outside the stack's identity: with `.id` on
-                    // the field, clearing it (back to the Library) made a new
-                    // field mid-typing.
-                    searchField(NavigationStack {
-                        content
+                    // The field inside the stack (outside it, the iPad drew
+                    // none), and the stack kept: another sidebar row empties
+                    // its path instead of making a new stack, which made a
+                    // new field mid-typing when clearing it went back to the
+                    // Library.
+                    NavigationStack(path: $narrowPath) {
+                        searchField(content
                             .withDestinations()
-                            .environment(\.openLabel, { item = .label($0) })
+                            .environment(\.openLabel, { item = .label($0) }))
                     }
-                    // Another sidebar row starts a fresh stack, not one
-                    // still showing the last row's page.
-                    .id(item))
                 }
             }
         }
@@ -177,6 +179,7 @@ struct LibraryView: View {
         }
         .onChange(of: item) { _, new in
             if keepSelection { keepSelection = false } else { session.selected = nil }
+            narrowPath = NavigationPath()
             if let new, let raw = new.storedValue { savedItem = raw }
             // An earlier search picked from the sidebar: search it again
             // (no reordering of Recent: it's being revisited, not typed).
