@@ -299,6 +299,11 @@ function applyLook() {
   // The browser's (and the installed app's) bar follows the chosen theme:
   // one colour for Night or Day, the system's pair for System.
   const metas = S.themeColorMetas(theme, palette);
+  // The same colours for app.css (--status-bar), so the first bar fades
+  // from exactly the status bar's colour when installed.
+  const pair = S.themeColorMetas('', palette);
+  document.documentElement.style.setProperty('--bar-night', pair[0].content);
+  document.documentElement.style.setProperty('--bar-day', pair[1].content);
   const shown = [...document.querySelectorAll('meta[name="theme-color"]')];
   if (shown.length !== metas.length || metas.some((m, i) => shown[i].content !== m.content || (shown[i].media || '') !== m.media)) {
     shown.forEach((m) => m.remove());
