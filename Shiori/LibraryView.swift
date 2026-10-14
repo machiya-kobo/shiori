@@ -4,8 +4,8 @@ import SwiftUI
 /// The Mac's and iPad's layout, like Mail: a sidebar to browse (Library,
 /// your search, the server's collections and labels), the results,
 /// and the preview of the selected page. Search is in the toolbar, with
-/// its scopes. With Settings → Preview Pane off, it's two columns and a
-/// page opens in place, as on iPhone.
+/// its scopes. With Settings → Preview Pane off, or a window under
+/// `paneMinWidth`, it's two columns and a page opens in place, as on iPhone.
 struct LibraryView: View {
     enum Item: Hashable {
         /// A search, by its text: the current one and the last few, each a
@@ -58,11 +58,14 @@ struct LibraryView: View {
     /// Set while a Shortcut's search changes the scope, so the scope
     /// change doesn't run the search a second time.
     @State private var scopeSetBySearch = false
+    /// Set while `onAppear` restores the sidebar row, so the selected page
+    /// (kept by `SearchSession` across a layout switch) isn't let go.
+    @State private var keepSelection = false
 
     var body: some View {
         @Bindable var session = session
         Group {
-            if app.searchPage.previewPane {
+            if threeColumns {
                 NavigationSplitView(columnVisibility: $columns) {
                     sidebar
                 } content: {
@@ -76,7 +79,7 @@ struct LibraryView: View {
                         // at 200 points) without the column's minimum.
                         .frame(minWidth: 420)
                         #endif
-                        .navigationSplitViewColumnWidth(min: 420, ideal: resultsWidth, max: 960)
+                        .navigationSplitViewColumnWidth(min: 420, ideal: resultsIdeal, max: 960)
                         .onGeometryChange(for: Double.self) { $0.size.width } action: { liveResults = $0 }
                 } detail: {
                     preview
@@ -88,14 +91,17 @@ struct LibraryView: View {
                 NavigationSplitView {
                     sidebar
                 } detail: {
+                    // The field outside the stack's identity: with `.id` on
+                    // the field, clearing it (back to the Library) made a new
+                    // field mid-typing.
                     searchField(NavigationStack {
                         content
                             .withDestinations()
                             .environment(\.openLabel, { item = .label($0) })
-                    })
+                    }
                     // Another sidebar row starts a fresh stack, not one
                     // still showing the last row's page.
-                    .id(item)
+                    .id(item))
                 }
             }
         }
@@ -158,7 +164,7 @@ struct LibraryView: View {
             if case .search = item { item = .recent }
         }
         .onChange(of: item) { _, new in
-            session.selected = nil
+            if keepSelection { keepSelection = false } else { session.selected = nil }
             if let new, let raw = new.storedValue { savedItem = raw }
             // An earlier search picked from the sidebar: search it again
             // (no reordering of Recent: it's being revisited, not typed).
@@ -171,9 +177,14 @@ struct LibraryView: View {
         .onAppear {
             // The sidebar lists them, not only the field's suggestions.
             app.reloadRecentSearches()
-            if let restored = Item(storedValue: savedItem) { item = restored }
+            var restored = Item(storedValue: savedItem) ?? item
             // Back from the tabs (an iPad widened again) with a search up.
-            if let submitted = session.submitted { item = .search(submitted) }
+            if let submitted = session.submitted { restored = .search(submitted) }
+            // Set once, and the page it had selected stays selected.
+            if restored != item {
+                keepSelection = session.selected != nil
+                item = restored
+            }
         }
         .onChange(of: request.pending, initial: true) { _, query in
             guard let query else { return }
@@ -192,19 +203,37 @@ struct LibraryView: View {
     private func saveWidths() async {
         try? await Task.sleep(for: .milliseconds(400))
         guard !Task.isCancelled, windowWidth > 0 else { return }
-        let columns = liveSidebar + (app.searchPage.previewPane ? liveResults : 0)
+        let columns = liveSidebar + (threeColumns ? liveResults : 0)
         guard windowWidth - columns >= Self.previewRoom else { return }
         // Only a width dragged to: the golden default keeps following the
         // results column until then.
         if liveSidebar > 0, abs(liveSidebar - sidebarIdeal) > 1 { sidebarWidth = liveSidebar }
-        if liveResults > 0, app.searchPage.previewPane { resultsWidth = liveResults }
+        if liveResults > 0, threeColumns { resultsWidth = liveResults }
+    }
+
+    /// Three columns with Preview Pane on and room for a usable preview;
+    /// below it (a narrow iPad, Split View, a small Mac window) two, and a
+    /// page opens over the results. Until the window is measured, three.
+    private var threeColumns: Bool {
+        app.searchPage.previewPane && (windowWidth == 0 || windowWidth >= Self.paneMinWidth)
+    }
+
+    /// The narrowest window that gets the preview pane.
+    private static let paneMinWidth = 1000.0
+
+    /// The results column's ideal: the one dragged to, but never so wide
+    /// that the preview keeps less than `previewRoom` (a width saved in a
+    /// big window applied to every smaller one).
+    private var resultsIdeal: Double {
+        guard windowWidth > 0 else { return resultsWidth }
+        return max(420, min(resultsWidth, windowWidth - sidebarIdeal - Self.previewRoom))
     }
 
     /// The sidebar's width: the one dragged to, else the results column's
     /// divided by the golden ratio (about 260 beside 420), within bounds.
     private var sidebarIdeal: Double {
         if sidebarWidth > 0 { return sidebarWidth }
-        let results = app.searchPage.previewPane ? resultsWidth : 420
+        let results = threeColumns ? resultsWidth : 420
         return min(320, max(220, (results / 1.618).rounded()))
     }
 
@@ -257,7 +286,7 @@ struct LibraryView: View {
     /// points in); the two-column layout (Preview Pane off) has no results
     /// column to span.
     private var searchWidth: CGFloat {
-        let column = app.searchPage.previewPane && liveResults > 0 ? liveResults : 420
+        let column = threeColumns && liveResults > 0 ? liveResults : 420
         return max(220, column - 16)
     }
     #endif
