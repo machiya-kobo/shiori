@@ -12,6 +12,9 @@ Routes (the same as web/README.md asks of the real host):
   /kura/<path>         Kura, prefix removed, for only the paths Shiori asks
                        for (KURA_PATHS); anything else under /kura/ is a 404
   /smallweb/*          the small-web gateway, prefix removed (api/search, api/save)
+  /jellyfin/, /plex/,  the media services (JELLYFIN_URL and JELLYFIN_TOKEN, and so
+  /koito/, /movary/    on), prefix removed: GET only, the read paths shiori-web
+                       passes (configure.py's MEDIA), the token added here
   anything else        the Hister host (Hister's API, /shiori/feed,
                        /shiori/ai/*)
 
@@ -31,6 +34,7 @@ only; stdlib, no dependencies.
 """
 
 import http.server
+import importlib.util
 import json
 import os
 import re
@@ -53,6 +57,13 @@ UPSTREAMS = {
 KURA_PATHS = {"api/search", "api/recent", "api/note", "api/vaults", "api/prefs", "feed.xml"}
 NOT_ROUTED = ""  # route()'s answer for a path no one serves here
 HISTER = os.environ.get("HISTER_URL", "")
+# The media services: the paths and token headers are shiori-web's own (configure.py's MEDIA), so the two agree.
+_spec = importlib.util.spec_from_file_location(
+    "shiori_web_configure", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docker", "shiori-web", "configure.py"))
+_configure = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_configure)
+MEDIA = {name: (os.environ.get(f"{name.upper()}_URL", ""), os.environ.get(f"{name.upper()}_TOKEN", ""), header, re.compile(f"^({paths})$"))
+         for name, (header, paths) in _configure.MEDIA.items()}
 # The Hister sign-in helper's /machiya/ paths (sign-in, the account's
 # preferences): on Hister's host, as in production, unless MACHIYA_URL
 # names another (a stand-in for testing). The path is kept whole.
@@ -84,6 +95,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return None
         if MACHIYA and self.path.startswith("/machiya/"):
             return MACHIYA.rstrip("/") + self.path
+        for name, (base, token, _, paths) in MEDIA.items():
+            if self.path.startswith(f"/{name}/"):
+                rest = self.path[len(name) + 2:]
+                if not (base and token) or not paths.match(rest.split("?", 1)[0]):
+                    return NOT_ROUTED
+                return base.rstrip("/") + "/" + rest
         for prefix, base in UPSTREAMS.items():
             if self.path.startswith(prefix):
                 if prefix == "/kura/" and path[len(prefix):] not in KURA_PATHS:
@@ -97,7 +114,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if length:
             body = self.rfile.read(length)
         headers = {k: v for k, v in self.headers.items() if k.lower() not in HOP}
-        if not self.path.startswith(ROOMS):
+        media = next((m for name, m in MEDIA.items() if self.path.startswith(f"/{name}/")), None)
+        if media:
+            # Nothing of the browser's: no cookie, no Authorization; Shiori's token instead.
+            headers = {k: v for k, v in headers.items() if k.lower() not in ("cookie", "authorization", "x-plex-token")}
+            field, value = media[2].format(t=media[1]).split(" ", 1)
+            headers[field] = value.strip('"')
+        elif not self.path.startswith(ROOMS):
             for key in [k for k in headers if k.lower() == "cookie"]:
                 rest = without_session(headers.pop(key))
                 if rest:
@@ -177,6 +200,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         if AI_STUB and self.path.startswith("/shiori/ai/"):
             return self.ai_stub()
+        if any(self.path.startswith(f"/{name}/") for name in MEDIA):
+            return self.send_error(403)
         target = self.route()
         if target:
             self.proxy(target)

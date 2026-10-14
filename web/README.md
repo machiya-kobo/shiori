@@ -34,6 +34,7 @@ origin):
 | `/konbini/*` | Konbini, `/konbini` removed (only `api/cards`) |
 | `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/api/prefs`, `/kura/feed.xml` | Kura, `/kura` removed: your notes, and (signed in) your theme, appearance and text size. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
 | `/smallweb/*` | the small-web gateway, `/smallweb` removed (`api/search`, `api/save`): Gemini and Gopher, and the web app's Add Page (any http(s), gemini or gopher page; its `SMALLWEB_ORIGINS` must include this host's origin) |
+| `/jellyfin/*`, `/plex/*`, `/koito/*`, `/movary/*` | the media services ([docs/media.md](../docs/media.md)), the prefix removed, **GET only and only the read paths Shiori asks for** (configure.py's `MEDIA` lists them), with the host's own token added and the browser's cookies and `Authorization` dropped. The browser never holds a media token |
 | anything else | the Hister host as it is: Hister's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (Machiya's [shiori-feed](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-feed.md) and [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md), the reference compose's `shiori` profile; the pages ask for `/shiori/ai/*` only when built with `SHIORI_AI=1`) |
 
 Pass requests through **unchanged**. Do not add `Origin: hister://`: Hister
@@ -146,6 +147,8 @@ port shows the same (the sign-in mode and which services are on), and `/healthz`
 | `SHIORI_SMALLWEB_URL` | The small-web gateway (Gemini, Gopher): its API only | off |
 | `SHIORI_FEED_URL` | shiori-feed, behind Subscribe | off: no feed links |
 | `SHIORI_AI_URL` | shiori-ai, behind Summarize and AI Answer | off |
+| `SHIORI_JELLYFIN_URL`, `SHIORI_PLEX_URL`, `SHIORI_KOITO_URL`, `SHIORI_MOVARY_URL` | The media services ([docs/media.md](../docs/media.md)): each needs its token too, `SHIORI_<NAME>_TOKEN` or a file named by `SHIORI_<NAME>_TOKEN_FILE` (a Docker secret). The token goes only into nginx's request to that service (its config file is readable by its own user alone), never into a page. Give each a token of its own, read-only where the service has such a thing | off: no Media pill, the routes answer 404 |
+| `SHIORI_JELLYFIN_PUBLIC_URL`, `SHIORI_PLEX_PUBLIC_URL`, `SHIORI_KOITO_PUBLIC_URL`, `SHIORI_MOVARY_PUBLIC_URL` | Each media service's address for people's browsers ("Open in Jellyfin"). Movary's must be the address Movary itself writes into its poster links (its `APPLICATION_URL`) | the addresses above |
 | `SHIORI_LOGIN_URL` | hister-login, for one sign-in across Machiya's apps; `SHIORI_LOGIN_AUTH_URL` is its nginx auth address (default: the same host, port 8081) and `SHIORI_ROOM_COOKIE` this host's room cookie (default `__Host-machiya_sso_shiori`) | unset: Hister's own sign-in |
 | `SHIORI_SEARCH_PORT`, `SHIORI_APP_PORT` | The ports inside the container (1024 and up) | 8080, 8081 |
 | `SHIORI_SEARCH_PAGE_URL`, `SHIORI_APP_URL` | The sites' own addresses, as a browser reaches them (OpenSearch, the room cookie's origin) | `http://localhost:8080/`, `http://localhost:8081/` |
@@ -153,7 +156,7 @@ port shows the same (the sign-in mode and which services are on), and `/healthz`
 | `SHIORI_HISTER_HOST` | The `Host` Hister expects, if it isn't the address above | the address above |
 | `SHIORI_HISTER_VERSION` | The Hister release `/_shiori/status.json` names, when it isn't the one the image was built against | the image's |
 | `SHIORI_UPSTREAM_TLS_VERIFY` | `0` to accept an https upstream's certificate unchecked | `1` |
-| `SHIORI_TIMING_LOG` | A file (for example `/tmp/timing.log`) that gets one line per request for a metrics collector: `<epoch.ms> <host> <bucket> <status> <seconds>`. The bucket is one of `/searx/search`, `/searx/autocompleter`, `/search`, `/api/search`, `/api/preview`, `/kura/api/search`, `/kura/api/note`, `/smallweb/api/search`, `/shiori/ai` or `other`: never a query string, a search word or a client address. Rotate it with `mv`, then `nginx -c /opt/shiori/nginx.conf -s reopen` | off |
+| `SHIORI_TIMING_LOG` | A file (for example `/tmp/timing.log`) that gets one line per request for a metrics collector: `<epoch.ms> <host> <bucket> <status> <seconds>`. The bucket is one of `/searx/search`, `/searx/autocompleter`, `/search`, `/api/search`, `/api/preview`, `/kura/api/search`, `/kura/api/note`, `/smallweb/api/search`, `/shiori/ai`, `/media` or `other`: never a query string, a search word or a client address. Rotate it with `mv`, then `nginx -c /opt/shiori/nginx.conf -s reopen` | off |
 | `SHIORI_OBSIDIAN_VAULT`, `SHIORI_SOURCE_URL`, `SHIORI_STATUS_URL`, `SHIORI_FRONTENDS` | As in the build configuration (CLAUDE.md) | empty |
 
 **Signing in.** Without `SHIORI_LOGIN_URL` the sign-in is Hister's own: Hister's `/auth` page is proxied on this origin,

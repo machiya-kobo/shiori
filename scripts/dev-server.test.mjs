@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 const server = fileURLToPath(new URL('../web/dev-server.py', import.meta.url));
 
 /** What route() answers for each path: null (the build), '' (a 404) or the upstream URL. */
-function routes(paths) {
+function routes(paths, more = {}) {
   const script = `
 import importlib.util, json, sys, types
 spec = importlib.util.spec_from_file_location("dev_server", sys.argv[1])
@@ -18,7 +18,7 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 print(json.dumps([m.Handler.route(types.SimpleNamespace(path=p)) for p in json.loads(sys.argv[2])]))
 `;
-  const env = { ...process.env, HISTER_URL: 'https://hister.example/', KURA_URL: 'https://kura.example/', SEARXNG_URL: 'https://searx.example/' };
+  const env = { ...process.env, HISTER_URL: 'https://hister.example/', KURA_URL: 'https://kura.example/', SEARXNG_URL: 'https://searx.example/', ...more };
   return JSON.parse(execFileSync('python3', ['-c', script, server, JSON.stringify(paths)], { env, encoding: 'utf8' }));
 }
 
@@ -115,4 +115,18 @@ test("the Hister sign-in helper's cookie (machiya_sso) reaches only the rooms to
   const [kura, hister, searx] = throughProxy(['/kura/api/vaults', '/api/stats', '/searx/search'], cookie);
   assert.equal(kura.cookie, cookie);
   for (const other of [hister, searx]) assert.equal(other.cookie, 'machiya_theme=night');
+});
+
+test('Media: only shiori-web’s read paths, and only for a service with its address and token', () => {
+  const env = { KOITO_URL: 'https://koito.example/', KOITO_TOKEN: 'k1234567', PLEX_URL: 'https://plex.example:32400', PLEX_TOKEN: 'p1234567', MOVARY_URL: 'https://movary.example/' };
+  const asked = ['/koito/apis/web/v1/search?q=x', '/koito/image/abc/300x300.webp', '/plex/hubs/search?query=x&includeGuids=1', '/plex/library/metadata/1/thumb/2'];
+  assert.deepEqual(routes(asked, env), [
+    'https://koito.example/apis/web/v1/search?q=x',
+    'https://koito.example/image/abc/300x300.webp',
+    'https://plex.example:32400/hubs/search?query=x&includeGuids=1',
+    'https://plex.example:32400/library/metadata/1/thumb/2',
+  ]);
+  const refused = ['/koito/apis/listenbrainz/1/submit-listens', '/koito/apis/web/v1/user/apikeys', '/plex/library/sections', '/movary/api/authentication/token',
+    '/jellyfin/Users/Me', '/koito/', '/koito/apis/web/v1/../v1/user'];
+  routes(refused, env).forEach((target, i) => assert.equal(target, '', refused[i]));
 });

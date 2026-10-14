@@ -17,6 +17,8 @@ Each placeholder, the setting that fills it (an older name after a slash):
     __SHIORI_AI__              SHIORI_AI ("1": the host has the AI companion)
     __SHIORI_FEED__            SHIORI_FEED ("off": the host has no feed service)
     __SHIORI_SIGNIN__          SHIORI_SIGNIN ("hister": Hister's own sign-in page)
+    __SHIORI_MEDIA__           SHIORI_MEDIA ("jellyfin=https://…/,plex=…": the media services
+                               the host routes, each one's address for links)
 
 The values land inside single-quoted JavaScript strings: one holding a quote,
 a backslash or a control character is refused.
@@ -35,6 +37,7 @@ PLACEHOLDERS = (
     ("__SHIORI_AI__", ("SHIORI_AI",)),
     ("__SHIORI_FEED__", ("SHIORI_FEED",)),
     ("__SHIORI_SIGNIN__", ("SHIORI_SIGNIN",)),
+    ("__SHIORI_MEDIA__", ("SHIORI_MEDIA",)),
 )
 UNSAFE = re.compile(r"['\\\x00-\x1f\x7f]")
 

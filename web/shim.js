@@ -31,6 +31,9 @@
   const AI_BUILD = '__SHIORI_AI__';
   // The small-web gateway, when the build names one (else /smallweb/ isn't routed and the tab stays out).
   const SMALLWEB_BUILD = '__SHIORI_SMALLWEB_URL__';
+  // The media services this host routes (/jellyfin/, /plex/, /koito/, /movary/, each adding its token there), with
+  // each one's address for links: "jellyfin=https://…/,plex=…". Safari's own page has none, so no Media there.
+  const MEDIA_BUILD = '__SHIORI_MEDIA__';
 
   function load() {
     try {
@@ -65,7 +68,7 @@
     // Kura is set up when this host has a Kura home (the build's, or this
     // browser's): /kura/ is always routed, so its address alone can't say.
     // Notes From follows it until the person picks (S.notesSource).
-    return { ...merged, searxngURL: ROOT + 'searx/', konbiniAPIURL: ROOT + 'konbini/', aiURL: AI_BUILD === '1' ? ROOT + 'shiori/ai/' : '', kuraAPIURL: ROOT + 'kura/', kuraConfigured: !!merged.niwaURL, smallwebAPIURL: SMALLWEB_BUILD.startsWith('__') ? '' : ROOT + 'smallweb/' };
+    return { ...merged, searxngURL: ROOT + 'searx/', konbiniAPIURL: ROOT + 'konbini/', aiURL: AI_BUILD === '1' ? ROOT + 'shiori/ai/' : '', kuraAPIURL: ROOT + 'kura/', kuraConfigured: !!merged.niwaURL, smallwebAPIURL: SMALLWEB_BUILD.startsWith('__') ? '' : ROOT + 'smallweb/', mediaBuild: MEDIA_BUILD.startsWith('__') ? '' : MEDIA_BUILD };
   }
 
   const storage = {

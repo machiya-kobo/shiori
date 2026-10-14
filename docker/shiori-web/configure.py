@@ -36,7 +36,27 @@ OPTIONAL = {
     "SHIORI_SMALLWEB_URL": "the small-web gateway",
     "SHIORI_FEED_URL": "shiori-feed (Subscribe)",
     "SHIORI_AI_URL": "shiori-ai (Summarize, AI Answer)",
+    "SHIORI_JELLYFIN_URL": "Jellyfin (Media)",
+    "SHIORI_PLEX_URL": "Plex (Media)",
+    "SHIORI_KOITO_URL": "Koito (Media: music played)",
+    "SHIORI_MOVARY_URL": "Movary (Media: films watched)",
 }
+# The media services (docs/media.md): each on only with its address and a token. The token goes into nginx's own
+# request to the service and nowhere else (not the pages, config.json or the log). Their routes pass only the read
+# endpoints Shiori uses, GET only, signed in. name -> (the header that carries the token, the paths passed).
+MEDIA = {
+    "jellyfin": ('Authorization "MediaBrowser Token={t}"',
+                 r"Users/(Me|[0-9a-f]{32}/Items(/Latest)?)|Items/[0-9a-f]{32}/Images/Primary"),
+    "plex": ('X-Plex-Token "{t}"',
+             r"identity|hubs/search|library/recentlyAdded|library/metadata/[0-9]{1,12}/(thumb|art)/[0-9]{1,12}"),
+    "koito": ('Authorization "Token {t}"',
+              r"apis/web/v1/(search|listens|now-playing|top/(artists|albums|tracks)|(track|album|artist)/[0-9]{1,12})"
+              r"|image/[A-Za-z0-9-]{1,64}/[A-Za-z0-9._-]{1,32}"),
+    "movary": ('Authorization "Bearer {t}"',
+               r"api/(authentication/token|users/[A-Za-z0-9._-]{1,64}/(played|history|watchlist)/movies)"
+               r"|storage/images/movie/[0-9]{1,12}\.(jpg|jpeg|png|webp)"),
+}
+TOKEN_RE = re.compile(r"^[A-Za-z0-9._~+/=-]{8,512}$")
 UPSTREAM_RE = re.compile(r"^(https?)://([A-Za-z0-9._-]+|\[[0-9A-Fa-f:]+\])(?::([0-9]{1,5}))?/?$")
 PUBLIC_RE = re.compile(r"^https?://[^\s'\"\\<>`{}|^\x00-\x1f\x7f]+$")
 HOST_RE = re.compile(r"^[A-Za-z0-9._-]+(?::[0-9]{1,5})?$")
@@ -79,6 +99,23 @@ def public(env, name):
     value = env.get(name, "").strip()
     if value and not PUBLIC_RE.match(value):
         raise ConfigError(f"{name}: {value!r} is not an http(s):// address")
+    return value
+
+
+def media_token(env, name):
+    """A media service's token, from SHIORI_<NAME>_TOKEN or the file SHIORI_<NAME>_TOKEN_FILE names; '' when unset."""
+    var = f"SHIORI_{name.upper()}_TOKEN"
+    value, path = env.get(var, "").strip(), env.get(var + "_FILE", "").strip()
+    if value and path:
+        raise ConfigError(f"{var} and {var}_FILE are both set: give one")
+    if path:
+        try:
+            with open(path, encoding="utf-8") as f:
+                value = f.read().strip()
+        except OSError as e:
+            raise ConfigError(f"{var}_FILE: can't read {path!r} ({e.strerror})")
+    if value and not TOKEN_RE.match(value):
+        raise ConfigError(f"{var}: the token holds a character a token never has (a space, a quote, a ';')")
     return value
 
 
@@ -135,6 +172,19 @@ def settings(env):
         "hister": public(env, "SHIORI_HISTER_PUBLIC_URL"),
         "searxng": public(env, "SHIORI_SEARXNG_PUBLIC_URL"),
     }
+    s["media"] = {}
+    for name in MEDIA:
+        url_var = f"SHIORI_{name.upper()}_URL"
+        token = media_token(env, name)
+        if bool(s[url_var]) != bool(token):
+            have, need = (url_var, f"SHIORI_{name.upper()}_TOKEN") if s[url_var] else (f"SHIORI_{name.upper()}_TOKEN", url_var)
+            raise ConfigError(f"{have} is set but {need} isn't: Media needs both (docs/media.md)")
+        if not token:
+            continue
+        link = public(env, f"SHIORI_{name.upper()}_PUBLIC_URL") or env[url_var].strip()
+        if "," in link:
+            raise ConfigError(f"SHIORI_{name.upper()}_PUBLIC_URL: {link!r} holds a comma")
+        s["media"][name] = {"up": s[url_var], "token": token, "link": link.rstrip("/") + "/"}
     s["rooms"] = env.get("SHIORI_ROOMS", "").strip()
     s["source"] = public(env, "SHIORI_SOURCE_URL")
     s["status"] = public(env, "SHIORI_STATUS_URL")
@@ -163,6 +213,8 @@ def stamped(s):
         "SHIORI_AI": "1" if s["SHIORI_AI_URL"] else "",
         "SHIORI_FEED": "" if s["SHIORI_FEED_URL"] else "off",
         "SHIORI_SIGNIN": "hister" if s["signin"] == "hister" else "",
+        # Each media service's address for links; the pages reach it through this host's /<name>/.
+        "SHIORI_MEDIA": ",".join(f"{name}={m['link']}" for name, m in s["media"].items()),
     }
     return {k: v for k, v in values.items() if v}
 
@@ -314,6 +366,17 @@ location /_shiori/ {
         add("# The small-web gateway: its API only.\nlocation /smallweb/api/ {\n"
             + proxy("smallweb", s["SHIORI_SMALLWEB_URL"], verify, extra="    proxy_read_timeout 60s;\n", rewrite="rewrite ^/smallweb/(.*)$ /$1 break;") + "}\n")
     add("location /smallweb/ {\n    return 404;\n}\n")
+    # The media services: their read API only, GET only, signed in, with Shiori's token added here.
+    for name, (header, paths) in MEDIA.items():
+        m = s["media"].get(name)
+        if m:
+            add(f"# {OPTIONAL['SHIORI_' + name.upper() + '_URL']}: the read endpoints Shiori uses, with its token.\n"
+                f'location ~ "^/{name}/({paths})$" {{\n    limit_except GET {{ deny all; }}\n    {auth}\n'
+                + proxy(name, m["up"], verify, hide_set_cookie=True, rewrite=f"rewrite ^/{name}/(.*)$ /$1 break;",
+                        extra=("    proxy_set_header Authorization \"\";\n" if not header.startswith("Authorization") else "")
+                        + f"    proxy_set_header {header.format(t=m['token'])};\n    proxy_read_timeout 20s;\n")
+                + "}\n")
+        add(f"location /{name}/ {{\n    return 404;\n}}\n")
     # shiori-ai, shiori-feed: signed in, and a clean answer when they're off (never Hister's UI, which answers any path 200).
     if s["SHIORI_AI_URL"]:
         ai = s["SHIORI_AI_URL"]
@@ -398,6 +461,7 @@ map $request_uri $timing_path {
     ~^/api/search(?:[?/]|$)            /api/search;
     ~^/api/preview(?:[?/]|$)           /api/preview;
     ~^/shiori/ai/                      /shiori/ai;
+    ~^/(jellyfin|plex|koito|movary)/   /media;
     default                            other;
 }
 log_format timing '$msec $host $timing_path $status $request_time';
@@ -646,8 +710,12 @@ def main():
         if not args.check:
             os.makedirs(args.out, exist_ok=True)
             stamp_pages(s, args.dist, args.out, args.scripts)
-            with open(os.path.join(args.out, "sites.conf"), "w", encoding="utf-8") as f:
+            conf = os.path.join(args.out, "sites.conf")
+            # It holds the media tokens: readable by this user (nginx's) only.
+            fd = os.open(conf, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(sites(s, args.resolver or resolver_from(), os.path.join(args.out, "www")))
+            os.chmod(conf, 0o600)
     except ConfigError as e:
         sys.stderr.write(f"shiori-web: {e}\n")
         return 2

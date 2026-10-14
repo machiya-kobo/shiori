@@ -4,7 +4,7 @@
 
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { mkdtempSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, existsSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -131,7 +131,7 @@ test('with only Hister and SearXNG: both pages, SearXNG and Hister proxied, ever
     assert.match(conf, /location \/searx\/ \{[^}]*set \$searx http:\/\/searxng:8080;/s);
     assert.match(conf, /location \/ \{[^}]*set \$hister http:\/\/hister:4433;/s);
     // Off: their routes answer 404, never fall through to Hister (whose UI answers any path 200).
-    for (const route of ['/kura/', '/konbini/', '/smallweb/', '/shiori/ai/', '/shiori/', '/machiya/']) {
+    for (const route of ['/kura/', '/konbini/', '/smallweb/', '/shiori/ai/', '/shiori/', '/machiya/', '/jellyfin/', '/plex/', '/koito/', '/movary/']) {
       assert.match(conf, new RegExp(`location ${route.replace(/\//g, '\\/')} \\{[^}]*return 404`), route);
     }
     assert.doesNotMatch(conf, /set \$(kura|konbini|smallweb|ai|feed) /);
@@ -153,7 +153,8 @@ test('with only Hister and SearXNG: both pages, SearXNG and Hister proxied, ever
     assert.match(app, /__SHIORI_KURA_URL__/, 'unset: left for the page to read as empty');
     assert.doesNotMatch(x.read('www/search/index.html'), /__SHIORI_STATUS_URL__|data-shiori-status/);
     const cfg = JSON.parse(x.read('www/search/_shiori/config.json'));
-    assert.deepEqual(cfg.services, { hister: true, searxng: true, kura: false, konbini: false, smallweb: false, feed: false, ai: false });
+    assert.deepEqual(cfg.services, { hister: true, searxng: true, kura: false, konbini: false, smallweb: false, feed: false, ai: false,
+      jellyfin: false, plex: false, koito: false, movary: false });
     assert.equal(cfg.signin, 'hister');
   } finally {
     x.cleanup();
@@ -193,10 +194,84 @@ test('every optional service set: routed, stamped, and the status link and rooms
     assert.doesNotMatch(x.read('www/app/_shiori/app.js'), /__SHIORI_(AI|SMALLWEB_URL|SOURCE_URL)__/);
     assert.match(x.read('www/app/_shiori/app.js'), /fromBuild\('__SHIORI_FEED__'\) !== 'off'/);   // a feed service: left unstamped, so on
     const cfg = JSON.parse(x.read('www/app/_shiori/config.json'));
-    assert.deepEqual(cfg.services, { hister: true, searxng: true, kura: true, konbini: true, smallweb: true, feed: true, ai: true });
+    assert.deepEqual(cfg.services, { hister: true, searxng: true, kura: true, konbini: true, smallweb: true, feed: true, ai: true,
+      jellyfin: false, plex: false, koito: false, movary: false });
     assert.equal(cfg.links.status, 'https://status.example/');
   } finally {
     x.cleanup();
+  }
+});
+
+test('Media: each service needs its address and token; its read API only, GET only, signed in, the token never in a page', { skip }, () => {
+  const tokenFile = join(mkdtempSync(join(tmpdir(), 'shiori-web-tok-')), 'plex');
+  writeFileSync(tokenFile, 'plexTOKEN-from-file\n');
+  const media = {
+    SHIORI_JELLYFIN_URL: 'http://jellyfin:8096', SHIORI_JELLYFIN_TOKEN: 'jellyfinTOKEN123', SHIORI_JELLYFIN_PUBLIC_URL: 'https://jellyfin.example.ts.net',
+    SHIORI_PLEX_URL: 'https://plex:32400', SHIORI_PLEX_TOKEN_FILE: tokenFile, SHIORI_PLEX_PUBLIC_URL: 'https://plex.example.ts.net/',
+    SHIORI_KOITO_URL: 'http://koito:4110', SHIORI_KOITO_TOKEN: 'koitoTOKEN123',
+    SHIORI_MOVARY_URL: 'http://movary:80', SHIORI_MOVARY_TOKEN: 'movaryTOKEN123', SHIORI_MOVARY_PUBLIC_URL: 'https://movary.example.ts.net/',
+  };
+  const x = run({ ...BASE, ...media });
+  try {
+    assert.equal(x.r.status, 0, x.r.stderr);
+    assert.match(x.r.stdout, /on: {2}Jellyfin \(Media\), Plex \(Media\), Koito \(Media: music played\), Movary \(Media: films watched\)/);
+    const conf = x.sites();
+    const block = (name) => conf.match(new RegExp(`location ~ "\\^/${name}/\\(([^"]*)\\)\\$" \\{([^}]*\\}[^}]*)\\}`));
+    for (const [name, header] of [['jellyfin', 'Authorization "MediaBrowser Token=jellyfinTOKEN123"'], ['plex', 'X-Plex-Token "plexTOKEN-from-file"'],
+      ['koito', 'Authorization "Token koitoTOKEN123"'], ['movary', 'Authorization "Bearer movaryTOKEN123"']]) {
+      const b = block(name);
+      assert.ok(b, name);
+      assert.match(b[2], /limit_except GET \{ deny all; \}/, name);
+      assert.match(b[2], /auth_request \/_hister_auth;/, name);
+      assert.match(b[2], new RegExp(`rewrite \\^/${name}/\\(\\.\\*\\)\\$ /\\$1 break;`), name);
+      assert.ok(b[2].includes(`proxy_set_header ${header};`), name);
+      assert.match(b[2], /proxy_set_header Cookie "";/, name);
+      assert.match(b[2], /proxy_hide_header Set-Cookie;/, name);
+      // Only the read endpoints: never a write (Koito's submit-listens, Movary's plays, an admin path).
+      const paths = new RegExp(`^(${b[1]})$`);
+      assert.doesNotMatch('apis/listenbrainz/1/submit-listens', paths);
+      assert.doesNotMatch('System/Logs', paths);
+      assert.doesNotMatch('library/sections/1/refresh', paths);
+    }
+    assert.match(block('plex')[2], /proxy_set_header Authorization "";/);
+    const allowed = (name, path) => new RegExp(`^(${block(name)[1]})$`).test(path);
+    assert.ok(allowed('koito', 'apis/web/v1/top/albums') && allowed('koito', 'apis/web/v1/track/42') && allowed('koito', 'image/abc-123/300x300.webp'));
+    assert.ok(!allowed('koito', 'apis/web/v1/user/apikeys') && !allowed('koito', 'apis/web/v1/track/42/merge'));
+    assert.ok(allowed('movary', 'api/users/reader/played/movies') && allowed('movary', 'storage/images/movie/12.jpg') && allowed('movary', 'api/authentication/token'));
+    assert.ok(!allowed('movary', 'api/movies/search') && !allowed('movary', 'api/movies/add') && !allowed('movary', 'storage/images/../x.jpg'));
+    assert.ok(allowed('jellyfin', 'Users/Me') && allowed('jellyfin', `Users/${'a1'.repeat(16)}/Items/Latest`) && allowed('jellyfin', `Items/${'b2'.repeat(16)}/Images/Primary`));
+    assert.ok(!allowed('jellyfin', 'Auth/Keys') && !allowed('jellyfin', `Users/${'a1'.repeat(16)}/Policy`));
+    assert.ok(allowed('plex', 'hubs/search') && allowed('plex', 'library/metadata/101/thumb/1700') && !allowed('plex', 'library/sections'));
+    // The tokens stay in nginx's config, readable by its user only: never a page, config.json or the start-up line.
+    assert.equal(statSync(join(x.out, 'sites.conf')).mode & 0o777, 0o600);
+    for (const dir of ['search', 'app']) {
+      for (const file of readdirSync(join(x.out, 'www', dir), { recursive: true })) {
+        const path = join(x.out, 'www', dir, String(file));
+        if (statSync(path).isFile()) assert.doesNotMatch(readFileSync(path, 'latin1'), /TOKEN/, path);
+      }
+    }
+    assert.doesNotMatch(x.r.stdout, /TOKEN/);
+    const stamp = 'jellyfin=https://jellyfin.example.ts.net/,plex=https://plex.example.ts.net/,koito=http://koito:4110/,movary=https://movary.example.ts.net/';
+    assert.ok(x.read('www/search/_shiori/web-shim.js').includes(`const MEDIA_BUILD = '${stamp}';`));
+    assert.ok(x.read('www/app/_shiori/app.js').includes(`fromBuild('${stamp}')`));
+    const cfg = JSON.parse(x.read('www/app/_shiori/config.json'));
+    assert.deepEqual([cfg.services.jellyfin, cfg.services.plex, cfg.services.koito, cfg.services.movary], [true, true, true, true]);
+  } finally {
+    x.cleanup();
+  }
+  // Half set up, or a token that could break the config: refused, by name.
+  for (const [env, name] of [
+    [{ SHIORI_KOITO_URL: 'http://koito:4110' }, 'SHIORI_KOITO_TOKEN'], [{ SHIORI_PLEX_TOKEN: 'plexTOKEN123' }, 'SHIORI_PLEX_URL'],
+    [{ SHIORI_MOVARY_URL: 'http://m', SHIORI_MOVARY_TOKEN: 'a";\n}x' }, 'SHIORI_MOVARY_TOKEN'],
+    [{ SHIORI_JELLYFIN_URL: 'http://j', SHIORI_JELLYFIN_TOKEN: 'x1234567', SHIORI_JELLYFIN_TOKEN_FILE: tokenFile }, 'SHIORI_JELLYFIN_TOKEN'],
+    [{ SHIORI_JELLYFIN_URL: 'http://j', SHIORI_JELLYFIN_TOKEN_FILE: '/nonexistent/token' }, 'SHIORI_JELLYFIN_TOKEN_FILE'],
+    [{ SHIORI_KOITO_URL: 'http://k', SHIORI_KOITO_TOKEN: 'koitoTOKEN123', SHIORI_KOITO_PUBLIC_URL: 'https://a.example/,b' }, 'SHIORI_KOITO_PUBLIC_URL'],
+  ]) {
+    const bad = run({ ...BASE, ...env });
+    assert.equal(bad.r.status, 2, JSON.stringify(env));
+    assert.ok(bad.r.stderr.includes(name), `${name} in ${bad.r.stderr}`);
+    assert.doesNotMatch(bad.r.stderr, /TOKEN123|from-file/);
+    bad.cleanup();
   }
 });
 

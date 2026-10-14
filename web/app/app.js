@@ -210,6 +210,11 @@ const SOURCE_URL = S.sourceLink(fromBuild('__SHIORI_SOURCE_URL__'));
  * through it, so without it neither is offered.
  */
 const SMALLWEB = fromBuild('__SHIORI_SMALLWEB_URL__') !== '';
+/**
+ * The media services this host routes (SHIORI_MEDIA, "jellyfin=https://…/,…"; docs/media.md): each reached at its
+ * /<name>/ here, which adds its token, the address after "=" only for links. None: no Media pill.
+ */
+const MEDIA_STAMP = fromBuild('__SHIORI_MEDIA__');
 /** The build's privacy front ends (SHIORI_FRONTENDS: Redlib, Invidious…), for a page's menu. */
 const FRONTENDS = S.frontendInstances(fromBuild('__SHIORI_FRONTENDS__'));
 // A host with no feed service (the shiori-web image without SHIORI_FEED_URL) says so; unstamped builds keep the feeds.

@@ -3,7 +3,8 @@
 that says what it was asked (method, path, the headers it received). Not for anything but tests.
 
     fake-upstream.py            ports: 9001 Hister, 9002 SearXNG, 9003 Kura, 9004 Konbini, 9005 feed, 9006 AI,
-                                9007 small web, 9008 helper (public), 9009 helper (nginx auth)
+                                9007 small web, 9008 helper (public), 9009 helper (nginx auth),
+                                9010 Jellyfin, 9011 Plex, 9012 Koito, 9013 Movary
     FAKE_SEARX_JSON=403         SearXNG refuses format=json, as a stock one does
 """
 import json
@@ -13,7 +14,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SERVICES = {9001: "hister", 9002: "searxng", 9003: "kura", 9004: "konbini", 9005: "feed", 9006: "ai", 9007: "smallweb",
-            9008: "helper", 9009: "helper-auth"}
+            9008: "helper", 9009: "helper-auth", 9010: "jellyfin", 9011: "plex", 9012: "koito", 9013: "movary"}
 
 
 class Handler(BaseHTTPRequestHandler):

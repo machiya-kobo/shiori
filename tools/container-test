@@ -128,7 +128,11 @@ def main():
         }
         full = {**house, "SHIORI_KURA_URL": f"http://{FAKE}:9003", "SHIORI_KONBINI_URL": f"http://{FAKE}:9004",
                 "SHIORI_FEED_URL": f"http://{FAKE}:9005", "SHIORI_AI_URL": f"http://{FAKE}:9006",
-                "SHIORI_SMALLWEB_URL": f"http://{FAKE}:9007", "SHIORI_STATUS_URL": "https://status.example/"}
+                "SHIORI_SMALLWEB_URL": f"http://{FAKE}:9007", "SHIORI_STATUS_URL": "https://status.example/",
+                "SHIORI_JELLYFIN_URL": f"http://{FAKE}:9010", "SHIORI_JELLYFIN_TOKEN": "jellyfintoken1",
+                "SHIORI_PLEX_URL": f"http://{FAKE}:9011", "SHIORI_PLEX_TOKEN": "plextoken1",
+                "SHIORI_KOITO_URL": f"http://{FAKE}:9012", "SHIORI_KOITO_TOKEN": "koitotoken1",
+                "SHIORI_MOVARY_URL": f"http://{FAKE}:9013", "SHIORI_MOVARY_TOKEN": "movarytoken1"}
 
         print("== it refuses to start without Hister and SearXNG")
         e.start("shiori-web-bare", image)
@@ -169,7 +173,8 @@ def main():
         s, h, _ = get(p1, asset.group(0)) if asset else (0, {}, "")
         check(asset and "immutable" in h.get("cache-control", ""), "a versioned asset is cached immutably", str(asset))
         check("no-cache" in get(p1, "/")[1].get("cache-control", ""), "the page itself always revalidates")
-        for path in ("/kura/api/search?q=x", "/konbini/api/cards", "/smallweb/api/search?q=x", "/shiori/feed?q=x", "/shiori/ai/status", "/machiya/start"):
+        for path in ("/kura/api/search?q=x", "/konbini/api/cards", "/smallweb/api/search?q=x", "/shiori/feed?q=x", "/shiori/ai/status", "/machiya/start",
+                     "/jellyfin/Users/Me", "/plex/identity", "/koito/apis/web/v1/search?q=x", "/movary/api/authentication/token"):
             check(get(p1, path)[0] == 404, f"off: {path} answers 404")
         # SearXNG: reached, with Origin and Sec-Fetch-* exactly as the browser sent them, and no cookie.
         s, h, echo = get(p1, "/searx/search?q=x&format=json", {"Origin": "https://shiori.example", "Sec-Fetch-Site": "same-origin", "Cookie": "hister=goodabcdefgh; a=b"})
@@ -206,6 +211,32 @@ def main():
         s, h, echo = get(p1, "/shiori/feed?q=x", {"Cookie": "hister=goodabcdefgh; x=y"})
         check(s == 200 and echo.get("service") == "feed" and "cookie" not in echo.get("headers", {}), "with a good session it reaches the feed, with no cookie", str(echo)[:120])
         check(get(p1, "/shiori/ai/summarize", {"Cookie": "hister=bad"})[0] == 403, "and AI summaries too")
+        # Media: signed in, GET only, the read endpoints only, each with its own token and no cookie.
+        signed = {"Cookie": "hister=goodabcdefgh; machiya_session=roomsession123", "Authorization": "Bearer frombrowser"}
+        check(get(p1, "/koito/apis/web/v1/search?q=x")[0] == 403, "Media needs the sign-in: 403 without it")
+        for path, svc, header, want in (
+                ("/koito/apis/web/v1/search?q=x", "koito", "authorization", "Token koitotoken1"),
+                ("/movary/api/users/reader/played/movies?search=x", "movary", "authorization", "Bearer movarytoken1"),
+                ("/jellyfin/Users/Me", "jellyfin", "authorization", "MediaBrowser Token=jellyfintoken1"),
+                ("/plex/library/metadata/1/thumb/2", "plex", "x-plex-token", "plextoken1")):
+            s, h, echo = get(p1, path, signed)
+            hd = echo.get("headers", {}) if isinstance(echo, dict) else {}
+            check(s == 200 and echo.get("service") == svc and echo.get("path") == "/" + path.split("/", 2)[2],
+                  f"{path} reaches {svc}, the prefix stripped", str(echo)[:120])
+            check(hd.get(header) == want and "cookie" not in hd, f"{svc} gets Shiori's token and no cookie", str(hd)[:200])
+        s, h, echo = get(p1, "/plex/identity", signed)
+        check("authorization" not in echo.get("headers", {}), "Plex gets no browser Authorization")
+        for path in ("/koito/apis/listenbrainz/1/submit-listens", "/movary/api/movies/search?search=x", "/jellyfin/System/Logs", "/plex/library/sections"):
+            check(get(p1, path, signed)[0] == 404, f"{path}: not a read Shiori makes, 404")
+        c = http.client.HTTPConnection("127.0.0.1", p1, timeout=10)
+        c.request("POST", "/koito/apis/web/v1/search?q=x", body=b"{}", headers=signed)
+        status = c.getresponse().status
+        c.close()
+        check(status == 403, "a POST to a media route is refused", status)
+        conf = e.run("exec", "shiori-web-full", "sh", "-c", "stat -c %a /tmp/shiori/sites.conf", check_=False).stdout.strip()
+        check(conf == "600", "nginx's config, holding the tokens, is its user's alone", conf)
+        check("koitotoken1" not in get(p1, "/_shiori/web-shim.js")[2] and "koitotoken1" not in str(get(p1, "/_shiori/config.json")[2]),
+              "no token in a page or config.json")
         s, h, echo = get(p1, "/kura/api/search?q=x", {"Cookie": "hister=goodabcdefgh; machiya_session=roomsession123"})
         check(echo.get("headers", {}).get("cookie") == "machiya_session=roomsession123", "Kura gets only the rooms' session cookie")
         # The timing log: a fixed bucket per request, never the words searched; a collector can rotate it as the
