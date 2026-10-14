@@ -318,6 +318,21 @@ struct LabellingState: Codable {
     /// Labels) to stay undoable.
     static let appliedKept = 1000
 
+    /// Whether the page has a label now (an edit here, or Hister's own
+    /// answer); nil when Hister didn't answer.
+    private func labelledMeanwhile(_ url: String, app: AppState) async -> Bool? {
+        if let edited = app.labelEdits[url], !edited.isEmpty { return true }
+        guard let client = app.client, let preview = try? await client.preview(of: url) else { return nil }
+        return !preview.label.isEmpty
+    }
+
+    /// A page the user labelled: its waiting suggestion goes.
+    func dropWaiting(_ url: String) {
+        guard state.pending.contains(where: { $0.url == url }) else { return }
+        state.pending.removeAll { $0.url == url }
+        save()
+    }
+
     private func revisitWaiting(app: AppState, excluded: Set<String>) async {
         let held = LabelStat.trust(state.stats).held
         for suggestion in state.pending {
@@ -326,6 +341,22 @@ struct LabellingState: Codable {
                 state.pending.removeAll { $0.url == suggestion.url }
                 state.seen[suggestion.url] = nil
                 continue
+            }
+            let applies = (app.ai.applyAppleLabels && suggestion.appleLabel.map { !excluded.contains($0) && !held.contains($0) } == true)
+                || (suggestion.cloudLabel != nil && suggestion.cloudLabel == suggestion.appleLabel
+                    && !excluded.contains(suggestion.cloudLabel ?? "") && LabelPolicy.trusted.contains(.anthropic))
+            // Before writing, as the first pass does: a page labelled
+            // meanwhile (by the user, or another device) keeps its label, and
+            // its suggestion goes. Undo would otherwise blank theirs.
+            if applies {
+                switch await labelledMeanwhile(suggestion.url, app: app) {
+                case .none: return  // Hister didn't answer: next run.
+                case .some(true):
+                    state.pending.removeAll { $0.url == suggestion.url }
+                    state.seen[suggestion.url] = Date()
+                    continue
+                case .some(false): break
+                }
             }
             if app.ai.applyAppleLabels, let label = suggestion.appleLabel, !excluded.contains(label), !held.contains(label) {
                 guard (try? await app.setLabel(label, url: suggestion.url)) != nil else { return }

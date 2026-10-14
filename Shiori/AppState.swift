@@ -792,8 +792,11 @@ final class AppState {
         labelEdits[document.url] ?? document.label
     }
 
+    /// The user's own label (Edit Label): any suggestion waiting for the
+    /// page goes, so Label New Pages never writes over it.
     func setLabel(_ label: String, for document: StoredPage) async throws(HisterError) {
         try await setLabel(label, url: document.url)
+        labeller.dropWaiting(document.url)
     }
 
     /// By address: automatic labelling and its Undo hold no StoredPage.
