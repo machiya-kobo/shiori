@@ -452,23 +452,14 @@ struct MediaArt: View {
         .task(id: item.image) { image = await load() }
     }
 
+    /// The art seen this session, in memory only (never written to the
+    /// device), at the card's size (`Thumbnails`).
     private func load() async -> Image? {
         guard app.searchPage.previewImages, !item.image.isEmpty, let client = app.media else { return nil }
-        if let cached = MediaArtCache.shared.object(forKey: item.image as NSString) { return Image(platformImage: cached) }
-        guard let data = await client.imageData(item.image), let platform = PlatformImage(data: data) else { return nil }
-        MediaArtCache.shared.setObject(platform, forKey: item.image as NSString)
-        return Image(platformImage: platform)
+        let address = item.image
+        let image = await Thumbnails.shared.image(address, points: poster ? 60 : 48) { await client.imageData(address) }
+        return image.map(Image.init(platformImage:))
     }
-}
-
-/// The art seen this session, in memory only (never written to the device).
-@MainActor
-enum MediaArtCache {
-    static let shared: NSCache<NSString, PlatformImage> = {
-        let cache = NSCache<NSString, PlatformImage>()
-        cache.countLimit = 300
-        return cache
-    }()
 }
 
 /// All's Your Media: the top five under a heading in the Media pill's
@@ -513,10 +504,14 @@ struct MediaShelvesView: View {
     @State private var shelves: MediaShelves?
     @State private var filter = Media.Filter()
 
-    /// Everything the shelves hold, one card per item (Recently Listened's listens merged with the top lists' counts).
-    private var everything: [MediaItem] {
-        guard let s = shelves else { return [] }
-        return Media.merge([s.added, s.nowPlaying, s.listens, s.watched, s.artists, s.albums, s.tracks, s.watchlist])
+    /// Everything the shelves hold, one card per item (Recently Listened's
+    /// listens merged with the top lists' counts). Merged once when the
+    /// shelves arrive, not on every redraw: the merge compares each item
+    /// with the rest.
+    @State private var everything: [MediaItem] = []
+
+    private static func merged(_ s: MediaShelves) -> [MediaItem] {
+        Media.merge([s.added, s.nowPlaying, s.listens, s.watched, s.artists, s.albums, s.tracks, s.watchlist])
     }
 
     var body: some View {
@@ -540,6 +535,7 @@ struct MediaShelvesView: View {
         guard let client = app.media else { return }
         let fresh = await client.browse(period: period)
         guard !Task.isCancelled else { return }
+        everything = Self.merged(fresh)
         shelves = fresh
     }
 
@@ -621,6 +617,7 @@ struct MediaSettingsPage: View {
     @State private var addresses: [MediaService: String] = [:]
     @State private var tokens: [MediaService: String] = [:]
     @State private var revealed: Set<MediaService> = []
+    @Environment(\.scenePhase) private var scenePhase
     @State private var checks: [MediaService: MediaClient.Check] = [:]
     @State private var checking: Set<MediaService> = []
     @State private var loaded = false
@@ -648,6 +645,9 @@ struct MediaSettingsPage: View {
         .listRowBackground(palette.surface)
         .onAppear(perform: load)
         .onDisappear(perform: saveAddresses)
+        // Tokens hidden again before the app switcher's snapshot (its cover
+        // is under the Settings sheet).
+        .onChange(of: scenePhase) { _, phase in if phase != .active { revealed = [] } }
         ForEach(Self.order, id: \.self) { service in
             Section {
                 // Its switch first, as every Settings section: off keeps the

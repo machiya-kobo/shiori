@@ -223,10 +223,10 @@ struct WebRow: View {
     let result: WebResult
     let query: String
     let saved: String?
-    @Environment(\.colorScheme) private var scheme
     @Environment(\.palette) private var palette
     @ScaledMetric(relativeTo: .headline) private var scaledThumb: CGFloat = 64
     @Environment(\.macTextScale) private var macScale
+    @State private var image: Image?
     private var thumb: CGFloat { scaledThumb * macScale }
 
     var body: some View {
@@ -260,8 +260,8 @@ struct WebRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if let thumbnail = result.thumbnail {
-                AsyncImage(url: thumbnail) { phase in
-                    if let image = phase.image {
+                Group {
+                    if let image {
                         image.resizable().scaledToFill()
                     } else {
                         palette.raised
@@ -270,6 +270,17 @@ struct WebRow: View {
                 .frame(width: thumb, height: thumb)
                 .clipShape(.rect(cornerRadius: 10))
                 .accessibilityHidden(true)
+                // Downloaded once, decoded off the main actor at the size
+                // it's drawn, kept for the session (`Thumbnails`).
+                .task(id: thumbnail) {
+                    let size = thumb
+                    image = await Thumbnails.shared.image(thumbnail.absoluteString, points: size) {
+                        guard let (data, response) = try? await HisterClient.defaultSession.data(from: thumbnail),
+                              (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) ?? false
+                        else { return nil }
+                        return data
+                    }.map(Image.init(platformImage:))
+                }
             }
         }
         .padding(.vertical, 4)
@@ -281,8 +292,9 @@ struct WebRow: View {
 
     /// Bolded once per result, query and palette, not on every redraw.
     private func bolded(_ text: String) -> AttributedString {
-        // The palette follows the colour scheme, so the scheme keys it.
-        let key = "\(result.url)\u{1F}\(query)\u{1F}\(scheme)"
+        // The hits take the theme's text colour: the theme keys it (two
+        // themes share a scheme, so the scheme alone kept the old colour).
+        let key = "\(result.url)\u{1F}\(query)\u{1F}\(palette.textStyleKey)"
         if let cached = Self.boldedCache[key] { return cached }
         let out = makeBolded(text)
         if Self.boldedCache.count > 500 { Self.boldedCache.removeAll() }
