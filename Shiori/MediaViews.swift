@@ -145,7 +145,8 @@ struct MediaControls: View {
                 }
             }
             .padding(.horizontal)
-            .padding(.top, 6)
+            // Level with the Code pill's first row under the pills (it sat 3 points lower).
+            .padding(.top, 2)
             .padding(.bottom, 8)
         }
         .fadesOverflow()
