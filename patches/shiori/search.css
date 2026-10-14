@@ -255,6 +255,9 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
   overflow-x: auto; scrollbar-width: none; padding: 2px 0;
 }
 #categories::-webkit-scrollbar { display: none; }
+/* From 760px, tabs that don't fit wrap to a second row (every one in sight,
+   as the apps' and the web app's pills); a phone keeps one scrolling row. */
+@media (min-width: 760px) { #categories { flex-wrap: wrap; overflow-x: visible; } }
 [data-fade] { --fade: 28px; }
 [data-fade="end"] {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);

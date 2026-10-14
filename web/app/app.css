@@ -202,6 +202,10 @@ body.phone-preview #preview-column { display: flex; border: 0; }
    colour, outlined, the chosen one filled. */
 .segments { display: flex; flex-wrap: nowrap; gap: 5px; margin: 0 12px 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
 .segments::-webkit-scrollbar { display: none; }
+/* From 760px (the sidebar's layout, as the Mac and iPad apps): pills that
+   don't fit wrap to a second row, every one in sight; one row again once the
+   column is wide enough. A phone keeps one sideways-scrolling row. */
+@media (min-width: 760px) { .segments { flex-wrap: wrap; overflow-x: visible; } }
 /* An end with more to scroll to fades out (fadeEdges() sets data-fade), as
    the search page's tabs. */
 [data-fade] { --fade: 28px; }

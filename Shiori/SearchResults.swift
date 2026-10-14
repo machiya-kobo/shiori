@@ -600,13 +600,43 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
     let tint: (Choice) -> Palette.Tint
     let count: (Choice) -> Int?
     @Environment(\.palette) private var palette
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
     @State private var rowBelow = false
+
+    /// Pills that don't fit wrap to a second row on the Mac and an iPad's
+    /// wide layout, so every one is in sight (one row again once the column
+    /// is wide enough); the iPhone keeps one sideways-scrolling row.
+    private var wraps: Bool {
+        #if os(iOS)
+        sizeClass == .regular
+        #else
+        true
+        #endif
+    }
 
     func body(content: Content) -> some View {
         content
             .onPreferenceChange(ControlsRowKey.self) { rowBelow = $0 }
             .topBar {
                 VStack(spacing: 0) {
+                    if wraps {
+                        PillFlow(spacing: 6) {
+                            ForEach(choices) { pill($0) }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        #if os(macOS)
+                        .padding(.top, 4)
+                        .padding(.bottom, 10)
+                        #else
+                        .padding(.top, 8)
+                        .padding(.bottom, 6)
+                        #endif
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel(label)
+                    } else {
                     // Scrolls sideways when the pills don't fit (a phone
                     // with Small Web on, the largest text sizes), rather
                     // than truncating; the chosen one is kept in view.
@@ -636,6 +666,7 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
                     }
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(label)
+                    }
                     if !rowBelow { Divider() }
                 }
                 // The theme's background before iOS 26; there, the scroll
@@ -660,6 +691,49 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
     private func pillText(_ choice: Choice) -> Text {
         guard let n = count(choice) else { return Text(title(choice)) }
         return Text(title(choice)) + Text(" \(n.formatted())").fontWeight(.regular)
+    }
+}
+
+/// Pills in rows: as many as fit on each, the rest on the next (6 points
+/// apart both ways), each row starting at the leading edge.
+struct PillFlow: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = rows(for: proposal.width ?? .infinity, subviews)
+        let width = rows.map { row in row.reduce(0) { $0 + $1.width } + spacing * CGFloat(max(0, row.count - 1)) }.max() ?? 0
+        let height = rows.map { $0.map(\.height).max() ?? 0 }.reduce(0, +) + spacing * CGFloat(max(0, rows.count - 1))
+        return CGSize(width: proposal.width.map { min($0, width) } ?? width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        var index = 0
+        for row in rows(for: bounds.width, subviews) {
+            var x = bounds.minX
+            let height = row.map(\.height).max() ?? 0
+            for size in row {
+                subviews[index].place(at: CGPoint(x: x, y: y + (height - size.height) / 2), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+                index += 1
+            }
+            y += height + spacing
+        }
+    }
+
+    private func rows(for width: CGFloat, _ subviews: Subviews) -> [[CGSize]] {
+        var rows: [[CGSize]] = [[]]
+        var x: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if !rows[rows.count - 1].isEmpty, x + size.width > width {
+                rows.append([])
+                x = 0
+            }
+            rows[rows.count - 1].append(size)
+            x += size.width + spacing
+        }
+        return rows
     }
 }
 
