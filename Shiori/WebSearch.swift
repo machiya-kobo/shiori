@@ -12,6 +12,9 @@ final class WebResultsModel {
     private(set) var unanswered: [String] = []
     private(set) var phase: ResultsModel.Phase = .idle
     private(set) var isLoadingMore = false
+    /// The next page didn't come: said under the list, with Try Again
+    /// (never retried by itself: each web search counts).
+    private(set) var moreFailed = false
     /// What Hister has of these results: URL → label ("" = visited).
     private(set) var saved: [String: String] = [:]
     /// How many results the first page brought: All spreads yours over
@@ -69,13 +72,24 @@ final class WebResultsModel {
         return WikipediaFirst.ordered(results, article: article, found: found)
     }
 
+    /// Try Again after a next page that didn't come.
+    func retryMore(searx: SearxClient?, hister: HisterClient?) async {
+        guard moreFailed, let last = results.last else { return }
+        moreFailed = false
+        await loadMoreIfNeeded(after: last, searx: searx, hister: hister)
+    }
+
     func loadMoreIfNeeded(after result: WebResult, searx: SearxClient?, hister: HisterClient?) async {
-        guard let searx, !exhausted, !isLoadingMore,
+        guard let searx, !exhausted, !isLoadingMore, !moreFailed,
             let index = results.lastIndex(where: { $0.url == result.url }), index >= results.count - 5
         else { return }
         isLoadingMore = true
         defer { isLoadingMore = false }
-        guard let next = try? await searx.search(query, page: page + 1) else { return }
+        moreFailed = false
+        guard let next = try? await searx.search(query, page: page + 1) else {
+            moreFailed = true
+            return
+        }
         page += 1
         let fresh = next.results.filter { known.insert($0.url).inserted }
         exhausted = fresh.isEmpty
@@ -173,6 +187,11 @@ struct WebResultsList: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .listRowBackground(palette.background)
+            } else if model.moreFailed {
+                // Asked again only on a tap: each web search counts.
+                ListFailureRow(text: "More didn't load.") {
+                    Task { await model.retryMore(searx: app.searx, hister: app.client) }
+                }
             }
         }
         .listStyle(.plain)

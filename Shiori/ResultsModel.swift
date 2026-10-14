@@ -106,6 +106,12 @@ final class ResultsModel {
     private(set) var total = 0
     private(set) var phase: Phase = .idle
     private(set) var isLoadingMore = false
+    /// The next page didn't come: the list says so, with Try Again
+    /// (`retryMore`), rather than just ending.
+    private(set) var moreFailed = false
+    /// A reload failed while rows were on screen: they stay, and the list
+    /// says the reload didn't work.
+    private(set) var refreshFailure: HisterError?
     /// Results you opened before for this search (first page), shown first.
     private(set) var opened: [OpenedResult] = []
     /// Counts per filter value, from the first page.
@@ -306,7 +312,7 @@ final class ResultsModel {
     }
 
     /// The Library's All, first page: a page of each, placed by date.
-    private func loadMerged(using client: HisterClient, generation mine: Int) async {
+    private func loadMerged(using client: HisterClient, generation mine: Int, keeping kept: NewestFirstMerge? = nil) async {
         do {
             async let notesPage = try? fetchNotes(client, query, sort: .newest)
             let pages = try await client.search(query, sort: .newest, options: options)
@@ -324,11 +330,18 @@ final class ResultsModel {
             opened = []
             if pages.facets != nil || !options.facets { facets = pages.facets }
             phase = .loaded
+            refreshFailure = nil
             savedOnline()
         } catch .cancelled {
         } catch {
             guard mine == generation else { return }
-            if documents.isEmpty, !showOffline(for: error) { phase = .failed(error) }
+            if documents.isEmpty {
+                if !showOffline(for: error) { phase = .failed(error) }
+            } else {
+                // A reload that failed kept the rows; paging goes on from them.
+                merge = kept
+                refreshFailure = error
+            }
         }
     }
 
@@ -339,9 +352,13 @@ final class ResultsModel {
         isLoadingMore = true
         defer { isLoadingMore = false }
         let mine = generation
+        moreFailed = false
         for _ in 0..<6 where !merge.finished {
             if merge.needsPages, let key = merge.pagesKey {
-                guard let page = try? await client.search(query, sort: .newest, pageKey: key, options: options) else { return }
+                guard let page = try? await client.search(query, sort: .newest, pageKey: key, options: options) else {
+                    if mine == generation { moreFailed = true }
+                    return
+                }
                 merge.add(pages: page.documents, next: page.nextPageKey)
             }
             if merge.needsNotes, let key = merge.notesKey {
@@ -379,10 +396,11 @@ final class ResultsModel {
             opened = openedInline ? [] : first.opened
             if first.facets != nil || !options.facets { facets = first.facets }
             phase = .loaded
+            refreshFailure = nil
         } catch .cancelled {
         } catch {
             guard mine == generation else { return }
-            if documents.isEmpty { phase = .failed(error) }
+            if documents.isEmpty { phase = .failed(error) } else { refreshFailure = error }
         }
     }
 
@@ -440,9 +458,12 @@ final class ResultsModel {
         generation += 1
         let mine = generation
         if documents.isEmpty { phase = .loading }
+        moreFailed = false
+        // Kept for a failed reload: the rows stay, and so does their paging.
+        let kept = merge
         merge = nil
         if merges {
-            await loadMerged(using: client, generation: mine)
+            await loadMerged(using: client, generation: mine, keeping: kept)
             return
         }
         if loadsAll {
@@ -465,14 +486,19 @@ final class ResultsModel {
             opened = openedInline ? [] : page.opened
             if page.facets != nil || !options.facets { facets = page.facets }
             phase = .loaded
+            refreshFailure = nil
             savedOnline()
         } catch .cancelled {
             // A newer load (or leaving the screen) superseded this one.
         } catch {
             guard mine == generation else { return }
-            // Keep what is already on screen; only an empty list shows the
-            // error, or the Library's offline copy.
-            if documents.isEmpty, !showOffline(for: error) { phase = .failed(error) }
+            // Keep what is already on screen, and say the reload failed;
+            // only an empty list shows the error, or the Library's offline copy.
+            if documents.isEmpty {
+                if !showOffline(for: error) { phase = .failed(error) }
+            } else {
+                refreshFailure = error
+            }
         }
     }
 
@@ -529,6 +555,9 @@ final class ResultsModel {
 
     /// Fetches the next page when `document` is near the end of the list.
     func loadMoreIfNeeded(after document: StoredPage, using client: HisterClient?, tries: Int = 0) async {
+        // After a failure, only Try Again asks (`retryMore`), not every row
+        // that scrolls into view.
+        guard !moreFailed else { return }
         if merge != nil {
             guard let client, let index = documents.lastIndex(where: { $0.url == document.url }), index >= documents.count - 5
             else { return }
@@ -541,9 +570,12 @@ final class ResultsModel {
         isLoadingMore = true
         defer { isLoadingMore = false }
         let mine = generation
-        guard let page = try? await search(client, query, sort: sort, pageKey: key, options: options),
-            mine == generation
-        else { return }
+        moreFailed = false
+        guard let page = try? await search(client, query, sort: sort, pageKey: key, options: options) else {
+            if mine == generation { moreFailed = true }
+            return
+        }
+        guard mine == generation else { return }
         let added = append(page.documents)
         nextPageKey = page.nextPageKey
         // Nothing new (all seen already): keep going.
@@ -551,5 +583,12 @@ final class ResultsModel {
             isLoadingMore = false
             await loadMoreIfNeeded(after: last, using: client, tries: tries + 1)
         }
+    }
+
+    /// Try Again after a next page that didn't come.
+    func retryMore(using client: HisterClient?) async {
+        guard moreFailed, let last = documents.last else { return }
+        moreFailed = false
+        await loadMoreIfNeeded(after: last, using: client)
     }
 }

@@ -13,6 +13,10 @@ final class OpenedModel {
     private(set) var entries: [OpenedEntry] = []
     private(set) var phase = Phase.idle
     private(set) var isLoadingMore = false
+    /// The next page didn't come: said under the list, with Try Again.
+    private(set) var moreFailed = false
+    /// A reload failed with entries on screen: they stay, and it's said.
+    private(set) var refreshFailure: HisterError?
     private var next: OpenedPage.Cursor?
     var byDay = true
     /// A search's text: only what you opened that matches (Hister's filter).
@@ -33,20 +37,33 @@ final class OpenedModel {
             entries = page.entries
             next = page.next
             phase = .loaded
+            refreshFailure = nil
+            moreFailed = false
         } catch .cancelled {
         } catch {
-            if entries.isEmpty { phase = .failed(error) }
+            if entries.isEmpty { phase = .failed(error) } else { refreshFailure = error }
         }
     }
 
     func loadMoreIfNeeded(after entry: OpenedEntry, using client: HisterClient?) async {
-        guard let client, let cursor = next, !isLoadingMore, entry.id == entries.last?.id else { return }
+        guard let client, let cursor = next, !isLoadingMore, !moreFailed, entry.id == entries.last?.id else { return }
         isLoadingMore = true
         defer { isLoadingMore = false }
-        guard let page = try? await client.openedHistory(filter: filter, after: cursor) else { return }
+        moreFailed = false
+        guard let page = try? await client.openedHistory(filter: filter, after: cursor) else {
+            moreFailed = true
+            return
+        }
         let known = Set(entries.map(\.id))
         entries += page.entries.filter { !known.contains($0.id) }
         next = page.next
+    }
+
+    /// Try Again after a next page that didn't come.
+    func retryMore(using client: HisterClient?) async {
+        guard moreFailed, let last = entries.last else { return }
+        moreFailed = false
+        await loadMoreIfNeeded(after: last, using: client)
     }
 
     func remove(_ entry: OpenedEntry) {
@@ -131,6 +148,9 @@ struct OpenedListView: View {
 
     private var list: some View {
         ResultsListContainer {
+            if let failure = model.refreshFailure {
+                ListFailureRow(text: "Couldn't reload: \(failure.userMessage)") { Task { await model.load(using: app.client) } }
+            }
             if model.byDay {
                 ForEach(model.sections(), id: \.id) { section in
                     Section {
@@ -151,6 +171,8 @@ struct OpenedListView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .listRowBackground(palette.background)
+            } else if model.moreFailed {
+                ListFailureRow(text: "More didn't load.") { Task { await model.retryMore(using: app.client) } }
             }
         }
         .listStyle(.plain)

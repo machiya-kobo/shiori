@@ -13,6 +13,8 @@ final class SmallWebModel {
     private(set) var failures: [String] = []
     private(set) var phase: ResultsModel.Phase = .idle
     private(set) var isLoadingMore = false
+    /// The next page didn't come: said under the list, with Try Again.
+    private(set) var moreFailed = false
     private var page = 1
     private var hasMore = false
     private var known = Set<String>()
@@ -41,13 +43,24 @@ final class SmallWebModel {
         }
     }
 
+    /// Try Again after a next page that didn't come.
+    func retryMore(using client: SmallWebClient?) async {
+        guard moreFailed, let last = results.last else { return }
+        moreFailed = false
+        await loadMoreIfNeeded(after: last, using: client)
+    }
+
     func loadMoreIfNeeded(after result: SmallWebResult, using client: SmallWebClient?) async {
-        guard let client, hasMore, !isLoadingMore,
+        guard let client, hasMore, !isLoadingMore, !moreFailed,
             let index = results.lastIndex(where: { $0.url == result.url }), index >= results.count - 5
         else { return }
         isLoadingMore = true
         defer { isLoadingMore = false }
-        guard let next = try? await client.search(query, page: page + 1) else { return }
+        moreFailed = false
+        guard let next = try? await client.search(query, page: page + 1) else {
+            moreFailed = true
+            return
+        }
         page += 1
         let fresh = next.results.filter { known.insert($0.url).inserted }
         hasMore = next.hasMore && !fresh.isEmpty
@@ -128,6 +141,8 @@ struct SmallWebResultsList: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .listRowBackground(palette.background)
+            } else if model.moreFailed {
+                ListFailureRow(text: "More didn't load.") { Task { await model.retryMore(using: app.smallweb) } }
             }
         }
         .listStyle(.plain)

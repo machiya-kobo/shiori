@@ -153,6 +153,9 @@ struct ResultsList<Empty: View>: View {
 
     private var list: some View {
         ResultsListContainer(topRequests: topRequests, top: visible.first?.id) {
+            if let failure = model.refreshFailure {
+                ListFailureRow(text: "Couldn't reload: \(failure.userMessage)") { Task { await load() } }
+            }
             if let respelled = model.respelledAs {
                 Text("Showing results for “\(respelled)”")
                     .textStyle(.callout)
@@ -188,12 +191,39 @@ struct ResultsList<Empty: View>: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .listRowBackground(palette.background)
+            } else if model.moreFailed {
+                ListFailureRow(text: "More didn't load.") { Task { await model.retryMore(using: app.client) } }
             }
         }
         .listStyle(.plain)
         .themedBackground()
     }
 
+}
+
+/// A list part that didn't load (the next page, a reload with rows on
+/// screen), said in the list with Try Again: it used to just end, or keep
+/// the old rows without a word. Announced for VoiceOver.
+struct ListFailureRow: View {
+    let text: String
+    let retry: () -> Void
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        HStack {
+            Label(text, systemImage: "exclamationmark.triangle")
+                .textStyle(.footnote)
+                .foregroundStyle(palette.secondaryText)
+            Spacer()
+            Button("Try Again", action: retry)
+                .buttonStyle(.borderless)
+                .textStyle(.footnote, weight: .semibold)
+                .frame(minHeight: 44)
+                .contentShape(.rect)
+        }
+        .listRowBackground(palette.background)
+        .onAppear { AccessibilityNotification.Announcement(text).post() }
+    }
 }
 
 /// The rest of a run of pages from one site (`SiteRuns`), folded into a
