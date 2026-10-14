@@ -186,7 +186,8 @@ public struct SmallWebResult: Sendable, Hashable, Identifiable, Decodable {
 
     /// The canonical address without its scheme, for a row's second line.
     public var place: String {
-        url.replacingOccurrences(of: #"^(gemini|gopher)://"#, with: "", options: .regularExpression)
+        for scheme in ["gemini://", "gopher://"] where url.hasPrefix(scheme) { return String(url.dropFirst(scheme.count)) }
+        return url
     }
 
     /// "TLGS · Kennedy": the engines that found it.

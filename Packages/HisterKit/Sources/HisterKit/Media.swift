@@ -664,12 +664,14 @@ public enum Media {
 
     /// A title or name reduced for matching: no case, accents, punctuation
     /// or spaces; "&" reads as "and".
+    // Made once: `norm` runs for every pair a merge compares.
+    private static let marks: Set<Unicode.GeneralCategory> = [.nonspacingMark, .spacingMark, .enclosingMark]
+    private static let letters: Set<Unicode.GeneralCategory> = [
+        .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter,
+        .decimalNumber, .letterNumber, .otherNumber,
+    ]
+
     public static func norm(_ s: String) -> String {
-        let marks: Set<Unicode.GeneralCategory> = [.nonspacingMark, .spacingMark, .enclosingMark]
-        let letters: Set<Unicode.GeneralCategory> = [
-            .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter,
-            .decimalNumber, .letterNumber, .otherNumber,
-        ]
         var noMarks = String.UnicodeScalarView()
         noMarks.append(contentsOf: s.decomposedStringWithCompatibilityMapping.unicodeScalars.filter { !marks.contains($0.properties.generalCategory) })
         let lowered = String(noMarks).lowercased().replacingOccurrences(of: "&", with: " and ")

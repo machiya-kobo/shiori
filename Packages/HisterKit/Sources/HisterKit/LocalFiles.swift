@@ -27,7 +27,8 @@ public enum LocalFiles {
     /// A watched file, known by its address (Hister's `type: 1`, domain
     /// `local`).
     public static func isLocalFile(_ url: String) -> Bool {
-        url.lowercased().hasPrefix("file://")
+        // The scheme alone, not the whole address lowercased (asked per row, several times).
+        url.prefix(7).lowercased() == "file://"
     }
 
     /// Hister's served copy of a file: `/api/file?id=<its address>` (the

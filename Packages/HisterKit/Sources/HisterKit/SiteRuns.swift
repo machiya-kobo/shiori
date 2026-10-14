@@ -24,12 +24,14 @@ public enum SiteRuns {
 
     public static func items(_ pages: [StoredPage], minimum: Int = 3) -> [Item] {
         var items: [Item] = []
+        // Each page's site once (it was worked out twice where runs meet).
+        let sites = pages.map(key)
         var index = pages.startIndex
         while index < pages.endIndex {
-            let site = key(pages[index])
+            let site = sites[index - pages.startIndex]
             var end = pages.index(after: index)
             if let site {
-                while end < pages.endIndex, key(pages[end]) == site { end = pages.index(after: end) }
+                while end < pages.endIndex, sites[end - pages.startIndex] == site { end = pages.index(after: end) }
             }
             items.append(.page(pages[index]))
             let rest = Array(pages[pages.index(after: index)..<end])

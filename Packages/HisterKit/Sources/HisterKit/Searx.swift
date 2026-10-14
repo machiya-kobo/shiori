@@ -311,8 +311,11 @@ extension SearxClient {
     /// then the web isn't asked. The same rule as search-core.js's webQuery.
     public static func webQuery(_ query: String) -> String {
         query.split(whereSeparator: \.isWhitespace).map(String.init).filter { word in
-            word.range(of: #"^(-?(label|added|updated|url|domain|type|language|metadata\.[\w.]+):|@\S+$)"#,
-                       options: [.regularExpression, .caseInsensitive]) == nil
+            histerSyntax.firstMatch(in: word, range: NSRange(word.startIndex..., in: word)) == nil
         }.joined(separator: " ")
     }
+
+    /// Compiled once, not per word of every search.
+    private static let histerSyntax = try! NSRegularExpression(
+        pattern: #"^(-?(label|added|updated|url|domain|type|language|metadata\.[\w.]+):|@\S+$)"#, options: .caseInsensitive)
 }

@@ -264,8 +264,12 @@ public struct Rules: Sendable, Equatable {
     /// (`metadata.source:code`, code-import's: it has its own pill). No
     /// collection either way.
     public static func namesTheVault(_ expansion: String) -> Bool {
-        expansion.range(of: #"(label|source):(\([^)]*)?\bvault\b|source:(\([^)]*)?\bcode\b"#, options: .regularExpression) != nil
+        vaultOrCode.firstMatch(in: expansion, range: NSRange(expansion.startIndex..., in: expansion)) != nil
     }
+
+    /// Compiled once (every alias is asked, on every rules fetch).
+    private static let vaultOrCode = try! NSRegularExpression(
+        pattern: #"(label|source):(\([^)]*)?\bvault\b|source:(\([^)]*)?\bcode\b"#)
 
     /// The collections a page with this label shows up in.
     public func collections(containing label: String) -> [String] {

@@ -213,7 +213,11 @@ nonisolated enum SharedSettings {
     }
 
     /// The App Group's defaults, or nil where the group isn't available.
-    static var defaults: UserDefaults? { UserDefaults(suiteName: appGroup) }
+    /// Made once: it's read on every settings change and redraw, and each
+    /// `UserDefaults(suiteName:)` was a new object for the same store.
+    /// Unchecked: UserDefaults isn't marked Sendable, but it is
+    /// thread-safe (Apple's documentation), and this one is never replaced.
+    nonisolated(unsafe) static let defaults: UserDefaults? = UserDefaults(suiteName: appGroup)
 
     /// What the extension's background asks for (`{type: "settings"}`). Keys
     /// the app never set are left out, so the extension keeps its own
