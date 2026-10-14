@@ -176,7 +176,12 @@ struct LibraryView: View {
         .onChange(of: app.searchFocusRequests) { _, _ in searchFocused = true }
         #if os(iOS)
         // shiori://settings: the iPad's Settings is a sidebar row.
-        .onChange(of: app.settingsRequests) { _, _ in item = .settings }
+        // Initial too: a link that launched the app arrived before this view.
+        .onChange(of: app.settingsRequests, initial: true) { _, requests in
+            guard requests > app.settingsRequestsSeen else { return }
+            app.settingsRequestsSeen = requests
+            item = .settings
+        }
         #endif
         // Cleared (the field's X, ⌘A and delete, Escape), on the Mac and the
         // iPad alike: back to the Library's newest, the search's rows and its

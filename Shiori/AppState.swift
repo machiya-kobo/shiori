@@ -505,6 +505,9 @@ final class AppState {
     /// Bumped by `shiori://settings` (the Safari extension's settings page):
     /// each layout opens its Settings.
     var settingsRequests = 0
+    /// The last of them a window acted on: a window opened later (or a view
+    /// made after a cold launch) acts only on a newer one.
+    var settingsRequestsSeen = 0
     /// Save This Note's Links, asked for by a note's ⋯ menu or a
     /// `shiori://save-links?path=…` / `?folder=…` link (Kura's note view).
     var saveLinksRequest: SaveLinksTarget?

@@ -29,7 +29,7 @@ struct ShioriApp: App {
                 .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 #endif
                 .onOpenURL { url in
-                    if url.scheme == "shiori", url.host() == "settings" { app.settingsRequests += 1 }
+                    if url.scheme?.lowercased() == "shiori", url.host()?.lowercased() == "settings" { app.settingsRequests += 1 }
                     if let target = SaveLinksTarget(url: url) { app.saveLinksRequest = target }
                 }
                 .onChange(of: scenePhase, initial: true) { _, phase in

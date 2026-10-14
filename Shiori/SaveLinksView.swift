@@ -19,7 +19,7 @@ enum SaveLinksTarget: Identifiable, Hashable {
     /// `shiori://save-links?path=<vault path>` (Kura's note view) or
     /// `?folder=<folder>`.
     init?(url: URL) {
-        guard url.scheme == "shiori", url.host() == "save-links",
+        guard url.scheme?.lowercased() == "shiori", url.host()?.lowercased() == "save-links",
             let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
         else { return nil }
         if let path = items.first(where: { $0.name == "path" })?.value, !path.isEmpty {

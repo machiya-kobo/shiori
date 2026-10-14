@@ -84,13 +84,16 @@ struct RootView: View {
             .onChange(of: app.searchScopes) { _, scopes in
                 if !scopes.contains(session.scope) { session.scope = .all }
             }
-            .onChange(of: app.settingsRequests) { _, _ in
+            // Initial too: a link that launched the app arrived before this view.
+            .onChange(of: app.settingsRequests, initial: true) { _, requests in
+                // The three columns open their Settings row themselves; the
+                // tabs have a Settings tab, the Mac its Settings window.
+                guard requests > app.settingsRequestsSeen, usesTabs || isMac else { return }
+                app.settingsRequestsSeen = requests
                 #if os(macOS)
                 openSettings()
                 #else
-                // The three columns open their Settings row themselves; the
-                // tabs have a Settings tab.
-                if !(UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular) { selection = .settings }
+                selection = .settings
                 #endif
             }
             .task(id: app.serverURL) {
@@ -131,6 +134,14 @@ struct RootView: View {
             .filter { $0.activationState == .foregroundActive }
             .flatMap(\.windows)
             .contains { $0.rootViewController?.presentedViewController != nil }
+        #endif
+    }
+
+    private var isMac: Bool {
+        #if os(macOS)
+        true
+        #else
+        false
         #endif
     }
 
