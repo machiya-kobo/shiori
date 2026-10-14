@@ -800,8 +800,12 @@
       if (current === url) return;
       current = url;
       update();
-      // Previewing a page is opening it.
-      if (card) recordOpened(url, card.querySelector('.title')?.textContent || '');
+      // Previewing a page counts as opening it once it has stayed in the
+      // pane a while, as in the apps: passing over a page doesn't.
+      if (card) {
+        const title = card.querySelector('.title')?.textContent || '';
+        setTimeout(() => current === url && recordOpened(url, title), 2000);
+      }
       document.querySelectorAll('.card.previewing').forEach((c) => c.classList.remove('previewing'));
       if (card) card.classList.add('previewing');
       const opens = S.safeHref(url);

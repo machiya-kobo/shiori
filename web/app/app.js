@@ -709,14 +709,27 @@ function openInApp(doc) {
   else openTab(n && n.niwa ? n.niwa : S.isLocalFile(doc.url) ? S.localFileURL(location.origin, doc.url) : doc.url);
 }
 
+// A page previewed beside the list counts as opened once it has stayed
+// there a while (Remember What You Open), as in the apps; a page opened on
+// its own counts at once.
+const OPEN_DWELL_MS = 2000;
+let dwellTimer = 0;
+
 function openDoc(doc, row) {
-  if (settings.rememberOpened && listSearch) api.recordOpened(doc.url, doc.title || '', listSearch);
+  clearTimeout(dwellTimer);
+  const search = listSearch;
   if (wide()) {
+    if (settings.rememberOpened && search) {
+      dwellTimer = setTimeout(() => {
+        if (selected === doc && listSearch === search) api.recordOpened(doc.url, doc.title || '', search);
+      }, OPEN_DWELL_MS);
+    }
     selected = doc;
     document.querySelectorAll('.row[aria-selected="true"]').forEach((r) => r.setAttribute('aria-selected', 'false'));
     if (row) row.setAttribute('aria-selected', 'true');
     showPreview(doc);
   } else {
+    if (settings.rememberOpened && search) api.recordOpened(doc.url, doc.title || '', search);
     lastPage = doc;
     go('page', { url: doc.url });
   }

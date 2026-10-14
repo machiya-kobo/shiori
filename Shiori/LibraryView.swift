@@ -58,6 +58,10 @@ struct LibraryView: View {
     /// Set while a Shortcut's search changes the scope, so the scope
     /// change doesn't run the search a second time.
     @State private var scopeSetBySearch = false
+    /// The page in the pane: the selection, a moment after it settles while
+    /// moving through the list fast, so each row passed over doesn't fetch
+    /// its preview.
+    @State private var previewed: StoredPage?
     /// Set while `onAppear` restores the sidebar row, so the selected page
     /// (kept by `SearchSession` across a layout switch) isn't let go.
     @State private var keepSelection = false
@@ -83,6 +87,14 @@ struct LibraryView: View {
                         .onGeometryChange(for: Double.self) { $0.size.width } action: { liveResults = $0 }
                 } detail: {
                     preview
+                        .task(id: session.selected?.url) {
+                            guard let selected = session.selected else { previewed = nil; return }
+                            if previewed != nil {
+                                try? await Task.sleep(for: .milliseconds(200))
+                                if Task.isCancelled { return }
+                            }
+                            previewed = selected
+                        }
                         .environment(\.previewFocus, PreviewFocus(isOn: columns == .detailOnly) {
                             withAnimation { columns = columns == .detailOnly ? .all : .detailOnly }
                         })
@@ -457,7 +469,10 @@ struct LibraryView: View {
     #endif
 
     @ViewBuilder private var preview: some View {
-        if let selected = session.selected, !app.deletes.hidden.contains(selected.url) {
+        // The selection itself once it's the one previewed (its label may
+        // have changed since), else the page still showing while it settles.
+        let shown = previewed?.url == session.selected?.url ? session.selected : previewed
+        if let selected = shown, session.selected != nil, !app.deletes.hidden.contains(selected.url) {
             NavigationStack {
                 DocumentView(document: selected)
             }

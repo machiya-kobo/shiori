@@ -310,6 +310,9 @@ struct ResultsListContainer<Content: View>: View {
     /// The first of a two-key command (gg, dd) and when it was pressed.
     @State private var pending: (key: Character, at: Date)?
     @State private var showingKeys = false
+    /// A page opened on purpose (Return, double-click), so the selection's
+    /// own count doesn't record it a second time.
+    @State private var openedOnPurpose: String?
     @FocusState private var focused: Bool
     /// Shown once the Mac's list has laid its rows out: its first pass
     /// guesses their heights, and new results drew squashed (titles only,
@@ -326,11 +329,16 @@ struct ResultsListContainer<Content: View>: View {
                 .onPreferenceChange(ListOrderKey.self) { order = $0 }
                 .onKeyPress(phases: .down) { press in viKey(press, selection: selection) }
                 .onChange(of: selection.wrappedValue) { _, new in
-                    // Previewing a page beside the list is opening it.
-                    if let new {
-                        actions.opened(new)
-                        withAnimation { proxy.scrollTo(new.id) }
-                    }
+                    if let new { withAnimation { proxy.scrollTo(new.id) } }
+                }
+                // Previewing a page beside the list counts as opening it once
+                // it has stayed selected a while: moving through the list
+                // (j/k, arrows, clicks) told Hister every row passed over.
+                .task(id: selection.wrappedValue?.url) {
+                    guard let page = selection.wrappedValue else { return }
+                    try? await Task.sleep(for: Self.dwell)
+                    guard !Task.isCancelled, selection.wrappedValue?.url == page.url, openedOnPurpose != page.url else { return }
+                    actions.opened(page)
                 }
                 .onChange(of: app.resultsFocusRequests) { _, _ in focused = true }
                 .onChange(of: topRequests) { _, _ in scrollToTop(proxy) }
@@ -451,9 +459,14 @@ struct ResultsListContainer<Content: View>: View {
     /// In its own app (`openPage`): a note in Obsidian, a file from
     /// Hister's copy, anything else in the browser.
     private func open(_ document: StoredPage) {
+        openedOnPurpose = document.url
         actions.opened(document)
         openURL.openPage(document, app: app)
     }
+
+    /// How long a page stays selected beside the pane before it counts as
+    /// opened (Remember What You Open). An open on purpose counts at once.
+    static var dwell: Duration { .seconds(2) }
 }
 
 extension View {
