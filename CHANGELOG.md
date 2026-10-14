@@ -5,6 +5,19 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.10.0 (2026-10-14)
+
+- Backgrounds, from annai: 16 animated night scenes (Tokyo, Osaka, Seoul,
+  Hong Kong, Shanghai, Taipei, Singapore, Bangkok, San Francisco, Los
+  Angeles, Chicago, Las Vegas, and three film and game homages), with
+  rain and your own picture or video, in the web app and the search page
+  (Settings → Appearance). The signs show Shiori's own words. Watch hides
+  the page to see the scene; Esc or a tap brings it back. Off by default,
+  kept in this browser only, a still frame with Reduce Motion. Text keeps
+  its contrast: panels frost over the scene.
+- shiori-web: the page's policy allows a video of your own (`media-src
+  'self' blob:`). The container test passes under rootless podman.
+
 ## 1.9.0 (2026-10-14)
 
 - Media: Sort (Newest, Most Played, Top Rated, Year…), Group (Shelves,
