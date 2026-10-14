@@ -86,10 +86,19 @@ nonisolated enum OfflineStore {
         return (entry.preview.preview, entry.savedAt)
     }
 
-    /// A deleted page's preview goes with it (whichever origin's copy it is).
+    /// A deleted page's preview goes with it (whichever origin's copy it
+    /// is), and it leaves the lists' copies.
     static func forget(url: String) {
         guard let file = previewFile(url) else { return }
-        queue.async { try? FileManager.default.removeItem(at: file) }
+        let lists = directory?.appending(path: "lists", directoryHint: .isDirectory)
+        queue.async {
+            try? FileManager.default.removeItem(at: file)
+            guard let lists, let files = try? FileManager.default.contentsOfDirectory(at: lists, includingPropertiesForKeys: nil) else { return }
+            for list in files {
+                guard let entry: ListEntry = read(list), entry.pages.contains(where: { $0.url == url }) else { continue }
+                write(ListEntry(origin: entry.origin, savedAt: entry.savedAt, pages: entry.pages.filter { $0.url != url }), to: list)
+            }
+        }
     }
 
     /// Everything, on signing out.

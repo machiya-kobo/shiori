@@ -79,6 +79,14 @@ struct OfflineStoreTests {
         #expect(OfflineStore.list("notes", origin: origin)?.pages.map(\.url) == ["https://kura.example/n/Open"])
     }
 
+    @Test func aDeletedPageLeavesTheListsToo() async {
+        OfflineStore.saveList("pages", origin: origin, pages: [page("https://example.com/a"), page("https://example.com/b")])
+        await OfflineStore.settled()
+        OfflineStore.forget(url: "https://example.com/a")
+        await OfflineStore.settled()
+        #expect(OfflineStore.list("pages", origin: origin)?.pages.map(\.url) == ["https://example.com/b"])
+    }
+
     @Test func onlyTheNewestListsStay() async throws {
         for i in 0..<(OfflineStore.listFiles + 4) {
             let other = OfflineStore.origin(server: "https://\(i).example/", kura: "")
