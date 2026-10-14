@@ -258,6 +258,8 @@ struct RecentScreen: View {
                         description: Text("Files appear here once your Hister server watches a folder."))
                 }
                 .id(ObjectIdentifier(files))
+            // What's playing, what you played and watched, your top lists, your watchlist, what's new.
+            case .media: MediaShelvesView()
             case .opened: OpenedListView()
             }
         }

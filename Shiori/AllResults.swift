@@ -33,6 +33,8 @@ struct AllResults: View {
     /// How many code documents match, for the Code pill's count (never
     /// listed here: code shows only on its own pill).
     @State private var codeTotal = 0
+    /// Your Media (docs/media.md): its top five above the rest, its count on the Media pill.
+    @State private var media: MediaSearchModel
 
     init(query: String, showScope: @escaping (SearchScope) -> Void, search: @escaping (String) -> Void) {
         self.query = query
@@ -44,6 +46,7 @@ struct AllResults: View {
         _notes = State(initialValue: ResultsModel(query: query, source: .notes, respellable: (query, { $0 })))
         // The web gets the words, not Hister's syntax (label:bsd).
         _web = State(initialValue: WebResultsModel(query: SearxClient.webQuery(query)))
+        _media = State(initialValue: MediaSearchModel(query: query))
     }
 
     /// Your pages and your notes in All: a page of each (as the web pages'
@@ -80,14 +83,14 @@ struct AllResults: View {
             .resultActions(query: query)
             // Their totals on the Pages and Notes pills ("Pages 31").
             .onChange(of: totals, initial: true) { _, totals in
-                session?.setCounts([.hister: totals[0], .notes: totals[1], .code: totals[2]], for: query)
+                session?.setCounts([.hister: totals[0], .notes: totals[1], .code: totals[2], .media: totals[3]], for: query)
             }
     }
 
     /// Hister's total has no notes (they're Kura's), and leaves out the pages
     /// you opened while Show Opened is off.
     private var totals: [Int] {
-        [max(pages.total - hiddenOpened, yourPages().count), max(notes.total, shown(notes, count: Self.count).count), codeTotal]
+        [max(pages.total - hiddenOpened, yourPages().count), max(notes.total, shown(notes, count: Self.count).count), codeTotal, media.items.count]
     }
 
     private func load() async {
@@ -98,12 +101,17 @@ struct AllResults: View {
         notes.notesFromHister = app.notesFrom == .hister
         async let mine: Void = pages.load(using: app.client)
         async let vault: Void = notes.load(using: app.client)
+        async let tunes: Void = loadMedia()
         // The Code pill's count: Hister's own index, nothing spent.
         if app.hasCodeDocs, let client = app.client, let page = try? await client.search(CodeDocs.query(query), limit: 1) {
             codeTotal = page.total
         }
         if webOn { await web.load(searx: app.searx, hister: app.client) }
-        _ = await (mine, vault)
+        _ = await (mine, vault, tunes)
+    }
+
+    private func loadMedia() async {
+        if app.media != nil { await media.load(using: app.media) }
     }
 
     private func shown(_ model: ResultsModel, count: Int) -> [StoredPage] {
@@ -158,7 +166,7 @@ struct AllResults: View {
         let mine = yourPages()
         let vault = shown(notes, count: Self.count)
         let webResults = webOn ? web.results : []
-        if (mine.isEmpty && vault.isEmpty && webResults.isEmpty) || (holding && mineLoading) || holdingForWeb {
+        if (mine.isEmpty && vault.isEmpty && webResults.isEmpty && media.items.isEmpty) || (holding && mineLoading) || holdingForWeb {
             Group {
                 if stillLoading {
                     ProgressView()
@@ -180,6 +188,9 @@ struct AllResults: View {
                 // On request only: collapsed until opened.
                 if webOn, AIAnswerSection.offered(in: app, results: webResults) {
                     AIAnswerSection(query: web.query, results: webResults)
+                }
+                if !media.items.isEmpty {
+                    MediaAllSection(model: media, showScope: showScope)
                 }
                 // No headings: the web's results, yours among them. No "You
                 // Opened" here either: it only grew, and pushed the rest down.

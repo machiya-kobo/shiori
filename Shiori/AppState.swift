@@ -385,6 +385,7 @@ final class AppState {
             case .smallweb: smallweb != nil
             case .files: hasLocalFiles
             case .code: hasCodeDocs
+            case .media: media != nil
             default: true
             }
         }
@@ -398,6 +399,42 @@ final class AppState {
     /// Safari's results page through the App Group (`PillOrder`).
     var pills: [String] {
         didSet { SharedSettings.defaults?.set(pills, forKey: SharedSettings.Key.pills) }
+    }
+
+    // MARK: Media (docs/media.md)
+
+    /// Each media service's address (Settings → Search → Media): this
+    /// device's own, never sent to the account or to Safari's extension. The
+    /// tokens are in the Keychain (`MediaKeychain`).
+    var mediaAddresses: [MediaService: String] = [:] {
+        didSet {
+            for service in MediaService.allCases {
+                UserDefaults.standard.set(mediaAddresses[service] ?? "", forKey: Self.mediaAddressKey(service))
+            }
+            rebuildMedia()
+        }
+    }
+
+    /// The media services set up here (an address and a token each); nil
+    /// with none, and then there's no Media pill. One client, so each
+    /// service's facts (Movary's user, Plex's machine) are asked once.
+    private(set) var media: MediaClient?
+
+    static func mediaAddressKey(_ service: MediaService) -> String { "mediaURL.\(service.rawValue)" }
+
+    /// A token typed in Settings: saved to the Keychain (or removed when emptied).
+    func setMediaToken(_ token: String, for service: MediaService) {
+        guard token.trimmingCharacters(in: .whitespacesAndNewlines) != MediaKeychain.read(service) else { return }
+        MediaKeychain.save(token, for: service)
+        rebuildMedia()
+    }
+
+    private func rebuildMedia() {
+        var accounts: [MediaService: MediaAccount] = [:]
+        for service in MediaService.allCases {
+            if let account = MediaAccount(base: mediaAddresses[service] ?? "", token: MediaKeychain.read(service)) { accounts[service] = account }
+        }
+        media = accounts.isEmpty ? nil : MediaClient(accounts: accounts)
     }
 
     /// The small-web gateway, while Small Web is on (Settings → Search → Small Web).
@@ -705,6 +742,9 @@ final class AppState {
         shared?.set(theme.rawValue, forKey: SharedSettings.Key.theme)
         shared?.set(textSize.rawValue, forKey: SharedSettings.Key.textSize)
         shared?.set(serverURL, forKey: SharedSettings.Key.serverURL)
+        mediaAddresses = Dictionary(uniqueKeysWithValues: MediaService.allCases.map { ($0, defaults.string(forKey: Self.mediaAddressKey($0)) ?? "") })
+        // An init's own assignment runs no didSet.
+        rebuildMedia()
         owner.app = self
     }
 

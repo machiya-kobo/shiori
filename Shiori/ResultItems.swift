@@ -98,7 +98,7 @@ private struct ResultActionsHost: ViewModifier {
 /// (`Palette.tintOpacity`, `tintBase`).
 struct ResultBar: View {
     enum Kind {
-        case page, note, opened, file, code, smallweb
+        case page, note, opened, file, code, smallweb, media
     }
 
     let kind: Kind
@@ -118,6 +118,7 @@ struct ResultBar: View {
         case .file: SearchScope.files.tint
         case .code: SearchScope.code.tint
         case .smallweb: SearchScope.smallweb.tint
+        case .media: SearchScope.media.tint
         }
     }
 

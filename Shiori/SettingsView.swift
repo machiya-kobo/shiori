@@ -52,7 +52,7 @@ struct SettingsView: View {
         var summary: String {
             switch self {
             case .appearance: "Theme, appearance, text size, app icon"
-            case .search: "Pills, the web, Small Web and your notes"
+            case .search: "Pills, the web, Small Web, media and your notes"
             case .results: "How results look and open, and your history"
             case .safari: "The extension, and Shiori's results in Safari"
             case .ai: "Summaries, AI providers and keys; off unless you turn it on"
@@ -227,6 +227,8 @@ struct SettingsView: View {
                 Text("Gemini and Gopher search through your small-web gateway, run when you press Return. Pages you open are saved to Hister.")
             }
             .listRowBackground(palette.surface)
+
+            MediaSettingsSection()
 
             Section {
                 // Where notes come from: shows the one in use (Kura when one

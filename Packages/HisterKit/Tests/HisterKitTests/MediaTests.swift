@@ -200,12 +200,24 @@ struct MediaClientTests {
         #expect(StubProtocol.requests(Self.hosts("browse")[.koito]!).contains { $0.url?.absoluteString.contains("/top/albums?period=year") == true })
     }
 
-    @Test func plexImagesCarryTheTokenInAHeader() throws {
+    @Test func artOnlyFromTheServicesAndPlexsWithItsTokenInAHeader() async {
         let client = Self.client("images")
-        let plex = client.imageRequest(try #require(URL(string: "https://plex.images.media-client.test/library/metadata/1/thumb/2")))
-        #expect(plex.value(forHTTPHeaderField: "X-Plex-Token") == "tok-plex")
-        let other = client.imageRequest(try #require(URL(string: "https://koito.images.media-client.test/image/x.webp")))
-        #expect(other.value(forHTTPHeaderField: "X-Plex-Token") == nil)
+        let plexHost = Self.hosts("images")[.plex]!, koitoHost = Self.hosts("images")[.koito]!
+        for host in [plexHost, koitoHost] {
+            StubProtocol.headers(host, ["Content-Type": "image/webp"])
+            StubProtocol.handle(host) { _ in (200, Data("img".utf8)) }
+        }
+        #expect(await client.imageData("https://\(plexHost)/library/metadata/1/thumb/2") == Data("img".utf8))
+        #expect(StubProtocol.requests(plexHost).last?.value(forHTTPHeaderField: "X-Plex-Token") == "tok-plex")
+        #expect(StubProtocol.requests(plexHost).last?.url?.absoluteString.contains("tok-") == false)
+        #expect(await client.imageData("https://\(koitoHost)/image/x/300.webp") != nil)
+        #expect(StubProtocol.requests(koitoHost).last?.value(forHTTPHeaderField: "X-Plex-Token") == nil)
+        // Anywhere else: never asked.
+        #expect(await client.imageData("https://elsewhere.example/x.jpg") == nil)
+        #expect(await client.imageData("javascript:alert(1)") == nil)
+        // Not an image: nothing.
+        StubProtocol.headers(koitoHost, ["Content-Type": "text/html"])
+        #expect(await client.imageData("https://\(koitoHost)/image/x/300.webp") == nil)
     }
 
     @Test func anAccountNeedsAnAddressAndAToken() {

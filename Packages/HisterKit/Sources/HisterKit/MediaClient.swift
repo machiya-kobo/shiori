@@ -72,14 +72,20 @@ public actor MediaClient {
     public nonisolated var services: Set<MediaService> { Set(accounts.keys) }
     public nonisolated var isConfigured: Bool { !accounts.isEmpty }
 
-    /// A request for one of the services' images: Plex's need its token
-    /// (in a header, never the address); the others' need nothing.
-    public nonisolated func imageRequest(_ url: URL) -> URLRequest {
+    /// A card's art, from one of the services or TMDB only (`Media.imageURL`
+    /// made the address): Plex's carries its token in a header, never the
+    /// address; no redirect is followed; nothing past 5 MB. Nil for anything else.
+    public nonisolated func imageData(_ address: String) async -> Data? {
+        guard let url = URL(string: address), url.scheme == "https" || url.scheme == "http" else { return nil }
+        let own = accounts.first { address.hasPrefix($0.value.base) }
+        guard own != nil || address.hasPrefix("https://image.tmdb.org/t/p/") else { return nil }
         var request = URLRequest(url: url)
-        if let plex = accounts[.plex], url.absoluteString.hasPrefix(plex.base) {
-            request.setValue(plex.token, forHTTPHeaderField: "X-Plex-Token")
-        }
-        return request
+        if let own, own.key == .plex { request.setValue(own.value.token, forHTTPHeaderField: "X-Plex-Token") }
+        guard let (data, response) = try? await session.data(for: request, delegate: NoRedirects()),
+            let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+            (http.value(forHTTPHeaderField: "Content-Type") ?? "").hasPrefix("image/"), data.count <= 5 << 20
+        else { return nil }
+        return data
     }
 
     func context(_ service: MediaService) -> MediaContext {
