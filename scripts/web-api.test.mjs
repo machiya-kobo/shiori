@@ -263,7 +263,10 @@ test("the web app's Settings are a tab on a phone, with no title row on the tabs
   const css = read('../web/app/app.css');
   assert.doesNotMatch(read('../web/app/index.html'), /settings-button/);
   assert.match(app.slice(app.indexOf('function tabs('), app.indexOf('// --- Render')), /tab\('settings', 'Settings', 'gear', 'settings'\)/);
-  assert.match(app, /function viewSettings\(\) \{\n[^\n]*\n  setTitle\('Settings'\);/);
+  // The index is titled Settings (no title row on a tab's own view); a page has its title and Back.
+  const view = app.slice(app.indexOf('function viewSettings() {'), app.indexOf('function settingsPage('));
+  assert.match(view, /setTitle\(shown\[1\], true\);/);
+  assert.equal((view.match(/setTitle\('Settings'\);/g) || []).length, 2);
   // Hidden at every width, not only beside the sidebar.
   const rule = '#list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) { display: none; }';
   assert.ok(css.includes(rule));
@@ -494,8 +497,11 @@ test('the web is searched only on purpose: Return, a recent search, Did you mean
 test("Settings opens on Appearance and ends on Account and About; who's signed in is read without a trip to the sign-in", () => {
   const app = read('../web/app/app.js');
   const api = read('../web/app/api.js');
-  assert.match(app, /\{ class: 'settings' \},\n(\s+\/\/[^\n]*\n)*\s+group\('Appearance', \[/);
-  assert.match(app, /feedsGroup\(group, text\),\n\s+accountGroup\(group\),\n\s+group\('About'/);
+  // The apps' pages, in their order: Appearance first, Account (with About) last.
+  const pages = [...app.slice(app.indexOf('const SETTINGS_PAGES = ['), app.indexOf('];', app.indexOf('const SETTINGS_PAGES = ['))).matchAll(/\['(\w+)', '/g)].map((m) => m[1]);
+  assert.deepEqual(pages, ['appearance', 'search', 'results', 'media', 'ai', 'feeds', 'account']);
+  assert.match(app, /case 'appearance':\n\s+return group\('Appearance', \[/);
+  assert.match(app, /case 'account':\n\s+return \[\n\s+accountGroup\(group\),\n\s+\.\.\.group\('About'/);
   assert.match(app, /const account = S\.histerAccount\(status, json\);/);
   const fn = api.slice(api.indexOf('export async function profile('), api.indexOf('export async function profile(') + 900);
   assert.doesNotMatch(fn, /request\(/);

@@ -76,6 +76,10 @@ const ICONS = {
   group: '<rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/><rect x="3" y="13" width="8" height="7" rx="1.5"/>',
   filter: '<circle cx="12" cy="12" r="9"/><path d="M7.5 9h9M9.5 12.5h5M11 16h2"/>',
   chevron: '<path d="M9 6l6 6-6 6"/>',
+  // Settings' pages, as the apps' symbols.
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+  feed: '<path d="M5 11a8 8 0 0 1 8 8M5 4a15 15 0 0 1 15 15"/><circle cx="6" cy="18" r="1.5"/>',
+  person: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
@@ -2535,16 +2539,66 @@ addEventListener('pagehide', () => commitDelete({ keepalive: true }));
 
 // --- Settings ------------------------------------------------------------------
 
+/**
+ * Settings' pages, the apps' own (SettingsView.Page) less what a browser
+ * hasn't: Safari's extension, the server addresses (this host's), the AI
+ * providers. Media only where the host routes a service, AI only in a build
+ * with the companion.
+ */
+const SETTINGS_PAGES = [
+  ['appearance', 'Appearance', 'palette', 'Theme, mode and text size'],
+  ['search', 'Search', 'search', 'Pills, the web, Small Web and your notes'],
+  ['results', 'Results', 'list', 'How results look and open, and your history'],
+  ['media', 'Media', 'music', 'Your libraries and what you played'],
+  ['ai', 'AI', 'sparkles', 'AI Answer'],
+  ['feeds', 'Feeds & Export', 'feed', 'Feeds, NewsBlur, export'],
+  ['account', 'Account', 'person', 'Signing in, about'],
+];
+const MEDIA_NAMES = { jellyfin: 'Jellyfin', plex: 'Plex', koito: 'Koito', movary: 'Movary' };
+const settingsPages = () => SETTINGS_PAGES.filter(([key]) => (key !== 'media' || S.mediaConfigured(MEDIA)) && (key !== 'ai' || AI_BUILT));
+
+/**
+ * Settings as in the apps: an index of pages, each page its sections. Wide
+ * (the preview's width), the index is the list and the page shows beside
+ * it, as the iPad's; narrower, a page opens over the index, with Back.
+ */
 function viewSettings() {
-  // A place of its own: the sidebar's gear, or the Settings tab.
-  setTitle('Settings');
+  const { params } = route();
+  const pages = settingsPages();
+  const asked = pages.find(([key]) => key === params.get('p'));
+  const beside = wide();
+  const shown = asked || (beside ? pages[0] : null);
   listSearch = '';
   fill($('list-top'), );
+  if (beside) selected = null;
   // Opening Settings asks the account afresh; the state line follows.
   void contactAccount().then(() => {
     const line = document.querySelector('.prefs-state');
     if (line) line.textContent = prefsStateLine();
   });
+  const index = () => h('div', { class: 'settings' },
+    h('div', { class: 'group settings-index' }, pages.map(([key, title, symbol, summary]) =>
+      h('button', {
+        type: 'button', class: 'item settings-link', 'aria-current': beside && shown && shown[0] === key ? 'page' : undefined,
+        onclick: () => go('settings', { p: key }, { replace: beside }),
+      }, icon(symbol), h('span', { class: 'settings-link-text' }, h('span', {}, title), h('span', { class: 'settings-summary' }, summary)), icon('chevron')))));
+  const page = ([key, title]) => h('div', { class: 'settings settings-page', 'data-page': key }, ...settingsPage(key, title));
+  if (beside) {
+    setTitle('Settings');
+    $('list').replaceChildren(index());
+    fill($('preview-bar'), h('span', { class: 'where settings-title' }, shown[1]));
+    $('preview').replaceChildren(page(shown));
+  } else if (shown) {
+    setTitle(shown[1], true);
+    $('list').replaceChildren(page(shown));
+  } else {
+    setTitle('Settings');
+    $('list').replaceChildren(index());
+  }
+}
+
+/** One page of Settings: its sections, in the apps' order. */
+function settingsPage(key, title) {
   // A setting whose dependents show only while it's on redraws the page.
   const redraws = ['webResults', 'smallWebTab'];
   const toggle = (key, title) => {
@@ -2575,13 +2629,9 @@ function viewSettings() {
   };
   // Not null as a child: replaceChildren writes it out as the text "null".
   const group = (title, items, foot) => [h('h2', {}, title), h('div', { class: 'group' }, items.filter(Boolean)), foot ? h('p', { class: 'footnote' }, foot) : null].filter(Boolean);
-  $('list').replaceChildren(
-    h(
-      'div',
-      { class: 'settings' },
-      // The house's order: Appearance first (it follows the person), then
-      // Shiori's own, Account and About last.
-      group('Appearance', [
+  switch (key) {
+    case 'appearance':
+      return group('Appearance', [
         choice('palette', 'Theme', Object.entries(S.PALETTES).map(([key, p]) => [key, p.name])),
         choice('theme', 'Mode', [['system', 'System'], ['day', 'Light'], ['night', 'Dark']]),
         // The house's five sizes (the account's text_size, the rooms' steps).
@@ -2590,46 +2640,63 @@ function viewSettings() {
       ], [
         h('span', {}, 'Follows you when signed in, except This Device’s Size. '),
         h('span', { class: 'prefs-state' }, prefsStateLine()),
-      ]),
-      pillsGroup(group, choice),
-      group('Web', [
-        toggle('webResults', 'Web Results'),
-        AI_BUILT && settings.webResults ? toggle('aiAnswer', 'AI Answer') : null,
-      ], AI_BUILT && settings.webResults ? 'AI Answer stays in this browser.' : ''),
-      group('Small Web', [
-        toggle('smallWebTab', 'Small Web'),
-        settings.smallWebTab ? choice('smallWebOpen', 'Open Results', [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']]) : null,
-      ], 'Gemini and Gopher search through the small-web gateway, run when you press Return.'),
-      group('Notes', [notesFrom(), text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text'), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/')],
-        'Notes open in this Obsidian vault, with their Kura page and Konbini card linked beside them. From Hister: your default vault’s notes only.'),
-      group('Results', [
-        choice('resultStyle', 'Result Style', [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']]),
-        toggle('foldRepeats', 'Fold Repeated Sites'),
-        toggle('searchFilters', 'Search Filters'),
-      ]),
-      group('Opening', [
-        choice('clickOpens', 'Click Opens', [['auto', 'Automatic'], ['original', 'The Original'], ['preview', 'Shiori’s Preview']]),
-        toggle('previewImages', 'Images in Previews'),
-      ], 'Click Opens picks what a result opens; the › is the other choice. It stays in this browser; the other options follow you when signed in.'),
-      group('History', [
-        toggle('searchHistory', 'Recent Searches'),
-        h('div', { class: 'item' }, h('button', { type: 'button', class: 'button', style: 'margin:0;color:var(--danger)', onclick: () => ((recents = []), writeLocal('shioriAppRecents', []), toast('Cleared')) }, 'Clear Recent Searches')),
-        toggle('rememberOpened', 'Remember What You Open'),
-        toggle('showOpened', 'Show Opened'),
-      ], 'Recent searches are kept in this browser only. Remember What You Open puts the results you open first next time.'),
-      feedsGroup(group, text),
-      accountGroup(group),
-      group('About', [
-        h('div', { class: 'item' }, h('span', {}, 'Saving pages'), h('span', { style: 'color:var(--secondary);text-align:right' },
-          SMALLWEB ? 'Add Page, or share a link to Shiori (installed from Chrome or Edge). Safari’s extension is in the Shiori app.' : 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
-        statusURL ? h('div', { class: 'item' }, h('span', {}, 'Server'), statusLink()) : null,
-        // The source (AGPL-3.0 section 13), only when the build names it.
-        SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'Source'), h('a', { href: SOURCE_URL, target: '_blank', rel: 'noopener noreferrer' }, 'View the source')) : null,
-        SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'License'), h('span', { style: 'color:var(--secondary)' }, S.LICENSE)) : null,
-      ],
-        'Install this as an app: Share → Add to Home Screen (iPhone, iPad), File → Add to Dock (Safari on the Mac), or Install in the browser’s menu (Chrome, Edge).'),
-    ),
-  );
+      ]);
+    case 'search':
+      // Every section the apps' way: its switch first, then its choices.
+      return [
+        ...pillsGroup(group, choice),
+        ...group('Web', [toggle('webResults', 'Web Results')],
+          'Your SearXNG, on this host: the web results here. Thumbnails come only through its image proxy.'),
+        ...group('Small Web', [
+          toggle('smallWebTab', 'Small Web'),
+          settings.smallWebTab ? choice('smallWebOpen', 'Open Results', [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']]) : null,
+        ], 'Gemini and Gopher through the small-web gateway, searched when you press Return.'),
+        ...group('Notes', [notesFrom(), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/'), text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text')],
+          'Notes open in this Obsidian vault, with their Kura page and Konbini card beside them. From Hister, only your default vault’s notes.'),
+      ];
+    case 'results':
+      return [
+        ...group('Results', [
+          choice('resultStyle', 'Result Style', [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']]),
+          toggle('foldRepeats', 'Fold Repeated Sites'),
+          toggle('searchFilters', 'Search Filters'),
+        ]),
+        ...group('Opening', [
+          choice('clickOpens', 'Click Opens', [['auto', 'Automatic'], ['original', 'The Original'], ['preview', 'Shiori’s Preview']]),
+          toggle('previewImages', 'Images in Previews'),
+        ], 'Click Opens picks what a result opens; the › is the other choice. It stays in this browser.'),
+        ...group('History', [
+          toggle('searchHistory', 'Recent Searches'),
+          h('div', { class: 'item' }, h('button', { type: 'button', class: 'link-button danger', onclick: () => ((recents = []), writeLocal('shioriAppRecents', []), toast('Cleared')) }, 'Clear Recent Searches')),
+          toggle('rememberOpened', 'Remember What You Open'),
+          toggle('showOpened', 'Show Opened'),
+        ], 'Recent searches stay in this browser. Remember What You Open puts the results you open first next time.'),
+      ];
+    case 'media':
+      return group('Media', Object.entries(MEDIA).map(([name, service]) =>
+        h('div', { class: 'item' }, h('span', {}, MEDIA_NAMES[name] || name),
+          h('a', { class: 'link-button', href: S.linkHref(service.link), target: '_blank', rel: 'noopener noreferrer' }, `Open ${MEDIA_NAMES[name] || name}`))),
+      'Set up on this host, which holds their tokens: this browser never does. Shiori only reads them, searched when you press Return.');
+    case 'ai':
+      return group('AI', [settings.webResults ? toggle('aiAnswer', 'AI Answer') : h('div', { class: 'item' }, h('span', {}, 'AI Answer'), h('span', { class: 'value' }, 'Needs Web Results'))],
+        'An answer from the web results, from this host’s AI, asked only when you open it. This browser’s own.');
+    case 'feeds':
+      return feedsGroup(group, text);
+    case 'account':
+      return [
+        accountGroup(group),
+        ...group('About', [
+          h('div', { class: 'item' }, h('span', {}, 'Saving Pages'), h('span', { class: 'value' },
+            SMALLWEB ? 'Add Page, or share a link to Shiori (installed from Chrome or Edge). Safari’s extension is in the Shiori app.' : 'Safari’s extension, the share sheet and Shortcuts are in the Shiori app.')),
+          statusURL ? h('div', { class: 'item' }, h('span', {}, 'Server'), statusLink()) : null,
+          // The source (AGPL-3.0 section 13), only when the build names it.
+          SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'Source'), h('a', { href: SOURCE_URL, target: '_blank', rel: 'noopener noreferrer' }, 'View the Source')) : null,
+          SOURCE_URL ? h('div', { class: 'item' }, h('span', {}, 'License'), h('span', { class: 'value' }, S.LICENSE)) : null,
+        ], 'Install it as an app: Share → Add to Home Screen (iPhone, iPad), File → Add to Dock (Safari on the Mac), or Install in the browser’s menu.'),
+      ];
+    default:
+      return [];
+  }
 }
 
 /**
@@ -3045,7 +3112,9 @@ function render() {
   else if (view === 'search') viewSearch(params);
   else if (view === 'settings') viewSettings();
   else viewLibrary(params);
-  if (wide() && !selected) $('preview').replaceChildren(status('No Page Selected', 'Select a page to preview it.'));
+  // Settings' page sits in the pane beside its index; anywhere else, its title leaves the pane's bar.
+  if (view !== 'settings') document.querySelector('#preview-bar .settings-title')?.remove();
+  if (wide() && !selected && view !== 'settings') $('preview').replaceChildren(status('No Page Selected', 'Select a page to preview it.'));
 }
 
 // --- vi keys (the apps and the search page have the same set) -------------------
