@@ -147,6 +147,16 @@ struct LibraryView: View {
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         #endif
         .onGeometryChange(for: Double.self) { $0.size.width } action: { windowWidth = $0 }
+        // Narrowed past the pane's width or widened again: the page that was
+        // open stays open, pushed over the results or shown in the pane.
+        .onChange(of: threeColumns) { _, three in
+            if three, session.selected == nil, let page = session.reading {
+                session.selected = page
+            } else if !three, let page = session.selected {
+                narrowPath = NavigationPath()
+                narrowPath.append(page)
+            }
+        }
         .task(id: liveSidebar) { await saveWidths() }
         .task(id: liveResults) { await saveWidths() }
         // No search while typing (the user's call): Return, a recent search

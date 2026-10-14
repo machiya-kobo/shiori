@@ -67,6 +67,18 @@ struct RootView: View {
                 if target != nil { Task { await presentSaveLinks() } }
             }
             .onChange(of: app.addPageRequests) { _, _ in addingPage = true }
+            // Crossing between the tabs and the three columns (an iPad's
+            // Split View widened or narrowed) keeps the page that was open:
+            // the pane's page opens in the Library tab, and the other way.
+            .onChange(of: usesTabs) { _, tabs in
+                if tabs, let page = session.selected {
+                    selection = .recent
+                    libraryPath = NavigationPath()
+                    libraryPath.append(page)
+                } else if !tabs, let page = session.reading {
+                    session.selected = page
+                }
+            }
             // The chosen pill gone (Show Opened off, or hidden in Settings →
             // Search → Pills): back to All.
             .onChange(of: app.searchScopes) { _, scopes in

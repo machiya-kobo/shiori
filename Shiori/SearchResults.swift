@@ -84,6 +84,9 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
     var webAllowed: String?
     var scope = SearchScope.all
     var selected: StoredPage?
+    /// The page open full-screen in a stack (the tabs, the two columns), so
+    /// widening to the three columns shows it in the pane.
+    var reading: StoredPage?
     /// A collection's or label's list on screen in the three columns (Mac,
     /// iPad): the window's one field then searches within it ("Search in
     /// <collection>"), with its own words, instead of a second field in the

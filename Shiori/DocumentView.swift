@@ -12,6 +12,8 @@ struct DocumentView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.previewFocus) private var focus
+    /// Absent in a sheet of its own: then nothing to keep across layouts.
+    @Environment(SearchSession.self) private var session: SearchSession?
     @State private var preview: PagePreview?
     /// When the preview on screen was kept (`OfflineStore`), while Hister
     /// or Kura can't be reached; nil for a fresh one.
@@ -59,6 +61,14 @@ struct DocumentView: View {
             .task(id: document.code?.repoName) {
                 repoNote = nil
                 if let name = document.code?.repoName, !name.isEmpty { repoNote = await app.repoNoteURL(repoName: name) }
+            }
+            // Open full-screen (not in the pane): kept, so widening to the
+            // three columns shows it there. Let go a moment after it
+            // leaves, once a layout switch has read it.
+            .onAppear { if focus == nil { session?.reading = document } }
+            .onDisappear {
+                let url = document.url
+                Task { @MainActor in if session?.reading?.url == url { session?.reading = nil } }
             }
             .task(id: document.url) {
                 summarizer().reset(for: document.url)
