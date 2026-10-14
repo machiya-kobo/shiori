@@ -245,8 +245,8 @@ final class AppState {
         client = makeClient()
         rulesLoaded = false
         capabilities = nil
-        vaultsReadAt = nil
-        cardsLoaded = false
+        vaultsNextRead = nil
+        cardsNextRead = nil
     }
 
     // MARK: Signing in to Hister (docs/signing-in.md)
@@ -375,8 +375,8 @@ final class AppState {
     private func machiyaChanged() {
         machiyaToken = MachiyaKeychain.token
         machiyaPrincipal = MachiyaKeychain.principal
-        vaultsReadAt = nil
-        cardsLoaded = false
+        vaultsNextRead = nil
+        cardsNextRead = nil
     }
 
     /// The pills over a list or search: Opened only while Show Opened is on.
@@ -460,7 +460,7 @@ final class AppState {
         do {
             try await smallweb?.save(url)
         } catch {
-            Self.log.notice("Small web page not saved: \(String(describing: error), privacy: .public)")
+            Self.log.notice("Small web page not saved: \(String(describing: error), privacy: .private)")
         }
     }
 
@@ -488,13 +488,21 @@ final class AppState {
 
     /// Konbini's cards, for linking vault notes to their cards.
     private(set) var konbiniCards: [Notes.Card] = []
-    private var cardsLoaded = false
+    /// When the cards may be asked for again: never once they've come
+    /// (nil: now). Set before the fetch, so one at a time goes out.
+    private var cardsNextRead: Date?
 
     func loadCardsIfNeeded() async {
         await loadVaultsIfNeeded()
-        guard !cardsLoaded, !searchPage.konbiniURL.isEmpty else { return }
-        cardsLoaded = true
-        konbiniCards = await Notes.fetchCards(base: searchPage.konbiniURL, signIn: machiyaSignIn)
+        guard !searchPage.konbiniURL.isEmpty else { return }
+        if let next = cardsNextRead, Date.now < next { return }
+        cardsNextRead = .distantFuture
+        if let cards = await Notes.fetchCards(base: searchPage.konbiniURL, signIn: machiyaSignIn) {
+            konbiniCards = cards
+        } else {
+            // Konbini didn't answer: asked again in a while, not never.
+            cardsNextRead = .now.addingTimeInterval(5 * 60)
+        }
     }
 
     /// Kura's vaults: the default one and the others, for the Notes filter,
@@ -502,19 +510,23 @@ final class AppState {
     /// (`Notes.useVaults`). Read again when older than ten minutes, so a
     /// vault made private again counts; a failed read shares none.
     private(set) var kuraVaults: [KuraVault] = []
-    private var vaultsReadAt: Date?
+    /// When the vaults are read again: ten minutes after a read, half a
+    /// minute after a failed one (until then every vault counts as
+    /// private). Set before the call, so one at a time goes out.
+    private var vaultsNextRead: Date?
 
     func loadVaultsIfNeeded() async {
         guard let kura = notesKura else {
             Notes.useVaults([])
             return
         }
-        if let at = vaultsReadAt, Date.now.timeIntervalSince(at) < 10 * 60 { return }
-        vaultsReadAt = .now
+        if let next = vaultsNextRead, Date.now < next { return }
+        vaultsNextRead = .now.addingTimeInterval(30)
         do {
             let found = try await kura.vaults()
             kuraVaults = found
             Notes.useVaults(found)
+            vaultsNextRead = .now.addingTimeInterval(10 * 60)
         } catch {
             Notes.useVaults([])
         }
@@ -805,7 +817,7 @@ final class AppState {
         } catch {
             // Tried again on the next screen that needs them; say why here.
             rulesFailure = error
-            Self.log.notice("Rules not loaded: \(error.userMessage, privacy: .public)")
+            Self.log.notice("Rules not loaded: \(error.userMessage, privacy: .private)")
         }
     }
 
@@ -884,7 +896,7 @@ final class AppState {
             do {
                 try await client.recordOpened(url: url, title: title, query: query)
             } catch {
-                Self.log.notice("Opened result not recorded: \(String(describing: error), privacy: .public)")
+                Self.log.notice("Opened result not recorded: \(String(describing: error), privacy: .private)")
             }
         }
     }
@@ -922,13 +934,18 @@ final class FaviconCache {
         return cache
     }()
     private var missing: Set<String> = []
+    /// Keys whose fetch failed for now, and when: not asked again for a
+    /// while (a row appearing again would otherwise ask every time).
+    private var failedAt: [String: Date] = [:]
+    private static let retryAfter: TimeInterval = 120
     private var inFlight: [String: Task<Fetch, Never>] = [:]
 
     private enum Fetch {
         case image(PlatformImage)
-        /// The server has no usable icon; don't ask again this session.
+        /// The server has no usable icon (404, or a refusal such as
+        /// Hister's 415 "invalid favicon data"); don't ask again this session.
         case none
-        /// Unreachable or similar; worth another try later.
+        /// Unreachable, a sign-in or a server error; worth a try later.
         case failed
     }
 
@@ -936,11 +953,14 @@ final class FaviconCache {
         guard !key.isEmpty, let client else { return nil }
         if let image = images.object(forKey: key as NSString) { return image }
         if missing.contains(key) { return nil }
+        if let at = failedAt[key], Date.now.timeIntervalSince(at) < Self.retryAfter { return nil }
         let task = inFlight[key] ?? Task { () -> Fetch in
             do {
                 let data = try await client.favicon(key: key)
                 return PlatformImage(data: data).map(Fetch.image) ?? .none
-            } catch HisterError.notFound {
+            } catch HisterError.notFound, HisterError.invalidQuery {
+                return .none
+            } catch HisterError.server(let status, _) where status < 500 && status != 408 && status != 429 {
                 return .none
             } catch {
                 return .failed
@@ -958,6 +978,8 @@ final class FaviconCache {
             missing.insert(key)
             return nil
         case .failed:
+            if failedAt.count > 2000 { failedAt.removeAll() }
+            failedAt[key] = .now
             return nil
         }
     }

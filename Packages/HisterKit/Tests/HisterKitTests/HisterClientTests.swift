@@ -239,6 +239,27 @@ struct HisterClientTests {
         #expect(first["dry_run"] as? Bool == true)
     }
 
+    @Test func aDeleteWhoseReplyWasLostCountsWhenThePageIsGone() async throws {
+        let deleted = Flag()
+        StubProtocol.handle(Self.host) { request in
+            let body = try jsonBody(request)
+            if (body["dry_run"] as? Bool) == true { return (200, Data((deleted.isSet ? #"{"matched":0}"# : #"{"matched":1}"#).utf8)) }
+            // Deleted, but the reply never arrives.
+            deleted.set()
+            throw URLError(.networkConnectionLost)
+        }
+        try await client.delete(url: "https://a.example/")
+        #expect(requests.count == 3)
+        // Still there after a lost reply: the failure stands.
+        let never = Flag()
+        StubProtocol.handle(Self.host) { request in
+            if (try jsonBody(request)["dry_run"] as? Bool) == true { return (200, Data(#"{"matched":1}"#.utf8)) }
+            never.set()
+            throw URLError(.timedOut)
+        }
+        await #expect(throws: HisterError.unreachable) { try await client.delete(url: "https://a.example/") }
+    }
+
     @Test func deleteRefusesWhenTheQueryMatchesMoreThanOnePage() async {
         stub(#"{"matched":3}"#)
         await #expect(throws: HisterError.unexpectedMatchCount(3)) { try await client.delete(url: "https://a.example/") }
@@ -251,4 +272,12 @@ struct HisterClientTests {
         #expect(rules.aliases["one"] == "label:birds")
         #expect(rules.labels == ["birds", "cats", "dogs"])
     }
+}
+
+/// A flag set from a stub's handler (another thread).
+final class Flag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    var isSet: Bool { lock.withLock { value } }
+    func set() { lock.withLock { value = true } }
 }

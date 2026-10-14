@@ -127,6 +127,30 @@ struct AccountPrefsTests {
         #expect(account.prefs["theme"] == "day")
     }
 
+    @Test func oneValueTheAccountRefusesDoesntTakeTheRestWithIt() async {
+        account.prefs = ["theme": "night", "palette": "nord"]
+        account.updated = ["theme": 10, "palette": 10]
+        _ = await contact()
+        defaults.set("day", forKey: "theme")
+        defaults.set("dracula", forKey: "palette")
+        // The account refuses any batch holding the palette, and the palette alone.
+        let account = account
+        StubProtocol.handle(Self.host) { request in
+            if request.httpMethod == "PUT",
+               let body = (try? JSONSerialization.jsonObject(with: request.httpBody ?? Data())) as? [String: Any],
+               (body["prefs"] as? [String: Any])?["palette"] != nil {
+                return (400, Data(#"{"error":"bad value"}"#.utf8))
+            }
+            return account.handle(request)
+        }
+        #expect(await contact() == .synced)
+        #expect(account.prefs["theme"] == "day")
+        #expect(account.prefs["palette"] == "nord")
+        // The palette was in the refused batch: it was really sent.
+        let puts = StubProtocol.requests(Self.host).filter { $0.httpMethod == "PUT" }
+        #expect(puts.count >= 2)
+    }
+
     @Test func signedOutSaysSoAndChangesNothing() async {
         account.status = 401
         defaults.set("day", forKey: "theme")

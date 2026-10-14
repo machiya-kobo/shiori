@@ -100,7 +100,7 @@ extension AutoLabeller {
                     try await add(name, to: keyword, automatic: true, app: app, client: client)
                     added += 1
                 } catch {
-                    log.notice("Collection edit failed: \(error.localizedDescription, privacy: .public)")
+                    log.notice("Collection edit failed: \(error.localizedDescription, privacy: .private)")
                 }
             } else if let keyword = CollectionPolicy.ask(cloud: cloud, onDevice: onDevice) {
                 state.collectionProposals.append(

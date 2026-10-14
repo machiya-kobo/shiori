@@ -43,8 +43,9 @@ public enum AIHTTP {
         guard (200..<300).contains(http.statusCode) else {
             let message = errorMessage(from: data)
             // The status and the provider's message only: never a key or
-            // anything of the page.
-            log.notice("AI request failed: \(http.statusCode, privacy: .public) \(message ?? "", privacy: .public)")
+            // anything of the page. The message stays private: a provider
+            // may echo part of a key or the server's address in it.
+            log.notice("AI request failed: \(http.statusCode, privacy: .public) \(message ?? "", privacy: .private)")
             throw AIError.badStatus(http.statusCode, message)
         }
         return data

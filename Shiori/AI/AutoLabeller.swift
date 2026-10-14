@@ -256,7 +256,7 @@ struct LabellingState: Codable {
                     lastMessage = "\(engine.provider.displayName) didn't answer; the rest wait for the next run."
                     break pages
                 } catch {
-                    log.notice("Cloud label failed: \(error.localizedDescription, privacy: .public)")
+                    log.notice("Cloud label failed: \(error.localizedDescription, privacy: .private)")
                 }
             }
             // Always asked, even when the cloud is sure: free, on the device,

@@ -106,10 +106,20 @@ enum AccountPrefs {
                 answer = reply
                 write(Optional<[String: String?]>.none, pendingKey, d)
             case .refused:
-                // 400: the store will never take it.
+                // 400: something in it the store will never take. Sent
+                // again one value at a time, so the rest still goes.
                 write(Optional<[String: String?]>.none, pendingKey, d)
-                guard case .ok(let reply) = await fetch(base: base, credential: credential, etag: nil, session: session) else { return .unavailable }
-                answer = reply
+                switch await sendEach(pending, base: base, credential: credential, session: session) {
+                case .failed(let state, let left):
+                    write(left, pendingKey, d)
+                    write(now, localKey, d)
+                    return state
+                case .done(let reply?):
+                    answer = reply
+                case .done(nil):
+                    guard case .ok(let reply) = await fetch(base: base, credential: credential, etag: nil, session: session) else { return .unavailable }
+                    answer = reply
+                }
             case .failed(let state):
                 write(pending, pendingKey, d)
                 write(now, localKey, d)
@@ -186,6 +196,36 @@ enum AccountPrefs {
         for (key, value) in values { prefs[key] = value.map { $0 as Any } ?? NSNull() }
         guard let body = try? JSONSerialization.data(withJSONObject: ["prefs": prefs]) else { return .refused }
         return await perform(request(base: base, credential: credential, method: "PUT", body: body), session: session)
+    }
+
+    private enum EachResult {
+        /// The account's last answer (nil: every value refused).
+        case done(PrefsSync.Snapshot?)
+        /// Stopped: these values are still to go.
+        case failed(State, left: [String: String?])
+    }
+
+    /// A batch the store refused, value by value: what it takes goes, what
+    /// it refuses is dropped, and a failure keeps the rest for next time.
+    private static func sendEach(_ values: [String: String?], base: URL, credential: Credential, session: URLSession) async -> EachResult {
+        var answer: PrefsSync.Snapshot?
+        var refused = 0
+        let keys = values.keys.sorted()
+        for (i, key) in keys.enumerated() {
+            guard let value = values[key] else { continue }
+            switch await send([key: value], base: base, credential: credential, session: session) {
+            case .ok(let reply): answer = reply
+            case .refused: refused += 1
+            case .unchanged: break
+            case .failed(let state):
+                var left: [String: String?] = [:]
+                for rest in keys[i...] { if let value = values[rest] { left.updateValue(value, forKey: rest) } }
+                return .failed(state, left: left)
+            }
+        }
+        // Counts only: the keys and values are the person's settings.
+        if refused > 0 { log.notice("Settings the account refused: \(refused, privacy: .public) dropped") }
+        return .done(answer)
     }
 
     private static func perform(_ request: URLRequest, session: URLSession) async -> Reply {

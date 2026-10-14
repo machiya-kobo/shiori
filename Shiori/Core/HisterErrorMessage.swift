@@ -7,7 +7,7 @@ extension HisterError {
         case .unreachable:
             "The server didn't answer. Check your network or VPN and the server address in Settings, then try again."
         case .untrusted:
-            "The server's certificate isn't trusted, so Shiori didn't send anything. Check the server's HTTPS setup."
+            "Shiori couldn't make a secure connection to the server (often an untrusted certificate), so nothing was sent. Check the server's HTTPS setup."
         case .plainHTTP:
             "This address uses http://, and Shiori needs https://."
         case .previewUnavailable:

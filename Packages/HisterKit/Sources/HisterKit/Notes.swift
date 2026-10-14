@@ -247,20 +247,28 @@ public enum Notes {
     }
 
     /// Konbini's cards, for linking notes and cards both ways. `signIn`:
-    /// the Machiya sign-in, sent where its host rule allows.
+    /// the Machiya sign-in, sent where its host rule allows. Nil when
+    /// Konbini didn't answer with them (out of reach, a sign-in, an error,
+    /// a reply that doesn't read), so the caller can ask again later.
     public static func fetchCards(
         base: String, session: URLSession = HisterClient.defaultSession, signIn: MachiyaSignIn? = nil
-    ) async -> [Card] {
+    ) async -> [Card]? {
         guard let url = URL(string: (base.hasSuffix("/") ? base : base + "/") + "api/cards"), url.scheme != nil else {
             return []
         }
         struct Wrapped: Decodable { var cards: [Card] }
         let data: Data
+        let response: URLResponse
         do {
-            (data, _) = try await session.roomData(for: URLRequest(url: url), signIn: signIn)
+            (data, response) = try await session.roomData(for: URLRequest(url: url), signIn: signIn)
         } catch {
-            HisterClient.log.notice("Konbini cards not fetched: \(String(describing: error), privacy: .public)")
-            return []
+            // The error's text names the host: private.
+            HisterClient.log.notice("Konbini cards not fetched: \(String(describing: error), privacy: .private)")
+            return nil
+        }
+        if let status = (response as? HTTPURLResponse)?.statusCode, !(200..<300).contains(status) {
+            HisterClient.log.notice("Konbini cards not fetched: it answered \(status, privacy: .public)")
+            return nil
         }
         if let wrapped = try? JSONDecoder().decode(Wrapped.self, from: data) { return wrapped.cards }
         do {
@@ -268,7 +276,7 @@ public enum Notes {
         } catch {
             // Without the cards, notes lose their Konbini links, quietly.
             HisterClient.log.error("Konbini cards didn't decode: \(DecodeLog.describe(error), privacy: .public)")
-            return []
+            return nil
         }
     }
 

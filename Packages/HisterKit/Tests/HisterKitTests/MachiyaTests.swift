@@ -117,6 +117,16 @@ struct MachiyaTests {
         #expect(follow(Self.hister) == nil)
     }
 
+    @Test func konbinisCardsAreNilWhenItDidntAnswerWithThem() async {
+        StubProtocol.handle(Self.konbiniHost) { _ in (200, Data(#"{"cards":[{"slug":"a","path":"Notes/A.md"}]}"#.utf8)) }
+        #expect(await Notes.fetchCards(base: Self.konbini, session: session) == [Notes.Card(slug: "a", path: "Notes/A.md")])
+        // A sign-in, a server error, a page that isn't the list: asked again later, not "no cards".
+        for (status, body) in [(401, "{}"), (503, "{}"), (200, "<html>")] {
+            StubProtocol.handle(Self.konbiniHost) { _ in (status, Data(body.utf8)) }
+            #expect(await Notes.fetchCards(base: Self.konbini, session: session) == nil)
+        }
+    }
+
     @Test func kuraAndKonbiniSendTheSignIn() async throws {
         let signIn = try #require(MachiyaSignIn(token: Self.token, rooms: rooms))
         StubProtocol.handle(Self.kuraHost) { _ in (200, Data(#"{"vaults":[{"name":"main","default":true}],"total":0,"results":[]}"#.utf8)) }

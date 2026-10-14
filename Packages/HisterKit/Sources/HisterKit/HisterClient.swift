@@ -5,7 +5,7 @@ import os
 public enum HisterError: Error, Equatable, Sendable {
     /// No answer from the server: VPN off, no signal, wrong address.
     case unreachable
-    /// The server answered, but its TLS certificate isn't trusted.
+    /// No secure connection: the TLS certificate isn't trusted, or the handshake failed.
     case untrusted
     /// A plain http:// address, which the system's App Transport Security
     /// refuses: nothing was sent.
@@ -216,7 +216,14 @@ public struct HisterClient: Sendable {
         let query = Self.exactURLQuery(url)
         let matched = try await deleteRequest(query: query, dryRun: true)
         guard matched == 1 else { throw .unexpectedMatchCount(matched) }
-        _ = try await deleteRequest(query: query, dryRun: false)
+        do {
+            _ = try await deleteRequest(query: query, dryRun: false)
+        } catch .unreachable {
+            // The reply was lost, not perhaps the delete: if the page is
+            // gone now, it was deleted.
+            if (try? await deleteRequest(query: query, dryRun: true)) == 0 { return }
+            throw .unreachable
+        }
     }
 
     /// Whether Hister holds this exact address, or it with or without a
