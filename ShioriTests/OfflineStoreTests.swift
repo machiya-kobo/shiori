@@ -61,6 +61,32 @@ struct OfflineStoreTests {
         #expect(OfflineStore.preview(for: note, origin: origin)?.preview.contentHTML == "<p>shared</p>")
         Notes.useVaults([])
         #expect(OfflineStore.preview(for: note, origin: origin) == nil)
+        // And its copy is gone from the device, not only hidden.
+        await OfflineStore.settled()
+        Notes.useVaults([KuraVault(name: "team", title: "Team", isDefault: false, isPrivate: false, obsidian: "Team")])
+        #expect(OfflineStore.preview(for: note, origin: origin) == nil)
+    }
+
+    @Test func aListDropsANoteWhoseVaultTurnedPrivate() async throws {
+        let note = page("https://kura.example/v/team/n/plan", label: "vault")
+        Notes.useVaults([KuraVault(name: "team", title: "Team", isDefault: false, isPrivate: false, obsidian: "Team")])
+        OfflineStore.saveList("notes", origin: origin, pages: [note, page("https://kura.example/n/Open")])
+        await OfflineStore.settled()
+        Notes.useVaults([])
+        #expect(OfflineStore.list("notes", origin: origin)?.pages.map(\.url) == ["https://kura.example/n/Open"])
+        await OfflineStore.settled()
+        Notes.useVaults([KuraVault(name: "team", title: "Team", isDefault: false, isPrivate: false, obsidian: "Team")])
+        #expect(OfflineStore.list("notes", origin: origin)?.pages.map(\.url) == ["https://kura.example/n/Open"])
+    }
+
+    @Test func onlyTheNewestListsStay() async throws {
+        for i in 0..<(OfflineStore.listFiles + 4) {
+            let other = OfflineStore.origin(server: "https://\(i).example/", kura: "")
+            OfflineStore.saveList("pages", origin: other, pages: [page("https://example.com/a")])
+        }
+        await OfflineStore.settled()
+        let folder = try #require(OfflineStore.directory?.appending(path: "lists"))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).count == OfflineStore.listFiles)
     }
 
     @Test func onlyTheNewestPreviewsStay() async throws {

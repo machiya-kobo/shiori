@@ -11,7 +11,8 @@ import HisterKit
 /// Fails closed: a note from a private vault (`Notes.isPrivateNote`, which
 /// counts an unknown vault as private), a file and code are never kept, and
 /// what's read back is checked again, since a vault may have turned private
-/// since. Signing out of Hister empties it all; a delete drops its preview.
+/// since (and a copy that fails is deleted). Signing out of Hister, or
+/// another token or user, empties it all; a delete drops its preview.
 ///
 /// Writes, pruning, forgetting and clearing run on one serial queue off the
 /// caller's (the main) actor, in the order asked: a save asked for before a
@@ -20,6 +21,9 @@ nonisolated enum OfflineStore {
     static let previewLimit = 50
     /// The first page a Library list loads.
     static let listLimit = 30
+    /// Lists kept, newest first: the Library's few, for a few servers (a
+    /// changed address leaves the old one's behind).
+    static let listFiles = 12
 
     /// May this page be kept on the device?
     static func keepable(_ page: StoredPage) -> Bool {
@@ -41,12 +45,18 @@ nonisolated enum OfflineStore {
         guard let file = file("lists", "\(origin)|\(name)") else { return }
         queue.async {
             write(ListEntry(origin: origin, savedAt: now, pages: kept.map(Page.init)), to: file)
+            prune(file.deletingLastPathComponent(), keeping: listFiles)
         }
     }
 
     static func list(_ name: String, origin: String) -> (pages: [StoredPage], savedAt: Date)? {
-        guard let entry: ListEntry = read(file("lists", "\(origin)|\(name)")), entry.origin == origin else { return nil }
+        guard let file = file("lists", "\(origin)|\(name)"), let entry: ListEntry = read(file), entry.origin == origin else { return nil }
         let pages = entry.pages.map(\.page).filter(keepable)
+        if pages.count < entry.pages.count {
+            // A vault turned private since: its notes leave the copy now.
+            let left = ListEntry(origin: entry.origin, savedAt: entry.savedAt, pages: pages.map(Page.init))
+            queue.async { write(left, to: file) }
+        }
         return pages.isEmpty ? nil : (pages, entry.savedAt)
     }
 
@@ -65,7 +75,12 @@ nonisolated enum OfflineStore {
     }
 
     static func preview(for page: StoredPage, origin: String) -> (preview: PagePreview, savedAt: Date)? {
-        guard keepable(page), let entry: PreviewEntry = read(previewFile(page.url)),
+        guard keepable(page) else {
+            // A vault turned private since: its copy goes now (as SummaryCache's does).
+            forget(url: page.url)
+            return nil
+        }
+        guard let entry: PreviewEntry = read(previewFile(page.url)),
               entry.origin == origin, entry.url == page.url
         else { return nil }
         return (entry.preview.preview, entry.savedAt)

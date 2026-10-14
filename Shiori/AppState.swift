@@ -230,9 +230,20 @@ final class AppState {
         let token = HisterToken.clean(trimmed)
         if !trimmed.isEmpty && token == nil { return "That isn't a token: it's 8 to 512 characters with no spaces." }
         guard HisterKeychain.save(token ?? "") else { return "The Keychain didn't keep it. Try again." }
+        let before = histerToken
         histerToken = HisterKeychain.token
+        // Another token may be another account: its copies aren't this one's.
+        if histerToken != before { forgetAccountCopies() }
         credentialsChanged()
         return nil
+    }
+
+    /// What this device kept for reading offline, summaries and the network
+    /// cache came through the old credential: they go with it.
+    private func forgetAccountCopies() {
+        OfflineStore.clear()
+        SummaryCache.clear()
+        HisterClient.clearCache()
     }
 
     /// The client for the server, with this device's token and sign-in.
@@ -291,7 +302,9 @@ final class AppState {
         guard HisterKeychain.saveSignIn(session: signedIn.session, sessionID: signedIn.sessionID, username: signedIn.username) else {
             return "The Keychain didn't keep the sign-in. Try again."
         }
+        let before = histerAccount?.username
         histerAccount = Self.storedAccount()
+        if before != signedIn.username { forgetAccountCopies() }
         credentialsChanged()
         Task { await syncAccountPrefs(force: true) }
         return nil
@@ -306,9 +319,7 @@ final class AppState {
         HisterKeychain.signOut()
         histerAccount = nil
         // What was kept for reading offline was this account's.
-        OfflineStore.clear()
-        SummaryCache.clear()
-        HisterClient.clearCache()
+        forgetAccountCopies()
         credentialsChanged()
     }
 

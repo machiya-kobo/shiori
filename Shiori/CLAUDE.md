@@ -85,7 +85,8 @@ Loaded when you work in `Shiori/`. The project-wide rules, layout and build/test
 - **Offline reading** (`OfflineStore`, apps only): the Library's first pages
   and the last 50 previews, in Caches per server and Kura, shown only when
   Hister or Kura is unreachable ("Offline · as of <time>"). Never a private
-  vault's note, a file or code; signing out empties it.
+  vault's note, a file or code (a copy that turns private is deleted on
+  reading); signing out, another token or another user empties it.
 - **Lists watch for new items, never redraw under you**: every 60 s while
   visible, an open list asks Hister and Kura (never the web) what arrived
   (`ResultsModel.checkForNew`, the web's `watchForNew`); an "N New Items"
