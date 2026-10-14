@@ -1390,6 +1390,685 @@
     return { href: direct ? result.url : result.proxy_url, other: direct ? result.proxy_url : result.url, direct };
   }
 
+  // --- Media: music, films and TV (docs/media.md) -----------------------------
+  // Your libraries (Jellyfin, Plex) and what you played (Koito for music,
+  // Movary for films), one card per item. Every request is a GET to a read
+  // endpoint. Private like a work note: never to Hister, a model, a cache, an
+  // export or a feed. HisterKit's Media.swift is the twin, on
+  // scripts/media-cases.json.
+
+  const MEDIA_NAMES = { jellyfin: 'Jellyfin', plex: 'Plex', koito: 'Koito', movary: 'Movary' };
+  const MEDIA_LIBRARIES = ['jellyfin', 'plex'];
+  const MEDIA_KINDS = { film: 'Film', show: 'Show', episode: 'Episode', artist: 'Artist', album: 'Album', track: 'Track', video: 'Music Video', collection: 'Collection', playlist: 'Playlist', other: 'Video' };
+  const MEDIA_GROUPS = { film: 'films', show: 'tv', episode: 'tv', artist: 'music', album: 'music', track: 'music', video: 'music', collection: 'other', playlist: 'other', other: 'other' };
+  const MEDIA_PERIODS = ['week', 'month', 'year', 'all_time'];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  /** A service's address with its trailing slash, or '' (an http(s) address, or a path on this host). */
+  function mediaBase(raw) {
+    const s = String(raw || '').trim();
+    if (!/^https?:\/\/[^/\s]+/.test(s) && !/^\/(?!\/)/.test(s)) return '';
+    return s.endsWith('/') ? s : s + '/';
+  }
+
+  const mediaEnc = (v) => encodeURIComponent(String(v));
+  const mediaQuery = (pairs) => pairs.filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => `${k}=${mediaEnc(v)}`).join('&');
+  const mediaWords = (q) => String(q || '').trim().replace(/\s+/g, ' ').slice(0, 200);
+  const mediaLimit = (n, d) => Math.max(1, Math.min(100, Number.isInteger(n) ? n : d));
+
+  /**
+   * One read request's address: `service` and `what` name it, `args` fill
+   * it. '' when the base or a needed argument is missing. Every one is a
+   * GET; Shiori never writes to these services.
+   */
+  function mediaRequestURL(service, what, base, args = {}) {
+    const b = mediaBase(base);
+    if (!b) return '';
+    const a = args || {};
+    const q = mediaWords(a.q);
+    const id = /^[A-Za-z0-9_-]{1,64}$/.test(String(a.id ?? '')) ? String(a.id) : '';
+    const user = String(a.user || '');
+    const path = (p, pairs = []) => b + p + (pairs.length && mediaQuery(pairs) ? '?' + mediaQuery(pairs) : '');
+    switch (`${service}.${what}`) {
+      case 'koito.search': return q ? path('apis/web/v1/search', [['q', q]]) : '';
+      case 'koito.listens': return path('apis/web/v1/listens', [['period', 'all_time'], ['limit', mediaLimit(a.limit, 10)]]);
+      case 'koito.nowPlaying': return path('apis/web/v1/now-playing');
+      case 'koito.top': {
+        if (!['artists', 'albums', 'tracks'].includes(a.kind)) return '';
+        const period = MEDIA_PERIODS.includes(a.period) ? a.period : 'month';
+        return path(`apis/web/v1/top/${a.kind}`, [['period', period], ['limit', mediaLimit(a.limit, 10)]]);
+      }
+      case 'koito.item': return ['track', 'album', 'artist'].includes(a.kind) && id ? path(`apis/web/v1/${a.kind}/${id}`) : '';
+      case 'koito.last': return ['track', 'album', 'artist'].includes(a.kind) && id ? path('apis/web/v1/listens', [['period', 'all_time'], ['limit', 1], [`${a.kind}_id`, id]]) : '';
+      case 'movary.me': return path('api/authentication/token');
+      case 'movary.played': return user && q ? path(`api/users/${mediaEnc(user)}/played/movies`, [['search', q], ['limit', mediaLimit(a.limit, 30)]]) : '';
+      case 'movary.history': return user ? path(`api/users/${mediaEnc(user)}/history/movies`, [['limit', mediaLimit(a.limit, 10)], ['page', 1]]) : '';
+      case 'movary.watchlist': return user ? path(`api/users/${mediaEnc(user)}/watchlist/movies`, [['limit', mediaLimit(a.limit, 10)], ['sortBy', 'addedAt'], ['sortOrder', 'desc']]) : '';
+      case 'jellyfin.me': return path('Users/Me');
+      case 'jellyfin.search': return user && q ? path(`Users/${mediaEnc(user)}/Items`, [['searchTerm', q], ['Recursive', 'true'], ['Limit', mediaLimit(a.limit, 40)],
+        ['Fields', 'ProviderIds,ProductionYear,DateCreated'], ['IncludeItemTypes', 'Movie,Series,Episode,MusicArtist,MusicAlbum,Audio,MusicVideo,BoxSet,Playlist,Video,AudioBook'],
+        ['EnableTotalRecordCount', 'false']]) : '';
+      case 'jellyfin.latest': return user ? path(`Users/${mediaEnc(user)}/Items/Latest`, [['Limit', mediaLimit(a.limit, 10)], ['Fields', 'ProviderIds,ProductionYear,DateCreated']]) : '';
+      case 'plex.identity': return path('identity');
+      case 'plex.search': return q ? path('hubs/search', [['query', q], ['limit', mediaLimit(a.limit, 10)], ['includeGuids', 1]]) : '';
+      case 'plex.recent': return path('library/recentlyAdded', [['X-Plex-Container-Start', 0], ['X-Plex-Container-Size', mediaLimit(a.limit, 10)], ['includeGuids', 1]]);
+      default: return '';
+    }
+  }
+
+  // Values from a reply: never trusted to be the type they should be.
+  const mStr = (v) => (typeof v === 'string' ? v.trim() : typeof v === 'number' && Number.isFinite(v) ? String(v) : '');
+  const mInt = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.trunc(v) : typeof v === 'string' && /^-?\d+$/.test(v.trim()) ? parseInt(v, 10) : null);
+  const mNum = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v.trim()) ? parseFloat(v) : null);
+  const mArr = (v) => (Array.isArray(v) ? v : []);
+  const mObj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  const mYear = (v) => { const n = mInt(v); return n && n > 1800 && n < 3000 ? n : null; };
+  /**
+   * Unix seconds from an ISO time (no zone reads as UTC; fractions dropped),
+   * or from a plain date (noon UTC, so the day reads the same in every zone).
+   */
+  function mTime(v) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/.exec(mStr(v));
+    if (!m) return null;
+    const [y, mo, d, h, mi, sec] = [1, 2, 3, 4, 5, 6].map((i) => parseInt(m[i] || '0', 10));
+    if (mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59 || sec > 60) return null;
+    if (m[4] === undefined) return Date.UTC(y, mo - 1, d, 12) / 1000;
+    let zone = 0;
+    if (m[7] && m[7] !== 'Z') {
+      const z = m[7].replace(':', '');
+      zone = (z[0] === '-' ? -1 : 1) * (parseInt(z.slice(1, 3), 10) * 60 + parseInt(z.slice(3, 5), 10));
+    }
+    return Date.UTC(y, mo - 1, d, h, mi, sec) / 1000 - zone * 60;
+  }
+  const mUnix = (v) => { const n = mInt(v); return n && n > 0 ? n : null; };
+
+  /** An item with its empty fields left out, so both twins write the same object. */
+  function mediaItem(fields) {
+    const out = {};
+    for (const [k, v] of Object.entries(fields)) {
+      if (v === undefined || v === null || v === '' || v === false) continue;
+      if (Array.isArray(v) && !v.length) continue;
+      if (typeof v === 'object' && !Array.isArray(v) && !Object.keys(v).length) continue;
+      out[k] = v;
+    }
+    return out;
+  }
+
+  function mediaIds(pairs) {
+    const ids = {};
+    for (const [k, raw] of pairs) {
+      let v = mStr(raw).toLowerCase();
+      if (!v || ids[k]) continue;
+      if (k === 'imdb' && !/^tt\d+$/.test(v)) continue;
+      if ((k === 'tmdb' || k === 'tvdb') && !/^\d+$/.test(v)) continue;
+      if (k === 'mbid' && !/^[0-9a-f-]{36}$/.test(v)) continue;
+      ids[k] = v;
+    }
+    return ids;
+  }
+
+  /** An image on the service's own address (a relative path joined to `api`), or TMDB's: anything else is dropped. */
+  function mediaImageURL(raw, ctx) {
+    const s = mStr(raw);
+    const api = mediaBase(ctx && ctx.api);
+    if (!s || !api) return '';
+    if (/^\/[^/]/.test(s)) return api + s.slice(1);
+    if (/^https:\/\/image\.tmdb\.org\/t\/p\/[\w/.-]+$/.test(s)) return s;
+    const link = mediaBase(ctx && ctx.link);
+    if (link && /^https?:/.test(link) && s.startsWith(link) && !/\.\.|[?#]/.test(s.slice(link.length))) return api + s.slice(link.length);
+    return '';
+  }
+
+  /** A score to one decimal, halves up ("7.3" for 7.25), as the Swift twin writes it. */
+  const score1 = (n) => (Math.round(n * 10) / 10).toFixed(1);
+
+  const by = (list) => mArr(list).map((a) => mStr(a && a.name)).filter(Boolean).join(', ');
+
+  function koitoItem(kind, raw, ctx) {
+    const r = mObj(raw);
+    const id = mInt(r.id);
+    const link = mediaBase(ctx && ctx.link);
+    const image = mObj(r.image);
+    return mediaItem({
+      kind,
+      title: mStr(kind === 'artist' ? r.name : r.title),
+      by: kind === 'artist' ? '' : by(r.artists),
+      ids: mediaIds([['mbid', r.musicbrainz_id]]),
+      image: mediaImageURL(image.medium || image.small, ctx),
+      source: 'koito',
+      sourceId: id ? String(id) : '',
+      open: link && id ? { koito: `${link}${kind}/${id}` } : {},
+    });
+  }
+
+  function movaryFilm(raw, ctx) {
+    const m = mObj(raw);
+    const ids = mObj(m.ids);
+    const link = mediaBase(ctx && ctx.link);
+    const movaryId = mInt(ids.movary);
+    const tmdb = mNum(mObj(mObj(m.externalRatings).tmdb).average);
+    const rating = mInt(m.userRating);
+    return mediaItem({
+      kind: 'film',
+      title: mStr(m.title),
+      year: mYear(mStr(m.releaseDate).slice(0, 4)),
+      ids: mediaIds([['tmdb', ids.tmdb], ['imdb', ids.imdb]]),
+      image: mediaImageURL(m.posterPath || (m.tmdbPosterPath ? 'https://image.tmdb.org/t/p/w342' + mStr(m.tmdbPosterPath) : ''), ctx),
+      rating: rating && rating > 0 && rating <= 10 ? rating : null,
+      ratingFrom: rating && rating > 0 && rating <= 10 ? 'movary' : '',
+      outside: tmdb && tmdb > 0 ? [{ name: 'TMDB', score: score1(tmdb) }] : [],
+      source: 'movary',
+      sourceId: movaryId ? String(movaryId) : '',
+      open: link && movaryId && ctx.user ? { movary: `${link}users/${mediaEnc(ctx.user)}/movies/${movaryId}` } : {},
+    });
+  }
+
+  const JELLYFIN_KINDS = { Movie: 'film', Series: 'show', Episode: 'episode', MusicArtist: 'artist', MusicAlbum: 'album', Audio: 'track', MusicVideo: 'video', BoxSet: 'collection', Playlist: 'playlist', Video: 'other', AudioBook: 'other' };
+  const PLEX_KINDS = { movie: 'film', show: 'show', episode: 'episode', artist: 'artist', album: 'album', track: 'track', clip: 'video', collection: 'collection', playlist: 'playlist' };
+
+  const episodeContext = (season, episode) => {
+    const s = mInt(season), e = mInt(episode);
+    return [s !== null ? `S${s}` : '', e !== null ? `E${e}` : ''].filter(Boolean).join(' · ');
+  };
+
+  function jellyfinItem(raw, ctx) {
+    const r = mObj(raw);
+    const kind = JELLYFIN_KINDS[r.Type];
+    const id = mStr(r.Id);
+    if (!kind || !/^[0-9a-f]{32}$/i.test(id)) return null;
+    const p = mObj(r.ProviderIds);
+    const mb = kind === 'album' ? p.MusicBrainzAlbum : kind === 'artist' ? p.MusicBrainzArtist : kind === 'track' ? p.MusicBrainzTrack : '';
+    const tags = mObj(r.ImageTags);
+    const api = mediaBase(ctx && ctx.api);
+    let image = '';
+    if (api && mStr(tags.Primary)) image = `${api}Items/${id}/Images/Primary?tag=${mediaEnc(mStr(tags.Primary))}&maxWidth=300`;
+    else if (api && kind === 'track' && /^[0-9a-f]{32}$/i.test(mStr(r.AlbumId)) && mStr(r.AlbumPrimaryImageTag)) {
+      image = `${api}Items/${mStr(r.AlbumId)}/Images/Primary?tag=${mediaEnc(mStr(r.AlbumPrimaryImageTag))}&maxWidth=300`;
+    }
+    const link = mediaBase(ctx && ctx.link);
+    const server = mStr(ctx && ctx.serverId);
+    return mediaItem({
+      kind,
+      title: mStr(r.Name),
+      by: kind === 'episode' ? mStr(r.SeriesName) : ['album', 'track', 'video'].includes(kind) ? (mStr(r.AlbumArtist) || mArr(r.Artists).map(mStr).filter(Boolean).join(', ')) : '',
+      context: kind === 'track' ? mStr(r.Album) : kind === 'episode' ? episodeContext(r.ParentIndexNumber, r.IndexNumber) : '',
+      year: mYear(r.ProductionYear),
+      ids: mediaIds([['tmdb', p.Tmdb], ['imdb', p.Imdb], ['tvdb', p.Tvdb], ['mbid', mb]]),
+      image,
+      added: mTime(r.DateCreated),
+      inLibrary: true,
+      source: 'jellyfin',
+      sourceId: id,
+      open: link && server ? { jellyfin: `${link}web/#/details?id=${id}&serverId=${mediaEnc(server)}` } : {},
+    });
+  }
+
+  /** Plex's rating images ("rottentomatoes://image.rating.ripe") to the name shown and the score as it reads there. */
+  function plexOutside(value, image) {
+    const n = mNum(value);
+    const img = mStr(image);
+    if (!n || n <= 0) return null;
+    if (img.startsWith('imdb://')) return { name: 'IMDb', score: score1(n) };
+    if (img.startsWith('themoviedb://')) return { name: 'TMDB', score: score1(n) };
+    if (/^rottentomatoes:\/\/image\.rating\.(ripe|rotten|certified)/.test(img)) return { name: 'RT', score: `${Math.round(n * 10)}%` };
+    if (/^rottentomatoes:\/\/image\.rating\.(upright|spilled)/.test(img)) return { name: 'RT Audience', score: `${Math.round(n * 10)}%` };
+    return null;
+  }
+
+  function plexItem(raw, ctx) {
+    const r = mObj(raw);
+    const kind = PLEX_KINDS[r.type];
+    const key = mStr(r.ratingKey);
+    if (!kind || !/^\d+$/.test(key)) return null;
+    const guid = (scheme) => {
+      const g = mArr(r.Guid).map((x) => mStr(x && x.id)).find((x) => x.startsWith(scheme + '://'));
+      return g ? g.slice(scheme.length + 3) : '';
+    };
+    const api = mediaBase(ctx && ctx.api);
+    const thumb = mStr(r.thumb) || mStr(r.parentThumb) || mStr(r.grandparentThumb);
+    const link = mediaBase(ctx && ctx.link);
+    const machine = mStr(ctx && ctx.machine);
+    const rating = mNum(r.userRating);
+    const show = kind === 'show';
+    const views = mInt(show ? r.viewedLeafCount : r.viewCount);
+    const outside = [plexOutside(r.audienceRating, r.audienceRatingImage), plexOutside(r.rating, r.ratingImage)].filter(Boolean);
+    return mediaItem({
+      kind,
+      title: mStr(r.title),
+      by: kind === 'track' || kind === 'episode' ? mStr(r.grandparentTitle) : kind === 'album' ? mStr(r.parentTitle) : '',
+      context: kind === 'track' ? mStr(r.parentTitle) : kind === 'episode' ? episodeContext(r.parentIndex, r.index) : '',
+      year: mYear(r.year) || (kind === 'album' ? mYear(r.parentYear) : null),
+      ids: mediaIds([['tmdb', guid('tmdb')], ['imdb', guid('imdb')], ['tvdb', guid('tvdb')], ['mbid', guid('mbid')]]),
+      image: api && /^\/library\/metadata\/\d+\/(thumb|art)\/\d+$/.test(thumb) ? api + thumb.slice(1) : '',
+      library: mStr(r.librarySectionTitle),
+      added: mUnix(r.addedAt),
+      inLibrary: true,
+      plays: ['collection', 'playlist'].includes(kind) ? null : views !== null && views > 0 ? views : 0,
+      last: views !== null && views > 0 ? mUnix(r.lastViewedAt) : null,
+      playedFrom: views !== null && views > 0 ? 'plex' : '',
+      episodes: show && mInt(r.leafCount) ? { watched: Math.max(0, mInt(r.viewedLeafCount) || 0), total: mInt(r.leafCount) } : {},
+      rating: rating && rating > 0 ? Math.min(10, Math.round(rating)) : null,
+      ratingFrom: rating && rating > 0 ? 'plex' : '',
+      outside,
+      source: 'plex',
+      sourceId: key,
+      open: link && /^[0-9a-f]{20,64}$/i.test(machine) ? { plex: `${link}web/index.html#!/server/${machine}/details?key=${mediaEnc('/library/metadata/' + key)}` } : {},
+    });
+  }
+
+  const PLEX_SKIP = new Set(['photo', 'photoalbum', 'actor', 'director', 'genre', 'tag', 'place', 'autotag', 'shared', 'season']);
+
+  /**
+   * A reply, read: `service.what` as in `mediaRequestURL`. Lists come back
+   * as items; `koito.item` as {plays, first}, `koito.last` as {last};
+   * `movary.me` {user}, `jellyfin.me` {user, serverId}, `plex.identity`
+   * {machine}. Anything it can't read is left out, never trusted.
+   */
+  function mediaParse(service, what, reply, ctx = {}) {
+    const r = mObj(reply);
+    switch (`${service}.${what}`) {
+      case 'koito.search':
+        return [
+          ...mArr(r.tracks).map((x) => koitoItem('track', x, ctx)),
+          ...mArr(r.albums).map((x) => koitoItem('album', x, ctx)),
+          ...mArr(r.artists).map((x) => koitoItem('artist', x, ctx)),
+        ].filter((x) => x.title && x.sourceId);
+      case 'koito.listens':
+        return mArr(r.items).map((x) => {
+          const it = koitoItem('track', mObj(x).track, ctx);
+          const when = mTime(mObj(x).time);
+          return it.title && when ? { ...it, when } : null;
+        }).filter(Boolean);
+      case 'koito.nowPlaying': {
+        if (r.currently_playing !== true) return [];
+        const it = koitoItem('track', r.track, ctx);
+        return it.title ? [{ ...it, nowPlaying: true }] : [];
+      }
+      case 'koito.topArtists': case 'koito.topAlbums': case 'koito.topTracks': {
+        const kind = { 'koito.topArtists': 'artist', 'koito.topAlbums': 'album', 'koito.topTracks': 'track' }[`${service}.${what}`];
+        return mArr(r.items).map((x) => {
+          const it = koitoItem(kind, mObj(x).item, ctx);
+          const plays = mInt(mObj(mObj(x).item).listen_count);
+          return it.title ? mediaItem({ ...it, rank: mInt(mObj(x).rank), plays: plays && plays > 0 ? plays : null, playedFrom: plays && plays > 0 ? 'koito' : '' }) : null;
+        }).filter(Boolean);
+      }
+      case 'koito.item': {
+        const plays = mInt(r.listen_count);
+        return mediaItem({ plays: plays !== null && plays >= 0 ? plays : null, first: mUnix(r.first_listen) });
+      }
+      case 'koito.last': return mediaItem({ last: mTime(mObj(mArr(r.items)[0]).time) });
+      case 'movary.me': return mediaItem({ user: mStr(mObj(r.user).name) });
+      case 'movary.played':
+        return mArr(r.played).map((x) => {
+          const it = movaryFilm(mObj(x).movie, ctx);
+          const dates = mArr(mObj(x).watchDates);
+          const plays = dates.reduce((n, d) => n + Math.max(1, mInt(mObj(d).plays) || 1), 0);
+          const last = dates.map((d) => mTime(mObj(d).date)).filter(Boolean).sort((a, b) => b - a)[0];
+          return it.title ? mediaItem({ ...it, plays: plays || null, last, playedFrom: plays ? 'movary' : '' }) : null;
+        }).filter(Boolean);
+      case 'movary.history':
+        return mArr(r.history).map((x) => {
+          const it = movaryFilm(mObj(x).movie, ctx);
+          const when = mTime(mObj(x).watchedAt);
+          return it.title ? mediaItem({ ...it, when }) : null;
+        }).filter(Boolean);
+      case 'movary.watchlist':
+        return mArr(r.watchlist).map((x) => {
+          const it = movaryFilm(mObj(x).movie || x, ctx);
+          return it.title ? mediaItem({ ...it, watchlist: true, added: mTime(mObj(x).addedAt) }) : null;
+        }).filter(Boolean);
+      case 'jellyfin.me': {
+        const user = mStr(r.Id), serverId = mStr(r.ServerId);
+        return mediaItem({ user: /^[0-9a-f]{32}$/i.test(user) ? user : '', serverId: /^[0-9a-f]{32}$/i.test(serverId) ? serverId : '' });
+      }
+      case 'jellyfin.search': case 'jellyfin.latest':
+        return (Array.isArray(reply) ? reply : mArr(r.Items)).map((x) => jellyfinItem(x, ctx)).filter((x) => x && x.title);
+      case 'plex.identity': {
+        const machine = mStr(mObj(r.MediaContainer).machineIdentifier);
+        return mediaItem({ machine: /^[0-9a-f]{20,64}$/i.test(machine) ? machine : '' });
+      }
+      case 'plex.search':
+        return mArr(mObj(r.MediaContainer).Hub).filter((h) => !PLEX_SKIP.has(mObj(h).type))
+          .flatMap((h) => mArr(mObj(h).Metadata)).map((x) => plexItem(x, ctx)).filter((x) => x && x.title);
+      case 'plex.recent':
+        return mArr(mObj(r.MediaContainer).Metadata).filter((x) => !PLEX_SKIP.has(mObj(x).type)).map((x) => plexItem(x, ctx)).filter((x) => x && x.title);
+      default: return [];
+    }
+  }
+
+  /** A title or name reduced for matching: no case, accents, punctuation or spaces; "&" reads as "and". */
+  function mediaNorm(s) {
+    return String(s || '').normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/&/g, ' and ').replace(/[^\p{L}\p{N}]+/gu, '');
+  }
+
+  const MEDIA_ID_KINDS = ['tmdb', 'imdb', 'tvdb', 'mbid'];
+
+  /** Whether two items are the same thing: one shared id, or the same title and artist (or show) and year when neither id disagrees. */
+  function mediaSame(a, b) {
+    if (a.kind !== b.kind) return false;
+    const ia = a.ids || {}, ib = b.ids || {};
+    let conflict = false;
+    for (const k of MEDIA_ID_KINDS) {
+      if (ia[k] && ib[k]) {
+        if (ia[k] === ib[k]) return true;
+        conflict = true;
+      }
+    }
+    if (conflict) return false;
+    const ta = mediaNorm(a.title);
+    if (!ta || ta !== mediaNorm(b.title)) return false;
+    const ba = mediaNorm(a.by), bb = mediaNorm(b.by);
+    if (ba && bb && ba !== bb) return false;
+    if (a.year && b.year && a.year !== b.year) return false;
+    return true;
+  }
+
+  /** 0 the title is the words, 1 it starts with them, 2 holds them, 3 anything else; episodes after all the rest. */
+  function mediaRelevance(item, q) {
+    const t = mediaNorm(item.title), w = mediaNorm(q);
+    const r = !w ? 0 : t === w ? 0 : t.startsWith(w) ? 1 : t.includes(w) ? 2 : 3;
+    return item.kind === 'episode' ? 4 + r : r;
+  }
+
+  const MEDIA_HISTORY = { film: 'movary', artist: 'koito', album: 'koito', track: 'koito' };
+
+  /**
+   * One card per item. `lists` are the services' parsed items (libraries
+   * first); `opts.q` the words, `opts.asked` which history services were
+   * asked ({movary, koito}). Played comes from Movary (films) or Koito
+   * (music) first, the library's own count where they have nothing; a
+   * library item no one has a play for is "Never Played" (plays 0), when
+   * someone who would know was asked. Ratings: Movary's for films, else
+   * Plex's. Library items first, then what you played that isn't in one.
+   */
+  function mediaMerge(lists, opts = {}) {
+    const asked = opts.asked || {};
+    const groups = [];
+    for (const list of lists || []) {
+      for (const item of list || []) {
+        if (!item || !item.kind || !item.title) continue;
+        const g = groups.find((members) => !members.some((m) => m.source === item.source) && members.some((m) => mediaSame(m, item)));
+        if (g) g.push(item);
+        else groups.push([item]);
+      }
+    }
+    const merged = groups.map((members, order) => {
+      const first = (f) => members.map((m) => m[f]).find((v) => v !== undefined && v !== null && v !== '');
+      const lib = members.find((m) => MEDIA_LIBRARIES.includes(m.source));
+      const head = lib || members[0];
+      const ids = {};
+      for (const m of members) for (const k of MEDIA_ID_KINDS) if (m.ids && m.ids[k] && !ids[k]) ids[k] = m.ids[k];
+      const open = {};
+      for (const m of members) Object.assign(open, m.open || {});
+      const historyService = MEDIA_HISTORY[head.kind];
+      const history = members.find((m) => m.source === historyService);
+      const plex = members.find((m) => m.source === 'plex');
+      let played = {};
+      if (history && history.plays > 0) played = { plays: history.plays, last: history.last, playedFrom: history.source };
+      else if (plex && plex.plays > 0) played = { plays: plex.plays, last: plex.last, playedFrom: 'plex' };
+      else if (lib && !['collection', 'playlist'].includes(head.kind) && ((historyService && asked[historyService]) || plex)) played = { plays: 0 };
+      else if (!lib && history && history.plays === 0) played = { plays: 0 };
+      const rated = (head.kind === 'film' && members.find((m) => m.source === 'movary' && m.rating)) || members.find((m) => m.source === 'plex' && m.rating);
+      const outside = [];
+      for (const m of members) for (const o of m.outside || []) if (!outside.some((x) => x.name === o.name) && outside.length < 3) outside.push(o);
+      return {
+        order,
+        item: mediaItem({
+          key: `${head.kind}:` + (MEDIA_ID_KINDS.map((k) => ids[k] && `${k}:${ids[k]}`).find(Boolean) || `${mediaNorm(head.title)}:${mediaNorm(first('by'))}:${first('year') || ''}`),
+          kind: head.kind,
+          title: head.title,
+          by: head.by || first('by'),
+          context: head.context || first('context'),
+          year: first('year'),
+          ids,
+          image: (lib && lib.image) || first('image'),
+          library: first('library'),
+          added: first('added'),
+          inLibrary: !!lib,
+          elsewhere: !lib,
+          ...played,
+          episodes: plex && plex.episodes,
+          rating: rated ? rated.rating : null,
+          ratingFrom: rated ? rated.ratingFrom : '',
+          outside,
+          open,
+        }),
+      };
+    });
+    const q = opts.q || '';
+    merged.sort((a, b) => (a.item.inLibrary ? 0 : 1) - (b.item.inLibrary ? 0 : 1)
+      || (q ? mediaRelevance(a.item, q) - mediaRelevance(b.item, q) : (b.item.added || 0) - (a.item.added || 0))
+      || a.order - b.order);
+    return merged.map((m) => m.item);
+  }
+
+  /** The Kind filter's group: films, tv, music or other. */
+  const mediaGroup = (item) => MEDIA_GROUPS[item && item.kind] || 'other';
+
+  /** Items the filters keep: `kind` (films, tv, music, other), `played` ("never"), `rated` (loved 8+, liked 6+, any, unrated). */
+  function mediaFilter(items, f = {}) {
+    return (items || []).filter((it) => {
+      if (f.kind && mediaGroup(it) !== f.kind) return false;
+      if (f.played === 'never' && !(it.inLibrary && it.plays === 0)) return false;
+      const r = it.rating || 0;
+      if (f.rated === 'loved' && r < 8) return false;
+      if (f.rated === 'liked' && r < 6) return false;
+      if (f.rated === 'any' && r <= 0) return false;
+      if (f.rated === 'unrated' && r > 0) return false;
+      return true;
+    });
+  }
+
+  /** "Mar 6, 2014", at `offsetMinutes` from UTC. */
+  function mediaDate(secs, offsetMinutes = 0) {
+    const d = new Date((secs + (offsetMinutes || 0) * 60) * 1000);
+    return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+  }
+
+  /**
+   * What a card says about playing it: "Played 3× · Last Mar 6, 2014",
+   * "Played Mar 6, 2014", "Played 8 of 8 Episodes", "Never Played", with
+   * "Not in Library" before it for a search's match that isn't in a library
+   * (`elsewhere`).
+   */
+  function mediaPlayedLine(item, offsetMinutes = 0) {
+    const it = item || {};
+    const parts = [];
+    if (it.nowPlaying) return 'Now Playing';
+    if (it.when) return (MEDIA_GROUPS[it.kind] === 'music' ? 'Listened ' : 'Watched ') + mediaDate(it.when, offsetMinutes);
+    if (it.elsewhere) parts.push('Not in Library');
+    if (it.episodes && it.episodes.total) {
+      parts.push(it.episodes.watched ? `Played ${it.episodes.watched} of ${it.episodes.total} Episodes` : 'Never Played');
+      if (it.episodes.watched && it.last) parts.push(`Last ${mediaDate(it.last, offsetMinutes)}`);
+    } else if (it.plays > 0) {
+      if (it.plays === 1 && it.last) parts.push(`Played ${mediaDate(it.last, offsetMinutes)}`);
+      else {
+        parts.push(`Played ${it.plays}×`);
+        if (it.last) parts.push(`Last ${mediaDate(it.last, offsetMinutes)}`);
+      }
+    } else if (it.plays === 0) parts.push('Never Played');
+    return parts.join(' · ');
+  }
+
+  /** Your rating as five stars with halves ("★★★★½" for 9); '' when unrated. */
+  function mediaStars(rating) {
+    const r = Math.round(Number(rating) || 0);
+    if (r <= 0) return '';
+    const n = Math.min(10, r);
+    return '★'.repeat(Math.floor(n / 2)) + (n % 2 ? '½' : '');
+  }
+
+  /** The others' ratings, quieter: "RT 93% · IMDb 7.8". */
+  const mediaOutsideLine = (item) => ((item && item.outside) || []).map((o) => `${o.name} ${o.score}`).join(' · ');
+
+  /** "Film · 1979", "Track · Artist · Album", "Episode · Show · S1 · E2". */
+  function mediaSubtitle(item) {
+    const it = item || {};
+    return [MEDIA_KINDS[it.kind] || '', it.by || '', it.context || '', it.year ? String(it.year) : ''].filter(Boolean).join(' · ');
+  }
+
+  /**
+   * Where a card opens and its other places: {href, places: [{key, name, url}]}.
+   * Koito or Movary first (the history), then Jellyfin, then Plex; the outside
+   * sites (IMDb, TMDB, Letterboxd, MusicBrainz) are links only, never fetched.
+   */
+  function mediaPlaces(item) {
+    const it = item || {};
+    const open = it.open || {};
+    const ids = it.ids || {};
+    const places = [];
+    for (const key of ['koito', 'movary', 'jellyfin', 'plex']) if (/^https?:\/\//.test(open[key] || '')) places.push({ key, name: MEDIA_NAMES[key], url: open[key] });
+    const film = it.kind === 'film' || it.kind === 'collection';
+    const tv = it.kind === 'show' || it.kind === 'episode';
+    if (ids.imdb && (film || tv)) places.push({ key: 'imdb', name: 'IMDb', url: `https://www.imdb.com/title/${ids.imdb}/` });
+    if (ids.tmdb && it.kind === 'film') places.push({ key: 'tmdb', name: 'TMDB', url: `https://www.themoviedb.org/movie/${ids.tmdb}` });
+    if (ids.tmdb && it.kind === 'show') places.push({ key: 'tmdb', name: 'TMDB', url: `https://www.themoviedb.org/tv/${ids.tmdb}` });
+    if (ids.tmdb && it.kind === 'film') places.push({ key: 'letterboxd', name: 'Letterboxd', url: `https://letterboxd.com/tmdb/${ids.tmdb}/` });
+    const mb = { artist: 'artist', album: 'release', track: 'recording' }[it.kind];
+    if (ids.mbid && mb) places.push({ key: 'musicbrainz', name: 'MusicBrainz', url: `https://musicbrainz.org/${mb}/${ids.mbid}` });
+    const own = places.filter((p) => MEDIA_NAMES[p.key]);
+    return { href: own.length ? own[0].url : '', places };
+  }
+
+  /**
+   * The media services a hosted page has, from the build's
+   * "jellyfin=https://…/,plex=…" (each one's address for links); each is
+   * reached through this host's own /<name>/ route, which adds its token.
+   */
+  function mediaServicesFromBuild(stamp, root) {
+    const out = {};
+    const s = String(stamp || '');
+    if (!s || s.startsWith('__')) return out;
+    const base = mediaBase(root || '/');
+    for (const pair of s.split(',')) {
+      const i = pair.indexOf('=');
+      const name = pair.slice(0, i).trim().toLowerCase();
+      const link = mediaBase(pair.slice(i + 1));
+      if (i > 0 && MEDIA_NAMES[name] && /^https?:/.test(link)) out[name] = { api: `${base}${name}/`, link };
+    }
+    return out;
+  }
+
+  const mediaConfigured = (services) => Object.keys(services || {}).some((k) => MEDIA_NAMES[k] && services[k] && mediaBase(services[k].api));
+
+  /** "Plex didn't answer", or "Plex refused Shiori's token" for a 401 or 403. */
+  function mediaFailure(service, error) {
+    const status = error && error.status;
+    return `${MEDIA_NAMES[service] || service} ${status === 401 || status === 403 ? "refused Shiori's token" : "didn't answer"}`;
+  }
+
+  /**
+   * Each service's own facts a request needs (Movary's user, Jellyfin's
+   * user and server, Plex's machine), asked once and kept on `services`.
+   */
+  async function mediaFacts(services, get) {
+    const asks = [];
+    const s = services || {};
+    const fact = (service, what, have) => {
+      if (!s[service] || s[service][have]) return;
+      delete s[service].factError;
+      asks.push(get(service, mediaRequestURL(service, what, s[service].api))
+        .then((r) => Object.assign(s[service], mediaParse(service, what, r)))
+        .catch((e) => { s[service].factError = e; }));
+    };
+    fact('movary', 'me', 'user');
+    fact('jellyfin', 'me', 'user');
+    fact('plex', 'identity', 'machine');
+    await Promise.allSettled(asks);
+  }
+
+  /** How many of Koito's matches get their play counts asked (one request each, two when played). */
+  const KOITO_COUNTS = 12;
+
+  /**
+   * A search across every service set up: `get(service, url)` fetches one
+   * reply as JSON (throwing, with `status`, on failure). One failing never
+   * fails the search: {items, failures}. Searched on submit only.
+   */
+  async function mediaSearch(services, q, get, opts = {}) {
+    const s = services || {};
+    const words = mediaWords(q);
+    const failures = [];
+    if (!words || !mediaConfigured(s)) return { items: [], failures };
+    await mediaFacts(s, get);
+    const ask = async (service, what, args) => {
+      if (!s[service]) return null;
+      const url = mediaRequestURL(service, what, s[service].api, args);
+      if (!url) {
+        failures.push(mediaFailure(service, s[service].factError));
+        return null;
+      }
+      try {
+        return mediaParse(service, what, await get(service, url), s[service]);
+      } catch (e) {
+        failures.push(mediaFailure(service, e));
+        return null;
+      }
+    };
+    const [jf, plex, koito, movary] = await Promise.all([
+      ask('jellyfin', 'search', { user: s.jellyfin && s.jellyfin.user, q: words, limit: opts.limit || 40 }),
+      ask('plex', 'search', { q: words, limit: 10 }),
+      ask('koito', 'search', { q: words }),
+      ask('movary', 'played', { user: s.movary && s.movary.user, q: words, limit: 30 }),
+    ]);
+    if (koito && koito.length) {
+      await Promise.allSettled(koito.slice(0, KOITO_COUNTS).map(async (it) => {
+        const one = (what) => get('koito', mediaRequestURL('koito', what, s.koito.api, { kind: it.kind, id: it.sourceId }))
+          .then((r) => mediaParse('koito', what, r));
+        const detail = await one('item');
+        if (detail.plays === undefined) return;
+        it.plays = detail.plays;
+        if (detail.plays > 0) {
+          it.playedFrom = 'koito';
+          const last = await one('last').catch(() => ({}));
+          if (last.last) it.last = last.last;
+        }
+      }));
+    }
+    const items = mediaMerge([jf || [], plex || [], koito || [], movary || []], { q: words, asked: { koito: !!koito, movary: !!movary } });
+    // What you don't own shows only when you played it (or Koito's count wasn't asked).
+    return { items: items.filter((it) => it.inLibrary || it.plays !== 0), failures };
+  }
+
+  /**
+   * The Media tab before a search: what's playing, what you played and
+   * watched lately, your top artists, albums and tracks for `opts.period`,
+   * your watchlist and what's new in your libraries. {sections, failures}.
+   */
+  async function mediaBrowse(services, get, opts = {}) {
+    const s = services || {};
+    const failures = [];
+    if (!mediaConfigured(s)) return { sections: {}, failures };
+    await mediaFacts(s, get);
+    const period = MEDIA_PERIODS.includes(opts.period) ? opts.period : 'month';
+    const seen = new Set();
+    const ask = async (service, what, args, as = what) => {
+      if (!s[service]) return [];
+      const url = mediaRequestURL(service, what, s[service].api, args);
+      try {
+        if (!url) throw s[service].factError || new Error('no address');
+        return mediaParse(service, as, await get(service, url), s[service]);
+      } catch (e) {
+        if (!seen.has(service)) failures.push(mediaFailure(service, e));
+        seen.add(service);
+        return [];
+      }
+    };
+    const [nowPlaying, listens, watched, artists, albums, tracks, watchlist, jfAdded, plexAdded] = await Promise.all([
+      ask('koito', 'nowPlaying'),
+      ask('koito', 'listens', { limit: 10 }),
+      ask('movary', 'history', { user: s.movary && s.movary.user, limit: 10 }),
+      ask('koito', 'top', { kind: 'artists', period, limit: 10 }, 'topArtists'),
+      ask('koito', 'top', { kind: 'albums', period, limit: 10 }, 'topAlbums'),
+      ask('koito', 'top', { kind: 'tracks', period, limit: 10 }, 'topTracks'),
+      ask('movary', 'watchlist', { user: s.movary && s.movary.user, limit: 10 }),
+      ask('jellyfin', 'latest', { user: s.jellyfin && s.jellyfin.user, limit: 12 }),
+      ask('plex', 'recent', { limit: 12 }),
+    ]);
+    const added = mediaMerge([jfAdded, plexAdded]).slice(0, 12);
+    return { sections: { nowPlaying, listens, watched, artists, albums, tracks, watchlist, added }, period, failures };
+  }
+
   // --- The house's shared settings ------------------------------------------------
   // The Machiya rooms keep theme, text size and which rooms the switcher
   // shows as `machiya_*` cookies on the network's domain, so one choice
@@ -2869,6 +3548,27 @@
     isPrivateNoteNow,
     loadVaults,
     useVaults,
+    mediaBase,
+    mediaRequestURL,
+    mediaParse,
+    mediaImageURL,
+    mediaNorm,
+    mediaSame,
+    mediaMerge,
+    mediaGroup,
+    mediaFilter,
+    mediaDate,
+    mediaPlayedLine,
+    mediaStars,
+    mediaOutsideLine,
+    mediaSubtitle,
+    mediaPlaces,
+    mediaServicesFromBuild,
+    mediaConfigured,
+    mediaFailure,
+    mediaFacts,
+    mediaSearch,
+    mediaBrowse,
     smallwebSearchURL,
     smallwebResults,
     unansweredEngines,
