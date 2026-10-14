@@ -223,6 +223,9 @@ struct OpenedListView: View {
 
     private func forget(_ entry: OpenedEntry) {
         model.remove(entry)
-        Task { try? await app.forgetOpened(entry.url, query: entry.query) }
+        Task {
+            // Hister didn't forget it: the list shows it again.
+            do { try await app.forgetOpened(entry.url, query: entry.query) } catch { await model.load(using: app.client) }
+        }
     }
 }

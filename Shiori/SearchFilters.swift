@@ -615,7 +615,10 @@ struct OpenedSection: View {
     private func forget(_ opened: OpenedResult) {
         let query = model.query
         model.removeOpened(opened.url)
-        Task { try? await app.forgetOpened(opened.url, query: query) }
+        Task {
+            // Hister didn't forget it: the list shows it again.
+            do { try await app.forgetOpened(opened.url, query: query) } catch { await model.load(using: app.client) }
+        }
     }
 }
 

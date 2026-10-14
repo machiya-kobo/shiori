@@ -99,6 +99,13 @@ struct LabelPicker: View {
             } actions: {
                 Button("Try Again") { Task { await loadLabels(again: true) } }
                     .buttonStyle(.bordered)
+                // The list's No Label row is under this: a page's label can
+                // still come off.
+                let current = app.label(of: document)
+                if !current.isEmpty {
+                    Button("Remove “\(current)”") { Task { await apply("") } }
+                        .buttonStyle(.bordered)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(palette.background)

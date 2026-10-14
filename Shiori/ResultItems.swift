@@ -61,7 +61,8 @@ private struct ResultActionsHost: ViewModifier {
                     preview: { document in
                         if let selection { selection.wrappedValue = document } else { previewing = PreviewRequest(document: document) }
                     },
-                    save: { saving = $0 },
+                    // Only an address that parses: the sheet was empty otherwise.
+                    save: { result in if URL(string: result.url) != nil { saving = result } },
                     opened: { document in
                         if let query { app.recordOpened(document, query: query) }
                     },

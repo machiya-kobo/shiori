@@ -535,6 +535,7 @@ struct FailureView: View {
     /// Who didn't answer, for the title: Hister, or Kura, SearXNG, the gateway.
     var service = "Hister"
     let retry: () -> Void
+    @Environment(AppState.self) private var app
 
     var body: some View {
         if !hasServer {
@@ -551,6 +552,11 @@ struct FailureView: View {
             } actions: {
                 Button("Try Again", action: retry)
                     .buttonStyle(.bordered)
+                // Signed out: where to sign in again.
+                if error == .signedOut {
+                    Button("Open Settings") { app.settingsRequests += 1 }
+                        .buttonStyle(.bordered)
+                }
             }
         }
     }

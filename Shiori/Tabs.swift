@@ -331,9 +331,16 @@ struct RecentScreen: View {
 
     private func list(_ model: ResultsModel, title: String) -> some View {
         ResultsList(model: model, title: title) {
-            ContentUnavailableView(
-                "Nothing Yet", systemImage: "clock",
-                description: Text("Pages you visit in Safari appear here once Shiori sends them."))
+            // A filter that hides everything isn't an empty Library.
+            if model.filters.isEmpty, model.dateRange == nil {
+                ContentUnavailableView(
+                    "Nothing Yet", systemImage: "clock",
+                    description: Text("Pages you visit in Safari appear here once Shiori sends them."))
+            } else {
+                ContentUnavailableView(
+                    "Nothing Matches These Filters", systemImage: "line.3.horizontal.decrease.circle",
+                    description: Text("Clear a filter to see more."))
+            }
         }
         .id(ObjectIdentifier(model))
     }
