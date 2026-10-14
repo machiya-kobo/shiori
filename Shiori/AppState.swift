@@ -415,6 +415,16 @@ final class AppState {
         }
     }
 
+    /// Media services switched off here (Settings → Media): their address and
+    /// token are kept, but they're not asked.
+    var mediaOff: Set<MediaService> = [] {
+        didSet {
+            UserDefaults.standard.set(mediaOff.map(\.rawValue).sorted(), forKey: Self.mediaOffKey)
+            rebuildMedia()
+        }
+    }
+    static let mediaOffKey = "mediaOff"
+
     /// The media services set up here (an address and a token each); nil
     /// with none, and then there's no Media pill. One client, so each
     /// service's facts (Movary's user, Plex's machine) are asked once.
@@ -431,7 +441,7 @@ final class AppState {
 
     private func rebuildMedia() {
         var accounts: [MediaService: MediaAccount] = [:]
-        for service in MediaService.allCases {
+        for service in MediaService.allCases where !mediaOff.contains(service) {
             if let account = MediaAccount(base: mediaAddresses[service] ?? "", token: MediaKeychain.read(service)) { accounts[service] = account }
         }
         media = accounts.isEmpty ? nil : MediaClient(accounts: accounts)
@@ -743,6 +753,7 @@ final class AppState {
         shared?.set(textSize.rawValue, forKey: SharedSettings.Key.textSize)
         shared?.set(serverURL, forKey: SharedSettings.Key.serverURL)
         mediaAddresses = Dictionary(uniqueKeysWithValues: MediaService.allCases.map { ($0, defaults.string(forKey: Self.mediaAddressKey($0)) ?? "") })
+        mediaOff = Set((defaults.stringArray(forKey: Self.mediaOffKey) ?? []).compactMap(MediaService.init(rawValue:)))
         // An init's own assignment runs no didSet.
         rebuildMedia()
         owner.app = self

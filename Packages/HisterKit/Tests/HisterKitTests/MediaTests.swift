@@ -220,6 +220,24 @@ struct MediaClientTests {
         #expect(await client.imageData("https://\(koitoHost)/image/x/300.webp") == nil)
     }
 
+    @Test func testConnectionSaysWhatItFound() async {
+        let client = Self.client("check")
+        #expect(await client.check(.jellyfin) == .works("Signed in as shiori"))
+        #expect(await client.check(.movary) == .works("Signed in as reader"))
+        #expect(await client.check(.koito) == .works("Your listens answer"))
+        #expect(await client.check(.plex) == .works("Your libraries answer"))
+        let refused = Self.client("check-refused", failing: [.plex: 401, .koito: 403, .movary: 500])
+        #expect(await refused.check(.plex) == .refused)
+        #expect(await refused.check(.koito) == .refused)
+        #expect(await refused.check(.movary) == .unexpected(500))
+        let gone = MediaClient(accounts: [.koito: MediaAccount(base: "https://nowhere.media-client.test/", token: "t")!], session: {
+            let config = URLSessionConfiguration.ephemeral
+            config.protocolClasses = [StubProtocol.self]
+            return URLSession(configuration: config)
+        }())
+        #expect(await gone.check(.koito) == .unreachable)
+    }
+
     @Test func anAccountNeedsAnAddressAndAToken() {
         #expect(MediaAccount(base: "https://koito.example.ts.net", token: " t ")?.base == "https://koito.example.ts.net/")
         #expect(MediaAccount(base: "https://koito.example.ts.net", token: " ") == nil)

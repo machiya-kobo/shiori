@@ -88,6 +88,54 @@ public actor MediaClient {
         return data
     }
 
+    /// Settings' Test Connection: one read with the account's token, and what it says.
+    public enum Check: Sendable, Equatable {
+        /// It answered with the token: who or what, in a few words ("Signed in as shiori").
+        case works(String)
+        /// 401 or 403: the service doesn't take the token.
+        case refused
+        /// Nothing answered (address, network, certificate).
+        case unreachable
+        /// Something answered, but not as this service would.
+        case unexpected(Int?)
+    }
+
+    /// Asks one service a read that needs its token: Jellyfin and Movary who
+    /// the token is, Koito how many listens it holds, Plex its newest item.
+    public nonisolated func check(_ service: MediaService) async -> Check {
+        guard let account = accounts[service] else { return .unreachable }
+        let url: String
+        switch service {
+        case .jellyfin: url = Media.requestURL(.jellyfin, "me", base: account.base)
+        case .movary: url = Media.requestURL(.movary, "me", base: account.base)
+        case .koito: url = Media.requestURL(.koito, "listens", base: account.base, args: MediaArgs(limit: 1))
+        case .plex: url = Media.requestURL(.plex, "recent", base: account.base, args: MediaArgs(limit: 1))
+        }
+        let reply: Any
+        do {
+            reply = try await get(service, url)
+        } catch {
+            if error.status == 401 || error.status == 403 { return .refused }
+            return error.status == nil ? .unreachable : .unexpected(error.status)
+        }
+        let r = Media.obj(reply)
+        switch service {
+        case .jellyfin:
+            let name = Media.str(r["Name"])
+            return Media.parseFacts(.jellyfin, "me", reply: reply)["user"] == nil ? .unexpected(nil) : .works(name.isEmpty ? "Signed in" : "Signed in as \(name)")
+        case .movary:
+            guard let user = Media.parseFacts(.movary, "me", reply: reply)["user"] as? String else { return .unexpected(nil) }
+            return .works("Signed in as \(user)")
+        case .koito:
+            guard r["items"] is [Any] else { return .unexpected(nil) }
+            guard let n = Media.int(r["total_record_count"]) else { return .works("Your listens answer") }
+            return .works("\(n.formatted()) \(n == 1 ? "listen" : "listens")")
+        case .plex:
+            guard r["MediaContainer"] is [String: Any] else { return .unexpected(nil) }
+            return .works("Your libraries answer")
+        }
+    }
+
     func context(_ service: MediaService) -> MediaContext {
         contexts[service] ?? MediaContext(api: accounts[service]?.base ?? "")
     }

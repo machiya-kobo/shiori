@@ -25,13 +25,14 @@ struct SettingsView: View {
     /// Shiori's own, Account and About last): an index on iPhone and iPad,
     /// the Settings window's tabs on the Mac. The same pages everywhere.
     enum Page: String, CaseIterable, Identifiable {
-        case appearance, search, results, safari, ai, feeds, account
+        case appearance, search, results, media, safari, ai, feeds, account
         var id: Self { self }
         var title: String {
             switch self {
             case .appearance: "Appearance"
             case .search: "Search"
             case .results: "Results"
+            case .media: "Media"
             case .safari: "Safari"
             case .ai: "AI"
             case .feeds: "Feeds & Export"
@@ -43,6 +44,7 @@ struct SettingsView: View {
             case .appearance: "paintbrush"
             case .search: "magnifyingglass"
             case .results: "list.bullet.rectangle"
+            case .media: "music.note.tv"
             case .safari: "safari"
             case .ai: "sparkles"
             case .feeds: "dot.radiowaves.up.forward"
@@ -52,8 +54,9 @@ struct SettingsView: View {
         var summary: String {
             switch self {
             case .appearance: "Theme, appearance, text size, app icon"
-            case .search: "Pills, the web, Small Web, media and your notes"
+            case .search: "Pills, the web, Small Web and your notes"
             case .results: "How results look and open, and your history"
+            case .media: "Your libraries and what you played"
             case .safari: "The extension, and Shiori's results in Safari"
             case .ai: "Summaries, AI providers and keys; off unless you turn it on"
             case .feeds: "Feeds, NewsBlur, export"
@@ -182,40 +185,23 @@ struct SettingsView: View {
             PillsSection()
                 .listRowBackground(palette.surface)
 
+            // Every section the same way: its switch first, then its addresses
+            // (SettingsField), then its choices; a footer of a sentence or two.
             Section {
-                TextField("SearXNG", text: $searxngDraft, prompt: Text("https://searxng.example/"))
-                    .textContentType(.URL)
-                    #if os(iOS)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                    .autocorrectionDisabled()
-                    .textStyle(.body, design: .monospaced)
-                    .onSubmit(saveSearxng)
-                unencryptedNote(searxngDraft)
                 Toggle("Web Results", isOn: $app.searchPage.webResults)
+                SettingsField(label: "SearXNG", text: $searxngDraft, prompt: "https://searxng.example/", submit: saveSearxng)
+                unencryptedNote(searxngDraft)
             } header: {
                 Text("Web")
             } footer: {
-                Text("Your SearXNG: the web results in Shiori and in Safari's results. Thumbnails come only through its image proxy. AI Answer is under Settings → AI.")
+                Text("Your SearXNG: the web results here and in Safari. Thumbnails come only through its image proxy.")
             }
             .listRowBackground(palette.surface)
 
             Section {
                 Toggle("Small Web", isOn: $app.searchPage.smallWebTab)
                 if app.searchPage.smallWebTab {
-                    LabeledContent("Gateway") {
-                        TextField("Gateway", text: $app.searchPage.smallwebURL, prompt: Text("https://smallweb.example/"))
-                            .labelsHidden()
-                            .multilineTextAlignment(.trailing)
-                            .textContentType(.URL)
-                            .autocorrectionDisabled()
-                            #if os(iOS)
-                            .keyboardType(.URL)
-                            .textInputAutocapitalization(.never)
-                            #endif
-                            .textStyle(.body, design: .monospaced)
-                    }
+                    SettingsField(label: "Gateway", text: $app.searchPage.smallwebURL, prompt: "https://smallweb.example/")
                     Picker("Open Results", selection: $app.searchPage.smallWebOpen) {
                         Text("Through the Gateway").tag("gateway")
                         Text("In a Gemini App").tag("direct")
@@ -224,11 +210,9 @@ struct SettingsView: View {
             } header: {
                 Text("Small Web")
             } footer: {
-                Text("Gemini and Gopher search through your small-web gateway, run when you press Return. Pages you open are saved to Hister.")
+                Text("Gemini and Gopher through your small-web gateway, searched when you press Return. Pages you open are saved to Hister.")
             }
             .listRowBackground(palette.surface)
-
-            MediaSettingsSection()
 
             Section {
                 // Where notes come from: shows the one in use (Kura when one
@@ -240,45 +224,13 @@ struct SettingsView: View {
                     Text("Kura").tag(NotesSource.kura.rawValue)
                     Text("Hister").tag(NotesSource.hister.rawValue)
                 }
-                // Each field in a labelled row with its own label hidden: a
-                // Mac Form shows a TextField's label as well (it read twice).
-                LabeledContent("Obsidian Vault") {
-                    TextField("Obsidian Vault", text: $app.searchPage.obsidianVault, prompt: Text("Your vault's name"))
-                        .labelsHidden()
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .textInputAutocapitalization(.never)
-                        #endif
-                }
-                LabeledContent("Kura") {
-                    TextField("Kura", text: $app.searchPage.niwaURL, prompt: Text("https://kura.example/"))
-                        .labelsHidden()
-                        .multilineTextAlignment(.trailing)
-                        .textContentType(.URL)
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        #endif
-                        .textStyle(.body, design: .monospaced)
-                }
-                LabeledContent("Konbini") {
-                    TextField("Konbini", text: $app.searchPage.konbiniURL, prompt: Text("https://konbini.example/"))
-                        .labelsHidden()
-                        .multilineTextAlignment(.trailing)
-                        .textContentType(.URL)
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        #endif
-                        .textStyle(.body, design: .monospaced)
-                }
+                SettingsField(label: "Kura", text: $app.searchPage.niwaURL, prompt: "https://kura.example/")
+                SettingsField(label: "Konbini", text: $app.searchPage.konbiniURL, prompt: "https://konbini.example/")
+                SettingsField(label: "Obsidian Vault", text: $app.searchPage.obsidianVault, prompt: "Your vault's name", address: false)
             } header: {
                 Text("Notes")
             } footer: {
-                Text("Notes open in this Obsidian vault, with their Kura page and Konbini card linked beside them. From Hister, only your default vault's notes.")
+                Text("Notes open in this Obsidian vault, with their Kura page and Konbini card beside them. From Hister, only your default vault's notes.")
             }
             .listRowBackground(palette.surface)
 
@@ -332,6 +284,9 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.surface)
             .onAppear { app.reloadRecentSearches() }
+
+            case .media:
+            MediaSettingsPage()
 
             case .safari:
             Section {
@@ -913,6 +868,39 @@ struct ServerStatsRow: View {
         .task(id: app.serverURL) {
             guard let client = app.client else { return }
             stats = try? await client.stats()
+        }
+    }
+}
+
+/// One settings field, the same everywhere: its label on the left, the
+/// value on the right in the callout size, one line (a long value scrolls
+/// inside it rather than widening the page), addresses in monospace with
+/// the URL keyboard. Settings → Search and Settings → Media use it.
+struct SettingsField: View {
+    let label: String
+    @Binding var text: String
+    var prompt = ""
+    var address = true
+    /// For VoiceOver when several rows share a label ("Plex Address").
+    var spoken: String?
+    var submit: () -> Void = {}
+
+    var body: some View {
+        LabeledContent(label) {
+            TextField(spoken ?? label, text: $text, prompt: Text(prompt))
+                .labelsHidden()
+                .accessibilityLabel(spoken ?? label)
+                .lineLimit(1)
+                .frame(minWidth: 0, maxWidth: .infinity)
+                .multilineTextAlignment(.trailing)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .keyboardType(address ? .URL : .default)
+                #endif
+                .textContentType(address ? .URL : nil)
+                .textStyle(.callout, design: address ? .monospaced : .default)
+                .onSubmit(submit)
         }
     }
 }

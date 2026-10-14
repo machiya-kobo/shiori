@@ -143,7 +143,7 @@ struct MediaNotSetUp: View {
         ContentUnavailableView {
             Label("No Media Set Up", systemImage: "music.note.tv")
         } description: {
-            Text("Add Jellyfin, Plex, Koito or Movary in Settings → Search → Media.")
+            Text("Add Jellyfin, Plex, Koito or Movary in Settings → Media.")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .themedBackground()
@@ -412,17 +412,20 @@ struct MediaShelvesView: View {
     }
 }
 
-/// Settings → Search → Media: each service's address and token. A service
-/// counts once it has both; the tokens go to the Keychain as typed (masked
-/// unless the eye is on), the addresses when the page is left or Return
-/// is pressed. Each wants a token of its own for Shiori: Koito's API key,
-/// a Movary token, a Jellyfin user's access token, a Plex device token.
-struct MediaSettingsSection: View {
+/// Settings → Media: one section per service, each its address, its token
+/// and Test Connection. A service counts once it has both; tokens go to the
+/// Keychain as typed (masked unless the eye is on), addresses on Return, on
+/// Test Connection or when the page is left. Each wants a token of its own
+/// for Shiori: a Jellyfin user's access token, a Plex device token, Koito's
+/// API key, a Movary token.
+struct MediaSettingsPage: View {
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
     @State private var addresses: [MediaService: String] = [:]
     @State private var tokens: [MediaService: String] = [:]
     @State private var revealed: Set<MediaService> = []
+    @State private var checks: [MediaService: MediaClient.Check] = [:]
+    @State private var checking: Set<MediaService> = []
     @State private var loaded = false
 
     /// The libraries first, then the histories, as the cards weigh them.
@@ -432,35 +435,44 @@ struct MediaSettingsSection: View {
         .koito: "https://koito.example/", .movary: "https://movary.example/",
     ]
     static let tokenNames: [MediaService: String] = [.jellyfin: "Access Token", .plex: "Token", .koito: "API Key", .movary: "Token"]
+    static let roles: [MediaService: String] = [
+        .jellyfin: "Your library. A user of its own for Shiori, not an admin: Jellyfin's API keys are admin keys.",
+        .plex: "Your library, and what you watched on TV. A device token for Shiori, revocable under Authorized Devices.",
+        .koito: "What you played: music. An API key for Shiori.",
+        .movary: "What you watched: films, and your ratings. A token for Shiori.",
+    ]
 
     var body: some View {
         Section {
-            ForEach(Self.order, id: \.self) { service in
-                LabeledContent(service.name) {
-                    TextField(service.name, text: address(service), prompt: Text(Self.prompts[service] ?? ""))
-                        .labelsHidden()
-                        .multilineTextAlignment(.trailing)
-                        .textContentType(.URL)
-                        .autocorrectionDisabled()
-                        #if os(iOS)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        #endif
-                        .textStyle(.body, design: .monospaced)
-                        .onSubmit(saveAddresses)
-                }
-                if !(addresses[service] ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
-                    tokenField(service)
-                }
-            }
-        } header: {
-            Text("Media")
-        } footer: {
-            Text("Your libraries (Jellyfin, Plex) and what you played (Koito, Movary), on the Media pill. Shiori only reads them. Tokens stay in this device's Keychain.")
+            Text("Your libraries and what you played, on the Media pill. Shiori only reads them, and tokens stay in this device's Keychain.")
+                .textStyle(.callout)
+                .foregroundStyle(palette.secondaryText)
         }
         .listRowBackground(palette.surface)
         .onAppear(perform: load)
         .onDisappear(perform: saveAddresses)
+        ForEach(Self.order, id: \.self) { service in
+            Section {
+                // Its switch first, as every Settings section: off keeps the
+                // address and token, and the service isn't asked.
+                Toggle(service.name, isOn: Binding(
+                    get: { !app.mediaOff.contains(service) },
+                    set: { on in
+                        if on { app.mediaOff.remove(service) } else { app.mediaOff.insert(service) }
+                    }))
+                if !app.mediaOff.contains(service) {
+                    SettingsField(label: "Address", text: address(service), prompt: Self.prompts[service] ?? "",
+                                  spoken: "\(service.name) Address", submit: saveAddresses)
+                    tokenField(service)
+                    checkRow(service)
+                }
+            } header: {
+                Text(service.name)
+            } footer: {
+                Text(Self.roles[service] ?? "")
+            }
+            .listRowBackground(palette.surface)
+        }
     }
 
     private func load() {
@@ -478,7 +490,58 @@ struct MediaSettingsSection: View {
     }
 
     private func address(_ service: MediaService) -> Binding<String> {
-        Binding(get: { addresses[service] ?? "" }, set: { addresses[service] = $0 })
+        Binding(get: { addresses[service] ?? "" }, set: {
+            addresses[service] = $0
+            checks[service] = nil
+        })
+    }
+
+    /// Test Connection, and what it found, on one row.
+    private func checkRow(_ service: MediaService) -> some View {
+        let account = MediaAccount(base: addresses[service] ?? "", token: tokens[service] ?? "")
+        return HStack(spacing: 10) {
+            Button("Test Connection") { test(service) }
+                .disabled(account == nil || checking.contains(service))
+            if checking.contains(service) {
+                ProgressView().controlSize(.small)
+            } else if let check = checks[service] {
+                Label(text(check, service), systemImage: works(check) ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .textStyle(.callout)
+                    .foregroundStyle(works(check) ? palette.tint(.green) : palette.danger)
+                    .lineLimit(2)
+            } else if account == nil {
+                Text((addresses[service] ?? "").isEmpty ? "Not set up" : "Needs a token")
+                    .textStyle(.callout)
+                    .foregroundStyle(palette.secondaryText)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func works(_ check: MediaClient.Check) -> Bool {
+        if case .works = check { return true }
+        return false
+    }
+
+    private func text(_ check: MediaClient.Check, _ service: MediaService) -> String {
+        switch check {
+        case .works(let what): "Works · \(what)"
+        case .refused: "\(service.name) refused this token"
+        case .unreachable: "No answer: check the address and your network"
+        case .unexpected(let status): "That doesn't answer as \(service.name) does" + (status.map { " (HTTP \($0))" } ?? "")
+        }
+    }
+
+    private func test(_ service: MediaService) {
+        saveAddresses()
+        guard let account = MediaAccount(base: addresses[service] ?? "", token: tokens[service] ?? "") else { return }
+        checking.insert(service)
+        checks[service] = nil
+        Task {
+            let result = await MediaClient(accounts: [service: account]).check(service)
+            checks[service] = result
+            checking.remove(service)
+        }
     }
 
     /// A token, masked unless its eye is on, saved as typed (an emptied field removes it).
@@ -487,6 +550,7 @@ struct MediaSettingsSection: View {
             get: { tokens[service] ?? "" },
             set: {
                 tokens[service] = $0
+                checks[service] = nil
                 if loaded { app.setMediaToken($0, for: service) }
             })
         let title = "\(service.name) \(Self.tokenNames[service] ?? "Token")"
@@ -500,7 +564,7 @@ struct MediaSettingsSection: View {
                     }
                 }
                 .labelsHidden()
-                // "Plex Token", not "Token": two rows have that label.
+                // "Plex Token", not "Token": two services call it that.
                 .accessibilityLabel(title)
                 .lineLimit(1)
                 .frame(minWidth: 0, maxWidth: .infinity)

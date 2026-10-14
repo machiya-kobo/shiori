@@ -67,8 +67,12 @@ struct ShioriApp: App {
         #endif
         #if os(macOS)
         Settings {
+            // A set width (the HIG's preferences window): a field holding a long
+            // address or token scrolls inside it, where it had widened the page
+            // past the window, which clipped both sides.
             SettingsView()
-                .frame(minWidth: 480, minHeight: 520)
+                .frame(width: 620)
+                .frame(minHeight: 520)
                 .environment(app)
                 .modifier(ThemedRoot(theme: app.theme, palette: app.palette))
                 .modifier(TextSizeRoot(size: app.effectiveTextSize))
