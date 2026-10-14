@@ -13,6 +13,7 @@ public struct OpenedEntry: Sendable, Equatable, Hashable, Identifiable, Decodabl
     /// The search it was opened from, as Hister keeps it (with
     /// `Notes.exclusion` since notes moved to Kura): the key to forget it by.
     public var query: String
+    /// When it was opened; `.distantPast` when Hister sent no time.
     public var added: Date
     /// The search as it was typed, for showing.
     public var typedQuery: String {
@@ -40,7 +41,7 @@ public struct OpenedEntry: Sendable, Equatable, Hashable, Identifiable, Decodabl
         url = try c.decode(String.self, forKey: .url)
         title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
         query = try c.decodeIfPresent(String.self, forKey: .query) ?? ""
-        added = Date(timeIntervalSince1970: TimeInterval(try c.decodeIfPresent(Int64.self, forKey: .added) ?? 0))
+        added = histerDate(histerSeconds(c, .added))
     }
 }
 
@@ -238,7 +239,8 @@ extension HisterClient {
         async throws(HisterError) -> OpenedPage
     {
         struct Reply: Decodable {
-            var documents: [OpenedEntry]?
+            /// One entry that doesn't read is skipped, not the page.
+            var documents: Lenient<OpenedEntry>?
             var last_id: Int?
             var last_updated_at: String?
         }
@@ -248,8 +250,8 @@ extension HisterClient {
             items.append(URLQueryItem(name: "last_updated_at", value: after.lastUpdatedAt))
         }
         let reply: Reply = try await decode(send(makeRequest("api/history", query: items, accept: "application/json")))
-        let entries = reply.documents ?? []
-        let next = entries.count >= 100 ? reply.last_id.flatMap { id in
+        let entries = reply.documents?.elements ?? []
+        let next = (reply.documents?.count ?? 0) >= 100 ? reply.last_id.flatMap { id in
             reply.last_updated_at.map { OpenedPage.Cursor(lastID: id, lastUpdatedAt: $0) }
         } : nil
         return OpenedPage(entries: entries, next: next)

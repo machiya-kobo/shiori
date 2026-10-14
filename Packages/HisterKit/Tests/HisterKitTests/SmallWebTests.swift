@@ -48,6 +48,14 @@ struct SmallWebTests {
         #expect(page.failures == ["Veronica-2 timed out"])
     }
 
+    @Test func oneOddEngineEntryDropsItselfNotTheRest() throws {
+        let json = #"{"results": [], "sources": {"tlgs": {"ok": true, "next": true}, "kennedy": "down"}, "errors": {"kennedy": 3, "veronica": "timeout"}}"#
+        let page = try JSONDecoder().decode(SmallWebPage.self, from: Data(json.utf8))
+        #expect(Array(page.engines.keys) == ["tlgs"])
+        #expect(page.hasMore)
+        #expect(page.errors == ["veronica": "timeout"])
+    }
+
     @Test func marksAreScalarOffsetsAndBadOnesAreSkipped() {
         let result = SmallWebResult(url: "gemini://a/", title: "A", proxyURL: "https://s/", snippet: "sample notes … my query",
                                     marks: [[18, 23], [0, 6], [3, 4], [30, 40]])

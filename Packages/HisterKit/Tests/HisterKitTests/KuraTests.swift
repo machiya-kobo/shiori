@@ -47,6 +47,18 @@ import Testing
         #expect(KuraClient.page(from: Data("not json".utf8), offset: 0) == nil)
     }
 
+    @Test func noResultsAtAllIsAnEmptyPageAndNoTimeIsNoDate() throws {
+        let none = try #require(KuraClient.page(from: Data(#"{"total": 0, "results": null}"#.utf8), offset: 0))
+        #expect(none.documents.isEmpty)
+        #expect(none.nextPageKey == nil)
+        let missing = try #require(KuraClient.page(from: Data(#"{"total": 0}"#.utf8), offset: 0))
+        #expect(missing.documents.isEmpty)
+        let undated = try #require(KuraClient.page(
+            from: Data(#"{"results": [{"url": "https://kura.example/n/a", "title": "A"}]}"#.utf8), offset: 0))
+        #expect(undated.documents.first?.added == .distantPast)
+        #expect(undated.documents.first?.updated == .distantPast)
+    }
+
     @Test func oneNoteThatDoesntReadIsSkippedNotThePage() throws {
         let json = """
             {"total": 3, "results": [

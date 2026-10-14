@@ -146,22 +146,25 @@ public struct KuraClient: Sendable {
                 let changed: Double?
             }
             let total: Int?
-            /// One note that doesn't read is skipped, not the page.
-            let results: Lenient<Note>
+            /// One note that doesn't read is skipped, not the page; none
+            /// (missing or null) is an empty page.
+            let results: Lenient<Note>?
         }
         guard let reply = DecodeLog.decode(Reply.self, from: data, what: "Kura's notes") else { return nil }
-        let notes = reply.results.elements.filter { $0.url.hasPrefix("https://") || $0.url.hasPrefix("http://") }
+        let read = reply.results?.count ?? 0
+        let notes = (reply.results?.elements ?? []).filter { $0.url.hasPrefix("https://") || $0.url.hasPrefix("http://") }
         let documents = notes.map { note in
-            let changed = note.changed ?? note.created ?? 0
+            // No time is no date (`.distantPast`, left out), not 1970.
+            let changed = note.changed ?? note.created
             return StoredPage(
                 url: note.url, title: note.title ?? note.path ?? "", domain: URL(string: note.url)?.host() ?? "",
-                label: Notes.label, added: Date(timeIntervalSince1970: note.created ?? changed),
-                updated: Date(timeIntervalSince1970: changed), faviconKey: "", snippetHTML: note.snippet ?? note.summary ?? "")
+                label: Notes.label, added: histerDate(note.created ?? changed),
+                updated: histerDate(changed), faviconKey: "", snippetHTML: note.snippet ?? note.summary ?? "")
         }
         let total = max(reply.total ?? documents.count, documents.count)
-        let next = offset + reply.results.count
+        let next = offset + read
         return SearchPage(
-            total: total, documents: documents, nextPageKey: next < total && reply.results.count > 0 ? String(next) : nil,
+            total: total, documents: documents, nextPageKey: next < total && read > 0 ? String(next) : nil,
             suggestion: nil)
     }
 }

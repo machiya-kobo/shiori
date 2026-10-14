@@ -90,8 +90,12 @@ public struct SmallWebPage: Sendable, Equatable, Decodable {
         let c = try decoder.container(keyedBy: Keys.self)
         // One result the app can't read is left out, not the page.
         results = ((try? c.decodeIfPresent([Lossy<SmallWebResult>].self, forKey: .results)) ?? nil)?.compactMap(\.value) ?? []
-        engines = (try? c.decodeIfPresent([String: Engine].self, forKey: .sources)) ?? [:]
-        errors = (try? c.decodeIfPresent([String: String].self, forKey: .errors)) ?? [:]
+        // Each engine on its own: one odd entry drops itself, not the rest
+        // (or the paging their `next` drives); the same for the errors.
+        engines = ((try? c.decodeIfPresent([String: Lossy<Engine>].self, forKey: .sources)) ?? nil)?
+            .compactMapValues(\.value) ?? [:]
+        errors = ((try? c.decodeIfPresent([String: Lossy<String>].self, forKey: .errors)) ?? nil)?
+            .compactMapValues(\.value) ?? [:]
     }
 }
 

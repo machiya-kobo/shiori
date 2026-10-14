@@ -59,13 +59,23 @@ public enum AIHTTP {
 
     /// The provider's message: `{"error":{"message":…}}` from OpenAI and
     /// local servers, `{"type":"error","error":{"message":…}}` from
-    /// Anthropic. Trimmed, since Settings shows it inline.
+    /// Anthropic, or a plain `{"error":"…"}` (Ollama and other local
+    /// servers). Trimmed, since Settings shows it inline.
     static func errorMessage(from data: Data) -> String? {
         struct Envelope: Decodable {
-            struct Inner: Decodable { let message: String? }
-            let error: Inner?
+            let message: String?
+            private enum Keys: String, CodingKey { case error }
+            private enum Inner: String, CodingKey { case message }
+            init(from decoder: any Decoder) throws {
+                let c = try decoder.container(keyedBy: Keys.self)
+                if let text = try? c.decode(String.self, forKey: .error) {
+                    message = text
+                } else {
+                    message = try? c.nestedContainer(keyedBy: Inner.self, forKey: .error).decode(String.self, forKey: .message)
+                }
+            }
         }
-        guard let message = (try? JSONDecoder().decode(Envelope.self, from: data))?.error?.message?
+        guard let message = (try? JSONDecoder().decode(Envelope.self, from: data))?.message?
             .trimmingCharacters(in: .whitespacesAndNewlines), !message.isEmpty
         else { return nil }
         return String(message.prefix(200))

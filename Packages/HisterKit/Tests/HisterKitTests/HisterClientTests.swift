@@ -168,6 +168,17 @@ struct HisterClientTests {
         #expect(page.documents.first?.domain == "a.example")
     }
 
+    @Test func oneDocumentThatDoesntReadIsSkippedNotThePage() async throws {
+        // No url; a url that's a number; then fractional seconds, which read
+        // as Hister's opened results do.
+        stub(#"{"total":3,"documents":[{"title":"none"},{"url":7},{"url":"https://a.example/","added":100.5,"updated":"soon"}]}"#)
+        let page = try await client.search("a")
+        #expect(page.documents.map(\.url) == ["https://a.example/"])
+        #expect(page.documents[0].added == Date(timeIntervalSince1970: 100.5))
+        // An unreadable `updated` is none, so `added` stands in.
+        #expect(page.documents[0].updated == Date(timeIntervalSince1970: 100.5))
+    }
+
     @Test func rawControlCharactersInARepliesAreTolerated() async throws {
         stub("{\"total\":1,\"documents\":[{\"url\":\"https://a.example/\",\"text\":\"line\u{01}one\"}]}")
         let page = try await client.search("a")
@@ -263,6 +274,13 @@ struct HisterClientTests {
     @Test func deleteRefusesWhenTheQueryMatchesMoreThanOnePage() async {
         stub(#"{"matched":3}"#)
         await #expect(throws: HisterError.unexpectedMatchCount(3)) { try await client.delete(url: "https://a.example/") }
+        #expect(requests.count == 1)
+    }
+
+    @Test func deleteRefusesWhenTheQueryMatchesNothing() async {
+        stub(#"{"matched":0}"#)
+        await #expect(throws: HisterError.unexpectedMatchCount(0)) { try await client.delete(url: "https://a.example/") }
+        // The dry run only: nothing was deleted.
         #expect(requests.count == 1)
     }
 

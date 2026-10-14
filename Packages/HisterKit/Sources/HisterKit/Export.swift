@@ -39,11 +39,16 @@ public enum Export {
     static func json(_ pages: [StoredPage]) -> Data {
         struct Row: Encodable {
             var url, title, domain, label: String
-            var added, updated: Int
+            /// Left out when the page has no date, never 0 (1 January 1970).
+            var added, updated: Int?
+        }
+        func seconds(_ date: Date) -> Int? {
+            let s = Int(date.timeIntervalSince1970)
+            return s > 0 ? s : nil
         }
         let rows = pages.map {
             Row(url: $0.url, title: $0.title, domain: $0.domain, label: $0.label,
-                added: max(0, Int($0.added.timeIntervalSince1970)), updated: max(0, Int($0.updated.timeIntervalSince1970)))
+                added: seconds($0.added), updated: seconds($0.updated))
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]

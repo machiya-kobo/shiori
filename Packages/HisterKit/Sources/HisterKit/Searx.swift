@@ -145,9 +145,21 @@ public struct SearxClient: Sendable {
                 var img_src: String?
                 var publishedDate: String?
             }
-            var results: [Result]?
+            /// One result that doesn't read is skipped, not the page.
+            var results: Lenient<Result>?
             var suggestions: [String]?
             var corrections: [String]?
+            /// Read here with the rest: the reply is decoded once.
+            var health: EngineHealth.Field
+
+            private enum Keys: String, CodingKey { case results, suggestions, corrections }
+            init(from decoder: any Decoder) throws {
+                let c = try decoder.container(keyedBy: Keys.self)
+                results = try c.decodeIfPresent(Lenient<Result>.self, forKey: .results)
+                suggestions = try? c.decodeIfPresent([String].self, forKey: .suggestions)
+                corrections = try? c.decodeIfPresent([String].self, forKey: .corrections)
+                health = try EngineHealth.Field(from: decoder)
+            }
         }
         let reply: Reply
         do {
@@ -157,7 +169,7 @@ public struct SearxClient: Sendable {
             throw .badResponse
         }
         var seen = Set<String>()
-        let results = (reply.results ?? []).compactMap { r -> WebResult? in
+        let results = (reply.results?.elements ?? []).compactMap { r -> WebResult? in
             guard let url = r.url, url.hasPrefix("http"), seen.insert(url).inserted else { return nil }
             return WebResult(
                 url: url,
@@ -169,7 +181,7 @@ public struct SearxClient: Sendable {
         }
         return WebPage(
             results: results, suggestions: reply.suggestions ?? [], corrections: reply.corrections ?? [],
-            unanswered: EngineHealth.names(inReply: data))
+            unanswered: EngineHealth.names(reply.health.entries ?? []))
     }
 
     /// An image URL served by this SearXNG (its image proxy), else nil.

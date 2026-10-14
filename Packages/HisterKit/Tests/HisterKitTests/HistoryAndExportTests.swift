@@ -118,6 +118,15 @@ struct HistoryTests {
         #expect(page.next == nil)
     }
 
+    @Test func anOpenedEntryWithoutATimeHasNoDateAndABadOneIsSkipped() async throws {
+        let reply = #"{"documents":[{"id":6,"url":"https://c.example/","query":"q"},{"id":"x"},{"id":7,"url":"https://d.example/","added":1790550000.5}]}"#
+        StubProtocol.handle(Self.host) { _ in (200, Data(reply.utf8)) }
+        let page = try await client.openedHistory()
+        #expect(page.entries.map(\.id) == [6, 7])
+        #expect(page.entries[0].added == .distantPast)
+        #expect(page.entries[1].added == Date(timeIntervalSince1970: 1_790_550_000.5))
+    }
+
     @Test func versionsComeNewestFirst() async throws {
         let reply = """
             [{"id":1,"created_at":"2026-09-01T10:00:00Z","url":"u","text_diff":"-a\\n+b","html_diff":""},
@@ -175,6 +184,9 @@ struct ExportTests {
         #expect(rows.count == 2)
         #expect(rows[0]["url"] as? String == "https://a.example/x?y=1&z=2")
         #expect(rows[0]["added"] as? Int == 1_790_000_000)
+        // No date is no field, never 0 (1970) for an import to believe.
+        #expect(rows[1]["added"] == nil)
+        #expect(rows[1]["updated"] == nil)
     }
 
     @Test func rssIsEscapedAndDated() throws {

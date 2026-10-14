@@ -81,12 +81,8 @@ public struct OpenedResult: Sendable, Equatable, Hashable, Identifiable, Decodab
         count = try c.decodeIfPresent(Int.self, forKey: .count) ?? 1
         pinned = try c.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
         domain = (try? c.decodeIfPresent(String.self, forKey: .domain)).flatMap { $0.isEmpty ? nil : $0 }
-        func date(_ key: Keys) -> Date? {
-            guard let seconds = try? c.decodeIfPresent(Double.self, forKey: key), seconds > 0 else { return nil }
-            return Date(timeIntervalSince1970: seconds)
-        }
-        added = date(.added)
-        updated = date(.updated)
+        added = histerSeconds(c, .added).map { Date(timeIntervalSince1970: $0) }
+        updated = histerSeconds(c, .updated).map { Date(timeIntervalSince1970: $0) }
     }
 }
 
@@ -289,6 +285,7 @@ public struct Rules: Sendable, Equatable {
 
 struct SearchResponse: Decodable {
     var total: Int
+    /// One document that doesn't read is skipped and logged, not the page.
     var documents: [DocumentWire]?
     var page_key: String?
     var query_suggestion: String?
@@ -299,7 +296,7 @@ struct SearchResponse: Decodable {
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: Keys.self)
         total = try c.decodeIfPresent(Int.self, forKey: .total) ?? 0
-        documents = try c.decodeIfPresent([DocumentWire].self, forKey: .documents)
+        documents = try c.decodeIfPresent(Lenient<DocumentWire>.self, forKey: .documents)?.elements
         page_key = try c.decodeIfPresent(String.self, forKey: .page_key)
         query_suggestion = try c.decodeIfPresent(String.self, forKey: .query_suggestion)
         // Extras: never the reason a search fails.
@@ -313,8 +310,8 @@ struct DocumentWire: Decodable {
     var title: String?
     var domain: String?
     var label: String?
-    var added: Int64?
-    var updated: Int64?
+    var added: Double?
+    var updated: Double?
     var favicon_key: String?
     var text: String?
     var metadata: MetadataWire?
@@ -326,8 +323,8 @@ struct DocumentWire: Decodable {
         title = try c.decodeIfPresent(String.self, forKey: .title)
         domain = try c.decodeIfPresent(String.self, forKey: .domain)
         label = try c.decodeIfPresent(String.self, forKey: .label)
-        added = try c.decodeIfPresent(Int64.self, forKey: .added)
-        updated = try c.decodeIfPresent(Int64.self, forKey: .updated)
+        added = histerSeconds(c, .added)
+        updated = histerSeconds(c, .updated)
         favicon_key = try c.decodeIfPresent(String.self, forKey: .favicon_key)
         text = try c.decodeIfPresent(String.self, forKey: .text)
         // Extras: never the reason a search fails.
@@ -352,9 +349,18 @@ struct DocumentWire: Decodable {
 
 /// Hister's unix seconds as a date. Missing (or 0) is no date at all:
 /// `.distantPast`, which the rows leave out, not 1 January 1970.
-func histerDate(_ seconds: Int64?) -> Date {
+func histerDate(_ seconds: Double?) -> Date {
     guard let seconds, seconds > 0 else { return .distantPast }
-    return Date(timeIntervalSince1970: TimeInterval(seconds))
+    return Date(timeIntervalSince1970: seconds)
+}
+
+/// A time field as unix seconds, whole or not (Hister sends integers, a
+/// fraction reads too), nil when missing, zero or not a number: one odd
+/// date never fails the document. Every Hister time goes through here, so
+/// a search and its opened results read the same field alike.
+func histerSeconds<K: CodingKey>(_ c: KeyedDecodingContainer<K>, _ key: K) -> Double? {
+    guard let seconds = (try? c.decodeIfPresent(Double.self, forKey: key)) ?? nil, seconds > 0 else { return nil }
+    return seconds
 }
 
 struct PreviewResponse: Decodable {
@@ -387,10 +393,21 @@ struct PreviewResponse: Decodable {
     }
     var title: String?
     var content: String?
-    var added: Int64?
-    var updated: Int64?
+    var added: Double?
+    var updated: Double?
     var details: Details?
     var meta: Meta?
+
+    private enum Keys: String, CodingKey { case title, content, added, updated, details, meta }
+    init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        content = try c.decodeIfPresent(String.self, forKey: .content)
+        added = histerSeconds(c, .added)
+        updated = histerSeconds(c, .updated)
+        details = try c.decodeIfPresent(Details.self, forKey: .details)
+        meta = try? c.decodeIfPresent(Meta.self, forKey: .meta)
+    }
 
     var preview: PagePreview {
         PagePreview(

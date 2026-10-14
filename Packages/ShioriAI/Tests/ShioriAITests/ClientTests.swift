@@ -277,8 +277,29 @@ let labelSchema: JSONValue = [
         #expect(!AIReachability.mayFallThrough(URLError(.serverCertificateUntrusted)))
     }
 
+    @Test func theEdgesOfWhatMayFallThrough() {
+        // The status ranges' ends.
+        #expect(AIReachability.mayFallThrough(AIError.badStatus(408, nil)))
+        #expect(AIReachability.mayFallThrough(AIError.badStatus(500, nil)))
+        #expect(AIReachability.mayFallThrough(AIError.badStatus(599, nil)))
+        #expect(AIReachability.mayFallThrough(AIError.badStatus(403, "refused")))
+        #expect(!AIReachability.mayFallThrough(AIError.badStatus(499, nil)))
+        #expect(!AIReachability.mayFallThrough(AIError.badStatus(600, nil)))
+        #expect(!AIReachability.mayFallThrough(AIError.badStatus(404, nil)))
+        // Too long for one engine may fit the next; the rest are the user's to see.
+        #expect(AIReachability.mayFallThrough(AIError.tooLong))
+        #expect(!AIReachability.mayFallThrough(AIError.plainHTTP))
+        #expect(!AIReachability.mayFallThrough(AIError.emptyContent))
+        #expect(!AIReachability.mayFallThrough(AIError.noEngine))
+        // Cancelling is the user's, never a reason to ask another engine.
+        #expect(!AIReachability.mayFallThrough(CancellationError()))
+        #expect(!AIReachability.mayFallThrough(URLError(.cancelled)))
+    }
+
     @Test func errorMessagesComeFromEitherShape() {
         #expect(AIHTTP.errorMessage(from: Data(#"{"error":{"message":" Use max_completion_tokens. "}}"#.utf8)) == "Use max_completion_tokens.")
+        #expect(AIHTTP.errorMessage(from: Data(#"{"error":"model 'x' not found"}"#.utf8)) == "model 'x' not found")
+        #expect(AIHTTP.errorMessage(from: Data(#"{"error":{"type":"x"}}"#.utf8)) == nil)
         #expect(AIHTTP.errorMessage(from: Data("<html>".utf8)) == nil)
     }
 }

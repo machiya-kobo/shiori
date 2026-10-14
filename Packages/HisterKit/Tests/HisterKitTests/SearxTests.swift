@@ -41,6 +41,19 @@ struct SearxTests {
         #expect(page.suggestions == ["s1"])
     }
 
+    @Test func oneResultThatDoesntReadIsSkippedAndTheHealthStillReads() async throws {
+        StubProtocol.handle(Self.host) { _ in
+            (200, Data(#"""
+            {"results":[{"url":"https://a.example/","title":"A"},{"url":"https://b.example/","title":["odd"]}],
+             "suggestions":null,"unresponsive_engines":[["alpha","timeout"]]}
+            """#.utf8))
+        }
+        let page = try await client.search("q")
+        #expect(page.results.map(\.url) == ["https://a.example/"])
+        #expect(page.suggestions.isEmpty)
+        #expect(page.unanswered == ["alpha"])
+    }
+
     @Test func unreachableIsUnreachable() async {
         StubProtocol.handle(Self.host) { _ in throw URLError(.cannotFindHost) }
         await #expect(throws: HisterError.unreachable) { try await client.search("q") }

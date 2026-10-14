@@ -78,7 +78,8 @@ final class OpenedModel {
             if let i = out.firstIndex(where: { $0.id == day }) {
                 out[i].entries.append(entry)
             } else {
-                out.append((id: day, title: ResultsModel.title(for: day, byDay: true, calendar: calendar), entries: [entry]))
+                let title = entry.added > .distantPast ? ResultsModel.title(for: day, byDay: true, calendar: calendar) : "No Date"
+                out.append((id: day, title: title, entries: [entry]))
             }
         }
         return out
@@ -187,7 +188,10 @@ struct OpenedListView: View {
             TitleLink(title: page.displayTitle, help: OpenOriginalButton.title(for: page, app: app)) {
                 openURL.openPage(page, app: app)
             }
-            Text("For “\(entry.typedQuery)” · \(entry.added.formatted(date: model.byDay ? .omitted : .abbreviated, time: .shortened))")
+            // No time from Hister: the search alone, never year 1.
+            Text(entry.added > .distantPast
+                ? "For “\(entry.typedQuery)” · \(entry.added.formatted(date: model.byDay ? .omitted : .abbreviated, time: .shortened))"
+                : "For “\(entry.typedQuery)”")
                 .textStyle(.subheadline)
                 .foregroundStyle(palette.secondaryText)
                 .lineLimit(1)
