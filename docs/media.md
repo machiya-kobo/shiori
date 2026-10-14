@@ -21,7 +21,7 @@ service is optional. With none set up, there's no Media pill.
   quieter.
 - **Filters:** Kind (Films, TV, Music, Other), Never Played, and Rating (4★+,
   3★+, Any Rating, Unrated).
-- **Before a search:** Now Playing, Recently Played and Watched, your top
+- **Before a search:** Now Playing, Recently Listened and Watched, your top
   artists, albums and tracks for a week, month, year or all time (Sort → Top
   Lists), your watchlist and Recently Added. Group → Day or Month instead puts
   date headings over everything, by when you played it.

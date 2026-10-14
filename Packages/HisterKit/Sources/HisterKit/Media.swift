@@ -769,7 +769,7 @@ public enum Media {
             it.added = members.compactMap { $0.added }.first { $0 != 0 }
             it.inLibrary = lib != nil
             it.elsewhere = lib == nil
-            // When it was last heard or watched in a history list (a browse's Recently Played).
+            // When it was last heard or watched in a history list (a browse's Recently Listened).
             it.when = members.compactMap(\.when).max().flatMap { $0 > 0 ? $0 : nil }
             var seen = Set<String>()
             it.sources = members.map(\.source).filter { !$0.isEmpty && seen.insert($0).inserted }

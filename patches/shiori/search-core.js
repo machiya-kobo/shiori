@@ -1827,7 +1827,7 @@
           inLibrary: !!lib,
           elsewhere: !lib,
           ...played,
-          // When it was last heard or watched in a history list (a browse's Recently Played).
+          // When it was last heard or watched in a history list (a browse's Recently Listened).
           when: Math.max(0, ...members.map((m) => m.when || 0)) || null,
           sources: [...new Set(members.map((m) => m.source).filter(Boolean))],
           episodes: plex && plex.episodes,

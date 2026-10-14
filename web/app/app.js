@@ -1993,7 +1993,7 @@ async function mediaShelves(container, params) {
   };
   const shelves = [
     shelf('Now Playing', s.nowPlaying),
-    shelf('Recently Played', s.listens),
+    shelf('Recently Listened', s.listens),
     shelf('Recently Watched', s.watched),
     shelf('Top Artists', s.artists),
     shelf('Top Albums', s.albums),

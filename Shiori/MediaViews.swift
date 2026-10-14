@@ -503,7 +503,7 @@ struct MediaShelvesView: View {
     @State private var shelves: MediaShelves?
     @State private var filter = Media.Filter()
 
-    /// Everything the shelves hold, one card per item (Recently Played's listens merged with the top lists' counts).
+    /// Everything the shelves hold, one card per item (Recently Listened's listens merged with the top lists' counts).
     private var everything: [MediaItem] {
         guard let s = shelves else { return [] }
         return Media.merge([s.added, s.nowPlaying, s.listens, s.watched, s.artists, s.albums, s.tracks, s.watchlist])
@@ -559,7 +559,7 @@ struct MediaShelvesView: View {
                     }
                 } else {
                 shelf("Now Playing", s.nowPlaying)
-                shelf("Recently Played", s.listens)
+                shelf("Recently Listened", s.listens)
                 shelf("Recently Watched", s.watched)
                 shelf("Top Artists", s.artists)
                 shelf("Top Albums", s.albums)
