@@ -378,8 +378,7 @@ struct LabelsScreen: View {
     var body: some View {
         List {
             if find.isEmpty,
-               app.ai.enabled && (app.ai.autoLabel || app.ai.autoCollections) || !app.labeller.state.pending.isEmpty
-                || !app.labeller.state.collectionProposals.isEmpty
+               app.ai.enabled && (app.ai.autoLabel || app.ai.autoCollections) || app.labeller.waiting > 0
             {
                 Section {
                     NavigationLink {

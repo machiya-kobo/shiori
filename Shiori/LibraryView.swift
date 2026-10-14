@@ -313,8 +313,7 @@ struct LibraryView: View {
                     SidebarDivider(title: "Labels")
                 }
             }
-            if app.ai.enabled && (app.ai.autoLabel || app.ai.autoCollections) || !app.labeller.state.pending.isEmpty
-                || !app.labeller.state.collectionProposals.isEmpty
+            if app.ai.enabled && (app.ai.autoLabel || app.ai.autoCollections) || app.labeller.waiting > 0
             {
                 Section {
                     SuggestedLabelsRow()

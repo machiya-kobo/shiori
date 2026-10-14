@@ -101,14 +101,19 @@ says so ("Summarized by Claude").
   applied when Anthropic is sure, or when Anthropic and Apple Intelligence
   agree; everything else waits in Suggested Labels with the reason. Every
   applied label is logged with Undo, and a label undone twice is held for
-  review. The page's label is re-read before writing.
+  review. The page's label is re-read before writing. Runs are at least 15
+  minutes apart and wait while Low Power Mode is on or the device is warm.
+  An engine that can't answer (offline, busy, a refused key, an unknown
+  model) stops the run, and its pages wait for the next one. Its state
+  (labelling.json) belongs to one account: another Hister server, or
+  another user signed in, starts it over; signing out keeps it.
 - **Suggest Labels** (Settings → AI, and Suggested Labels) runs the same
   asking once, on request, with Label New Pages on or off: the newest
   unlabelled pages not looked at before, every answer waiting in Suggested
   Labels, nothing applied. A page you skipped stays skipped.
 - **Apply Apple Intelligence's Labels** (off by default): when Anthropic
-  doesn't settle a page, or isn't used, Apple Intelligence's first choice is
-  applied instead of suggested, and so is its choice for each waiting
+  doesn't settle a page, or isn't used, Apple Intelligence's first choice
+  (right about 6 times in 10) is applied instead of suggested, and so is its choice for each waiting
   suggestion on the next run. For a user who'd rather correct than review:
   every one is in the Undo list (the last 1,000), and a label undone twice
   is held, only suggested from then on.

@@ -217,12 +217,18 @@ struct AISettingsPage: View {
     }
 
     private var autoLabelFooter: String {
-        let start = if app.ai.applyAppleLabels {
-            "New pages get Anthropic's sure answer, else Apple Intelligence's first choice."
-        } else if app.ai.cloud != .anthropic {
+        if app.ai.autoLabel, app.ai.appleIntelligence, app.ai.applyAppleLabels {
+            return "New pages get Anthropic's sure answer, else Apple Intelligence's, right about 6 times in 10. "
+                + "Use it on one device only; every label can be undone."
+        }
+        let start = if app.ai.cloud != .anthropic {
             "Without Anthropic as the AI provider, new pages' labels wait in Suggested Labels."
         } else {
             "Anthropic's sure answers label new pages; the rest wait in Suggested Labels."
+        }
+        // Beside Apply Apple Intelligence's Labels: how often it's right.
+        if app.ai.autoLabel, app.ai.appleIntelligence {
+            return start + " Apple Intelligence's labels are right about 6 times in 10; every label can be undone."
         }
         return start + " Use it on one device only; every change can be undone."
     }

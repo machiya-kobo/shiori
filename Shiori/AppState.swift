@@ -115,6 +115,10 @@ final class AppState {
 
     /// The label suggestions' hints from the user's own filing (LabelHints).
     var labelHints: LabelHints?
+    /// Bumped when the account changes: hints read for the one before
+    /// aren't kept.
+    @ObservationIgnored private(set) var labelAccount = 0
+    @ObservationIgnored private var labelOwner: (server: String, user: String?)?
     /// Label New Pages (Settings → AI): its queue, its log, its runs.
     let labeller = AutoLabeller()
 
@@ -246,6 +250,24 @@ final class AppState {
         HisterClient.clearCache()
     }
 
+    /// Label New Pages' state and the label hints belong to one account:
+    /// another server, or another user signed in, starts them over
+    /// (`AutoLabeller.adopt`); signing out, or back in as the same user,
+    /// keeps them. Labels edited here go with them. Checked at launch, on
+    /// signing in, and once a server's rules arrive (an address that
+    /// answers, not one half-typed or mistyped).
+    func labellingAccountChanged() {
+        let server = client?.baseURL.absoluteString ?? serverURL
+        let user = histerAccount.map(\.username).flatMap { $0.isEmpty ? nil : $0 }
+        if LabellingOwner.changed(fromServer: labelOwner?.server, user: labelOwner?.user, toServer: server, user: user) {
+            labelHints = nil
+            labelEdits = [:]
+            labelAccount += 1
+        }
+        labelOwner = (server, user ?? labelOwner?.user)
+        labeller.adopt(server: server, user: user)
+    }
+
     /// The client for the server, with this device's token and sign-in.
     private func makeClient() -> HisterClient? {
         HisterClient(serverURL: serverURL, token: histerToken, histerSession: histerAccount?.session)
@@ -306,6 +328,7 @@ final class AppState {
         histerAccount = Self.storedAccount()
         if before != signedIn.username { forgetAccountCopies() }
         credentialsChanged()
+        labellingAccountChanged()
         Task { await syncAccountPrefs(force: true) }
         return nil
     }
@@ -804,6 +827,7 @@ final class AppState {
         // An init's own assignment runs no didSet.
         rebuildMedia()
         owner.app = self
+        labellingAccountChanged()
     }
 
     /// The server's aliases and labels, fetched once per server.
@@ -820,6 +844,7 @@ final class AppState {
             let fetched = try await client.rules()
             rules = fetched
             rulesLoaded = true
+            labellingAccountChanged()
             rulesFailure = nil
             // The share sheet's label picker works from this copy.
             SharedSettings.defaults?.set(fetched.labels, forKey: SharedSettings.Key.labels)

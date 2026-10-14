@@ -235,33 +235,24 @@ struct LabelPicker: View {
 
     private func suggest() async {
         guard app.ai.hasEngine(note: false), suggestion == nil, let client = app.client else { return }
-        // Another vault's note reaches a model only while Kura, asked afresh, still shares it.
+        // Another vault's note reaches a model only while Kura, asked afresh,
+        // still shares it; its address isn't even sent to Hister otherwise.
         guard !(await app.isWorkNoteNow(document.url)) else { return }
-        let excluded = Set(app.ai.neverSuggest)
-        let labels = app.rules.labels.filter { !LabelClassifier.notTopics.contains($0) && !excluded.contains($0) }
+        let labels = app.suggestableLabels
         guard !labels.isEmpty else { return }
         suggesting = true
         defer { suggesting = false }
         do {
             async let preview = client.preview(of: document.url)
             let hints = await app.labelHintsIfNeeded()
-            let rules = app.rules
-            let choices = hints.choices(labels, collections: { rules.collections(containing: $0) }, excluding: document.url)
             let page = try await preview
-            let title = page.title.isEmpty ? document.displayTitle : page.title
-            let similar = await AutoLabeller.neighbours(of: document.url, title: title, labels: Set(labels), client: client)
-            // Where the page may go, as for a summary: another vault's note
-            // is asked of Kura afresh (the default vault's asks nothing).
-            let isFile = LocalFiles.isLocalFile(document.url), isCode = document.code != nil
-            let content = AIContent.classify(
-                isLocalFile: isFile, isCode: isCode,
-                isPrivateNote: isFile || isCode ? false : await app.isWorkNoteNow(document.url),
-                isNote: document.label == Notes.label)
-            suggestion = try await LabelClassifier(chain: app.ai.chain).suggest(
-                title: title, url: document.url, html: page.contentHTML, choices: choices,
-                siteLabels: hints.siteLabels(for: document.url), neighbours: similar,
-                corrections: Array(app.labeller.state.corrections.prefix(10)),
-                content: content)
+            // The question Label New Pages asks too: where the page may go
+            // is decided there (`AIContent.classify`), for both.
+            guard let question = await app.labelQuestion(
+                url: document.url, title: document.displayTitle, label: document.label, isCode: document.code != nil,
+                preview: page, labels: labels, hints: hints, corrections: Array(app.labeller.state.corrections.prefix(10)))
+            else { return }
+            suggestion = try await question.ask(app.ai.chain)
         } catch is CancellationError {
         } catch let error as HisterError {
             if error != .cancelled { suggestionFailure = error.userMessage }

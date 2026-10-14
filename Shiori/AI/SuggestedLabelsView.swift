@@ -360,7 +360,7 @@ struct SuggestedLabelsRow: View {
             HStack {
                 Text("Suggested Labels")
                 Spacer()
-                let count = app.labeller.state.pending.count + app.labeller.state.collectionProposals.count
+                let count = app.labeller.waiting
                 if count > 0 {
                     Text(count.formatted())
                         .textStyle(.caption, weight: .semibold)

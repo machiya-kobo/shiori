@@ -30,6 +30,8 @@ struct ShioriApp: App {
                     // come back before the toast would have.
                     if phase == .background {
                         app.deletes.commit()
+                        // Labelling's state, written now rather than in a few seconds.
+                        app.labeller.flush()
                         #if os(iOS)
                         app.labeller.stop()
                         #endif
