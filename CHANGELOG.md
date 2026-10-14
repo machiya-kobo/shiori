@@ -5,6 +5,50 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.9.0 (2026-10-14)
+
+- Media: Sort (Newest, Most Played, Top Rated, Year…), Group (Shelves,
+  Day, Month, Kind, Played) and a Filter with counts (Date, Kind, Played,
+  Rating, Service), as on the other pills. Sort → Top Lists picks the top
+  lists' period. Films and TV open in Plex first. "Recently Listened".
+  Settings → Media: a switch, address, token and Test Connection for each
+  service.
+- Settings: one look for every field; Hister's server at the top of
+  Search; the pills' order and switches behind one row; Pill Row
+  (Automatic wraps when the pills don't fit, one row on a short screen).
+  The web pages' Settings is the house's sheet (Cancel and Save), the web
+  app's with the apps' pages inside it.
+- Opened pages: a page you opened from a search stays in that search (it
+  vanished with Show Opened off). Show Opened is on by default. Beside
+  the preview, a page counts as opened after 2 seconds on it.
+- ⌘K goes to the search field everywhere (Ctrl+K off a Mac); ⌘R reloads a
+  list on the Mac.
+- iPad and small Mac windows: two columns below 1,000 points, a page
+  opening over the results.
+- Saving: a site's error page is never saved as the page; a busy site's
+  link waits and is downloaded later. Waiting to Send lists pages that
+  couldn't be saved. On the Mac, waiting pages are sent again (the outbox
+  never found them). Save Links has Stop.
+- Failures say so: Small Web and All when a source didn't answer, a list
+  that couldn't load more, Labels when the server didn't answer.
+- AI: cut-off summaries and answers are marked and never kept; Label New
+  Pages never writes over a label you set, stops when an engine can't
+  answer, and starts fresh for another account.
+- Privacy and security: Kura's and Konbini's addresses save on Return
+  (the sign-in never goes to a half-typed address) and only the app sets
+  them; the network cache is memory only; a note from a private vault is
+  never offered by Save Links or served from a cached summary; preview
+  links open only as web addresses; "Not encrypted" under any http://
+  address that gets a sign-in.
+- Accessibility: Undo is announced and waits 20 seconds with VoiceOver;
+  results and saves are announced; bigger tap targets; theme colors only.
+- Web app: no black-translucent status bar (re-add it to the Home
+  Screen); the status bar's color fades into the header; one tab lit at a
+  time. Search page: Open in Hister goes to Hister.
+- shiori-web: says when a token file can't be read; the container test
+  covers another uid.
+- Faster lists, previews and launch; one bad item no longer fails a page.
+
 ## 1.8.0 (2026-10-13)
 
 - Media: a Media pill for your Jellyfin and Plex libraries and what you
