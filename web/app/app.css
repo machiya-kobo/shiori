@@ -215,6 +215,9 @@ body.phone-preview #preview-column { display: flex; border: 0; }
    once there's room); Settings → Pill Row → One Row keeps one scrolling row. */
 .segments { flex-wrap: wrap; overflow-x: visible; }
 body[data-pill-row="scroll"] .segments { flex-wrap: nowrap; overflow-x: auto; }
+/* Automatic on a short screen (a phone on its side): one scrolling row, as
+   the apps do in a compact height; wrapped rows took half the screen. */
+@media (max-height: 500px) { .segments { flex-wrap: nowrap; overflow-x: auto; } }
 /* An end with more to scroll to fades out (fadeEdges() sets data-fade), as
    the search page's tabs. */
 [data-fade] { --fade: 28px; }

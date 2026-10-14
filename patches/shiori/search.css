@@ -259,6 +259,9 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
    and the web app's pills; Settings → Pill Row → One Row keeps one scrolling row. */
 #categories { flex-wrap: wrap; overflow-x: visible; }
 body[data-pill-row="scroll"] #categories { flex-wrap: nowrap; overflow-x: auto; }
+/* Automatic on a short screen (a phone on its side): one scrolling row, as
+   the apps do in a compact height; wrapped rows took half the screen. */
+@media (max-height: 500px) { #categories { flex-wrap: nowrap; overflow-x: auto; } }
 [data-fade] { --fade: 28px; }
 [data-fade="end"] {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);

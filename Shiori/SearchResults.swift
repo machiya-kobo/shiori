@@ -638,8 +638,20 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
 
     /// Pills that don't fit wrap to another row, every one in sight (one row
     /// again once there's room), unless Settings → Search → Pill Row says One
-    /// Row: then they scroll sideways.
-    private var wraps: Bool { app.searchPage.pillRow != "scroll" }
+    /// Row: then they scroll sideways. Automatic scrolls too on a short
+    /// screen (an iPhone on its side), where wrapped rows, the field and Sort
+    /// took nearly half of it.
+    private var wraps: Bool {
+        guard app.searchPage.pillRow != "scroll" else { return false }
+        #if os(iOS)
+        return verticalSizeClass != .compact
+        #else
+        return true
+        #endif
+    }
+    #if os(iOS)
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
 
     func body(content: Content) -> some View {
         content
