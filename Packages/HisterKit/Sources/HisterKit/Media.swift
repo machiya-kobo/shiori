@@ -78,6 +78,8 @@ public struct MediaItem: Sendable, Hashable, Identifiable {
     public var ratingFrom = ""
     public var outside: [Outside] = []
     public var source = ""
+    /// A merged card's services, in the order they were asked.
+    public var sources: [String] = []
     public var sourceId = ""
     /// Where it opens, by service name.
     public var open: [String: String] = [:]
@@ -117,6 +119,7 @@ public struct MediaItem: Sendable, Hashable, Identifiable {
         put("ratingFrom", ratingFrom)
         if !outside.isEmpty { d["outside"] = outside.map { ["name": $0.name, "score": $0.score] } }
         put("source", source)
+        if !sources.isEmpty { d["sources"] = sources }
         put("sourceId", sourceId)
         if !open.isEmpty { d["open"] = open }
         put("when", when)
@@ -151,6 +154,7 @@ public struct MediaItem: Sendable, Hashable, Identifiable {
         ratingFrom = s("ratingFrom")
         outside = (d["outside"] as? [[String: String]] ?? []).map { .init(name: $0["name"] ?? "", score: $0["score"] ?? "") }
         source = s("source")
+        sources = d["sources"] as? [String] ?? []
         sourceId = s("sourceId")
         open = d["open"] as? [String: String] ?? [:]
         when = i("when")
@@ -765,6 +769,10 @@ public enum Media {
             it.added = members.compactMap { $0.added }.first { $0 != 0 }
             it.inLibrary = lib != nil
             it.elsewhere = lib == nil
+            // When it was last heard or watched in a history list (a browse's Recently Played).
+            it.when = members.compactMap(\.when).max().flatMap { $0 > 0 ? $0 : nil }
+            var seen = Set<String>()
+            it.sources = members.map(\.source).filter { !$0.isEmpty && seen.insert($0).inserted }
             it.episodes = plex?.episodes
             it.rating = rated?.rating
             it.ratingFrom = rated?.ratingFrom ?? ""
@@ -794,22 +802,84 @@ public enum Media {
     public struct Filter: Sendable, Equatable {
         /// films, tv, music, other.
         public var kind: String?
-        /// "never".
+        /// never (in a library, never played), played, elsewhere (not in a library).
         public var played: String?
         /// loved (4★+), liked (3★+), any, unrated.
         public var rated: String?
-        public init(kind: String? = nil, played: String? = nil, rated: String? = nil) {
+        /// week, month, year (last played within it), older (before a year ago).
+        public var date: String?
+        /// jellyfin, plex, koito, movary.
+        public var service: String?
+        public init(kind: String? = nil, played: String? = nil, rated: String? = nil, date: String? = nil, service: String? = nil) {
             self.kind = kind
             self.played = played
             self.rated = rated
+            self.date = date
+            self.service = service
         }
-        public var isEmpty: Bool { kind == nil && played == nil && rated == nil }
+        public var isEmpty: Bool { kind == nil && played == nil && rated == nil && date == nil && service == nil }
+
+        public subscript(key: String) -> String? {
+            get {
+                switch key {
+                case "kind": kind
+                case "played": played
+                case "rated": rated
+                case "date": date
+                case "service": service
+                default: nil
+                }
+            }
+            set {
+                switch key {
+                case "kind": kind = newValue
+                case "played": played = newValue
+                case "rated": rated = newValue
+                case "date": date = newValue
+                case "service": service = newValue
+                default: break
+                }
+            }
+        }
     }
 
-    public static func filter(_ items: [MediaItem], _ f: Filter) -> [MediaItem] {
+    /// The Filter sheet's sections and their choices (search-core's MEDIA_FILTERS).
+    public static let filters: [(key: String, title: String, choices: [(String, String)])] = [
+        ("date", "Date", [("week", "Past Week"), ("month", "Past Month"), ("year", "Past Year"), ("older", "Older")]),
+        ("kind", "Kind", [("films", "Films"), ("tv", "TV"), ("music", "Music"), ("other", "Other")]),
+        ("played", "Played", [("played", "Played"), ("never", "Never Played"), ("elsewhere", "Not in Library")]),
+        ("rated", "Rating", [("loved", "4★+"), ("liked", "3★+"), ("any", "Any Rating"), ("unrated", "Unrated")]),
+        ("service", "Service", [("jellyfin", "Jellyfin"), ("plex", "Plex"), ("koito", "Koito"), ("movary", "Movary")]),
+    ]
+    static let dateDays = ["week": 7, "month": 30, "year": 365]
+
+    /// How many items each Filter choice would keep, the other filters held (search-core's `mediaFacets`).
+    public static func facets(_ items: [MediaItem], _ f: Filter, now: Int) -> [String: [String: Int]] {
+        var out: [String: [String: Int]] = [:]
+        for section in filters {
+            var counts: [String: Int] = [:]
+            for (value, _) in section.choices {
+                var g = f
+                g[section.key] = value
+                counts[value] = filter(items, g, now: now).count
+            }
+            out[section.key] = counts
+        }
+        return out
+    }
+
+    public static func filter(_ items: [MediaItem], _ f: Filter, now: Int = 0) -> [MediaItem] {
         items.filter { it in
             if let kind = f.kind, group(it) != kind { return false }
             if f.played == "never", !(it.inLibrary && it.plays == 0) { return false }
+            if f.played == "played", !((it.plays ?? 0) > 0 || (it.when ?? 0) != 0) { return false }
+            if f.played == "elsewhere", !it.elsewhere { return false }
+            if let service = f.service, !(it.sources.isEmpty ? [it.source] : it.sources).contains(service) { return false }
+            if let date = f.date {
+                let at = lastPlayed(it)
+                if at == 0 { return false }
+                if date == "older" ? now - at <= 365 * 86400 : now - at > (dateDays[date] ?? 0) * 86400 { return false }
+            }
             let r = it.rating ?? 0
             switch f.rated {
             case "loved": if r < 8 { return false }
@@ -824,8 +894,8 @@ public enum Media {
 
     /// Sort and Group, as the other pills' (search-core's MEDIA_ORDERS, MEDIA_GROUPINGS).
     public static let orders = [("best", "Best Match"), ("newest", "Newest"), ("oldest", "Oldest"), ("plays", "Most Played"),
-                                ("rating", "Top Rated"), ("title", "Title"), ("added", "Recently Added")]
-    public static let groupings = [("", "No Groups"), ("kind", "Kind"), ("month", "Month")]
+                                ("rating", "Top Rated"), ("title", "Title"), ("year", "Year"), ("added", "Recently Added")]
+    public static let groupings = [("", "No Groups"), ("day", "Day"), ("month", "Month"), ("kind", "Kind"), ("played", "Played")]
     static let monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
     /// When it was last played (or listened to, watched): 0 when no one knows.
@@ -850,6 +920,7 @@ public enum Media {
             case "plays": later({ $0.plays ?? 0 }, desc: true)
             case "rating": later({ $0.rating ?? 0 }, desc: true)
             case "added": later({ $0.added ?? 0 }, desc: true)
+            case "year": later({ $0.year ?? 0 }, desc: true)
             case "title": { a, b in
                 let x = norm(a.title), y = norm(b.title)
                 return x < y ? -1 : x > y ? 1 : 0
@@ -871,6 +942,13 @@ public enum Media {
         let titleOf: ((MediaItem) -> String)? =
             switch grouping {
             case "kind": { ["films": "Films", "tv": "TV", "music": "Music", "other": "Other"][group($0)] ?? "Other" }
+            case "day": { it in
+                let at = lastPlayed(it)
+                return at != 0 ? date(at, offsetMinutes: offsetMinutes) : it.plays == 0 ? "Never Played" : "No Date"
+            }
+            case "played": { it in
+                (it.plays ?? 0) > 0 || (it.when ?? 0) != 0 ? "Played" : it.elsewhere ? "Not in Library" : it.plays == 0 ? "Never Played" : "Not Known"
+            }
             case "month": { it in
                 let at = lastPlayed(it)
                 guard at != 0 else { return it.plays == 0 ? "Never Played" : "No Date" }
@@ -887,8 +965,8 @@ public enum Media {
             let title = titleOf(it)
             if let i = out.firstIndex(where: { $0.title == title }) { out[i].items.append(it) } else { out.append((title, [it])) }
         }
-        if grouping == "kind" {
-            let rank = ["Films", "TV", "Music", "Other"]
+        let ranks = ["kind": ["Films", "TV", "Music", "Other"], "played": ["Played", "Never Played", "Not in Library", "Not Known"]]
+        if let rank = ranks[grouping] {
             out = out.enumerated().sorted { a, b in
                 let x = rank.firstIndex(of: a.element.title) ?? 9, y = rank.firstIndex(of: b.element.title) ?? 9
                 return x != y ? x < y : a.offset < b.offset

@@ -56,7 +56,7 @@ struct MediaResults: View {
     var body: some View {
         content
             .task(id: query) { await model.load(using: app.media) }
-            .topBar { MediaControls(order: $order, grouping: $grouping, filter: $filter) }
+            .topBar { MediaControls(order: $order, grouping: $grouping, filter: $filter, items: model.items) }
     }
 
     @ViewBuilder private var content: some View {
@@ -68,7 +68,7 @@ struct MediaResults: View {
         case .failed:
             MediaNotSetUp()
         case .loaded:
-            let items = Media.sort(Media.filter(model.items, filter), order)
+            let items = Media.sort(Media.filter(model.items, filter, now: Int(Date().timeIntervalSince1970)), order)
             if model.items.isEmpty {
                 ContentUnavailableView {
                     Label("No Media Found", systemImage: "music.note.list")
@@ -106,37 +106,50 @@ struct MediaResults: View {
     }
 }
 
-/// Media's bar, the other pills' Sort · Group · Filter: Sort and Group on a
-/// search (Best Match, Newest, Oldest, Most Played, Top Rated, Title,
-/// Recently Added; No Groups, Kind, Month), the top lists' period when
-/// browsing, and Filter (Kind, Never Played, Rating) with its chips and Clear.
+/// Media's bar, the other pills' Sort · Group · Filter: Sort (Best Match on
+/// a search, Newest, Oldest, Most Played, Top Rated, Title, Year, Recently
+/// Added), Group (Shelves when browsing, No Groups, Day, Month, Kind,
+/// Played), the top lists' period when browsing, and Filter, a sheet with a
+/// count beside every choice (Date, Kind, Played, Rating, Service), with
+/// chips to remove each and Clear.
 struct MediaControls: View {
-    var order: Binding<String>? = nil
-    var grouping: Binding<String>? = nil
+    @Binding var order: String
+    @Binding var grouping: String
     var period: Binding<String>? = nil
     @Binding var filter: Media.Filter
+    /// Every item before the filters, for the sheet's counts.
+    let items: [MediaItem]
+    /// Browsing: no Best Match, and Shelves first among the groups.
+    var browsing = false
 
     @Environment(\.palette) private var palette
+    @State private var filtering = false
 
-    static let kinds = [("films", "Films"), ("tv", "TV"), ("music", "Music"), ("other", "Other")]
-    static let ratings = [("loved", "4★+"), ("liked", "3★+"), ("any", "Any Rating"), ("unrated", "Unrated")]
     static let periods = [("week", "This Week"), ("month", "This Month"), ("year", "This Year"), ("all_time", "All Time")]
+    private var orders: [(String, String)] { browsing ? Media.orders.filter { $0.0 != "best" } : Media.orders }
+    private var groupings: [(String, String)] { browsing ? [("shelves", "Shelves")] + Media.groupings : Media.groupings }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
-                if let order { sortMenu(order) }
-                if let grouping, let order { groupMenu(grouping, order: order) }
-                if let period { periodMenu(period) }
-                filterMenu
-                    .labelStyle(.titleAndIcon)
-                    .quietControl(active: !filter.isEmpty)
-                if let kind = filter.kind, let name = Self.kinds.first(where: { $0.0 == kind })?.1 {
-                    chip(name) { filter.kind = nil }
+                sortMenu
+                groupMenu
+                if let period, grouping == "shelves" { periodMenu(period) }
+                Button {
+                    filtering = true
+                } label: {
+                    Label(filter.isEmpty ? "Filter" : "Filtered", systemImage: filter.isEmpty
+                        ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
                 }
-                if filter.played != nil { chip("Never Played") { filter.played = nil } }
-                if let rated = filter.rated, let name = Self.ratings.first(where: { $0.0 == rated })?.1 {
-                    chip(name) { filter.rated = nil }
+                .buttonStyle(.borderless)
+                .labelStyle(.titleAndIcon)
+                .quietControl(active: !filter.isEmpty)
+                .help("Filter")
+                .accessibilityLabel(filter.isEmpty ? "Filter" : "Filter, filters on")
+                ForEach(Media.filters, id: \.key) { section in
+                    if let value = filter[section.key], let name = section.choices.first(where: { $0.0 == value })?.1 {
+                        chip(name) { filter[section.key] = nil }
+                    }
                 }
                 if !filter.isEmpty {
                     Button("Clear") { filter = Media.Filter() }
@@ -151,13 +164,14 @@ struct MediaControls: View {
         }
         .fadesOverflow()
         .endsTopBar()
+        .sheet(isPresented: $filtering) { MediaFilterSheet(filter: $filter, items: items) }
     }
 
-    private func sortMenu(_ order: Binding<String>) -> some View {
-        let name = Media.orders.first { $0.0 == order.wrappedValue }?.1 ?? "Best Match"
+    private var sortMenu: some View {
+        let name = orders.first { $0.0 == order }?.1 ?? orders[0].1
         return Menu {
-            Picker("Sort", selection: order) {
-                ForEach(Media.orders, id: \.0) { Text($0.1).tag($0.0) }
+            Picker("Sort", selection: $order) {
+                ForEach(orders, id: \.0) { Text($0.1).tag($0.0) }
             }
             .pickerStyle(.inline)
         } label: {
@@ -168,21 +182,21 @@ struct MediaControls: View {
         .accessibilityLabel("Sort: \(name)")
     }
 
-    /// Month follows when you played: choosing it sorts Newest (unless Oldest), as Day and Month do on the other pills.
-    private func groupMenu(_ grouping: Binding<String>, order: Binding<String>) -> some View {
-        let name = Media.groupings.first { $0.0 == grouping.wrappedValue }?.1 ?? "No Groups"
+    /// Day and Month follow when you played: choosing one sorts Newest (unless Oldest), as on the other pills.
+    private var groupMenu: some View {
+        let name = groupings.first { $0.0 == grouping }?.1 ?? "No Groups"
         return Menu {
-            Picker("Group", selection: Binding(get: { grouping.wrappedValue }, set: { new in
-                grouping.wrappedValue = new
-                if new == "month", order.wrappedValue != "oldest" { order.wrappedValue = "newest" }
+            Picker("Group", selection: Binding(get: { grouping }, set: { new in
+                grouping = new
+                if new == "day" || new == "month", order != "oldest" { order = "newest" }
             })) {
-                ForEach(Media.groupings, id: \.0) { Text($0.1).tag($0.0) }
+                ForEach(groupings, id: \.0) { Text($0.1).tag($0.0) }
             }
             .pickerStyle(.inline)
         } label: {
-            Label(grouping.wrappedValue.isEmpty ? "Group" : name, systemImage: "rectangle.3.group")
+            Label(grouping.isEmpty ? "Group" : name, systemImage: "rectangle.3.group")
         }
-        .quietControl(active: !grouping.wrappedValue.isEmpty)
+        .quietControl(active: !grouping.isEmpty && grouping != "shelves")
         .help("Group")
         .accessibilityLabel("Group: \(name)")
     }
@@ -202,32 +216,6 @@ struct MediaControls: View {
         .accessibilityLabel("Your Top: \(name)")
     }
 
-    /// Kind, Played and Rating, each its own list in the one menu (no submenus).
-    private var filterMenu: some View {
-        Menu {
-            Picker("Kind", selection: $filter.kind) {
-                Text("All Kinds").tag(String?.none)
-                ForEach(Self.kinds, id: \.0) { Text($0.1).tag(String?.some($0.0)) }
-            }
-            .pickerStyle(.inline)
-            Picker("Played", selection: $filter.played) {
-                Text("Played or Not").tag(String?.none)
-                Text("Never Played").tag(String?.some("never"))
-            }
-            .pickerStyle(.inline)
-            Picker("Rating", selection: $filter.rated) {
-                Text("All Ratings").tag(String?.none)
-                ForEach(Self.ratings, id: \.0) { Text($0.1).tag(String?.some($0.0)) }
-            }
-            .pickerStyle(.inline)
-        } label: {
-            Label(filter.isEmpty ? "Filter" : "Filtered", systemImage: filter.isEmpty
-                ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
-        }
-        .help("Filter")
-        .accessibilityLabel(filter.isEmpty ? "Filter" : "Filter, filters on")
-    }
-
     private func chip(_ text: String, remove: @escaping () -> Void) -> some View {
         Button(action: remove) {
             HStack(spacing: 4) {
@@ -241,6 +229,77 @@ struct MediaControls: View {
         .foregroundStyle(palette.text)
         .accessibilityLabel("\(text), remove filter")
         .help("Remove this filter")
+    }
+}
+
+/// Media's Filter, as the other pills' sheet: Date, Kind, Played, Rating and
+/// Service, each choice with how many it keeps (the other filters held); a
+/// tap applies it or takes it off.
+struct MediaFilterSheet: View {
+    @Binding var filter: Media.Filter
+    let items: [MediaItem]
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        let counts = Media.facets(items, filter, now: Int(Date().timeIntervalSince1970))
+        NavigationStack {
+            List {
+                ForEach(Media.filters, id: \.key) { section in
+                    Section(section.title) {
+                        row(section.key == "date" ? "Any Time" : "Any", count: nil, on: filter[section.key] == nil) { filter[section.key] = nil }
+                        ForEach(section.choices, id: \.0) { value, name in
+                            row(name, count: counts[section.key]?[value], on: filter[section.key] == value) {
+                                filter[section.key] = filter[section.key] == value ? nil : value
+                            }
+                        }
+                    }
+                }
+            }
+            .themedBackground()
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .navigationTitle("Filter")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+                if !filter.isEmpty {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Clear") { filter = Media.Filter() }
+                    }
+                }
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 380, minHeight: 520)
+        #endif
+        .presentationDetents([.medium, .large])
+    }
+
+    private func row(_ title: String, count: Int?, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                Spacer()
+                if let count {
+                    Text(count.formatted())
+                        .foregroundStyle(palette.secondaryText)
+                        .monospacedDigit()
+                }
+                if on {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(palette.accent)
+                        .accessibilityLabel("Applied")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(palette.surface)
     }
 }
 
@@ -443,8 +502,16 @@ struct MediaShelvesView: View {
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
     @AppStorage("mediaTopPeriod") private var period = "month"
+    @AppStorage("mediaBrowseOrder") private var order = "newest"
+    @AppStorage("mediaBrowseGrouping") private var grouping = "shelves"
     @State private var shelves: MediaShelves?
     @State private var filter = Media.Filter()
+
+    /// Everything the shelves hold, one card per item (Recently Played's listens merged with the top lists' counts).
+    private var everything: [MediaItem] {
+        guard let s = shelves else { return [] }
+        return Media.merge([s.added, s.nowPlaying, s.listens, s.watched, s.artists, s.albums, s.tracks, s.watchlist])
+    }
 
     var body: some View {
         Group {
@@ -460,7 +527,7 @@ struct MediaShelvesView: View {
         }
         .task(id: period) { await load() }
         .pullToRefresh { await load() }
-        .topBar { MediaControls(period: $period, filter: $filter) }
+        .topBar { MediaControls(order: $order, grouping: $grouping, period: $period, filter: $filter, items: everything, browsing: true) }
     }
 
     private func load() async {
@@ -483,6 +550,18 @@ struct MediaShelvesView: View {
         } else {
             List {
                 if !s.failures.isEmpty { MediaFailuresRow(failures: s.failures) }
+                if grouping != "shelves" {
+                    let now = Int(Date().timeIntervalSince1970)
+                    let groups = Media.groups(Media.sort(Media.filter(everything, filter, now: now), order), grouping,
+                                              offsetMinutes: TimeZone.current.secondsFromGMT() / 60)
+                    ForEach(groups, id: \.title) { group in
+                        if group.title.isEmpty {
+                            ForEach(group.items) { MediaItemRow(item: $0) }
+                        } else {
+                            Section { ForEach(group.items) { MediaItemRow(item: $0) } } header: { Text(group.title) }
+                        }
+                    }
+                } else {
                 shelf("Now Playing", s.nowPlaying)
                 shelf("Recently Played", s.listens)
                 shelf("Recently Watched", s.watched)
@@ -491,6 +570,7 @@ struct MediaShelvesView: View {
                 shelf("Top Tracks", s.tracks)
                 shelf("Watchlist", s.watchlist)
                 shelf("Recently Added", s.added)
+                }
             }
             .listStyle(.plain)
             .themedBackground()
@@ -498,7 +578,7 @@ struct MediaShelvesView: View {
     }
 
     @ViewBuilder private func shelf(_ title: String, _ all: [MediaItem]) -> some View {
-        let items = Media.filter(all, filter)
+        let items = Media.filter(all, filter, now: Int(Date().timeIntervalSince1970))
         if !items.isEmpty {
             Section {
                 ForEach(items) { MediaItemRow(item: $0) }

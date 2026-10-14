@@ -72,10 +72,20 @@ struct MediaTests {
     @Test func theFilters() {
         let f = Self.cases["filter"] as? [String: Any] ?? [:]
         let items = Self.items(f["items"])
+        func filter(_ raw: [String: String]) -> Media.Filter {
+            .init(kind: raw["kind"], played: raw["played"], rated: raw["rated"], date: raw["date"], service: raw["service"])
+        }
         for c in f["cases"] as? [[String: Any]] ?? [] {
             let raw = c["filter"] as? [String: String] ?? [:]
-            let got = Media.filter(items, .init(kind: raw["kind"], played: raw["played"], rated: raw["rated"])).map(\.key)
+            let got = Media.filter(items, filter(raw), now: c["now"] as? Int ?? 0).map(\.key)
             #expect(got == c["want"] as? [String], "\(raw)")
+        }
+        let facets = f["facets"] as? [[String: Any]] ?? []
+        #expect(!facets.isEmpty)
+        for c in facets {
+            let raw = c["filter"] as? [String: String] ?? [:]
+            let got = Media.facets(items, filter(raw), now: c["now"] as? Int ?? 0)
+            #expect(Self.same(got, c["want"]!), "\(raw): \(Self.describe(got))")
         }
     }
 

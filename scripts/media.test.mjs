@@ -32,7 +32,9 @@ test('one card per item, played and rated from the right service', () => {
 });
 
 test('the filters', () => {
-  for (const c of cases.filter.cases) assert.deepEqual(plain(S.mediaFilter(cases.filter.items, c.filter).map((x) => x.key)), c.want, JSON.stringify(c.filter));
+  for (const c of cases.filter.cases) assert.deepEqual(plain(S.mediaFilter(cases.filter.items, c.filter, c.now).map((x) => x.key)), c.want, JSON.stringify(c.filter));
+  assert.ok(cases.filter.facets.length);
+  for (const c of cases.filter.facets) assert.deepEqual(plain(S.mediaFacets(cases.filter.items, c.filter, c.now)), c.want, JSON.stringify(c.filter));
 });
 
 test('what a card says', () => {

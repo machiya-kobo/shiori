@@ -2006,6 +2006,11 @@
      "plays": 12,
      "last": 1748820600,
      "playedFrom": "koito",
+     "sources": [
+      "jellyfin",
+      "plex",
+      "koito"
+     ],
      "rating": 10,
      "ratingFrom": "plex",
      "open": {
@@ -2030,6 +2035,11 @@
      "plays": 3,
      "last": 1577880000,
      "playedFrom": "movary",
+     "sources": [
+      "jellyfin",
+      "plex",
+      "movary"
+     ],
      "rating": 9,
      "ratingFrom": "movary",
      "outside": [
@@ -2062,6 +2072,9 @@
      },
      "inLibrary": true,
      "plays": 0,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=18181818181818181818181818181818&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2079,6 +2092,9 @@
      "plays": 3,
      "last": 1750000000,
      "playedFrom": "plex",
+     "sources": [
+      "plex"
+     ],
      "episodes": {
       "watched": 3,
       "total": 8
@@ -2101,6 +2117,9 @@
      "year": 2013,
      "inLibrary": true,
      "plays": 0,
+     "sources": [
+      "plex"
+     ],
      "open": {
       "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F304"
      }
@@ -2110,6 +2129,9 @@
      "kind": "collection",
      "title": "Example Collection",
      "inLibrary": true,
+     "sources": [
+      "plex"
+     ],
      "open": {
       "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F404"
      }
@@ -2124,6 +2146,9 @@
       "tvdb": "555"
      },
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=07070707070707070707070707070707&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2136,6 +2161,9 @@
      "image": "https://koito.example.ts.net/image/bbbb/300x300.webp",
      "elsewhere": true,
      "plays": 0,
+     "sources": [
+      "koito"
+     ],
      "open": {
       "koito": "https://koito.example.ts.net/album/19"
      }
@@ -2149,6 +2177,9 @@
      },
      "image": "https://koito.example.ts.net/image/aaaa/300x300.webp",
      "elsewhere": true,
+     "sources": [
+      "koito"
+     ],
      "open": {
       "koito": "https://koito.example.ts.net/artist/5"
      }
@@ -2166,6 +2197,9 @@
      "plays": 1,
      "last": 1250942400,
      "playedFrom": "movary",
+     "sources": [
+      "movary"
+     ],
      "open": {
       "movary": "https://movary.example.ts.net/users/reader/movies/13"
      }
@@ -2174,7 +2208,10 @@
      "key": "film:badposter::",
      "kind": "film",
      "title": "Bad Poster",
-     "elsewhere": true
+     "elsewhere": true,
+     "sources": [
+      "movary"
+     ]
     }
    ]
   },
@@ -2373,6 +2410,10 @@
      "plays": 3,
      "last": 1650000000,
      "playedFrom": "plex",
+     "sources": [
+      "jellyfin",
+      "plex"
+     ],
      "rating": 8,
      "ratingFrom": "plex",
      "outside": [
@@ -2403,6 +2444,9 @@
      "plays": 3,
      "last": 1750000000,
      "playedFrom": "plex",
+     "sources": [
+      "plex"
+     ],
      "episodes": {
       "watched": 3,
       "total": 8
@@ -2422,6 +2466,9 @@
      "kind": "collection",
      "title": "Example Collection",
      "inLibrary": true,
+     "sources": [
+      "plex"
+     ],
      "open": {
       "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F404"
      }
@@ -2441,6 +2488,10 @@
      "plays": 2,
      "last": 1659339621,
      "playedFrom": "plex",
+     "sources": [
+      "jellyfin",
+      "plex"
+     ],
      "rating": 10,
      "ratingFrom": "plex",
      "open": {
@@ -2457,6 +2508,9 @@
       "mbid": "00000000-0000-4000-8000-000000000003"
      },
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=18181818181818181818181818181818&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2469,6 +2523,9 @@
      "year": 2013,
      "inLibrary": true,
      "plays": 0,
+     "sources": [
+      "plex"
+     ],
      "open": {
       "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F304"
      }
@@ -2483,6 +2540,9 @@
       "tvdb": "555"
      },
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=07070707070707070707070707070707&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2574,6 +2634,9 @@
      "image": "https://jellyfin.example.ts.net/Items/d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4/Images/Primary?tag=tag1&maxWidth=300",
      "added": 1706933106,
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2587,6 +2650,9 @@
      "year": 2018,
      "image": "https://jellyfin.example.ts.net/Items/f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6/Images/Primary?tag=tag2&maxWidth=300",
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2600,6 +2666,9 @@
       "mbid": "00000000-0000-4000-8000-000000000003"
      },
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=18181818181818181818181818181818&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2614,6 +2683,9 @@
       "tvdb": "555"
      },
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=07070707070707070707070707070707&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2708,6 +2780,9 @@
      "added": 1706933106,
      "inLibrary": true,
      "plays": 0,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2721,6 +2796,9 @@
      "year": 2018,
      "image": "https://jellyfin.example.ts.net/Items/f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6/Images/Primary?tag=tag2&maxWidth=300",
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2734,6 +2812,9 @@
       "mbid": "00000000-0000-4000-8000-000000000003"
      },
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=18181818181818181818181818181818&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2748,6 +2829,9 @@
       "tvdb": "555"
      },
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=07070707070707070707070707070707&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2831,6 +2915,9 @@
      "plays": 3,
      "last": 1577880000,
      "playedFrom": "movary",
+     "sources": [
+      "movary"
+     ],
      "rating": 9,
      "ratingFrom": "movary",
      "outside": [
@@ -2856,6 +2943,9 @@
      "plays": 1,
      "last": 1250942400,
      "playedFrom": "movary",
+     "sources": [
+      "movary"
+     ],
      "open": {
       "movary": "https://movary.example.ts.net/users/reader/movies/13"
      }
@@ -2864,7 +2954,10 @@
      "key": "film:badposter::",
      "kind": "film",
      "title": "Bad Poster",
-     "elsewhere": true
+     "elsewhere": true,
+     "sources": [
+      "movary"
+     ]
     }
    ]
   },
@@ -2913,6 +3006,9 @@
      "added": 1760000000,
      "inLibrary": true,
      "plays": 0,
+     "sources": [
+      "plex"
+     ],
      "open": {
       "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F707"
      }
@@ -2929,6 +3025,9 @@
      "image": "https://jellyfin.example.ts.net/Items/d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4/Images/Primary?tag=tag1&maxWidth=300",
      "added": 1706933106,
      "inLibrary": true,
+     "sources": [
+      "jellyfin"
+     ],
      "open": {
       "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
      }
@@ -2953,6 +3052,11 @@
     "plays": 12,
     "last": 1748820600,
     "playedFrom": "koito",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "koito"
+    ],
     "rating": 10,
     "ratingFrom": "plex",
     "open": {
@@ -2977,6 +3081,11 @@
     "plays": 3,
     "last": 1577880000,
     "playedFrom": "movary",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "movary"
+    ],
     "rating": 9,
     "ratingFrom": "movary",
     "outside": [
@@ -3009,6 +3118,9 @@
     },
     "inLibrary": true,
     "plays": 0,
+    "sources": [
+     "jellyfin"
+    ],
     "open": {
      "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=18181818181818181818181818181818&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
     }
@@ -3026,6 +3138,9 @@
     "plays": 3,
     "last": 1750000000,
     "playedFrom": "plex",
+    "sources": [
+     "plex"
+    ],
     "episodes": {
      "watched": 3,
      "total": 8
@@ -3048,6 +3163,9 @@
     "year": 2013,
     "inLibrary": true,
     "plays": 0,
+    "sources": [
+     "plex"
+    ],
     "open": {
      "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F304"
     }
@@ -3057,6 +3175,9 @@
     "kind": "collection",
     "title": "Example Collection",
     "inLibrary": true,
+    "sources": [
+     "plex"
+    ],
     "open": {
      "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F404"
     }
@@ -3071,6 +3192,9 @@
      "tvdb": "555"
     },
     "inLibrary": true,
+    "sources": [
+     "jellyfin"
+    ],
     "open": {
      "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=07070707070707070707070707070707&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
     }
@@ -3083,6 +3207,9 @@
     "image": "https://koito.example.ts.net/image/bbbb/300x300.webp",
     "elsewhere": true,
     "plays": 0,
+    "sources": [
+     "koito"
+    ],
     "open": {
      "koito": "https://koito.example.ts.net/album/19"
     }
@@ -3096,6 +3223,9 @@
     },
     "image": "https://koito.example.ts.net/image/aaaa/300x300.webp",
     "elsewhere": true,
+    "sources": [
+     "koito"
+    ],
     "open": {
      "koito": "https://koito.example.ts.net/artist/5"
     }
@@ -3113,6 +3243,9 @@
     "plays": 1,
     "last": 1250942400,
     "playedFrom": "movary",
+    "sources": [
+     "movary"
+    ],
     "open": {
      "movary": "https://movary.example.ts.net/users/reader/movies/13"
     }
@@ -3121,12 +3254,16 @@
     "key": "film:badposter::",
     "kind": "film",
     "title": "Bad Poster",
-    "elsewhere": true
+    "elsewhere": true,
+    "sources": [
+     "movary"
+    ]
    }
   ],
   "cases": [
    {
     "filter": {},
+    "now": 1767400000,
     "want": [
      "track:mbid:00000000-0000-4000-8000-000000000002",
      "film:tmdb:1001",
@@ -3145,6 +3282,7 @@
     "filter": {
      "kind": "films"
     },
+    "now": 1767400000,
     "want": [
      "film:tmdb:1001",
      "film:tmdb:1002",
@@ -3155,6 +3293,7 @@
     "filter": {
      "kind": "tv"
     },
+    "now": 1767400000,
     "want": [
      "show:tvdb:444",
      "episode:tvdb:555"
@@ -3164,6 +3303,7 @@
     "filter": {
      "kind": "music"
     },
+    "now": 1767400000,
     "want": [
      "track:mbid:00000000-0000-4000-8000-000000000002",
      "album:mbid:00000000-0000-4000-8000-000000000003",
@@ -3176,6 +3316,7 @@
     "filter": {
      "kind": "other"
     },
+    "now": 1767400000,
     "want": [
      "collection:examplecollection::"
     ]
@@ -3184,6 +3325,7 @@
     "filter": {
      "played": "never"
     },
+    "now": 1767400000,
     "want": [
      "album:mbid:00000000-0000-4000-8000-000000000003",
      "album:unheard:sampleband:2013"
@@ -3193,6 +3335,7 @@
     "filter": {
      "rated": "loved"
     },
+    "now": 1767400000,
     "want": [
      "track:mbid:00000000-0000-4000-8000-000000000002",
      "film:tmdb:1001"
@@ -3202,6 +3345,7 @@
     "filter": {
      "rated": "liked"
     },
+    "now": 1767400000,
     "want": [
      "track:mbid:00000000-0000-4000-8000-000000000002",
      "film:tmdb:1001"
@@ -3211,6 +3355,7 @@
     "filter": {
      "rated": "any"
     },
+    "now": 1767400000,
     "want": [
      "track:mbid:00000000-0000-4000-8000-000000000002",
      "film:tmdb:1001"
@@ -3220,6 +3365,7 @@
     "filter": {
      "rated": "unrated"
     },
+    "now": 1767400000,
     "want": [
      "album:mbid:00000000-0000-4000-8000-000000000003",
      "show:tvdb:444",
@@ -3237,9 +3383,225 @@
      "kind": "music",
      "rated": "loved"
     },
+    "now": 1767400000,
     "want": [
      "track:mbid:00000000-0000-4000-8000-000000000002"
     ]
+   },
+   {
+    "filter": {
+     "played": "played"
+    },
+    "now": 1767400000,
+    "want": [
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "film:tmdb:1001",
+     "show:tvdb:444",
+     "film:tmdb:1002"
+    ]
+   },
+   {
+    "filter": {
+     "played": "elsewhere"
+    },
+    "now": 1767400000,
+    "want": [
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "film:tmdb:1002",
+     "film:badposter::"
+    ]
+   },
+   {
+    "filter": {
+     "service": "plex"
+    },
+    "now": 1767400000,
+    "want": [
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "film:tmdb:1001",
+     "show:tvdb:444",
+     "album:unheard:sampleband:2013",
+     "collection:examplecollection::"
+    ]
+   },
+   {
+    "filter": {
+     "service": "movary"
+    },
+    "now": 1767400000,
+    "want": [
+     "film:tmdb:1001",
+     "film:tmdb:1002",
+     "film:badposter::"
+    ]
+   },
+   {
+    "filter": {
+     "service": "koito"
+    },
+    "now": 1767400000,
+    "want": [
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001"
+    ]
+   },
+   {
+    "filter": {
+     "date": "week"
+    },
+    "now": 1767400000,
+    "want": []
+   },
+   {
+    "filter": {
+     "date": "month"
+    },
+    "now": 1767400000,
+    "want": []
+   },
+   {
+    "filter": {
+     "date": "year"
+    },
+    "now": 1767400000,
+    "want": [
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "show:tvdb:444"
+    ]
+   },
+   {
+    "filter": {
+     "date": "older"
+    },
+    "now": 1767400000,
+    "want": [
+     "film:tmdb:1001",
+     "film:tmdb:1002"
+    ]
+   },
+   {
+    "filter": {
+     "date": "year",
+     "kind": "tv"
+    },
+    "now": 1767400000,
+    "want": [
+     "show:tvdb:444"
+    ]
+   }
+  ],
+  "facets": [
+   {
+    "filter": {},
+    "now": 1767400000,
+    "want": {
+     "date": {
+      "week": 0,
+      "month": 0,
+      "year": 2,
+      "older": 2
+     },
+     "kind": {
+      "films": 3,
+      "tv": 2,
+      "music": 5,
+      "other": 1
+     },
+     "played": {
+      "played": 4,
+      "never": 2,
+      "elsewhere": 4
+     },
+     "rated": {
+      "loved": 2,
+      "liked": 2,
+      "any": 2,
+      "unrated": 9
+     },
+     "service": {
+      "jellyfin": 4,
+      "plex": 5,
+      "koito": 3,
+      "movary": 3
+     }
+    }
+   },
+   {
+    "filter": {
+     "kind": "films"
+    },
+    "now": 1767400000,
+    "want": {
+     "date": {
+      "week": 0,
+      "month": 0,
+      "year": 0,
+      "older": 2
+     },
+     "kind": {
+      "films": 3,
+      "tv": 2,
+      "music": 5,
+      "other": 1
+     },
+     "played": {
+      "played": 2,
+      "never": 0,
+      "elsewhere": 2
+     },
+     "rated": {
+      "loved": 1,
+      "liked": 1,
+      "any": 1,
+      "unrated": 2
+     },
+     "service": {
+      "jellyfin": 1,
+      "plex": 1,
+      "koito": 0,
+      "movary": 3
+     }
+    }
+   },
+   {
+    "filter": {
+     "played": "played",
+     "service": "plex"
+    },
+    "now": 1767400000,
+    "want": {
+     "date": {
+      "week": 0,
+      "month": 0,
+      "year": 2,
+      "older": 1
+     },
+     "kind": {
+      "films": 1,
+      "tv": 1,
+      "music": 1,
+      "other": 0
+     },
+     "played": {
+      "played": 3,
+      "never": 1,
+      "elsewhere": 0
+     },
+     "rated": {
+      "loved": 2,
+      "liked": 2,
+      "any": 2,
+      "unrated": 1
+     },
+     "service": {
+      "jellyfin": 2,
+      "plex": 3,
+      "koito": 1,
+      "movary": 2
+     }
+    }
    }
   ]
  },
@@ -3260,6 +3622,11 @@
     "plays": 12,
     "last": 1748820600,
     "playedFrom": "koito",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "koito"
+    ],
     "rating": 10,
     "ratingFrom": "plex",
     "open": {
@@ -3287,6 +3654,11 @@
     "plays": 12,
     "last": 1748820600,
     "playedFrom": "koito",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "koito"
+    ],
     "rating": 10,
     "ratingFrom": "plex",
     "open": {
@@ -3314,6 +3686,11 @@
     "plays": 12,
     "last": 1748820600,
     "playedFrom": "koito",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "koito"
+    ],
     "rating": 10,
     "ratingFrom": "plex",
     "open": {
@@ -3342,6 +3719,11 @@
     "plays": 3,
     "last": 1577880000,
     "playedFrom": "movary",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "movary"
+    ],
     "rating": 9,
     "ratingFrom": "movary",
     "outside": [
@@ -3384,6 +3766,11 @@
     "plays": 3,
     "last": 1577880000,
     "playedFrom": "movary",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "movary"
+    ],
     "rating": 9,
     "ratingFrom": "movary",
     "outside": [
@@ -3426,6 +3813,11 @@
     "plays": 3,
     "last": 1577880000,
     "playedFrom": "movary",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "movary"
+    ],
     "rating": 9,
     "ratingFrom": "movary",
     "outside": [
@@ -3462,6 +3854,9 @@
     },
     "inLibrary": true,
     "plays": 0,
+    "sources": [
+     "jellyfin"
+    ],
     "open": {
      "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=18181818181818181818181818181818&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
     }
@@ -3483,6 +3878,9 @@
     "plays": 3,
     "last": 1750000000,
     "playedFrom": "plex",
+    "sources": [
+     "plex"
+    ],
     "episodes": {
      "watched": 3,
      "total": 8
@@ -3514,6 +3912,9 @@
     "plays": 3,
     "last": 1750000000,
     "playedFrom": "plex",
+    "sources": [
+     "plex"
+    ],
     "episodes": {
      "watched": 3,
      "total": 8
@@ -3545,6 +3946,9 @@
     "plays": 3,
     "last": 1750000000,
     "playedFrom": "plex",
+    "sources": [
+     "plex"
+    ],
     "episodes": {
      "watched": 3,
      "total": 8
@@ -3571,6 +3975,9 @@
     "year": 2013,
     "inLibrary": true,
     "plays": 0,
+    "sources": [
+     "plex"
+    ],
     "open": {
      "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F304"
     }
@@ -3584,6 +3991,9 @@
     "kind": "collection",
     "title": "Example Collection",
     "inLibrary": true,
+    "sources": [
+     "plex"
+    ],
     "open": {
      "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F404"
     }
@@ -3602,6 +4012,9 @@
      "tvdb": "555"
     },
     "inLibrary": true,
+    "sources": [
+     "jellyfin"
+    ],
     "open": {
      "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=07070707070707070707070707070707&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
     }
@@ -3618,6 +4031,9 @@
     "image": "https://koito.example.ts.net/image/bbbb/300x300.webp",
     "elsewhere": true,
     "plays": 0,
+    "sources": [
+     "koito"
+    ],
     "open": {
      "koito": "https://koito.example.ts.net/album/19"
     }
@@ -3635,6 +4051,9 @@
     },
     "image": "https://koito.example.ts.net/image/aaaa/300x300.webp",
     "elsewhere": true,
+    "sources": [
+     "koito"
+    ],
     "open": {
      "koito": "https://koito.example.ts.net/artist/5"
     }
@@ -3656,6 +4075,9 @@
     "plays": 1,
     "last": 1250942400,
     "playedFrom": "movary",
+    "sources": [
+     "movary"
+    ],
     "open": {
      "movary": "https://movary.example.ts.net/users/reader/movies/13"
     }
@@ -3677,6 +4099,9 @@
     "plays": 1,
     "last": 1250942400,
     "playedFrom": "movary",
+    "sources": [
+     "movary"
+    ],
     "open": {
      "movary": "https://movary.example.ts.net/users/reader/movies/13"
     }
@@ -3698,6 +4123,9 @@
     "plays": 1,
     "last": 1250942400,
     "playedFrom": "movary",
+    "sources": [
+     "movary"
+    ],
     "open": {
      "movary": "https://movary.example.ts.net/users/reader/movies/13"
     }
@@ -3710,7 +4138,10 @@
     "key": "film:badposter::",
     "kind": "film",
     "title": "Bad Poster",
-    "elsewhere": true
+    "elsewhere": true,
+    "sources": [
+     "movary"
+    ]
    },
    "offset": 0,
    "played": "Not in Library"
@@ -3857,6 +4288,11 @@
     "plays": 12,
     "last": 1748820600,
     "playedFrom": "koito",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "koito"
+    ],
     "rating": 10,
     "ratingFrom": "plex",
     "open": {
@@ -3910,6 +4346,11 @@
     "plays": 3,
     "last": 1577880000,
     "playedFrom": "movary",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "movary"
+    ],
     "rating": 9,
     "ratingFrom": "movary",
     "outside": [
@@ -3981,6 +4422,9 @@
     },
     "inLibrary": true,
     "plays": 0,
+    "sources": [
+     "jellyfin"
+    ],
     "open": {
      "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=18181818181818181818181818181818&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
     }
@@ -4017,6 +4461,9 @@
     "plays": 3,
     "last": 1750000000,
     "playedFrom": "plex",
+    "sources": [
+     "plex"
+    ],
     "episodes": {
      "watched": 3,
      "total": 8
@@ -4053,6 +4500,9 @@
     "year": 2013,
     "inLibrary": true,
     "plays": 0,
+    "sources": [
+     "plex"
+    ],
     "open": {
      "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F304"
     }
@@ -4076,6 +4526,9 @@
     "kind": "collection",
     "title": "Example Collection",
     "inLibrary": true,
+    "sources": [
+     "plex"
+    ],
     "open": {
      "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F404"
     }
@@ -4104,6 +4557,9 @@
      "tvdb": "555"
     },
     "inLibrary": true,
+    "sources": [
+     "jellyfin"
+    ],
     "open": {
      "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=07070707070707070707070707070707&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
     }
@@ -4130,6 +4586,9 @@
     "image": "https://koito.example.ts.net/image/bbbb/300x300.webp",
     "elsewhere": true,
     "plays": 0,
+    "sources": [
+     "koito"
+    ],
     "open": {
      "koito": "https://koito.example.ts.net/album/19"
     }
@@ -4157,6 +4616,9 @@
     },
     "image": "https://koito.example.ts.net/image/aaaa/300x300.webp",
     "elsewhere": true,
+    "sources": [
+     "koito"
+    ],
     "open": {
      "koito": "https://koito.example.ts.net/artist/5"
     }
@@ -4193,6 +4655,9 @@
     "plays": 1,
     "last": 1250942400,
     "playedFrom": "movary",
+    "sources": [
+     "movary"
+    ],
     "open": {
      "movary": "https://movary.example.ts.net/users/reader/movies/13"
     }
@@ -4225,7 +4690,10 @@
     "key": "film:badposter::",
     "kind": "film",
     "title": "Bad Poster",
-    "elsewhere": true
+    "elsewhere": true,
+    "sources": [
+     "movary"
+    ]
    },
    "subtitle": "Film",
    "outside": "",
@@ -4617,6 +5085,11 @@
     "plays": 12,
     "last": 1748820600,
     "playedFrom": "koito",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "koito"
+    ],
     "rating": 10,
     "ratingFrom": "plex",
     "open": {
@@ -4641,6 +5114,11 @@
     "plays": 3,
     "last": 1577880000,
     "playedFrom": "movary",
+    "sources": [
+     "jellyfin",
+     "plex",
+     "movary"
+    ],
     "rating": 9,
     "ratingFrom": "movary",
     "outside": [
@@ -4673,6 +5151,9 @@
     },
     "inLibrary": true,
     "plays": 0,
+    "sources": [
+     "jellyfin"
+    ],
     "open": {
      "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=18181818181818181818181818181818&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
     }
@@ -4690,6 +5171,9 @@
     "plays": 3,
     "last": 1750000000,
     "playedFrom": "plex",
+    "sources": [
+     "plex"
+    ],
     "episodes": {
      "watched": 3,
      "total": 8
@@ -4712,6 +5196,9 @@
     "year": 2013,
     "inLibrary": true,
     "plays": 0,
+    "sources": [
+     "plex"
+    ],
     "open": {
      "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F304"
     }
@@ -4721,6 +5208,9 @@
     "kind": "collection",
     "title": "Example Collection",
     "inLibrary": true,
+    "sources": [
+     "plex"
+    ],
     "open": {
      "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F404"
     }
@@ -4735,6 +5225,9 @@
      "tvdb": "555"
     },
     "inLibrary": true,
+    "sources": [
+     "jellyfin"
+    ],
     "open": {
      "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=07070707070707070707070707070707&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
     }
@@ -4747,6 +5240,9 @@
     "image": "https://koito.example.ts.net/image/bbbb/300x300.webp",
     "elsewhere": true,
     "plays": 0,
+    "sources": [
+     "koito"
+    ],
     "open": {
      "koito": "https://koito.example.ts.net/album/19"
     }
@@ -4760,6 +5256,9 @@
     },
     "image": "https://koito.example.ts.net/image/aaaa/300x300.webp",
     "elsewhere": true,
+    "sources": [
+     "koito"
+    ],
     "open": {
      "koito": "https://koito.example.ts.net/artist/5"
     }
@@ -4777,6 +5276,9 @@
     "plays": 1,
     "last": 1250942400,
     "playedFrom": "movary",
+    "sources": [
+     "movary"
+    ],
     "open": {
      "movary": "https://movary.example.ts.net/users/reader/movies/13"
     }
@@ -4785,7 +5287,10 @@
     "key": "film:badposter::",
     "kind": "film",
     "title": "Bad Poster",
-    "elsewhere": true
+    "elsewhere": true,
+    "sources": [
+     "movary"
+    ]
    },
    {
     "key": "x:heard",
@@ -4906,6 +5411,24 @@
      "episode:tvdb:555",
      "artist:mbid:00000000-0000-4000-8000-000000000001",
      "album:unheard:sampleband:2013",
+     "x:top"
+    ]
+   },
+   {
+    "order": "year",
+    "want": [
+     "show:tvdb:444",
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "album:unheard:sampleband:2013",
+     "film:tmdb:1002",
+     "film:tmdb:1001",
+     "album:mbid:00000000-0000-4000-8000-000000000003",
+     "collection:examplecollection::",
+     "episode:tvdb:555",
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "film:badposter::",
+     "x:heard",
      "x:top"
     ]
    },
@@ -5153,6 +5676,153 @@
        "artist:mbid:00000000-0000-4000-8000-000000000001",
        "film:badposter::",
        "x:top"
+      ]
+     }
+    ]
+   },
+   {
+    "grouping": "day",
+    "offset": 0,
+    "want": [
+     {
+      "title": "Jan 2, 2026",
+      "keys": [
+       "x:heard"
+      ]
+     },
+     {
+      "title": "Jun 15, 2025",
+      "keys": [
+       "show:tvdb:444"
+      ]
+     },
+     {
+      "title": "Jun 1, 2025",
+      "keys": [
+       "track:mbid:00000000-0000-4000-8000-000000000002"
+      ]
+     },
+     {
+      "title": "Jan 1, 2020",
+      "keys": [
+       "film:tmdb:1001"
+      ]
+     },
+     {
+      "title": "Aug 22, 2009",
+      "keys": [
+       "film:tmdb:1002"
+      ]
+     },
+     {
+      "title": "Never Played",
+      "keys": [
+       "album:mbid:00000000-0000-4000-8000-000000000003",
+       "album:unheard:sampleband:2013",
+       "album:northstar:sampleband:"
+      ]
+     },
+     {
+      "title": "No Date",
+      "keys": [
+       "collection:examplecollection::",
+       "episode:tvdb:555",
+       "artist:mbid:00000000-0000-4000-8000-000000000001",
+       "film:badposter::",
+       "x:top"
+      ]
+     }
+    ]
+   },
+   {
+    "grouping": "day",
+    "offset": -420,
+    "want": [
+     {
+      "title": "Jan 1, 2026",
+      "keys": [
+       "x:heard"
+      ]
+     },
+     {
+      "title": "Jun 15, 2025",
+      "keys": [
+       "show:tvdb:444"
+      ]
+     },
+     {
+      "title": "Jun 1, 2025",
+      "keys": [
+       "track:mbid:00000000-0000-4000-8000-000000000002"
+      ]
+     },
+     {
+      "title": "Jan 1, 2020",
+      "keys": [
+       "film:tmdb:1001"
+      ]
+     },
+     {
+      "title": "Aug 22, 2009",
+      "keys": [
+       "film:tmdb:1002"
+      ]
+     },
+     {
+      "title": "Never Played",
+      "keys": [
+       "album:mbid:00000000-0000-4000-8000-000000000003",
+       "album:unheard:sampleband:2013",
+       "album:northstar:sampleband:"
+      ]
+     },
+     {
+      "title": "No Date",
+      "keys": [
+       "collection:examplecollection::",
+       "episode:tvdb:555",
+       "artist:mbid:00000000-0000-4000-8000-000000000001",
+       "film:badposter::",
+       "x:top"
+      ]
+     }
+    ]
+   },
+   {
+    "grouping": "played",
+    "offset": 0,
+    "want": [
+     {
+      "title": "Played",
+      "keys": [
+       "x:heard",
+       "show:tvdb:444",
+       "track:mbid:00000000-0000-4000-8000-000000000002",
+       "film:tmdb:1001",
+       "film:tmdb:1002",
+       "x:top"
+      ]
+     },
+     {
+      "title": "Never Played",
+      "keys": [
+       "album:mbid:00000000-0000-4000-8000-000000000003",
+       "album:unheard:sampleband:2013"
+      ]
+     },
+     {
+      "title": "Not in Library",
+      "keys": [
+       "album:northstar:sampleband:",
+       "artist:mbid:00000000-0000-4000-8000-000000000001",
+       "film:badposter::"
+      ]
+     },
+     {
+      "title": "Not Known",
+      "keys": [
+       "collection:examplecollection::",
+       "episode:tvdb:555"
       ]
      }
     ]

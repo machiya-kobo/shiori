@@ -1606,7 +1606,7 @@ function viewSearch(params) {
     // A tap on Media searches it on purpose too (m=1), without making the web's search one (w stays as it was).
     segments(scopes(), scope, (s) => go('search', { ...keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), ...(s === 'media' ? { m: '1' } : {}) }, { replace: true })),
     listed ? controls('search', params, { search: true, notes: scope === 'notes' }) : null,
-    scope === 'media' ? mediaControls('search', params, { search: true }) : null,
+    scope === 'media' ? mediaControls('search', params, { search: true, items: mediaLast.q === q ? mediaLast.res.items : [] }) : null,
   );
   if (segmentTotals.query === q) for (const [value, n] of Object.entries(segmentTotals.counts)) setSegmentCount(value, n);
   if (scope !== 'opened') didYouMean(q, scope);
@@ -1805,60 +1805,62 @@ async function smallwebList(container, q) {
 // /jellyfin/, /plex/, /koito/ and /movary/ (each adds its token there). Private: nothing of it goes to Hister, a model,
 // Remember What You Open, an export or a feed. A card opens in its service in a new tab.
 
-const MEDIA_KINDS = [['films', 'Films'], ['tv', 'TV'], ['music', 'Music'], ['other', 'Other']];
-const MEDIA_RATED = [['loved', '4★+'], ['liked', '3★+'], ['any', 'Any Rating'], ['unrated', 'Unrated']];
 const MEDIA_PERIODS = [['week', 'This Week'], ['month', 'This Month'], ['year', 'This Year'], ['all_time', 'All Time']];
 /** The last search's results, so a change of Sort, Group or Filter redraws without asking the services again. */
 let mediaLast = { q: null, res: null };
+const nowSecs = () => Math.floor(Date.now() / 1000);
 
-/** Media's choices, from the address (so Back keeps them): Sort `mo`, Group `mg`, Filter `mk`, `mp`, `mr`, period `p`. */
-function mediaChoices(params) {
+/**
+ * Media's choices, from the address (so Back keeps them): Sort `mo`, Group
+ * `mg`, the period `p`, and each Filter section by its key (S.MEDIA_FILTERS:
+ * date, kind, played, rated, service) as `m<key>`. Browsing sorts Newest and
+ * groups by Shelves unless told otherwise.
+ */
+function mediaChoices(params, { search = true } = {}) {
   const pick = (key, list) => (list.some(([v]) => v === params.get(key)) ? params.get(key) : undefined);
-  return {
-    order: pick('mo', S.MEDIA_ORDERS) || 'best',
-    grouping: pick('mg', S.MEDIA_GROUPINGS) || '',
-    filter: { kind: pick('mk', MEDIA_KINDS), played: params.get('mp') === 'never' ? 'never' : undefined, rated: pick('mr', MEDIA_RATED) },
-    period: pick('p', MEDIA_PERIODS) || 'month',
-  };
+  const groupings = search ? S.MEDIA_GROUPINGS : [['shelves', 'Shelves'], ...S.MEDIA_GROUPINGS];
+  const filter = {};
+  for (const [key, , choices] of S.MEDIA_FILTERS) filter[key] = pick('m' + key, choices);
+  const grouping = params.has('mg') ? pick('mg', groupings) || '' : search ? '' : 'shelves';
+  return { order: pick('mo', S.MEDIA_ORDERS) || (search ? 'best' : 'newest'), grouping, groupings, filter, period: pick('p', MEDIA_PERIODS) || 'month' };
 }
 
 /**
- * Media's bar, the other pills' Sort · Group · Filter (controls()): Sort and
- * Group on a search, the top lists' period when browsing, and Filter (Kind,
- * Never Played, Rating). Each choice goes in the address.
+ * Media's bar, the other pills' Sort · Group · Filter (controls()): Sort,
+ * Group (Shelves first when browsing), the top lists' period with Shelves,
+ * and Filter (Date, Kind, Played, Rating, Service, each choice with how
+ * many it keeps). Each choice goes in the address.
  */
-function mediaControls(view, params, { search }) {
-  const c = mediaChoices(params);
+function mediaControls(view, params, { search, items = [] }) {
+  const c = mediaChoices(params, { search });
   const set = (change) => {
     const next = Object.fromEntries(params);
-    for (const [k, v] of Object.entries(change)) if (v) next[k] = v; else delete next[k];
+    for (const [k, v] of Object.entries(change)) if (v !== undefined && v !== '') next[k] = v; else delete next[k];
     go(view, next, { replace: true });
   };
   const quiet = (iconName, text, active) => h('button', { type: 'button', class: `quiet${active ? ' active' : ''}`, 'aria-haspopup': 'menu' }, icon(iconName), text);
   const named = (list, v) => (list.find(([k]) => k === v) || [])[1];
-  const filterName = [named(MEDIA_KINDS, c.filter.kind), c.filter.played ? 'Never Played' : '', named(MEDIA_RATED, c.filter.rated)].filter(Boolean).join(' · ');
+  const orders = search ? S.MEDIA_ORDERS : S.MEDIA_ORDERS.filter(([k]) => k !== 'best');
+  const filterName = S.MEDIA_FILTERS.map(([key, , choices]) => named(choices, c.filter[key])).filter(Boolean).join(' · ');
+  const facets = S.mediaFacets(items, c.filter, nowSecs());
   return h(
     'div',
     { class: 'controls' },
-    search ? dropMenu(quiet('sort', named(S.MEDIA_ORDERS, c.order), false), () => S.MEDIA_ORDERS.map(([k, t]) => ({ text: t, checked: k === c.order, pick: () => set({ mo: k === 'best' ? '' : k }) }))) : null,
-    search
-      ? dropMenu(quiet('group', c.grouping ? named(S.MEDIA_GROUPINGS, c.grouping) : 'Group', !!c.grouping), () =>
-          // Month follows when you played: it sorts Newest (unless Oldest), as Day and Month do on the other pills.
-          S.MEDIA_GROUPINGS.map(([k, t]) => ({ text: t, checked: k === c.grouping, pick: () => set({ mg: k, mo: k === 'month' && c.order !== 'oldest' ? 'newest' : params.get('mo') }) })))
+    dropMenu(quiet('sort', named(orders, c.order) || orders[0][1], false), () => orders.map(([k, t]) => ({ text: t, checked: k === c.order, pick: () => set({ mo: k }) }))),
+    dropMenu(quiet('group', c.grouping ? named(c.groupings, c.grouping) : 'Group', !!c.grouping && c.grouping !== 'shelves'), () =>
+      // Day and Month follow when you played: they sort Newest (unless Oldest), as on the other pills.
+      c.groupings.map(([k, t]) => ({ text: t, checked: k === c.grouping, pick: () => set({ mg: k, mo: (k === 'day' || k === 'month') && c.order !== 'oldest' ? 'newest' : params.get('mo') || undefined }) }))),
+    !search && c.grouping === 'shelves'
+      ? dropMenu(quiet('clock', named(MEDIA_PERIODS, c.period), false), () => MEDIA_PERIODS.map(([k, t]) => ({ text: t, checked: k === c.period, pick: () => set({ p: k === 'month' ? '' : k }) })))
       : null,
-    search ? null : dropMenu(quiet('clock', named(MEDIA_PERIODS, c.period), false), () => MEDIA_PERIODS.map(([k, t]) => ({ text: t, checked: k === c.period, pick: () => set({ p: k === 'month' ? '' : k }) }))),
-    dropMenu(quiet('filter', filterName || 'Filter', !!filterName), () => [
-      { text: 'All Kinds', checked: !c.filter.kind, pick: () => set({ mk: '' }) },
-      ...MEDIA_KINDS.map(([k, t]) => ({ text: t, checked: k === c.filter.kind, pick: () => set({ mk: k }) })),
-      '-',
-      { text: 'Played or Not', checked: !c.filter.played, pick: () => set({ mp: '' }) },
-      { text: 'Never Played', checked: !!c.filter.played, pick: () => set({ mp: 'never' }) },
-      '-',
-      { text: 'All Ratings', checked: !c.filter.rated, pick: () => set({ mr: '' }) },
-      ...MEDIA_RATED.map(([k, t]) => ({ text: t, checked: k === c.filter.rated, pick: () => set({ mr: k }) })),
-    ]),
+    dropMenu(quiet('filter', filterName || 'Filter', !!filterName), () => S.MEDIA_FILTERS.flatMap(([key, title, choices], i) => [
+      ...(i ? ['-'] : []),
+      { text: key === 'date' ? 'Any Time' : `Any ${title}`, checked: !c.filter[key], pick: () => set({ ['m' + key]: '' }) },
+      ...choices.map(([k, t]) => ({ text: `${t} · ${facets[key][k]}`, checked: k === c.filter[key], pick: () => set({ ['m' + key]: k }) })),
+    ])),
   );
 }
+
 const mediaOffset = () => -new Date().getTimezoneOffset();
 const MEDIA_ICONS = { film: 'film', show: 'film', episode: 'film', collection: 'stack', playlist: 'music', other: 'film' };
 
@@ -1921,10 +1923,12 @@ async function mediaList(container, q, params) {
       return container.replaceChildren(status("Media Didn't Answer", error.message || '', () => mediaList(container, q, params)));
     }
     mediaLast = { q, res };
+    // The bar's counts come from the items: draw it again now that they're here.
+    $('list-top').querySelector('.controls')?.replaceWith(mediaControls('search', params, { search: true, items: res.items }));
   }
   setSegmentCount('media', res.items.length, q);
   if (!res.items.length) return container.replaceChildren(status('No Media Found', res.failures.join(' · ') || `Nothing in your media matches “${q}”.`));
-  const items = S.mediaSort(S.mediaFilter(res.items, c.filter), c.order);
+  const items = S.mediaSort(S.mediaFilter(res.items, c.filter, nowSecs()), c.order);
   if (!items.length) return container.replaceChildren(status('Nothing Matches These Filters', 'Clear a filter to see more.'));
   const groups = S.mediaGroups(items, c.grouping, mediaOffset());
   fill(container, res.failures.length ? h('p', { class: 'engine-health' }, res.failures.join(' · ')) : null,
@@ -1952,15 +1956,27 @@ function yourMedia(pending, q) {
  *  what's new in your libraries. */
 async function mediaShelves(container, params) {
   container.replaceChildren(h('div', { class: 'spinner' }));
-  const { period, filter } = mediaChoices(params);
+  const c = mediaChoices(params, { search: false });
+  const { period, filter } = c;
   const res = await S.mediaBrowse(MEDIA, api.media, { period });
   const { view, params: now } = route();
   if (view !== 'library' || scopeOf(now) !== 'media') return;
+  const s = res.sections;
+  // Everything the shelves hold, one card per item, for the bar's counts and any grouping but Shelves.
+  const everything = S.mediaMerge([s.added, s.nowPlaying, s.listens, s.watched, s.artists, s.albums, s.tracks, s.watchlist]);
+  $('list-top').querySelector('.controls')?.replaceWith(mediaControls('library', params, { search: false, items: everything }));
+  if (c.grouping !== 'shelves') {
+    const groups = S.mediaGroups(S.mediaSort(S.mediaFilter(everything, filter, nowSecs()), c.order), c.grouping, mediaOffset());
+    if (!groups.some((g) => g.items.length)) return container.replaceChildren(status('Nothing Matches These Filters', 'Clear a filter to see more.'));
+    return fill(container, res.failures.length ? h('p', { class: 'engine-health' }, res.failures.join(' · ')) : null,
+      groups.map((g) => (g.title
+        ? h('section', { class: 'list-section' }, h('div', { class: 'section-head' }, g.title), h('ul', { class: 'rows' }, g.items.map(mediaRow)))
+        : h('ul', { class: 'rows' }, g.items.map(mediaRow)))));
+  }
   const shelf = (title, all) => {
-    const items = S.mediaFilter(all, filter);
+    const items = S.mediaFilter(all, filter, nowSecs());
     return items.length ? h('section', { class: 'list-section' }, h('div', { class: 'section-head' }, title), h('ul', { class: 'rows' }, items.map(mediaRow))) : null;
   };
-  const s = res.sections;
   const shelves = [
     shelf('Now Playing', s.nowPlaying),
     shelf('Recently Played', s.listens),

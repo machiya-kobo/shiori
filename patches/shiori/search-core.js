@@ -1827,6 +1827,9 @@
           inLibrary: !!lib,
           elsewhere: !lib,
           ...played,
+          // When it was last heard or watched in a history list (a browse's Recently Played).
+          when: Math.max(0, ...members.map((m) => m.when || 0)) || null,
+          sources: [...new Set(members.map((m) => m.source).filter(Boolean))],
           episodes: plex && plex.episodes,
           rating: rated ? rated.rating : null,
           ratingFrom: rated ? rated.ratingFrom : '',
@@ -1845,11 +1848,27 @@
   /** The Kind filter's group: films, tv, music or other. */
   const mediaGroup = (item) => MEDIA_GROUPS[item && item.kind] || 'other';
 
-  /** Items the filters keep: `kind` (films, tv, music, other), `played` ("never"), `rated` (loved 8+, liked 6+, any, unrated). */
-  function mediaFilter(items, f = {}) {
+  const MEDIA_DATES = { week: 7, month: 30, year: 365 };
+
+  /**
+   * Items the filters keep: `kind` (films, tv, music, other), `played`
+   * (never: in a library and never played; played; elsewhere: not in a
+   * library), `rated` (loved 8+, liked 6+, any, unrated), `date` (week,
+   * month, year: last played within it, older: before a year ago; `now` in
+   * unix seconds) and `service` (on Jellyfin, Plex, Koito or Movary).
+   */
+  function mediaFilter(items, f = {}, now = 0) {
     return (items || []).filter((it) => {
       if (f.kind && mediaGroup(it) !== f.kind) return false;
       if (f.played === 'never' && !(it.inLibrary && it.plays === 0)) return false;
+      if (f.played === 'played' && !(it.plays > 0 || it.when)) return false;
+      if (f.played === 'elsewhere' && !it.elsewhere) return false;
+      if (f.service && !(it.sources || [it.source]).includes(f.service)) return false;
+      if (f.date) {
+        const at = mediaLastPlayed(it);
+        if (!at) return false;
+        if (f.date === 'older' ? now - at <= 365 * 86400 : now - at > (MEDIA_DATES[f.date] || 0) * 86400) return false;
+      }
       const r = it.rating || 0;
       if (f.rated === 'loved' && r < 8) return false;
       if (f.rated === 'liked' && r < 6) return false;
@@ -1861,8 +1880,26 @@
 
   // Sort and Group, as the other pills' (Newest, Oldest, Day…), for what makes sense here.
   const MEDIA_ORDERS = [['best', 'Best Match'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['plays', 'Most Played'],
-    ['rating', 'Top Rated'], ['title', 'Title'], ['added', 'Recently Added']];
-  const MEDIA_GROUPINGS = [['', 'No Groups'], ['kind', 'Kind'], ['month', 'Month']];
+    ['rating', 'Top Rated'], ['title', 'Title'], ['year', 'Year'], ['added', 'Recently Added']];
+  const MEDIA_GROUPINGS = [['', 'No Groups'], ['day', 'Day'], ['month', 'Month'], ['kind', 'Kind'], ['played', 'Played']];
+  /** The Filter sheet's sections, each its choices (search-core and the apps show the same). */
+  const MEDIA_FILTERS = [
+    ['date', 'Date', [['week', 'Past Week'], ['month', 'Past Month'], ['year', 'Past Year'], ['older', 'Older']]],
+    ['kind', 'Kind', [['films', 'Films'], ['tv', 'TV'], ['music', 'Music'], ['other', 'Other']]],
+    ['played', 'Played', [['played', 'Played'], ['never', 'Never Played'], ['elsewhere', 'Not in Library']]],
+    ['rated', 'Rating', [['loved', '4★+'], ['liked', '3★+'], ['any', 'Any Rating'], ['unrated', 'Unrated']]],
+    ['service', 'Service', [['jellyfin', 'Jellyfin'], ['plex', 'Plex'], ['koito', 'Koito'], ['movary', 'Movary']]],
+  ];
+
+  /** How many items each Filter choice would keep, by section and choice ({date: {week: 3, …}, …}), the other filters held. */
+  function mediaFacets(items, f = {}, now = 0) {
+    const out = {};
+    for (const [key, , choices] of MEDIA_FILTERS) {
+      out[key] = {};
+      for (const [value] of choices) out[key][value] = mediaFilter(items, { ...f, [key]: value }, now).length;
+    }
+    return out;
+  }
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   /** When it was last played (or listened to, watched): 0 when no one knows. */
@@ -1887,6 +1924,7 @@
       plays: (a, b) => later(a, b, (it) => it.plays || 0, true),
       rating: (a, b) => later(a, b, (it) => it.rating || 0, true),
       added: (a, b) => later(a, b, (it) => it.added || 0, true),
+      year: (a, b) => later(a, b, (it) => it.year || 0, true),
       title: (a, b) => {
         const x = mediaNorm(a.item.title), y = mediaNorm(b.item.title);
         return x < y ? -1 : x > y ? 1 : 0;
@@ -1905,6 +1943,11 @@
   function mediaGroups(items, grouping, offsetMinutes = 0) {
     const titleOf = {
       kind: (it) => ({ films: 'Films', tv: 'TV', music: 'Music', other: 'Other' })[mediaGroup(it)],
+      day: (it) => {
+        const at = mediaLastPlayed(it);
+        return at ? mediaDate(at, offsetMinutes) : it.plays === 0 ? 'Never Played' : 'No Date';
+      },
+      played: (it) => (it.plays > 0 || it.when ? 'Played' : it.elsewhere ? 'Not in Library' : it.plays === 0 ? 'Never Played' : 'Not Known'),
       month: (it) => {
         const at = mediaLastPlayed(it);
         if (!at) return it.plays === 0 ? 'Never Played' : 'No Date';
@@ -1920,8 +1963,9 @@
       if (!g) groups.push((g = { title, items: [] }));
       g.items.push(it);
     }
-    if (grouping === 'kind') {
-      const rank = ['Films', 'TV', 'Music', 'Other'];
+    const ranks = { kind: ['Films', 'TV', 'Music', 'Other'], played: ['Played', 'Never Played', 'Not in Library', 'Not Known'] };
+    if (ranks[grouping]) {
+      const rank = ranks[grouping];
       groups.sort((a, b) => rank.indexOf(a.title) - rank.indexOf(b.title));
     }
     return groups;
@@ -3629,6 +3673,8 @@
     mediaFilter,
     mediaSort,
     mediaGroups,
+    mediaFacets,
+    MEDIA_FILTERS,
     MEDIA_ORDERS,
     MEDIA_GROUPINGS,
     mediaDate,

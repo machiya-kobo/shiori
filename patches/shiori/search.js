@@ -2068,19 +2068,23 @@
   function codeFiltersFromAddress() {
     return { kind: params.get('ck') || undefined, host: params.get('ch') || undefined, open: params.get('co') === '1', private: params.get('cp') === '1' };
   }
-  /** The Media tab's filters, from the address (mk, mp, mr), so Back and a reload keep them. */
+  /**
+   * The Media tab's choices, from the address so Back and a reload keep
+   * them: Sort `mo`, Group `mg`, and each Filter section (S.MEDIA_FILTERS)
+   * as `m<key>`.
+   */
   function mediaFiltersFromAddress() {
     const p = new URLSearchParams(location.search);
-    const pick = (key, allowed) => (allowed.includes(p.get(key)) ? p.get(key) : undefined);
-    return {
-      kind: pick('mk', ['films', 'tv', 'music', 'other']), played: pick('mp', ['never']), rated: pick('mr', ['loved', 'liked', 'any', 'unrated']),
-      order: pick('mo', S.MEDIA_ORDERS.map(([k]) => k)) || 'best', grouping: pick('mg', S.MEDIA_GROUPINGS.map(([k]) => k)) || '',
-    };
+    const pick = (key, list) => (list.some(([v]) => v === p.get(key)) ? p.get(key) : undefined);
+    const out = { order: pick('mo', S.MEDIA_ORDERS) || 'best', grouping: pick('mg', S.MEDIA_GROUPINGS) || '' };
+    for (const [key, , choices] of S.MEDIA_FILTERS) out[key] = pick('m' + key, choices);
+    return out;
   }
 
-  /** Kind, Never Played and Rating: each change kept in the address and drawn in place (the services aren't asked again). */
-  function mediaFilterBar(draw) {
+  /** Sort, Group and each Filter section as selects, each change kept in the address and drawn in place (the services aren't asked again). */
+  function mediaFilterBar(draw, items) {
     const f = mediaFiltersFromAddress();
+    const facets = S.mediaFacets(items, f, Math.floor(Date.now() / 1000));
     const set = (key, value) => {
       const next = new URLSearchParams(location.search);
       if (value) next.set(key, value);
@@ -2094,18 +2098,11 @@
       sel.addEventListener('change', () => set(key, sel.value));
       return sel;
     };
-    const never = el('button', { type: 'button', 'aria-pressed': f.played === 'never' ? 'true' : 'false' }, 'Never Played');
-    never.addEventListener('click', () => {
-      const on = never.getAttribute('aria-pressed') !== 'true';
-      never.setAttribute('aria-pressed', on ? 'true' : 'false');
-      set('mp', on ? 'never' : '');
-    });
     return el('div', { class: 'code-filters media-filters', role: 'group', 'aria-label': 'Sort, group and filter' },
       select('mo', S.MEDIA_ORDERS.map(([k, name]) => [k === 'best' ? '' : k, name]), 'Sort', f.order === 'best' ? '' : f.order),
       select('mg', S.MEDIA_GROUPINGS, 'Group', f.grouping),
-      select('mk', [['', 'All Kinds'], ['films', 'Films'], ['tv', 'TV'], ['music', 'Music'], ['other', 'Other']], 'Kind', f.kind),
-      never,
-      select('mr', [['', 'Rating'], ['loved', '4★+'], ['liked', '3★+'], ['any', 'Any Rating'], ['unrated', 'Unrated']], 'Rating', f.rated));
+      ...S.MEDIA_FILTERS.map(([key, title, choices]) => select('m' + key,
+        [['', key === 'date' ? 'Any Time' : `Any ${title}`], ...choices.map(([k, name]) => [k, `${name} · ${facets[key][k]}`])], title, f[key])));
   }
 
   /**
@@ -2473,12 +2470,14 @@
     setPillCount('media', res.items.length);
     const draw = () => {
       const f = mediaFiltersFromAddress();
-      const items = S.mediaSort(S.mediaFilter(res.items, f), f.order);
+      const items = S.mediaSort(S.mediaFilter(res.items, f, Math.floor(Date.now() / 1000)), f.order);
       const groups = S.mediaGroups(items, f.grouping, -new Date().getTimezoneOffset());
       $('web-results').replaceChildren(...groups.flatMap((g) => [g.title ? el('li', { class: 'media-group' }, g.title) : null, ...g.items.map(mediaCard)]).filter(Boolean));
       $('web-status').replaceChildren(items.length ? '' : 'Nothing matches these filters.');
+      // Its counts follow the other choices.
+      document.querySelector('.media-filters')?.replaceWith(mediaFilterBar(draw, res.items));
     };
-    $('web-results').before(mediaFilterBar(draw));
+    $('web-results').before(mediaFilterBar(draw, res.items));
     draw();
     return restoreScroll();
   }
