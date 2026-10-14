@@ -129,6 +129,9 @@ final class AppState {
 
     /// Bumped by Find (⌘F) on the Mac: the search field takes focus.
     var searchFocusRequests = 0
+    /// Bumped by View → Reload (⌘R): the list on screen and the rules load
+    /// again (`pullToRefresh`'s action).
+    var reloadRequests = 0
     private static let log = Logger(subsystem: ShioriID.app, category: "app")
 
     /// Safari's results page has its own Settings, which write the App

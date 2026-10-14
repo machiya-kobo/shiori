@@ -26,6 +26,9 @@ private let log = Logger(subsystem: ShioriID.app, category: "ai")
     private(set) var waiting = 0
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var loopID = 0
+    /// Whether runs are scheduled (`start`), so a stop that wasn't the
+    /// user's (the iPhone going to the background) can be undone.
+    var isScheduled: Bool { loop != nil }
     /// Whether labelling.json has been read (or found missing). Until then
     /// nothing is written, so an early save can't replace the file with an
     /// empty state; a file that couldn't be read is tried again before the

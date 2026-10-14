@@ -7,13 +7,16 @@ import SwiftUI
 ///
 /// Not the system's `.refreshable`: with Shiori's bars under the navigation
 /// bar (`topBar`'s safe-area bars), iOS drew its spinner where it couldn't
-/// be seen, and its haptic came only after a long pull. iOS only: the Mac
-/// has no pull (a trackpad's bounce isn't one). VoiceOver has a Refresh
+/// be seen, and its haptic came only after a long pull. The pull is iOS's:
+/// the Mac has no pull (a trackpad's bounce isn't one), and reloads with
+/// View → Reload (⌘R, `AppState.reloadRequests`), as a keyboard on the iPad
+/// does; the spinner shows either way. VoiceOver has a Refresh
 /// action instead, and Reduce Motion keeps the mark still (no growing or
 /// turning: the arrow points up, in the accent, once letting go reloads).
 struct PullToRefresh: ViewModifier {
     let action: () async -> Void
 
+    @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pull: CGFloat = 0
@@ -45,8 +48,11 @@ struct PullToRefresh: ViewModifier {
             .sensoryFeedback(.impact(weight: .medium), trigger: armed) { _, now in now }
             .overlay(alignment: .top) { mark }
             .accessibilityAction(named: "Refresh") { if !refreshing { start() } }
+            .onChange(of: app.reloadRequests) { _, _ in if !refreshing { start() } }
         #else
         content
+            .overlay(alignment: .top) { mark }
+            .onChange(of: app.reloadRequests) { _, _ in if !refreshing { start() } }
         #endif
     }
 
@@ -95,7 +101,7 @@ struct PullToRefresh: ViewModifier {
 }
 
 extension View {
-    /// Shiori's pull to refresh (`PullToRefresh`) on iOS; nothing on the Mac.
+    /// Shiori's pull to refresh (`PullToRefresh`) on iOS; ⌘R everywhere.
     func pullToRefresh(_ action: @escaping () async -> Void) -> some View {
         modifier(PullToRefresh(action: action))
     }
