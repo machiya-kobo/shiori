@@ -97,7 +97,7 @@ struct SmallWebResultsList: View {
                 }
                 .themedBackground()
             } else {
-                FailureView(error: error, hasServer: true) {
+                FailureView(error: error, hasServer: true, service: "the Gateway") {
                     Task { await model.load(using: app.smallweb) }
                 }
                 .themedBackground()

@@ -120,11 +120,11 @@ struct AllResults: View {
 
     /// Any part that failed: with nothing to show, that's the answer, not
     /// "no results" (pages first, then notes, then the web).
-    private var failure: HisterError? {
-        var phases = [pages.phase, notes.phase]
-        if webOn { phases.append(web.phase) }
-        for phase in phases {
-            if case .failed(let error) = phase { return error }
+    private var failure: (error: HisterError, service: String)? {
+        var phases = [(pages.phase, "Hister"), (notes.phase, app.notesFrom == .hister ? "Hister" : "Kura")]
+        if webOn { phases.append((web.phase, "SearXNG")) }
+        for (phase, service) in phases {
+            if case .failed(let error) = phase { return (error, service) }
         }
         return nil
     }
@@ -178,8 +178,8 @@ struct AllResults: View {
                 if stillLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = failure {
-                    FailureView(error: error, hasServer: app.client != nil) {
+                } else if let failure {
+                    FailureView(error: failure.error, hasServer: app.client != nil, service: failure.service) {
                         Task { await load() }
                     }
                 } else {

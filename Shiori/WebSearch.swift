@@ -137,7 +137,7 @@ struct WebResultsList: View {
                 }
                 .themedBackground()
             } else {
-                FailureView(error: error, hasServer: true) {
+                FailureView(error: error, hasServer: true, service: "SearXNG") {
                     Task { await model.load(searx: app.searx, hister: app.client) }
                 }
                 .themedBackground()

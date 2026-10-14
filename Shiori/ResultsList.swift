@@ -95,7 +95,8 @@ struct ResultsList<Empty: View>: View {
             // returns to .loading).
             loadingView
         case .failed(let error):
-            FailureView(error: error, hasServer: app.client != nil) {
+            FailureView(error: error, hasServer: app.client != nil,
+                        service: model.source == .notes && !model.notesFromHister ? "Kura" : "Hister") {
                 Task { await load() }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -531,6 +532,8 @@ struct FaviconView: View {
 struct FailureView: View {
     let error: HisterError
     let hasServer: Bool
+    /// Who didn't answer, for the title: Hister, or Kura, SearXNG, the gateway.
+    var service = "Hister"
     let retry: () -> Void
 
     var body: some View {
@@ -554,7 +557,7 @@ struct FailureView: View {
 
     private var title: String {
         switch error {
-        case .unreachable: "Can't Reach Hister"
+        case .unreachable: "Can't Reach \(service)"
         case .untrusted: "Connection Not Trusted"
         case .plainHTTP: "Needs HTTPS"
         case .previewUnavailable: "Preview Not Shown"
