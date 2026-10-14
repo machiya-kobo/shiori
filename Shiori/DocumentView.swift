@@ -25,6 +25,8 @@ struct DocumentView: View {
     @State private var error: HisterError?
     @State private var labelling = false
     @State private var failure: String?
+    /// Show As couldn't load that view: said, and the page stays as it was.
+    @State private var showAsFailure: String?
     @State private var rendered = false
     @State private var renderFailed = false
     /// Bumped by Try Again after a failed render: a fresh web view.
@@ -91,6 +93,14 @@ struct DocumentView: View {
             } message: {
                 Text(failure ?? "")
             }
+            .alert(
+                "Couldn't Show the Page That Way",
+                isPresented: Binding(get: { showAsFailure != nil }, set: { if !$0 { showAsFailure = nil } })
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(showAsFailure ?? "")
+            }
     }
 
     @ViewBuilder private func content(note: AppState.NoteLinks?) -> some View {
@@ -103,7 +113,7 @@ struct DocumentView: View {
                 html: previewPage.html(
                     for: PreviewPageCache.Key(
                         url: document.url, updated: preview.updated, size: preview.contentHTML.utf8.count, title: preview.title,
-                        label: label, palette: css, place: note?.place, images: images, kura: kura)
+                        label: label, palette: css, place: note?.place, images: images, kura: kura, extractor: extractor)
                 ) {
                     PreviewPage.html(
                         document: document, preview: preview, label: label, palette: palette,
@@ -348,8 +358,13 @@ struct DocumentView: View {
             // (Settings → Notes → Notes From), the default vault's note is
             // Hister's readable copy, below.
             let vault = Notes.otherVault(of: document.url) ?? ""
-            guard let kura = app.notesKura, let path = Notes.path(of: document.url, cards: []) else {
+            guard let kura = app.notesKura else {
                 error = .unreachable
+                return
+            }
+            // A Konbini card (/p/<slug>) by its vault path, from the cards.
+            guard let path = Notes.path(of: document.url, cards: app.konbiniCards) else {
+                error = .notFound
                 return
             }
             do {
@@ -442,12 +457,22 @@ struct DocumentView: View {
         summarizer().summarize(document: document, preview: preview, isNote: note, fresh: fresh)
     }
 
+    /// Another of the server's views of the page. The page on screen stays
+    /// until the new one arrives (`loaded` redraws only a changed page: an
+    /// unchanged one never finished loading and left a blank page and a
+    /// spinner); one that fails says so and keeps the view it had.
     private func show(as name: String?) {
         guard name != extractor else { return }
+        let previous = extractor
         extractor = name
-        rendered = false
         renderFailed = false
-        Task { await load() }
+        Task {
+            await load()
+            guard extractor == name, let failed = error, preview != nil else { return }
+            error = nil
+            extractor = previous
+            showAsFailure = failed.userMessage
+        }
     }
 
 }
@@ -477,6 +502,8 @@ final class PreviewPageCache {
         var place: String?
         var images: Bool
         var kura: String
+        /// Show As: another view of the same page can be the same size.
+        var extractor: String?
     }
 
     private var key: Key?
