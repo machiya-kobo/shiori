@@ -343,16 +343,8 @@ struct SettingsView: View {
 
             case .account:
             Section {
-                TextField("Server", text: $draft, prompt: Text("https://hister.example/"))
-                    .textContentType(.URL)
-                    #if os(iOS)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                    .autocorrectionDisabled()
-                    .textStyle(.body, design: .monospaced)
-                    .onSubmit(save)
-                Button("Check Connection", action: { Task { await checkConnection() } })
+                SettingsField(label: "Server", text: $draft, prompt: "https://hister.example/", submit: save)
+                Button("Test Connection", action: { Task { await checkConnection() } })
                     .disabled(check == .checking || HisterClient(serverURL: draft) == nil)
                 connectionStatus
                 unencryptedNote(draft)
@@ -788,15 +780,7 @@ private struct FeedsSection: View {
     var body: some View {
         @Bindable var app = app
         Section {
-            TextField("NewsBlur", text: $draft, prompt: Text("https://newsblur.example/"))
-                .textContentType(.URL)
-                #if os(iOS)
-                .keyboardType(.URL)
-                .textInputAutocapitalization(.never)
-                #endif
-                .autocorrectionDisabled()
-                .textStyle(.body, design: .monospaced)
-                .onSubmit(save)
+            SettingsField(label: "NewsBlur", text: $draft, prompt: "https://newsblur.example/", submit: save)
             FeedButtons(feed: app.feedURL(query: "*", title: "New Pages", source: .all))
             Button("Export Collections as OPML…", systemImage: "list.bullet.rectangle") { opml = makeOPML() }
                 .disabled(app.client == nil || (app.rules.aliases.isEmpty && app.rules.labels.isEmpty))
@@ -881,6 +865,8 @@ struct SettingsField: View {
     @Binding var text: String
     var prompt = ""
     var address = true
+    /// Monospace for a value that isn't an address (a model's name); addresses always are.
+    var monospaced = false
     /// For VoiceOver when several rows share a label ("Plex Address").
     var spoken: String?
     var submit: () -> Void = {}
@@ -899,7 +885,7 @@ struct SettingsField: View {
                 .keyboardType(address ? .URL : .default)
                 #endif
                 .textContentType(address ? .URL : nil)
-                .textStyle(.callout, design: address ? .monospaced : .default)
+                .textStyle(.callout, design: address || monospaced ? .monospaced : .default)
                 .onSubmit(submit)
         }
     }

@@ -75,10 +75,8 @@ struct AISettingsPage: View {
             }
             Toggle("Use a Local Server", isOn: $app.ai.localEnabled)
             if app.ai.localEnabled {
-                TextField("Address", text: $app.ai.localURL, prompt: Text("https://server.example.ts.net/v1"))
-                    .urlField()
-                TextField("Model", text: $app.ai.localModel, prompt: Text("e.g. qwen3"))
-                    .monospacedField()
+                SettingsField(label: "Address", text: $app.ai.localURL, prompt: "https://server.example.ts.net/v1")
+                SettingsField(label: "Model", text: $app.ai.localModel, prompt: "e.g. qwen3", address: false, monospaced: true)
                 keyField("Token", prompt: "Optional", text: $localToken, account: .local)
                 Button("Test Local Server") { Task { await testLocal() } }
                     .disabled(localCheck == .checking || app.ai.localBaseURL == nil || app.ai.localModel.isEmpty)
@@ -156,8 +154,7 @@ struct AISettingsPage: View {
     ) -> some View {
         Section {
             keyField("API Key", prompt: keyPrompt, text: keyBinding(account), account: account)
-            TextField("Model", text: model, prompt: Text(modelPrompt))
-                .monospacedField()
+            SettingsField(label: "Model", text: model, prompt: modelPrompt, address: false, monospaced: true)
             testRow(account)
             removeKeyButton(account)
         } header: {
