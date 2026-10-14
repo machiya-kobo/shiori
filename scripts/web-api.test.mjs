@@ -258,19 +258,31 @@ test("the web app marks web results you already have, with the search page's loo
   assert.match(read('../patches/shiori/search.js'), /const lookups = S\.urlLookupQueries\(cards\.map/);
 });
 
-test("the web app's Settings are a tab on a phone, with no title row on the tabs' own views", () => {
+test("the web app's Settings are the house's sheet: a tab on a phone, Cancel and Save, the pages inside", () => {
   const app = read('../web/app/app.js');
   const css = read('../web/app/app.css');
   assert.doesNotMatch(read('../web/app/index.html'), /settings-button/);
-  assert.match(app.slice(app.indexOf('function tabs('), app.indexOf('// --- Render')), /tab\('settings', 'Settings', 'gear', 'settings'\)/);
-  // The index is titled Settings (no title row on a tab's own view); a page has its title and Back.
-  const view = app.slice(app.indexOf('function viewSettings() {'), app.indexOf('function settingsPage('));
-  assert.match(view, /setTitle\(shown\[1\], true\);/);
-  assert.equal((view.match(/setTitle\('Settings'\);/g) || []).length, 2);
+  assert.match(read('../web/app/index.html'), /<dialog id="settings-sheet" class="msheet"/);
+  // The Settings tab opens the sheet, lit while it's open.
+  const tabs = app.slice(app.indexOf('function tabs('), app.indexOf('// --- Render'));
+  assert.match(tabs, /class: 'settings-tab', 'aria-expanded'/);
+  assert.match(tabs, /onclick: \(\) => openSettings\(\)/);
+  // ✕ Cancel, the title (focused on opening), ✓ Save; a page has Back to the index.
+  const sheet = app.slice(app.indexOf('function openSettings('), app.indexOf('function settingsPage('));
+  assert.match(sheet, /round\('cancel', 'Cancel', 'close'/);
+  assert.match(sheet, /round\('save', 'Save', 'check'/);
+  assert.match(sheet, /sheet\.querySelector\('\.shead h2'\)\.focus\(\)/);
+  assert.match(sheet, /class: 'settings-back'/);
+  // Changes preview; only Save keeps them, and closing any other way puts them back.
+  assert.match(app.slice(app.indexOf('function changeSetting('), app.indexOf('function changeSetting(') + 600), /if \(settingsDraft && !fromAccount\) \{/);
+  assert.match(sheet, /if \(draft && !draft\.saved\) revertSettings\(draft\);/);
   // Hidden at every width, not only beside the sidebar.
   const rule = '#list-column > .bar:has(#title.sidebar-says):has(#back[hidden]) { display: none; }';
   assert.ok(css.includes(rule));
   assert.ok(css.lastIndexOf('@media', css.indexOf(rule)) < css.lastIndexOf('}', css.indexOf(rule)), 'not inside a media query');
+  // One column that can't widen the sheet; the page holds still under it.
+  assert.match(css, /\.msheet \.sbody \{\n  display: grid; grid-template-columns: minmax\(0, 1fr\); grid-auto-rows: max-content;/);
+  assert.match(css, /html\.dialog-open, html\.dialog-open body \{ overflow: hidden; \}/);
 });
 
 test("the web app's sidebar has no empty heading", () => {

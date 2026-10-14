@@ -142,15 +142,20 @@
         <a id="next" class="page-button primary" href="#">Next page ›</a>
       </nav>
     </main>
-    <dialog id="settings" aria-labelledby="settings-title">
-      <form method="dialog">
-        <div class="sheet-head">
-          <h2 id="settings-title" tabindex="-1" autofocus>Settings</h2>
-          <button class="done" value="done">Done</button>
-        </div>
+    <dialog id="settings" class="msheet" aria-labelledby="settings-title">
+      <div class="shead">
+        <button id="settings-cancel" class="sround cancel" type="button" aria-label="Cancel" title="Cancel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+        <h2 id="settings-title" tabindex="-1">Settings</h2>
+        <button id="settings-save" class="sround save" type="button" aria-label="Save" title="Save">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+        </button>
+      </div>
+      <div class="sbody">
         <div id="settings-body"></div>
         <p class="sheet-note">Kept on this device. The Shiori app has the rest (servers, the Safari switch).</p>
-      </form>
+      </div>
     </dialog>
     <aside id="preview-pane" aria-label="Preview" hidden>
       <div class="preview-bar">

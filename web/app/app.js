@@ -83,6 +83,7 @@ const ICONS = {
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
   sparkles: '<path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/>',
 };
 function icon(name) {
@@ -252,7 +253,16 @@ function writeLocal(key, value) {
 
 function changeSetting(key, value, { fromAccount = false } = {}) {
   settings = { ...settings, [key]: value };
-  writeLocal('shioriAppSettings', settings);
+  // With the Settings sheet open a change is previewed, and kept only on
+  // Save (saveSettings); the account's own answer is kept at once.
+  if (settingsDraft && !fromAccount) {
+    settingsDraft.keys.add(key);
+    if (key === 'searchHistory' && value === false) recents = [];
+    applyLook();
+    return;
+  }
+  if (settingsDraft) settingsDraft.before[key] = value;
+  writeLocal('shioriAppSettings', settingsDraft ? settingsDraft.before : settings);
   // Theme and text size are the house's too (the other rooms read them).
   const shared = S.houseCookie(key, value, location.hostname, { steps: 'rooms' });
   if (shared) document.cookie = shared;
@@ -348,9 +358,11 @@ function contactAccount() {
   prefsRunning ||= contactOnce().finally(() => (prefsRunning = null));
   return prefsRunning;
 }
+/** The settings this browser keeps: not the Settings sheet's preview, until Save. */
+const keptSettings = () => (settingsDraft ? settingsDraft.before : settings);
 async function contactOnce() {
   prefsAt = Date.now();
-  const now = S.accountValues(settings, { steps: 'rooms' });
+  const now = S.accountValues(keptSettings(), { steps: 'rooms' });
   const pending = readLocal(PREFS_PENDING) || {};
   const last = readLocal(PREFS_LOCAL);
   if (last) {
@@ -384,8 +396,8 @@ async function contactOnce() {
     answer = got.snapshot;
   }
   const { apply, send } = S.prefsSync({ mine: now, seen, answer });
-  for (const [key, value] of Object.entries(S.localValues(apply, { steps: 'rooms', mine: settings.textSize, defaults: DEFAULTS }))) {
-    if (value !== undefined && JSON.stringify(value) !== JSON.stringify(settings[key])) changeSetting(key, value, { fromAccount: true });
+  for (const [key, value] of Object.entries(S.localValues(apply, { steps: 'rooms', mine: keptSettings().textSize, defaults: DEFAULTS }))) {
+    if (value !== undefined && JSON.stringify(value) !== JSON.stringify(keptSettings()[key])) changeSetting(key, value, { fromAccount: true });
   }
   if (Object.keys(send).length) {
     const put = await api.putAccountPrefs(send);
@@ -393,7 +405,7 @@ async function contactOnce() {
     else writeLocal(PREFS_PENDING, send);
   }
   writeLocal(PREFS_SEEN, answer);
-  writeLocal(PREFS_LOCAL, S.accountValues(settings, { steps: 'rooms' }));
+  writeLocal(PREFS_LOCAL, S.accountValues(keptSettings(), { steps: 'rooms' }));
   return (prefsState = 'synced');
 }
 function soonContact() {
@@ -1322,7 +1334,7 @@ api.setRefusedHandler((status, path) => {
   }
 });
 /** The Rooms menu's last row, as the rooms end theirs: Shiori's Settings. */
-const ROOMS_SETTINGS = { href: '#/settings', open: () => go('settings') };
+const ROOMS_SETTINGS = { href: '#/settings', open: () => openSettings() };
 
 /** Kura on this host (web/README.md), for the notes lists' feeds. */
 const KURA_BASE = location.origin + '/kura/';
@@ -2432,6 +2444,11 @@ function dialog(title, body) {
   const d = $('dialog');
   d.replaceChildren(h('div', { class: 'dialog-head' }, h('h2', {}, title), iconButton('close', 'Close', () => d.close())), h('div', { class: 'dialog-body' }, body));
   d.showModal();
+  // While any dialog is open the page under it holds still (app.css).
+  document.documentElement.classList.add('dialog-open');
+  d.addEventListener('close', () => {
+    if (!document.querySelector('dialog[open]')) document.documentElement.classList.remove('dialog-open');
+  }, { once: true });
   return d;
 }
 
@@ -2600,45 +2617,119 @@ const SETTINGS_PAGES = [
 const MEDIA_NAMES = { jellyfin: 'Jellyfin', plex: 'Plex', koito: 'Koito', movary: 'Movary' };
 const settingsPages = () => SETTINGS_PAGES.filter(([key]) => (key !== 'media' || S.mediaConfigured(MEDIA)) && (key !== 'ai' || AI_BUILT));
 
-/**
- * Settings as in the apps: an index of pages, each page its sections. Wide
- * (the preview's width), the index is the list and the page shows beside
- * it, as the iPad's; narrower, a page opens over the index, with Back.
- */
-function viewSettings() {
-  const { params } = route();
-  const pages = settingsPages();
-  const asked = pages.find(([key]) => key === params.get('p'));
-  const beside = wide();
-  const shown = asked || (beside ? pages[0] : null);
+// --- Settings: the house's sheet (vaultkit v0.32) ---------------------------------
+// Settings is a sheet over the page, as every Machiya room's: ✕ Cancel, the
+// title, ✓ Save. Inside, the apps' index of pages, a page with Back to it.
+// Changes preview at once (the look applies; the rest wait), and nothing is
+// kept until Save: then this browser's copy, the house's cookies and the
+// account, as a change used to be at once. Cancel, Esc, the backdrop, a link
+// in it or the page going away put everything back.
+
+/** While the sheet is open: the settings as they were, and what changed. */
+let settingsDraft = null;
+/** The page the sheet shows (a SETTINGS_PAGES key), or null for the index. */
+let settingsPageKey = null;
+/** Changes the page shows without a reload; the rest redraw it on Save. */
+const SHEET_LOOK = ['theme', 'palette', 'textSize', 'pillRow', 'resultStyle', 'clickOpens'];
+/** Changes only a reload applies everywhere (where notes come from). */
+const SHEET_RELOAD = ['niwaURL', 'konbiniURL', 'notesSource'];
+
+function openSettings(page = null) {
+  const sheet = $('settings-sheet');
+  settingsPageKey = settingsPages().some(([key]) => key === page) ? page : null;
+  if (sheet.open) return drawSettings({ focusTitle: true });
+  settingsDraft = { before: { ...settings }, recents: [...recents], device: deviceTextSize(), keys: new Set(), clearRecents: false, saved: false };
   listSearch = '';
-  fill($('list-top'), );
-  if (beside) selected = null;
   // Opening Settings asks the account afresh; the state line follows.
   void contactAccount().then(() => {
-    const line = document.querySelector('.prefs-state');
+    const line = sheet.querySelector('.prefs-state');
     if (line) line.textContent = prefsStateLine();
   });
-  const index = () => h('div', { class: 'settings' },
-    h('div', { class: 'group settings-index' }, pages.map(([key, title, symbol, summary]) =>
-      h('button', {
-        type: 'button', class: 'item settings-link', 'aria-current': beside && shown && shown[0] === key ? 'page' : undefined,
-        onclick: () => go('settings', { p: key }, { replace: beside }),
-      }, icon(symbol), h('span', { class: 'settings-link-text' }, h('span', {}, title), h('span', { class: 'settings-summary' }, summary)), icon('chevron')))));
-  const page = ([key, title]) => h('div', { class: 'settings settings-page', 'data-page': key }, ...settingsPage(key, title));
-  if (beside) {
-    setTitle('Settings');
-    $('list').replaceChildren(index());
-    fill($('preview-bar'), h('span', { class: 'where settings-title' }, shown[1]));
-    $('preview').replaceChildren(page(shown));
-  } else if (shown) {
-    setTitle(shown[1], true);
-    $('list').replaceChildren(page(shown));
-  } else {
-    setTitle('Settings');
-    $('list').replaceChildren(index());
-  }
+  drawSettings();
+  sheet.showModal();
+  document.documentElement.classList.add('dialog-open');
+  markSettingsOpen(true);
+  // The title, not Cancel: a ring on Cancel looked like a pressed button.
+  sheet.querySelector('.shead h2').focus();
 }
+
+/** The sheet's header and the index or a page; kept open across redraws. */
+function drawSettings({ focusTitle = false } = {}) {
+  const sheet = $('settings-sheet');
+  const pages = settingsPages();
+  const shown = pages.find(([key]) => key === settingsPageKey);
+  const round = (kind, label, iconName, onclick) =>
+    h('button', { type: 'button', class: `sround ${kind}`, 'aria-label': label, title: label, onclick }, icon(iconName));
+  const title = h('h2', { id: 'settings-sheet-title', tabindex: '-1' }, shown ? shown[1] : 'Settings');
+  const head = h('div', { class: 'shead' },
+    round('cancel', 'Cancel', 'close', () => sheet.close()),
+    title,
+    round('save', 'Save', 'check', () => saveSettings()));
+  const open = (key) => {
+    settingsPageKey = key;
+    drawSettings({ focusTitle: true });
+  };
+  const body = shown
+    ? h('div', { class: 'sbody' },
+      h('button', { type: 'button', class: 'settings-back', onclick: () => open(null) }, icon('back'), h('span', {}, 'Settings')),
+      h('div', { class: 'settings settings-page', 'data-page': shown[0] }, ...settingsPage(shown[0], shown[1])))
+    : h('div', { class: 'sbody' },
+      h('div', { class: 'settings' },
+        h('div', { class: 'group settings-index' }, pages.map(([key, name, symbol, summary]) =>
+          h('button', { type: 'button', class: 'item settings-link', onclick: () => open(key) },
+            icon(symbol), h('span', { class: 'settings-link-text' }, h('span', {}, name), h('span', { class: 'settings-summary' }, summary)), icon('chevron'))))));
+  sheet.replaceChildren(head, body);
+  if (focusTitle) title.focus();
+}
+
+/** Save: keep what the sheet changed, as a change on the page would. */
+function saveSettings() {
+  const draft = settingsDraft;
+  if (!draft) return;
+  draft.saved = true;
+  const changed = [...draft.keys].filter((key) => JSON.stringify(settings[key]) !== JSON.stringify(draft.before[key]));
+  writeLocal('shioriAppSettings', settings);
+  for (const key of changed) {
+    // Theme and text size are the house's too (the other rooms read them).
+    const shared = S.houseCookie(key, settings[key], location.hostname, { steps: 'rooms' });
+    if (shared) document.cookie = shared;
+  }
+  if (changed.some((key) => ['theme', 'palette', 'textSize', 'pills'].includes(key) || Object.hasOwn(S.prefsShioriKeys(), key))) soonContact();
+  if (draft.clearRecents || settings.searchHistory === false) {
+    recents = [];
+    writeLocal('shioriAppRecents', recents);
+  }
+  $('settings-sheet').close();
+  if (changed.some((key) => SHEET_RELOAD.includes(key))) location.reload();
+  else if (changed.some((key) => !SHEET_LOOK.includes(key))) render();
+}
+
+/** Closed without Save (Cancel, Esc, the backdrop, a link, the page going): as it was. */
+function revertSettings(draft) {
+  settings = { ...draft.before };
+  recents = draft.recents;
+  if (deviceTextSize() !== draft.device) setDeviceTextSize(draft.device);
+  else applyLook();
+}
+
+/** The Settings tab (a phone) and the sidebar's gear are lit while the sheet is open. */
+function markSettingsOpen(on) {
+  document.querySelector('#tabs .settings-tab')?.setAttribute('aria-expanded', String(on));
+  const gear = document.querySelector('#sidebar .sidebar-gear:not(.sidebar-add)');
+  if (gear) gear.setAttribute('aria-current', on ? 'page' : 'false');
+}
+
+$('settings-sheet').addEventListener('close', () => {
+  const draft = settingsDraft;
+  settingsDraft = null;
+  if (!document.querySelector('dialog[open]')) document.documentElement.classList.remove('dialog-open');
+  markSettingsOpen(false);
+  if (draft && !draft.saved) revertSettings(draft);
+});
+// A tap on the backdrop is Cancel.
+$('settings-sheet').addEventListener('click', (event) => {
+  if (event.target === $('settings-sheet')) $('settings-sheet').close();
+});
 
 /** One page of Settings: its sections, in the apps' order. */
 function settingsPage(key, title) {
@@ -2649,7 +2740,7 @@ function settingsPage(key, title) {
     input.checked = !!settings[key];
     input.addEventListener('change', () => {
       changeSetting(key, input.checked);
-      if (redraws.includes(key)) viewSettings();
+      if (redraws.includes(key)) drawSettings();
     });
     return h('label', { class: 'item' }, h('span', {}, title), input);
   };
@@ -2710,7 +2801,13 @@ function settingsPage(key, title) {
         ], 'Click Opens picks what a result opens; the › is the other choice. It stays in this browser.'),
         ...group('History', [
           toggle('searchHistory', 'Recent Searches'),
-          h('div', { class: 'item' }, h('button', { type: 'button', class: 'link-button danger', onclick: () => ((recents = []), writeLocal('shioriAppRecents', []), toast('Cleared')) }, 'Clear Recent Searches')),
+          h('div', { class: 'item' }, h('button', { type: 'button', class: 'link-button danger', disabled: !recents.length, onclick: (event) => {
+            // Cleared on Save, as the rest of the sheet's changes.
+            recents = [];
+            if (settingsDraft) settingsDraft.clearRecents = true;
+            else writeLocal('shioriAppRecents', recents);
+            event.currentTarget.disabled = true;
+          } }, 'Clear Recent Searches')),
           toggle('rememberOpened', 'Remember What You Open'),
           toggle('showOpened', 'Show Opened'),
         ], 'Recent searches stay in this browser. Remember What You Open puts the results you open first next time.'),
@@ -2804,7 +2901,7 @@ function deviceSizeRows() {
   const select = h('select', { 'aria-label': 'This Device’s Size', hidden: !own }, sizes.map(([v, t]) => h('option', { value: v, selected: v === house }, t)));
   toggle.addEventListener('change', () => {
     setDeviceTextSize(toggle.checked ? S.houseValue('textSize', settings.textSize, 'rooms') || 'standard' : '');
-    viewSettings();
+    drawSettings();
   });
   select.addEventListener('change', () => setDeviceTextSize(select.value));
   return [
@@ -3081,7 +3178,7 @@ function sidebar(current) {
   // the list's own bar then holds nothing, and the search field sits at
   // the top of the column.
   const gear = h('button', { type: 'button', class: 'sidebar-gear', 'aria-label': 'Settings', title: 'Settings',
-    'aria-current': view === 'settings' ? 'page' : undefined, onclick: () => go('settings') }, icon('gear'));
+    'aria-current': $('settings-sheet').open ? 'page' : undefined, onclick: () => openSettings() }, icon('gear'));
   // Add Page beside them, as the iPad app's + on its sidebar.
   const add = SMALLWEB ? h('button', { type: 'button', class: 'sidebar-gear sidebar-add', 'aria-label': 'Add Page', title: 'Add Page', onclick: () => addPage() }, icon('plus')) : null;
   fill(nav, 
@@ -3122,8 +3219,10 @@ function tabs(view) {
   const add = SMALLWEB ? h('button', { type: 'button', class: 'add-tab', 'aria-expanded': 'false', onclick: () => addPage() }, icon('plus'), h('span', {}, 'Add Page')) : null;
   // The rooms' tab-bar menu: it opens above the tab, as theirs does.
   const rooms = S.roomsSwitcher(ROOMS, 'shiori', { tab: true, settings: ROOMS_SETTINGS });
+  // Settings is a sheet: its tab is lit while the sheet is open.
+  const settingsTab = h('button', { type: 'button', class: 'settings-tab', 'aria-expanded': String($('settings-sheet').open), onclick: () => openSettings() }, icon('gear'), h('span', {}, 'Settings'));
   fill($('tabs'), tab('library', 'Library', 'library', 'library'), tab('labels', 'Labels', 'tag', 'labels'), add,
-    tab('settings', 'Settings', 'gear', 'settings'), rooms);
+    settingsTab, rooms);
   $('tabs').querySelector('button').setAttribute('aria-current', view === 'library' || view === 'search' ? 'page' : 'false');
 }
 
@@ -3131,6 +3230,13 @@ function tabs(view) {
 
 function render() {
   const current = route();
+  // #/settings opens the sheet over the Library (a bookmark, the Rooms menu's link).
+  if (current.view === 'settings') {
+    const page = current.params.get('p');
+    history.replaceState(null, '', '#/');
+    render();
+    return openSettings(page);
+  }
   const { view, params } = current;
   if (view === 'page') {
     // A narrow screen: the page in place of the list.
@@ -3153,11 +3259,8 @@ function render() {
   if (view === 'labels') viewLabels();
   else if (view === 'list') viewList(params);
   else if (view === 'search') viewSearch(params);
-  else if (view === 'settings') viewSettings();
   else viewLibrary(params);
-  // Settings' page sits in the pane beside its index; anywhere else, its title leaves the pane's bar.
-  if (view !== 'settings') document.querySelector('#preview-bar .settings-title')?.remove();
-  if (wide() && !selected && view !== 'settings') $('preview').replaceChildren(status('No Page Selected', 'Select a page to preview it.'));
+  if (wide() && !selected) $('preview').replaceChildren(status('No Page Selected', 'Select a page to preview it.'));
 }
 
 // --- vi keys (the apps and the search page have the same set) -------------------
@@ -3236,7 +3339,7 @@ const keyboard = (() => {
     document.body.append(help);
   }
   document.addEventListener('keydown', (event) => {
-    if (event.defaultPrevented || $('dialog').open) return;
+    if (event.defaultPrevented || document.querySelector('dialog[open]')) return;
     const typing = inField(event.target);
     const r = S.vimKey(state, {
       key: event.key, shiftKey: event.shiftKey, metaKey: event.metaKey, ctrlKey: event.ctrlKey,
@@ -3342,7 +3445,7 @@ const loadVaults = () => {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && Date.now() - vaultsAt > 10 * 60_000) void loadVaults();
   // Back from signing in on Kura's page: Settings says so.
-  if (!document.hidden && route().view === 'settings') render();
+  if (!document.hidden && $('settings-sheet').open) drawSettings();
 });
 Promise.all([loadRules(), api.cards().then((c) => (konbiniCards = c)), loadVaults(), loadLocalFiles()]).then(render);
 // The account's settings: after the first draw (the cookies and this browser's copy paint it).

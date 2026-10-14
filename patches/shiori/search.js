@@ -1056,9 +1056,12 @@
   new ResizeObserver(() => alignField()).observe($('brand'));
 
   // --- Settings (the gear): the app's options for this page ---------------------
-  // Changes go to the app's App Group through the background, so the app
-  // and this page share one set. Theme and text size apply at once; the
-  // rest redraw the page when the sheet closes.
+  // The house's sheet (vaultkit v0.32): ✕ Cancel, the title, ✓ Save. A change
+  // previews at once (theme, mode, text size); nothing is kept until Save,
+  // which sends them once to the app's App Group through the background (so
+  // the app and this page share one set) and to the account, then redraws
+  // the page if one needs it. Cancel, Esc, the backdrop, a link in it or the
+  // page going away put everything back.
   // The house's five sizes, as the account keeps them (HOUSE_STEPS.apple).
   const HOUSE_SIZE_CHOICES = [['xSmall', 'Extra Small'], ['small', 'Small'], ['system', 'Standard'], ['xLarge', 'Large'], ['xxLarge', 'Extra Large']];
   // The house's order, as the app's Settings: Appearance first (it follows
@@ -1121,6 +1124,8 @@
   const CHOICE_DEFAULTS = { theme: 'system', palette: 'tokyo-night', notesSource: S.notesSource('', kuraSetUp) };
   const saving = [];
   let redraw = false;
+  // While the Settings sheet is open: the settings as they were, and what changed.
+  let sheetDraft = null;
 
   // Who Hister says is signed in (S.histerAccount from /api/profile), on
   // the hosted page only: its host signs Hister's calls in. Asked once per
@@ -1325,8 +1330,10 @@
     prefsRunning ||= contactOnce().finally(() => (prefsRunning = null));
     return prefsRunning;
   }
+  /** The settings this device keeps: not the sheet's preview, until Save. */
+  const keptSettings = () => (sheetDraft ? sheetDraft.before : settings);
   async function contactOnce() {
-    const now = S.accountValues(settings);
+    const now = S.accountValues(keptSettings());
     const pending = readStore(PREFS_PENDING) || {};
     const last = readStore(PREFS_LOCAL);
     if (last) {
@@ -1360,8 +1367,8 @@
     }
     const { apply, send } = S.prefsSync({ mine: now, seen, answer });
     const values = {};
-    for (const [key, value] of Object.entries(S.localValues(apply, { mine: settings.textSize, defaults: { textSize: 'system' } }))) {
-      if (value !== undefined && JSON.stringify(value) !== JSON.stringify(settings[key])) values[key] = value;
+    for (const [key, value] of Object.entries(S.localValues(apply, { mine: keptSettings().textSize, defaults: { textSize: 'system' } }))) {
+      if (value !== undefined && JSON.stringify(value) !== JSON.stringify(keptSettings()[key])) values[key] = value;
     }
     if (Object.keys(values).length) change(values, { fromAccount: true });
     if (Object.keys(send).length) {
@@ -1370,7 +1377,7 @@
       else writeStore(PREFS_PENDING, send);
     }
     writeStore(PREFS_SEEN, answer);
-    writeStore(PREFS_LOCAL, S.accountValues(settings));
+    writeStore(PREFS_LOCAL, S.accountValues(keptSettings()));
     return (prefsState = 'synced');
   }
   /** "Use This Device's Size": the rooms' cookie in this browser (the house's words); '' clears it. */
@@ -1382,6 +1389,22 @@
   }
 
   function change(values, { fromAccount = false } = {}) {
+    if (sheetDraft && !fromAccount) {
+      // Previewed: kept only on Save.
+      Object.assign(settings, values);
+      Object.assign(sheetDraft.values, values);
+      if (values.searchHistory === false) recent = [];
+      if (Object.keys(values).some((k) => LOOK_KEYS.includes(k))) {
+        applyLook(settings.theme, settings.textSize, settings.palette);
+        previewPane.update();
+      }
+      return drawSettings();
+    }
+    // The account's answer is kept at once, sheet or not.
+    if (sheetDraft) Object.assign(sheetDraft.before, values);
+    keepSettings(values, { fromAccount });
+  }
+  function keepSettings(values, { fromAccount = false } = {}) {
     // A setting that follows the person goes to the account soon after (hosted page).
     if (HOSTED && !fromAccount && Object.keys(values).some((k) => ['theme', 'palette', 'textSize', 'pills'].includes(k) || Object.hasOwn(S.prefsShioriKeys(), k))) {
       clearTimeout(prefsTimer);
@@ -1422,12 +1445,40 @@
   if (switcher) $('settings-open').before(switcher);
 
   $('settings-open').addEventListener('click', () => {
+    if ($('settings').open) return;
+    sheetDraft = { before: JSON.parse(JSON.stringify(settings)), values: {}, recent: [...recent], device: S.deviceTextSize(document.cookie), saved: false };
     // Opening Settings asks the account afresh (the hosted page); the state line follows.
     void contactAccount().then(() => $('settings').open && drawSettings());
     drawSettings();
     $('recent').hidden = true;
     $('settings').showModal();
+    document.documentElement.classList.add('dialog-open');
+    // The title, not Cancel: a ring on Cancel looked like a pressed button.
+    $('settings-title').focus();
   });
+  $('settings-cancel').addEventListener('click', () => $('settings').close());
+  // Save: what changed, sent once (Safari's page through the app's set-settings).
+  $('settings-save').addEventListener('click', () => {
+    if (!sheetDraft) return;
+    sheetDraft.saved = true;
+    const values = {};
+    for (const [key, value] of Object.entries(sheetDraft.values)) {
+      if (key === 'clearRecentSearches' || JSON.stringify(value) !== JSON.stringify(sheetDraft.before[key])) values[key] = value;
+    }
+    if (Object.keys(values).length) keepSettings(values);
+    $('settings').close();
+  });
+  /** Closed without Save: the settings, recent searches and this device's size as they were. */
+  function revertSettings(draft) {
+    for (const key of Object.keys(settings)) if (!(key in draft.before)) delete settings[key];
+    Object.assign(settings, draft.before);
+    recent = draft.recent;
+    if (S.deviceTextSize(document.cookie) !== draft.device) setDeviceTextSize(draft.device);
+    else applyLook(settings.theme, settings.textSize, settings.palette);
+    previewPane.update();
+  }
+  // The page going away (a link in the sheet, the tab closing) is a Cancel.
+  addEventListener('pagehide', () => $('settings').open && $('settings').close());
   // The account's settings on load (after the first draw: the cookies and
   // this browser's copy paint it) and on return after 30 s or more away.
   if (HOSTED) {
@@ -1440,6 +1491,10 @@
     });
   }
   $('settings').addEventListener('close', async () => {
+    const draft = sheetDraft;
+    sheetDraft = null;
+    document.documentElement.classList.remove('dialog-open');
+    if (draft && !draft.saved) return revertSettings(draft);
     await Promise.all(saving);
     if (redraw) location.replace(location.href);
   });
@@ -1565,6 +1620,8 @@
     else delete document.documentElement.dataset.palette;
     const zoom = pageZoom(textSize);
     document.body.style.zoom = Math.abs(zoom - 1) < 0.01 ? '' : String(zoom);
+    // The Settings sheet sizes itself to the window, whose units the zoom scales (search.css).
+    document.documentElement.style.setProperty('--page-zoom', String(Math.abs(zoom - 1) < 0.01 ? 1 : zoom));
     fitUnits();
   }
 

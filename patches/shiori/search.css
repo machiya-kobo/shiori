@@ -655,21 +655,56 @@ body.pending footer { visibility: hidden; }
   100% { opacity: 0.6; background-position: 160% 0; }
 }
 
-/* Settings: a sheet like the app's grouped form. */
-#settings {
-  width: min(560px, calc(100vw - 24px)); max-height: min(86vh, 900px); padding: 0; overflow: auto;
+/* Settings: the house's sheet (vaultkit v0.32), ✕ Cancel, the title, ✓ Save,
+   over the page; the whole screen on a phone. Inside, the app's grouped form. */
+/* The window's units over the page's zoom (Text Size zooms the body, and
+   the sheet with it): --page-zoom, kept by applyLook. */
+#settings.msheet {
+  width: min(640px, calc((100vw - 32px) / var(--page-zoom, 1))); max-width: none;
+  max-height: min(calc(88vh / var(--page-zoom, 1)), 960px); padding: 0; overflow: hidden;
   border: 1px solid var(--line); border-radius: 18px; background: var(--bg); color: var(--text);
-  box-shadow: 0 20px 60px rgb(0 0 0 / 0.4);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.35);
 }
-#settings::backdrop { background: rgb(0 0 0 / 0.45); }
-#settings form { padding: 0 16px 16px; }
-.sheet-head {
-  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 0 10px; background: var(--bg);
+#settings.msheet[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+/* No blur behind it: an installed iOS app drew the backdrop's blur over the sheet's top edge. */
+#settings::backdrop { background: rgb(0 0 0 / 0.45); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.msheet .shead {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px;
+  padding: 10px 12px; border-bottom: 1px solid var(--line);
 }
-.sheet-head h2 { margin: 0; font: -apple-system-headline; font-weight: 700; outline: none; }
-.sheet-head .done {
-  border: 0; background: transparent; color: var(--accent); font: -apple-system-body; font-weight: 600; cursor: pointer;
+.msheet .shead h2 {
+  margin: 0; text-align: center; font: -apple-system-headline; font-weight: 600; color: var(--text); outline: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sround { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; font: inherit; }
+.sround svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.sround.cancel { background: color-mix(in srgb, var(--secondary) 24%, transparent); color: var(--text); }
+.sround.save { background: var(--accent); color: var(--bg); }
+.sround:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* One column that can't grow past the sheet (a long option once pushed a
+   sheet off the screen's edge), rows as tall as their content: a short
+   window scrolls rather than squeezing a group. */
+.msheet .sbody {
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; align-content: start;
+  overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 16px;
+}
+/* The page under a sheet doesn't scroll. */
+html.dialog-open, html.dialog-open body { overflow: hidden; }
+@media (max-width: 760px) {
+  #settings.msheet {
+    width: calc(100vw / var(--page-zoom, 1)); height: calc(100dvh / var(--page-zoom, 1)); max-height: none;
+    margin: 0; inset: 0; border: 0; border-radius: 0; box-shadow: none;
+  }
+  .msheet .shead {
+    padding-top: calc(10px + env(safe-area-inset-top)); padding-left: calc(12px + env(safe-area-inset-left));
+    padding-right: calc(12px + env(safe-area-inset-right));
+  }
+  .msheet .sbody {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom)); padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
+  }
+  /* iOS drew the header's blur over a sheet in the top layer: it hides while one is open. */
+  html.dialog-open body > header { visibility: hidden; }
 }
 .group-foot { margin: 6px 4px 0; font: -apple-system-footnote; color: var(--secondary); }
 .group-title { margin: 16px 4px 6px; font: -apple-system-footnote; font-weight: 600; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.03em; }

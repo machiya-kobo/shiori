@@ -128,7 +128,7 @@ test('the app offers the ten as Theme, System / Light / Dark as Appearance, and 
   assert.match(app, /choice\('theme', 'Mode', \[\['system', 'System'\], \['day', 'Light'\], \['night', 'Dark'\]\]\)/);
   assert.match(app, /document\.documentElement\.dataset\.palette = palette/);
   // The palette follows the person through the account (S.accountValues).
-  assert.match(app, /S\.accountValues\(settings, \{ steps: 'rooms' \}\)/);
+  assert.match(app, /S\.accountValues\(keptSettings\(\), \{ steps: 'rooms' \}\)/);
   assert.match(read('../web/app/index.html'), /<link rel="stylesheet" href="\/_shiori\/palettes\.css" \/>/);
   assert.match(read('../web/app/sw.js'), /'\/_shiori\/palettes\.css'/);
   assert.match(read('../scripts/build-pwa.sh'), /web\/app\/palettes\.css/);
