@@ -496,6 +496,7 @@ private struct DateRangeSheet: View {
     let initial: ClosedRange<Date>?
     let apply: (ClosedRange<Date>) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.palette) private var palette
     @State private var from: Date
     @State private var to: Date
 
@@ -510,9 +511,15 @@ private struct DateRangeSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                DatePicker("From", selection: $from, in: ...to, displayedComponents: .date)
-                DatePicker("To", selection: $to, in: from..., displayedComponents: .date)
+                Section {
+                    DatePicker("From", selection: $from, in: ...to, displayedComponents: .date)
+                    DatePicker("To", selection: $to, in: from..., displayedComponents: .date)
+                }
+                .listRowBackground(palette.surface)
             }
+            .formStyle(.grouped)
+            // Sheets are content: the theme, as the Filter sheet under it has.
+            .themedBackground()
             .navigationTitle("Date Range")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

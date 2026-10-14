@@ -59,6 +59,9 @@ struct CodeResults: View {
                 }
                 .fadesOverflow()
                 .padding(.vertical, 2)
+                // The theme behind it before iOS 26 and macOS 26, as every
+                // bar has (it was see-through between the pills and Sort).
+                .topBarBackground()
             }
     }
 }
