@@ -165,8 +165,10 @@ From a fresh clone (`git clone --recurse-submodules`; or `git submodule update -
   web app's `w=1`); respellings come from the autocompleter, never a `/search`.
 - **A click on a result** opens the original or Shiori's preview as Settings →
   Click Opens says (per device, never sent to the account); the title always
-  opens the original; chips and links inside a result keep their own. Every
-  delete is Undo, not a confirmation: it goes to Hister only after the toast.
+  opens the original; chips and links inside a result keep their own. A page
+  previewed beside the list counts as opened (Remember What You Open) only
+  after 2 seconds there; an open on purpose counts at once. Every delete is
+  Undo, not a confirmation: it goes to Hister only after the toast.
 - **Releases**: bump `MARKETING_VERSION` (project.yml) and `VERSION`
   (linux/gjs/save.js) together and add a `## X.Y.Z (date)` section to
   CHANGELOG.md (minor for features, patch for fixes; a test holds all three),

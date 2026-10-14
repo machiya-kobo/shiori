@@ -66,6 +66,13 @@ Loaded when you work in `Shiori/`. The project-wide rules, layout and build/test
   toolbar items, which lost the keyboard mid-typing. Its delegate never gets
   `doCommandBy`, so a key monitor catches Return/Tab/→. Don't put anything
   under it in a popover.
+- **Three columns only from 1,000 points wide** (`LibraryView.threeColumns`):
+  narrower (a narrow iPad, Split View, a small Mac window) it's two, and a
+  page opens over the results; the open page follows a layout switch.
+- **The foreground refresh** (sign-in check, rules and files, the account's
+  settings, Label New Pages) runs at launch and after a minute or more away
+  (`ShioriApp.cameBack`); waiting pages go out on every return. ⌘R reloads
+  a list through `pullToRefresh` (the Mac has no pull).
 - Mac column widths: macOS restores its own divider over the ideal width and
   without the column's minimum, hence the extra `minWidth` frames. On a
   collection or label the window's field searches within it

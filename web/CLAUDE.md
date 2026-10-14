@@ -32,5 +32,9 @@ Loaded when you work in `web/` (and for the search page in `patches/shiori/`). T
 - **Every href goes through `S.linkHref`** and a stored address opened from
   script through `S.safeHref` (`SafeHref` in the apps): never `javascript:`,
   `data:` or `file:`.
+- **Settings is the house's sheet** (vaultkit v0.32) on both pages: ✕ Cancel,
+  the title, ✓ Save. Changes preview; only Save keeps them (localStorage,
+  cookies, the account, Safari's set-settings), and any other close puts them
+  back. Account contact reads the kept settings, never the preview.
 - The shared settings (theme, text size, hidden rooms) are `machiya_*` cookies
   on the network's domain (`S.houseSettings`).
