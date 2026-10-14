@@ -61,8 +61,21 @@ struct ShioriApp: App {
             CommandGroup(after: .textEditing) {
                 Button("Find") { app.searchFocusRequests += 1 }
                     .keyboardShortcut("f")
+                // ⌘K, as the web pages and many apps: the search field.
+                Button("Search") { app.searchFocusRequests += 1 }
+                    .keyboardShortcut("k")
             }
             SearchCommands(app: app)
+        }
+        #else
+        // A hardware keyboard on the iPad (and iPhone): ⌘F and ⌘K to the search field.
+        .commands {
+            CommandGroup(after: .textEditing) {
+                Button("Find") { app.searchFocusRequests += 1 }
+                    .keyboardShortcut("f")
+                Button("Search") { app.searchFocusRequests += 1 }
+                    .keyboardShortcut("k")
+            }
         }
         #endif
         #if os(macOS)

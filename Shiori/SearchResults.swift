@@ -250,7 +250,7 @@ struct KeyboardHelp: View {
         ("Return  o", "Open (a note in Obsidian)"),
         ("p", "Preview"),
         ("g g  G", "Top, bottom"),
-        ("/", "Search"),
+        ("/  ⌘K", "Search"),
         ("Esc", "Clear the selection"),
         ("y", "Copy the link"),
         ("e", "Edit the label"),

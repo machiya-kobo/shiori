@@ -2817,9 +2817,10 @@
    * vi-style keys for a results list (the search page, the web app; the
    * apps have the same set). Maps a key event ({key, shiftKey, metaKey,
    * ctrlKey, altKey, inField, now}) and a small state ({pendingKey, at})
-   * to an action and the next state. In a field only Escape counts; with
-   * Meta, Ctrl or Alt held nothing does (those are the browser's). `gg`
-   * and `dd` are the same key twice within 600 ms.
+   * to an action and the next state. ⌘K (Ctrl+K off a Mac) goes to the
+   * search field from anywhere, a field included. Otherwise in a field only
+   * Escape counts, and with Meta, Ctrl or Alt held nothing does (those are
+   * the browser's). `gg` and `dd` are the same key twice within 600 ms.
    */
   const VIM_PAIR_MS = 600;
   const VIM_PAIRS = { g: 'top', d: 'delete' };
@@ -2831,6 +2832,7 @@
     const e = event || {};
     const now = e.now == null ? Date.now() : e.now;
     const cleared = { pendingKey: null, at: null };
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && String(e.key).toLowerCase() === 'k') return { action: 'focusSearch', state: cleared };
     if (e.metaKey || e.ctrlKey || e.altKey) return { action: null, state: cleared };
     if (e.inField) return { action: e.key === 'Escape' ? 'escape' : null, state: cleared };
     if (Object.prototype.hasOwnProperty.call(VIM_PAIRS, e.key)) {

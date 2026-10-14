@@ -976,7 +976,7 @@
     }
     const KEYS = [
       ['j / k', 'Next / previous result'], ['h / l', 'Previous / next tab'], ['Enter, o', 'Open the result'],
-      ['p', 'Preview it'], ['gg / G', 'First / last result'], ['/', 'Search'], ['Esc', 'Leave the field, close the preview'],
+      ['p', 'Preview it'], ['gg / G', 'First / last result'], ['/, ⌘K', 'Search'], ['Esc', 'Leave the field, close the preview'],
       ['y', 'Copy the link'], ['?', 'These keys'],
     ];
     function toggleHelp() {

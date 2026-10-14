@@ -484,6 +484,8 @@ struct SearchScreen: View {
         .onChange(of: searchFocused) { _, focused in
             if focused { app.reloadRecentSearches() }
         }
+        // ⌘K or ⌘F from a keyboard.
+        .onChange(of: app.searchFocusRequests) { _, _ in searchFocused = true }
         .onChange(of: session.scope) { _, scope in
             // A tap on the Web pill asks the web: that's on purpose.
             if scope == .web { session.webAllowed = session.text.trimmingCharacters(in: .whitespaces) }

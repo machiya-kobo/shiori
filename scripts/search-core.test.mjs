@@ -410,6 +410,18 @@ test('vi keys: j/k, h/l, open, preview, copy, help, search, label', () => {
   assert.equal(k('x'), null);
 });
 
+test('⌘K (Ctrl+K) goes to the search field from anywhere, a field included; other chords stay the browser\'s', () => {
+  const k = (key, extra = {}) => S.vimKey({}, { key, now: 1000, ...extra }).action;
+  assert.equal(k('k', { metaKey: true }), 'focusSearch');
+  assert.equal(k('k', { ctrlKey: true }), 'focusSearch');
+  assert.equal(k('K', { metaKey: true }), 'focusSearch');
+  assert.equal(k('k', { metaKey: true, inField: true }), 'focusSearch');
+  assert.equal(k('k', { metaKey: true, shiftKey: true }), null);
+  assert.equal(k('k', { metaKey: true, altKey: true }), null);
+  assert.equal(k('f', { metaKey: true }), null);
+  assert.equal(k('j', { ctrlKey: true }), null);
+});
+
 test('vi keys: gg and dd within 600 ms; slower, or another key between, is not', () => {
   for (const [key, action] of [['g', 'top'], ['d', 'delete']]) {
     let r = S.vimKey({}, { key, now: 1000 });

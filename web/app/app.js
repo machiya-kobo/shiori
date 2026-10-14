@@ -3175,7 +3175,7 @@ const keyboard = (() => {
   }
   const KEYS = [
     ['j / k', 'Next / previous result'], ['h / l', 'Previous / next pill'], ['Enter, o', 'Open the result'],
-    ['p', 'Preview it'], ['gg / G', 'First / last result'], ['/', 'Search'], ['Esc', 'Leave the field, close the preview'],
+    ['p', 'Preview it'], ['gg / G', 'First / last result'], ['/, ⌘K', 'Search'], ['Esc', 'Leave the field, close the preview'],
     ['y', 'Copy the link'], ['e', 'Edit the label'], ['dd', 'Delete (with Undo)'], ['?', 'These keys'],
   ];
   function toggleHelp() {
@@ -3224,7 +3224,8 @@ const keyboard = (() => {
         break;
       case 'delete': if (!doc || S.isLocalFile(doc.url) || S.isCodeDoc(doc)) return; mark(null); deleteWithUndo(doc); break;
       case 'focusSearch':
-        if ($('search-top').hidden) return;
+        // From a view without the field (Settings, Labels), back to the Library's.
+        if ($('search-top').hidden) go('library');
         caretToEnd(searchInput);
         break;
       case 'help': toggleHelp(); break;

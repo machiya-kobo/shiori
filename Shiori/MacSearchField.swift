@@ -8,7 +8,7 @@ import SwiftUI
 /// `DefaultToolbarItem(kind: .search)` at `.navigation` or
 /// `.primaryAction` were all tried, and measured), so this is our own: a
 /// real `NSSearchField` (the app's select-on-click already covers it, and
-/// ⌘F and / focus it through `searchFocusRequests`). No suggestions under
+/// ⌘F, ⌘K and / focus it through `searchFocusRequests`). No suggestions under
 /// it: recent searches are in the sidebar.
 /// Instead, type-ahead: the rest of a recent search, or of the web's
 /// autocomplete, grey after the caret; Tab or → takes it, and so does a
