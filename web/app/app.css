@@ -589,7 +589,10 @@ body.phone-preview #tabs { display: none; }
    above the tab, at the bar's right; the open tab sits on the raised pill. */
 #tabs .rooms-tab { flex: 1 1 0; min-width: 0; position: relative; display: flex; }
 #tabs .rooms-tab > .rooms-open { flex: 1 1 0; width: auto; height: auto; }
-#tabs .rooms-tab > .rooms-open[aria-expanded="true"] { background: var(--raised); color: var(--text); }
+/* One tab lit at a time: while a tab's sheet is open (Rooms, Add Page), that
+   tab is lit and the page's own tab isn't (vaultkit v0.31.5). */
+#tabs .rooms-tab > .rooms-open[aria-expanded="true"], #tabs .add-tab[aria-expanded="true"] { background: var(--raised); color: var(--accent); }
+#tabs:has(.rooms-open[aria-expanded="true"], .add-tab[aria-expanded="true"]) button[aria-current="page"] { background: transparent; color: var(--text); }
 #tabs .rooms-tab .rooms-menu { top: auto; bottom: calc(100% + 14px); right: 0; }
 dialog {
   width: min(460px, calc(100vw - 24px)); max-height: 80vh; padding: 0; border: 1px solid var(--line2); border-radius: 16px;

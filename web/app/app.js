@@ -2479,7 +2479,13 @@ function addPage(prefill = {}) {
     $('dialog').close();
     toast(reply.message);
   });
-  dialog('Add Page', form);
+  const d = dialog('Add Page', form);
+  // The Add Page tab is the lit one while its sheet is open.
+  const tab = document.querySelector('#tabs .add-tab');
+  if (tab) {
+    tab.setAttribute('aria-expanded', 'true');
+    d.addEventListener('close', () => tab.setAttribute('aria-expanded', 'false'), { once: true });
+  }
   (prefill.url ? save : address).focus();
 }
 
@@ -3084,7 +3090,7 @@ function tabs(view) {
   // small-web gateway) · Settings, then the Machiya rooms, a sheet.
   // Settings is a tab, not a gear in a title row: the tabs' own views have
   // none.
-  const add = SMALLWEB ? h('button', { type: 'button', class: 'add-tab', onclick: () => addPage() }, icon('plus'), h('span', {}, 'Add Page')) : null;
+  const add = SMALLWEB ? h('button', { type: 'button', class: 'add-tab', 'aria-expanded': 'false', onclick: () => addPage() }, icon('plus'), h('span', {}, 'Add Page')) : null;
   // The rooms' tab-bar menu: it opens above the tab, as theirs does.
   const rooms = S.roomsSwitcher(ROOMS, 'shiori', { tab: true, settings: ROOMS_SETTINGS });
   fill($('tabs'), tab('library', 'Library', 'library', 'library'), tab('labels', 'Labels', 'tag', 'labels'), add,
