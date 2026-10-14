@@ -43,7 +43,7 @@ struct RootView: View {
             .focusedSceneValue(\.searchSession, session)
             .overlay(alignment: .bottom) {
                 if let pending = app.deletes.pending {
-                    UndoToast(title: pending.document.displayTitle) { app.deletes.undo() }
+                    UndoToast(title: pending.document.displayTitle, overTabBar: usesTabs) { app.deletes.undo() }
                         .id(pending.id)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -119,6 +119,15 @@ struct RootView: View {
             .filter { $0.activationState == .foregroundActive }
             .flatMap(\.windows)
             .contains { $0.rootViewController?.presentedViewController != nil }
+        #endif
+    }
+
+    /// The iPhone's (and a narrow iPad's) tab bar is at the bottom.
+    private var usesTabs: Bool {
+        #if os(macOS)
+        false
+        #else
+        !(UIDevice.current.userInterfaceIdiom == .pad && sizeClass == .regular)
         #endif
     }
 
@@ -678,8 +687,14 @@ struct SearchTips: View {
 /// Hister (`AppState.deletes`).
 struct UndoToast: View {
     let title: String
+    /// Clear of the tab bar (the iPhone's, a narrow iPad's); else just off
+    /// the bottom edge (the three columns, the Mac).
+    var overTabBar = false
     let undo: () -> Void
     @Environment(\.palette) private var palette
+    /// The tab bar's height with room above it, growing with the text size
+    /// as the bar's labels do.
+    @ScaledMetric(relativeTo: .caption) private var tabBarClearance: CGFloat = 76
 
     var body: some View {
         HStack(spacing: 14) {
@@ -700,12 +715,7 @@ struct UndoToast: View {
         .overlay(Capsule().strokeBorder(palette.secondaryText.opacity(0.25)))
         .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
         .padding(.horizontal, 20)
-        #if os(iOS)
-        // Clear of the iPhone's tab bar.
-        .padding(.bottom, 90)
-        #else
-        .padding(.bottom, 20)
-        #endif
+        .padding(.bottom, overTabBar ? tabBarClearance : 20)
         .accessibilityElement(children: .combine)
         .accessibilityAction(named: "Undo", undo)
         // Nothing moves VoiceOver's focus here, so say it: the delete is
