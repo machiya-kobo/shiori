@@ -316,7 +316,7 @@ struct AISettingsPage: View {
             Label {
                 Text(message)
             } icon: {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(palette.tint(.green))
             }
         case .failed(let message):
             Label {
@@ -328,7 +328,7 @@ struct AISettingsPage: View {
             Label {
                 Text(message)
             } icon: {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(palette.tint(.orange))
             }
             ForEach(nearest, id: \.self) { model in
                 Button("Use \(model)") { use(model) }

@@ -67,7 +67,7 @@ struct SuggestedLabelsView: View {
                 } header: {
                     Text("Labelled Automatically")
                 } footer: {
-                    Text("Orange: Apple Intelligence disagreed, worth a look. Green: both agreed. Undo takes a label off, and Shiori learns from it.")
+                    Text("A warning sign: Apple Intelligence disagreed, worth a look. A check: both agreed. Undo takes a label off, and Shiori learns from it.")
                 }
                 .listRowBackground(palette.surface)
             }
@@ -272,9 +272,11 @@ struct SuggestedLabelsView: View {
 
     private func reviewColour(_ review: AppliedLabel.Review) -> Color {
         switch review {
-        case .disagreed: .orange
+        // The theme's (4.5:1 on its surfaces), not the system's: system
+        // orange and green read at about 2:1 on a light surface.
+        case .disagreed: palette.tint(.orange)
         case .unchecked: palette.secondaryText
-        case .agreed: .green
+        case .agreed: palette.tint(.green)
         }
     }
 

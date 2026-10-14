@@ -152,11 +152,11 @@ struct DiffView: View {
     }
 
     private func color(for line: Substring) -> Color {
-        line.hasPrefix("+") ? .green : line.hasPrefix("-") ? palette.danger : palette.text
+        line.hasPrefix("+") ? palette.tint(.green) : line.hasPrefix("-") ? palette.danger : palette.text
     }
 
     private func background(for line: Substring) -> Color {
-        line.hasPrefix("+") ? Color.green.opacity(0.12) : line.hasPrefix("-") ? palette.danger.opacity(0.12) : .clear
+        line.hasPrefix("+") ? palette.tint(.green).opacity(0.12) : line.hasPrefix("-") ? palette.danger.opacity(0.12) : .clear
     }
 
     private func accessibility(for line: Substring) -> String {

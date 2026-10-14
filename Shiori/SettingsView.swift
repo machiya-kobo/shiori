@@ -434,7 +434,7 @@ struct SettingsView: View {
             Label {
                 Text("Connected: \(total.formatted()) pages")
             } icon: {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(palette.tint(.green))
             }
         case .failed(let message):
             Label {
@@ -546,7 +546,7 @@ private struct MacExtensionStatus: View {
             Label {
                 Text("Turned on")
             } icon: {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(palette.tint(.green))
             }
         case false?:
             Label("Turned off", systemImage: "circle")
