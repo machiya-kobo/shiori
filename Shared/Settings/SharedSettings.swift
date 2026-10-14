@@ -128,7 +128,9 @@ nonisolated enum SharedSettings {
         Key.labelSuggestions, Key.aiAnswer, Key.showOpened, Key.smallWebTab,
     ]
     static let countKeys = [Key.histerCount, Key.vaultCount]
-    static let urlKeys = [Key.searxngURL, Key.niwaURL, Key.konbiniURL, Key.newsBlurURL, Key.smallwebURL]
+    /// Never Kura's or Konbini's: the Machiya token goes to them, so only
+    /// the app's own Settings sets them.
+    static let urlKeys = [Key.searxngURL, Key.newsBlurURL, Key.smallwebURL]
     static let resultStyles = ["tint", "solid", "bar", "none"]
     static let smallWebOpens = ["gateway", "direct"]
     static let pillRows = ["auto", "scroll"]

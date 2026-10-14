@@ -31,7 +31,8 @@ struct SharedSettingsTests {
                 "histerCount": 7,  // not one of the page counts
                 "vaultCount": 10,
                 "searxngURL": "ftp://x/",  // http(s) only
-                "niwaURL": "https://niwa.example/",
+                "niwaURL": "https://kura.example/",  // the app's to set: the token goes there
+                "konbiniURL": "https://konbini.example/",
                 "theme": "purple",
                 "textSize": "large",
                 "obsidianVault": "",  // never empty
@@ -43,7 +44,8 @@ struct SharedSettingsTests {
         #expect(defaults.object(forKey: "histerCount") == nil)
         #expect(defaults.object(forKey: "vaultCount") as? Int == 10)
         #expect(defaults.object(forKey: "searxngURL") == nil)
-        #expect(defaults.string(forKey: "niwaURL") == "https://niwa.example/")
+        #expect(defaults.object(forKey: "niwaURL") == nil)
+        #expect(defaults.object(forKey: "konbiniURL") == nil)
         #expect(defaults.object(forKey: "theme") == nil)
         #expect(defaults.string(forKey: "textSize") == "large")
         #expect(defaults.object(forKey: "obsidianVault") == nil)

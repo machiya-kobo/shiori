@@ -14,6 +14,10 @@ struct SettingsView: View {
     @State private var draft = ""
     @State private var check: ConnectionCheck = .idle
     @State private var searxngDraft = ""
+    // Kura's and Konbini's addresses are kept here until Return or leaving
+    // the page: the Machiya token goes to them, never to a half-typed host.
+    @State private var kuraDraft = ""
+    @State private var konbiniDraft = ""
 
     enum ConnectionCheck: Equatable {
         case idle, checking
@@ -111,6 +115,8 @@ struct SettingsView: View {
     private func loadDrafts() {
         draft = app.serverURL
         searxngDraft = app.searxngURL
+        kuraDraft = app.searchPage.niwaURL
+        konbiniDraft = app.searchPage.konbiniURL
     }
 
     /// The house's text sizes, as Appearance's Text Size offers them.
@@ -129,6 +135,14 @@ struct SettingsView: View {
     private func saveDrafts() {
         save()
         saveSearxng()
+        saveRooms()
+    }
+
+    private func saveRooms() {
+        let kura = kuraDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let konbini = konbiniDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if kura != app.searchPage.niwaURL { app.searchPage.niwaURL = kura }
+        if konbini != app.searchPage.konbiniURL { app.searchPage.konbiniURL = konbini }
     }
 
     @ViewBuilder private func page(_ page: Page) -> some View {
@@ -240,8 +254,8 @@ struct SettingsView: View {
                     Text("Kura").tag(NotesSource.kura.rawValue)
                     Text("Hister").tag(NotesSource.hister.rawValue)
                 }
-                SettingsField(label: "Kura", text: $app.searchPage.niwaURL, prompt: "https://kura.example/")
-                SettingsField(label: "Konbini", text: $app.searchPage.konbiniURL, prompt: "https://konbini.example/")
+                SettingsField(label: "Kura", text: $kuraDraft, prompt: "https://kura.example/", submit: saveRooms)
+                SettingsField(label: "Konbini", text: $konbiniDraft, prompt: "https://konbini.example/", submit: saveRooms)
                 SettingsField(label: "Obsidian Vault", text: $app.searchPage.obsidianVault, prompt: "Your vault's name", address: false)
             } header: {
                 Text("Notes")
