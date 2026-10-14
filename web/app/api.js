@@ -307,6 +307,16 @@ export async function kuraNote(path, vault) {
   return (reply && reply.html) || '';
 }
 
+/**
+ * One media service's reply (docs/media.md) for search-core's mediaSearch and mediaBrowse: a GET through this host's
+ * /<service>/, which adds the token (the browser holds none). Never cached.
+ */
+export function media(service, url) {
+  const path = String(url || '');
+  if (!/^(jellyfin|plex|koito|movary)$/.test(service) || !path.startsWith(`/${service}/`)) return Promise.reject(new HisterError('Not a media address.'));
+  return request(path.slice(1), { timeout: 15000 });
+}
+
 /** Gemini and Gopher results through the small-web gateway (/smallweb/, same-origin). Searched only on submit. */
 export async function smallweb(q, page = 1) {
   const url = globalThis.ShioriSearch.smallwebSearchURL(ROOT + 'smallweb/', q, page);

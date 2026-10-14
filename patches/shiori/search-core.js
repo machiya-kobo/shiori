@@ -3074,7 +3074,7 @@
 
   const PILLS = [
     ['all', 'All'], ['pages', 'Pages'], ['notes', 'Notes'], ['web', 'Web'], ['images', 'Images'],
-    ['videos', 'Videos'], ['news', 'News'], ['smallweb', 'Small Web'], ['files', 'Files'], ['code', 'Code'], ['opened', 'Opened'],
+    ['videos', 'Videos'], ['news', 'News'], ['smallweb', 'Small Web'], ['files', 'Files'], ['code', 'Code'], ['media', 'Media'], ['opened', 'Opened'],
   ];
   const PILL_KEYS = PILLS.map(([key]) => key);
 

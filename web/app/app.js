@@ -215,6 +215,7 @@ const SMALLWEB = fromBuild('__SHIORI_SMALLWEB_URL__') !== '';
  * /<name>/ here, which adds its token, the address after "=" only for links. None: no Media pill.
  */
 const MEDIA_STAMP = fromBuild('__SHIORI_MEDIA__');
+const MEDIA = S.mediaServicesFromBuild(MEDIA_STAMP, '/');
 /** The build's privacy front ends (SHIORI_FRONTENDS: Redlib, Invidious…), for a page's menu. */
 const FRONTENDS = S.frontendInstances(fromBuild('__SHIORI_FRONTENDS__'));
 // A host with no feed service (the shiori-web image without SHIORI_FEED_URL) says so; unstamped builds keep the feeds.
@@ -1269,7 +1270,8 @@ const ROOMS = S.rooms(ROOMS_STAMP, location.origin).filter((r) => r.key === 'shi
 // the rooms', which say so themselves) goes to the helper's sign-in and
 // back here, at most once in 30 s; a 500 there says sign-in is unavailable.
 // Inert while Hister has no users: nothing answers 401 or 403.
-const ROOM_PATHS = /^(kura|konbini|searx|smallweb)\//;
+// The media services' own refusals (a token they no longer take) say so in the list, never a trip to the sign-in.
+const ROOM_PATHS = /^(kura|konbini|searx|smallweb|jellyfin|plex|koito|movary)\//;
 let unavailableSaid = false;
 api.setRefusedHandler((status, path) => {
   if (ROOM_PATHS.test(path)) return;
@@ -1387,7 +1389,7 @@ function viewLibrary(params) {
   searchInput.placeholder = PROMPTS[filter];
   fill($('list-top'), 
     segments(scopes(), filter, (s) => go('library', { s }, { replace: true })),
-    filter === 'opened' || filter === 'web' ? null : controls('library', params, { notes: filter === 'notes' }),
+    filter === 'opened' || filter === 'web' || filter === 'media' ? null : controls('library', params, { notes: filter === 'notes' }),
   );
   const list = freshList();
   if (filter === 'opened') {
@@ -1401,6 +1403,10 @@ function viewLibrary(params) {
     return list.replaceChildren(status('Search the Small Web', 'Type in the search field and press Return to search Gemini and Gopher.'));
   }
   if (filter === 'code') return codeList(list, '', { sort: 'date' });
+  if (filter === 'media') {
+    shownList = { title: 'Media' };
+    return mediaShelves(list, params);
+  }
   if (filter === 'files') {
     // The folders Hister watches, newest first; never mixed into the rest.
     shownList = { title: 'Files' };
@@ -1544,9 +1550,9 @@ function viewList(params) {
 // rooms' colours).
 // Files: the folders Hister watches, green (a hue no room wears).
 // Code: your repos (code-import's), red, the one hue left.
-const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['opened', 'Opened', 'purple']];
+const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['media', 'Media', 'purple'], ['opened', 'Opened', 'purple']];
 /** The pills: Opened only while Show Opened is on (off by default); Files only while Hister has some. */
-const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'notes' || S.notesTabShown(!!settings.niwaURL, settings.notesSource)) && (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || (SMALLWEB && settings.smallWebTab !== false)) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs));
+const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'notes' || S.notesTabShown(!!settings.niwaURL, settings.notesSource)) && (v !== 'opened' || settings.showOpened === true) && (v !== 'smallweb' || (SMALLWEB && settings.smallWebTab !== false)) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs) && (v !== 'media' || S.mediaConfigured(MEDIA)));
 /** The pill's key in the shared vocabulary (S.PILLS). */
 const pillKey = (scope) => (scope === 'hister' ? 'pages' : scope);
 /** The pills in the order set in Settings → Pills, less the ones switched off (S.orderPills). */
@@ -1567,7 +1573,7 @@ async function loadLocalFiles() {
 // One row over every list, browsing or searching, as in the apps (it had
 // been two: the Library's and a search's). `s` in the address is the
 // choice for both, so typing searches whichever is picked.
-const PROMPTS = { all: 'Search All', hister: 'Search Your Pages', notes: 'Search Notes', web: 'Search the Web', smallweb: 'Search Gemini and Gopher', files: 'Search Your Files', code: 'Search Your Code', opened: 'Search What You Opened' };
+const PROMPTS = { all: 'Search All', hister: 'Search Your Pages', notes: 'Search Notes', web: 'Search the Web', smallweb: 'Search Gemini and Gopher', files: 'Search Your Files', code: 'Search Your Code', media: 'Search Your Media', opened: 'Search What You Opened' };
 function scopeOf(params) {
   const s = params.get('s') || { pages: 'hister' }[params.get('f')] || params.get('f') || 'all';
   return scopes().some(([v]) => v === s) ? s : 'all';
@@ -1594,7 +1600,8 @@ function viewSearch(params) {
   const listed = scope === 'hister' || scope === 'notes';
   const list = freshList();
   fill($('list-top'), 
-    segments(scopes(), scope, (s) => go('search', keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), { replace: true })),
+    // A tap on Media searches it on purpose too (m=1), without making the web's search one (w stays as it was).
+    segments(scopes(), scope, (s) => go('search', { ...keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), ...(s === 'media' ? { m: '1' } : {}) }, { replace: true })),
     listed ? controls('search', params, { search: true, notes: scope === 'notes' }) : null,
   );
   if (segmentTotals.query === q) for (const [value, n] of Object.entries(segmentTotals.counts)) setSegmentCount(value, n);
@@ -1620,6 +1627,12 @@ function viewSearch(params) {
     else list.replaceChildren(status('Search the Web', 'Press Return to search the web for this.'));
   } else if (scope === 'smallweb') smallwebList(list, q);
   else if (scope === 'code') codeList(list, q);
+  else if (scope === 'media') {
+    // Searched on purpose only (Return, the pill): one search asks every media service, and Koito once per match.
+    shownList = { title: q };
+    if (web || params.get('m') === '1') mediaList(list, q);
+    else list.replaceChildren(status('Search Your Media', 'Press Return to search your music, films and shows.'));
+  }
   else if (scope === 'files') {
     shownList = { title: q };
     resultsList(list, { query: S.filesQuery(q), sort: '', group: '', source: 'pages', empty: `No files match “${q}”.` });
@@ -1650,6 +1663,8 @@ const ALL_COUNT = 30;
 
 async function searchAll(container, q, { web = true } = {}) {
   container.replaceChildren(h('div', { class: 'spinner' }));
+  // Your Media: asked beside your pages and notes, on a search run on purpose only.
+  const media = web && S.mediaConfigured(MEDIA) ? S.mediaSearch(MEDIA, q, api.media).catch(() => null) : null;
   // Pages from Hister (which sends no notes), notes from Kura or Hister (Notes From).
   const both = (text) => Promise.all([
     api.search(text, { limit: ALL_COUNT }).catch(() => null),
@@ -1682,6 +1697,7 @@ async function searchAll(container, q, { web = true } = {}) {
   container.replaceChildren();
   const answer = answerCard(q);
   if (answer) container.append(answer);
+  if (media) container.append(yourMedia(media, q));
   // Your pages and notes have no sections here, as on the search page:
   // a page of each goes among the web results, pages and notes taking
   // turns, spread evenly (S.alternate, S.mixCounts), each row saying whose
@@ -1778,6 +1794,149 @@ async function smallwebList(container, q) {
     load();
   });
   load();
+}
+
+// --- Media (docs/media.md) ------------------------------------------------------------------------------------------
+// Your Jellyfin and Plex libraries and what you played (Koito, Movary), one card per item, through this host's
+// /jellyfin/, /plex/, /koito/ and /movary/ (each adds its token there). Private: nothing of it goes to Hister, a model,
+// Remember What You Open, an export or a feed. A card opens in its service in a new tab.
+
+const MEDIA_KINDS = [['', 'All Kinds'], ['films', 'Films'], ['tv', 'TV'], ['music', 'Music'], ['other', 'Other']];
+const MEDIA_RATED = [['', 'Rating'], ['loved', '4★+'], ['liked', '3★+'], ['any', 'Any Rating'], ['unrated', 'Unrated']];
+const MEDIA_PERIODS = [['week', 'Week'], ['month', 'Month'], ['year', 'Year'], ['all_time', 'All Time']];
+let mediaFilters = {};
+const mediaOffset = () => -new Date().getTimezoneOffset();
+const MEDIA_ICONS = { film: 'film', show: 'film', episode: 'film', collection: 'stack', playlist: 'music', other: 'film' };
+
+/** One card: art (with Images in Previews on), the title opening it in its service, what it is, when you played it,
+ *  your stars and the others' ratings, then its other places as chips. */
+function mediaRow(item) {
+  const { href, places } = S.mediaPlaces(item);
+  const link = S.linkHref(href, location.href);
+  const poster = ['film', 'show', 'episode', 'collection', 'other'].includes(item.kind);
+  const fallback = () => h('span', { class: 'icon' }, icon(MEDIA_ICONS[item.kind] || 'music'));
+  let art = fallback();
+  if (settings.previewImages !== false && item.image) {
+    art = h('img', { class: `media-art${poster ? ' poster' : ''}`, src: item.image, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' });
+    art.addEventListener('error', () => art.replaceWith(fallback()));
+  }
+  const played = S.mediaPlayedLine(item, mediaOffset());
+  const stars = S.mediaStars(item.rating);
+  const outside = S.mediaOutsideLine(item);
+  const chips = places.filter((p) => p.url !== href).map((p) => {
+    const to = S.linkHref(p.url, location.href);
+    return to ? h('a', { class: 'chip-link', href: to, target: '_blank', rel: 'noopener noreferrer', title: `Open in ${p.name}` }, p.name) : null;
+  }).filter(Boolean);
+  const row = h(
+    'li',
+    { class: `row doc-row media-row${item.elsewhere ? ' elsewhere' : ''}`, ...(link ? { role: 'link', tabindex: '0' } : {}) },
+    art,
+    h(
+      'div',
+      {},
+      link ? h('a', { class: 'title', href: link, target: '_blank', rel: 'noopener noreferrer' }, item.title) : h('div', { class: 'title' }, item.title),
+      h('div', { class: 'meta' }, S.mediaSubtitle(item)),
+      played || stars || outside
+        ? h('div', { class: 'meta media-played' }, played,
+          stars ? [played ? ' · ' : '', h('span', { class: 'media-stars', 'aria-label': `Your rating: ${item.rating / 2} of 5` }, stars)] : null,
+          outside ? [played || stars ? ' · ' : '', h('span', { class: 'media-outside' }, outside)] : null)
+        : null,
+      chips.length ? h('div', { class: 'meta media-places' }, chips) : null,
+    ),
+  );
+  if (link) {
+    const open = (e) => {
+      if (e.target.closest('a')) return;
+      openTab(link);
+    };
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', (e) => e.key === 'Enter' && open(e));
+  }
+  return row;
+}
+
+/** The Media pill's search: every service set up, one failing never failing it; Kind, Never Played and Rated. */
+async function mediaList(container, q) {
+  container.replaceChildren(h('div', { class: 'spinner' }));
+  let res;
+  try {
+    res = await S.mediaSearch(MEDIA, q, api.media);
+  } catch (error) {
+    return container.replaceChildren(status("Media Didn't Answer", error.message || '', () => mediaList(container, q)));
+  }
+  setSegmentCount('media', res.items.length, q);
+  const box = h('div', {});
+  const draw = () => {
+    const items = S.mediaFilter(res.items, mediaFilters);
+    if (!res.items.length) return box.replaceChildren(status('No Media Found', res.failures.join(' · ') || `Nothing in your media matches “${q}”.`));
+    if (!items.length) return box.replaceChildren(status('Nothing Matches These Filters', 'Clear a filter to see more.'));
+    box.replaceChildren(h('ul', { class: 'rows' }, items.map(mediaRow)));
+  };
+  const select = (key, choices, label) => {
+    const el = h('select', { 'aria-label': label }, choices.map(([value, name]) => h('option', { value, selected: (mediaFilters[key] || '') === value }, name)));
+    el.addEventListener('change', () => ((mediaFilters = { ...mediaFilters, [key]: el.value || undefined }), draw()));
+    return el;
+  };
+  const never = h('button', { type: 'button', 'aria-pressed': mediaFilters.played === 'never' ? 'true' : 'false' }, 'Never Played');
+  never.addEventListener('click', () => {
+    mediaFilters = { ...mediaFilters, played: mediaFilters.played === 'never' ? undefined : 'never' };
+    never.setAttribute('aria-pressed', mediaFilters.played === 'never' ? 'true' : 'false');
+    draw();
+  });
+  container.replaceChildren(
+    res.failures.length ? h('p', { class: 'engine-health' }, res.failures.join(' · ')) : '',
+    h('div', { class: 'code-filters media-filters', role: 'group', 'aria-label': 'Filters' }, select('kind', MEDIA_KINDS, 'Kind'), never, select('rated', MEDIA_RATED, 'Rating')),
+    box,
+  );
+  draw();
+}
+
+/** All's Your Media: the top five, the count leading to the Media pill. */
+function yourMedia(pending, q) {
+  const section = h('section', { class: 'list-section your-media' });
+  pending.then((res) => {
+    const { view, params } = route();
+    if (!res || view !== 'search' || params.get('q') !== q) return section.remove();
+    setSegmentCount('media', res.items.length, q);
+    if (!res.items.length) return section.remove();
+    const more = h('a', { href: '#', class: 'count', onclick: (e) => (e.preventDefault(), go('search', { q, s: 'media', w: '1' })) },
+      `${res.items.length} ${res.items.length === 1 ? 'result' : 'results'} ›`);
+    section.replaceChildren(h('div', { class: 'section-head tinted', 'data-tint': 'purple' }, 'Your Media', more), h('ul', { class: 'rows' }, res.items.slice(0, 5).map(mediaRow)));
+  });
+  return section;
+}
+
+/** The Media pill before a search: what's playing, what you played and watched, your top lists, your watchlist and
+ *  what's new in your libraries. */
+async function mediaShelves(container, params) {
+  container.replaceChildren(h('div', { class: 'spinner' }));
+  const period = MEDIA_PERIODS.some(([p]) => p === params.get('p')) ? params.get('p') : 'month';
+  const res = await S.mediaBrowse(MEDIA, api.media, { period });
+  const { view, params: now } = route();
+  if (view !== 'library' || scopeOf(now) !== 'media') return;
+  const shelf = (title, items, extra = null) => (items.length
+    ? h('section', { class: 'list-section' }, h('div', { class: 'section-head' }, title, extra), h('ul', { class: 'rows' }, items.map(mediaRow)))
+    : null);
+  const periods = h('select', { class: 'media-period', 'aria-label': 'Period' }, MEDIA_PERIODS.map(([p, name]) => h('option', { value: p, selected: p === period }, name)));
+  periods.addEventListener('change', () => go('library', { s: 'media', p: periods.value }, { replace: true }));
+  const s = res.sections;
+  const top = s.artists.length || s.albums.length || s.tracks.length;
+  // The period sits on the first of the top lists drawn.
+  const firstTop = s.artists.length ? 'artists' : s.albums.length ? 'albums' : 'tracks';
+  const shelves = [
+    shelf('Now Playing', s.nowPlaying),
+    shelf('Recently Played', s.listens),
+    shelf('Recently Watched', s.watched),
+    shelf('Top Artists', s.artists, firstTop === 'artists' ? periods : null),
+    shelf('Top Albums', s.albums, firstTop === 'albums' ? periods : null),
+    shelf('Top Tracks', s.tracks, firstTop === 'tracks' ? periods : null),
+    shelf('Watchlist', s.watchlist),
+    shelf('Recently Added', s.added),
+  ].filter(Boolean);
+  if (!shelves.length && !top) {
+    return container.replaceChildren(status('Nothing Here Yet', res.failures.join(' · ') || 'What you play and watch shows up here.', res.failures.length ? () => mediaShelves(container, params) : null));
+  }
+  fill(container, res.failures.length ? h('p', { class: 'engine-health' }, res.failures.join(' · ')) : null, shelves);
 }
 
 /**

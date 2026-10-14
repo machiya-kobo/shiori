@@ -146,6 +146,7 @@ button { font: inherit; color: inherit; }
 }
 .section-head.tinted[data-tint="orange"] { --tint: var(--notes); }
 .section-head.tinted[data-tint="yellow"] { --tint: var(--web); }
+.section-head.tinted[data-tint="purple"] { --tint: var(--tab-news); }
 .section-head.tinted .count { margin-left: auto; font-weight: 400; font-size: var(--fs-foot); }
 .section-head.tinted a.count { color: inherit; text-decoration: none; font-weight: 600; }
 .text-button { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; }
@@ -360,6 +361,21 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .doc-row.file-row { --tint: var(--kept); }
 .doc-row.code-row { --tint: var(--tab-videos); }
 .doc-row.smallweb-row { --tint: var(--smallweb); }
+/* Media (docs/media.md): the Media pill's colour; its art (album covers square, posters 2:3) in a wider first column. */
+.doc-row.media-row { --tint: var(--tab-news); grid-template-columns: 44px minmax(0, 1fr); }
+.media-row > .icon { justify-self: center; }
+.media-art { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: var(--raised); }
+.media-art.poster { width: 40px; height: 60px; justify-self: center; }
+.media-row .media-stars { color: var(--hit); letter-spacing: 1px; }
+.media-row .media-outside { color: var(--secondary); }
+.media-row .media-places { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.media-row .chip-link { color: var(--tab-news); text-decoration: none; font-weight: 600; }
+.media-row .chip-link:hover { text-decoration: underline; }
+.media-filters button[aria-pressed="true"] { border-color: var(--tab-news); color: var(--tab-news); }
+.section-head .media-period {
+  margin-left: 10px; font: inherit; font-size: var(--fs-foot); color: var(--text); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; cursor: pointer;
+}
 /* A code row: what it is, its repo, its state, a lock when private. */
 .code-glyph { display: inline-grid; place-items: center; color: var(--tab-videos); font-weight: 700; }
 .code-state { font-weight: 600; }

@@ -1159,7 +1159,7 @@ test('Code: its own pill, never anywhere else, filters as metadata terms (CodeDo
   assert.equal(S.codeNotePath('../x'), 'Repos/x.git.md'); // the last segment only
   // @code is no collection, as @notes isn't; the pill is in the order setting, after Files.
   assert.deepEqual(Object.keys(S.collectionAliases({ '@code': 'metadata.source:code', '@lanterns': 'label:(a|b)' })), ['@lanterns']);
-  assert.deepEqual(plain(S.PILL_KEYS.slice(-3)), ['files', 'code', 'opened']);
+  assert.deepEqual(plain(S.PILL_KEYS.slice(-4)), ['files', 'code', 'media', 'opened']);
 });
 
 test('code never folds by site (one forge holds every repo)', () => {
