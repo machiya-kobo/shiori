@@ -803,7 +803,7 @@ final class AppState {
     func setLabel(_ label: String, url: String) async throws(HisterError) {
         guard let client else { throw .unreachable }
         // Hister never has a private vault's note.
-        guard !(await isWorkNoteNow(url)), !isLocalFile(url) else { throw .notFound }
+        guard HisterGuard.mayLabel(url: url), !(await isWorkNoteNow(url)) else { throw .notFound }
         try await client.setLabel(label, for: url)
         // Bounded: the lists refetch long before this many edits matter.
         if labelEdits.count >= 2000 { labelEdits.removeAll() }
@@ -856,7 +856,7 @@ final class AppState {
     func recordOpened(url: String, title: String, query: String) {
         // Never a work note's address or title to Hister.
         // Never a file's: what you open there stays here.
-        guard searchPage.rememberOpened, let client, Self.remembers(query), !isWorkNote(url), !isLocalFile(url) else { return }
+        guard searchPage.rememberOpened, let client, HisterGuard.mayRecordOpened(url: url, query: query) else { return }
         Task {
             // Another vault's note: Kura asked afresh first.
             guard !(await self.isWorkNoteNow(url)) else { return }
@@ -874,10 +874,7 @@ final class AppState {
     }
 
     /// A real search, not a browse (the Library's `*`, a note list).
-    static func remembers(_ query: String) -> Bool {
-        let q = query.trimmingCharacters(in: .whitespaces)
-        return !q.isEmpty && q != "*"
-    }
+    static func remembers(_ query: String) -> Bool { HisterGuard.remembers(query) }
 
     // MARK: What the server can do
 

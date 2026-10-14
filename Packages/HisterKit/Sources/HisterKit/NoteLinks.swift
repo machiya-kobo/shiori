@@ -93,7 +93,8 @@ public enum SaveLinks {
     /// gopher, each once across all the notes (web links compared without
     /// fragment, "www.", tracking parameters or a trailing slash; small-web
     /// ones only with scheme and host lowercased and the default port
-    /// dropped), at most `cap`.
+    /// dropped), at most `cap`. Never a link to another vault's page in
+    /// Kura (`Notes.otherVault`): it would go to Hister.
     public static func links(in notes: [LinkedNote], cap: Int = cap) -> [LinkToSave] {
         var seen = Set<String>()
         var out: [LinkToSave] = []
@@ -101,6 +102,7 @@ public enum SaveLinks {
             for link in note.externalLinks {
                 guard out.count < cap, let u = URLComponents(string: link.url),
                     let scheme = u.scheme?.lowercased(), schemes.contains(scheme), u.host != nil,
+                    Notes.otherVault(of: link.url) == nil,
                     seen.insert(isSmallWeb(link.url) ? smallWebKey(link.url) : comparable(link.url)).inserted
                 else { continue }
                 out.append(LinkToSave(url: link.url, text: link.text, notePath: note.path, noteTitle: note.title))

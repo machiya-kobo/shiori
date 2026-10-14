@@ -26,7 +26,13 @@ nonisolated enum SummaryCache {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appending(path: "Summaries", directoryHint: .isDirectory)
     }
 
+    /// Checked again on reading: a note whose vault has since turned private
+    /// gets nothing back, and its copy goes.
     static func read(url: String, updated: Date) -> Summary? {
+        guard OfflineStore.keepable(url: url) else {
+            remove(url: url)
+            return nil
+        }
         guard let file = file(for: url), let data = try? Data(contentsOf: file),
               let entry = try? JSONDecoder().decode(Entry.self, from: data),
               entry.url == url, entry.updated == updated, entry.style == Summarizer.style

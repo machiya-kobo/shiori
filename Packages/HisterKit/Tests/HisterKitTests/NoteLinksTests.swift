@@ -32,6 +32,9 @@ struct NoteLinksTests {
         #expect(links.map(\.notePath) == ["A", "B"])
         let many = note("C", (0..<250).map { "https://example.net/\($0)" })
         #expect(SaveLinks.links(in: [many]).count == SaveLinks.cap)
+        // Another vault's page in Kura is never offered (it would go to Hister).
+        let work = note("W", ["https://kura.example/v/work/n/plan", "https://kura.example/v/work/f/x", "https://kura.example/n/shared"])
+        #expect(SaveLinks.links(in: [work]).map(\.url) == ["https://kura.example/n/shared"])
     }
 
     @Test func geminiAndGopherLinksAreOfferedComparedConservatively() {

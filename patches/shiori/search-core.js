@@ -3097,6 +3097,8 @@
           continue;
         }
         if (!SAVE_LINK_SCHEMES.includes(u.protocol)) continue;
+        // Never another vault's page in Kura: it would go to Hister.
+        if (noteVault(link.url) !== null) continue;
         const key = isSmallWebLink(link.url) ? smallWebKey(link.url) : normalizeURL(link.url);
         if (seen.has(key)) continue;
         seen.add(key);

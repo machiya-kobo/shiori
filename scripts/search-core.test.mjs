@@ -870,6 +870,9 @@ test("save this note's links: deduplicated across notes, capped (HisterKit's Sav
   const many = note('C', Array.from({ length: 250 }, (_, i) => `https://example.net/${i}`));
   assert.equal(S.saveLinkRows([many]).length, 200);
   assert.equal(S.saveLinkRows([{ path: 'D' }]).length, 0);
+  // Another vault's page in Kura is never offered (it would go to Hister).
+  const work = note('W', ['https://kura.example/v/work/n/plan', 'https://kura.example/v/work/f/x', 'https://kura.example/n/shared']);
+  assert.deepEqual([...S.saveLinkRows([work]).map((r) => r.url)], ['https://kura.example/n/shared']);
 });
 
 test("a note's tags offer only labels that exist", () => {
