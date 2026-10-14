@@ -344,7 +344,8 @@ struct LibraryView: View {
                         Text("Add your Hister server in Settings.")
                             .foregroundStyle(palette.secondaryText)
                     } else {
-                        Text("No labels from Hister yet.")
+                        // The server didn't answer: why, not "no labels".
+                        Text(app.rulesFailure?.userMessage ?? "No labels from Hister yet.")
                             .foregroundStyle(palette.secondaryText)
                         Button("Try Again", systemImage: "arrow.clockwise") {
                             Task { await app.reloadRules() }

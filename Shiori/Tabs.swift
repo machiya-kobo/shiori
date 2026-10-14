@@ -449,6 +449,9 @@ struct LabelsScreen: View {
             } else if app.rules.labels.isEmpty {
                 if app.client == nil {
                     FailureView(error: .unreachable, hasServer: false) {}
+                } else if let failure = app.rulesFailure {
+                    // The server didn't answer: not "no labels".
+                    FailureView(error: failure, hasServer: true) { Task { await app.reloadRules() } }
                 } else {
                     ContentUnavailableView {
                         Label("No Labels Yet", systemImage: "tag")
