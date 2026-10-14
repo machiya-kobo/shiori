@@ -1859,6 +1859,74 @@
     });
   }
 
+  // Sort and Group, as the other pills' (Newest, Oldest, Day…), for what makes sense here.
+  const MEDIA_ORDERS = [['best', 'Best Match'], ['newest', 'Newest'], ['oldest', 'Oldest'], ['plays', 'Most Played'],
+    ['rating', 'Top Rated'], ['title', 'Title'], ['added', 'Recently Added']];
+  const MEDIA_GROUPINGS = [['', 'No Groups'], ['kind', 'Kind'], ['month', 'Month']];
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  /** When it was last played (or listened to, watched): 0 when no one knows. */
+  const mediaLastPlayed = (it) => (it && (it.last || it.when)) || 0;
+
+  /**
+   * The items in an order: Best Match keeps the merge's; Newest and Oldest
+   * by when you last played (the never or unknown after the rest), Most
+   * Played, Top Rated (unrated last), Title (A to Z), Recently Added. Ties
+   * keep their order.
+   */
+  function mediaSort(items, order) {
+    const list = (items || []).map((item, i) => ({ item, i }));
+    const later = (a, b, f, desc) => {
+      const x = f(a.item), y = f(b.item);
+      if (!x !== !y) return x ? -1 : 1;
+      return x === y ? 0 : (desc ? y - x : x - y);
+    };
+    const cmp = {
+      newest: (a, b) => later(a, b, mediaLastPlayed, true),
+      oldest: (a, b) => later(a, b, mediaLastPlayed, false),
+      plays: (a, b) => later(a, b, (it) => it.plays || 0, true),
+      rating: (a, b) => later(a, b, (it) => it.rating || 0, true),
+      added: (a, b) => later(a, b, (it) => it.added || 0, true),
+      title: (a, b) => {
+        const x = mediaNorm(a.item.title), y = mediaNorm(b.item.title);
+        return x < y ? -1 : x > y ? 1 : 0;
+      },
+    }[order];
+    if (cmp) list.sort((a, b) => cmp(a, b) || a.i - b.i);
+    return list.map((x) => x.item);
+  }
+
+  /**
+   * The items in groups, each {title, items}, in the order they first
+   * appear: by Kind (Films, TV, Music, Other) or by the Month you last
+   * played them ("October 2026"; "Never Played", or "No Date" when the
+   * plays have no date). No grouping: one group with no title.
+   */
+  function mediaGroups(items, grouping, offsetMinutes = 0) {
+    const titleOf = {
+      kind: (it) => ({ films: 'Films', tv: 'TV', music: 'Music', other: 'Other' })[mediaGroup(it)],
+      month: (it) => {
+        const at = mediaLastPlayed(it);
+        if (!at) return it.plays === 0 ? 'Never Played' : 'No Date';
+        const d = new Date((at + (offsetMinutes || 0) * 60) * 1000);
+        return `${MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+      },
+    }[grouping];
+    if (!titleOf) return [{ title: '', items: [...(items || [])] }];
+    const groups = [];
+    for (const it of items || []) {
+      const title = titleOf(it);
+      let g = groups.find((x) => x.title === title);
+      if (!g) groups.push((g = { title, items: [] }));
+      g.items.push(it);
+    }
+    if (grouping === 'kind') {
+      const rank = ['Films', 'TV', 'Music', 'Other'];
+      groups.sort((a, b) => rank.indexOf(a.title) - rank.indexOf(b.title));
+    }
+    return groups;
+  }
+
   /** "Mar 6, 2014", at `offsetMinutes` from UTC. */
   function mediaDate(secs, offsetMinutes = 0) {
     const d = new Date((secs + (offsetMinutes || 0) * 60) * 1000);
@@ -3557,6 +3625,10 @@
     mediaMerge,
     mediaGroup,
     mediaFilter,
+    mediaSort,
+    mediaGroups,
+    MEDIA_ORDERS,
+    MEDIA_GROUPINGS,
     mediaDate,
     mediaPlayedLine,
     mediaStars,

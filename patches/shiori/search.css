@@ -399,6 +399,8 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
 .media-card .media-outside { color: var(--secondary); }
 .chip.media-place { color: var(--tab-news); }
 .media-filters button[aria-pressed="true"] { border-color: var(--tab-news); color: var(--tab-news); }
+/* Group → Kind or Month: each group's name above its cards. */
+.media-group { list-style: none; margin: 8px 4px 0; font-weight: 600; color: var(--secondary); }
 .code-glyph { color: var(--tab-videos); font-weight: 700; }
 .code-state { font-weight: 600; }
 .code-host { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); }

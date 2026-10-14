@@ -822,6 +822,81 @@ public enum Media {
         }
     }
 
+    /// Sort and Group, as the other pills' (search-core's MEDIA_ORDERS, MEDIA_GROUPINGS).
+    public static let orders = [("best", "Best Match"), ("newest", "Newest"), ("oldest", "Oldest"), ("plays", "Most Played"),
+                                ("rating", "Top Rated"), ("title", "Title"), ("added", "Recently Added")]
+    public static let groupings = [("", "No Groups"), ("kind", "Kind"), ("month", "Month")]
+    static let monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+    /// When it was last played (or listened to, watched): 0 when no one knows.
+    static func lastPlayed(_ it: MediaItem) -> Int { (it.last ?? 0) != 0 ? it.last! : (it.when ?? 0) }
+
+    /// The items in an order (search-core's `mediaSort`): Best Match keeps
+    /// the merge's; Newest and Oldest by when you last played (the never or
+    /// unknown after the rest), Most Played, Top Rated (unrated last), Title,
+    /// Recently Added. Ties keep their order.
+    public static func sort(_ items: [MediaItem], _ order: String) -> [MediaItem] {
+        func later(_ f: @escaping (MediaItem) -> Int, desc: Bool) -> (MediaItem, MediaItem) -> Int {
+            { a, b in
+                let x = f(a), y = f(b)
+                if (x == 0) != (y == 0) { return x != 0 ? -1 : 1 }
+                return x == y ? 0 : (desc ? (y > x ? 1 : -1) : (x > y ? 1 : -1))
+            }
+        }
+        let cmp: ((MediaItem, MediaItem) -> Int)? =
+            switch order {
+            case "newest": later(lastPlayed, desc: true)
+            case "oldest": later(lastPlayed, desc: false)
+            case "plays": later({ $0.plays ?? 0 }, desc: true)
+            case "rating": later({ $0.rating ?? 0 }, desc: true)
+            case "added": later({ $0.added ?? 0 }, desc: true)
+            case "title": { a, b in
+                let x = norm(a.title), y = norm(b.title)
+                return x < y ? -1 : x > y ? 1 : 0
+            }
+            default: nil
+            }
+        guard let cmp else { return items }
+        return items.enumerated().sorted { a, b in
+            let c = cmp(a.element, b.element)
+            return c != 0 ? c < 0 : a.offset < b.offset
+        }.map(\.element)
+    }
+
+    /// The items in groups (search-core's `mediaGroups`), in the order they
+    /// first appear: by Kind (Films, TV, Music, Other) or the Month you last
+    /// played them ("October 2026"; "Never Played", or "No Date"). No
+    /// grouping: one group with no title.
+    public static func groups(_ items: [MediaItem], _ grouping: String, offsetMinutes: Int = 0) -> [(title: String, items: [MediaItem])] {
+        let titleOf: ((MediaItem) -> String)? =
+            switch grouping {
+            case "kind": { ["films": "Films", "tv": "TV", "music": "Music", "other": "Other"][group($0)] ?? "Other" }
+            case "month": { it in
+                let at = lastPlayed(it)
+                guard at != 0 else { return it.plays == 0 ? "Never Played" : "No Date" }
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = TimeZone(identifier: "UTC")!
+                let d = calendar.dateComponents([.year, .month], from: Date(timeIntervalSince1970: TimeInterval(at + offsetMinutes * 60)))
+                return "\(monthNames[(d.month ?? 1) - 1]) \(d.year ?? 1970)"
+            }
+            default: nil
+            }
+        guard let titleOf else { return [("", items)] }
+        var out: [(title: String, items: [MediaItem])] = []
+        for it in items {
+            let title = titleOf(it)
+            if let i = out.firstIndex(where: { $0.title == title }) { out[i].items.append(it) } else { out.append((title, [it])) }
+        }
+        if grouping == "kind" {
+            let rank = ["Films", "TV", "Music", "Other"]
+            out = out.enumerated().sorted { a, b in
+                let x = rank.firstIndex(of: a.element.title) ?? 9, y = rank.firstIndex(of: b.element.title) ?? 9
+                return x != y ? x < y : a.offset < b.offset
+            }.map(\.element)
+        }
+        return out
+    }
+
     /// "Mar 6, 2014", at `offsetMinutes` from UTC.
     public static func date(_ secs: Int, offsetMinutes: Int = 0) -> String {
         var calendar = Calendar(identifier: .gregorian)

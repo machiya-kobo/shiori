@@ -375,11 +375,6 @@ input:placeholder-shown ~ .field-clear { display: none; }
 .media-row .media-places { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .media-row .chip-link { color: var(--tab-news); text-decoration: none; font-weight: 600; }
 .media-row .chip-link:hover { text-decoration: underline; }
-.media-filters button[aria-pressed="true"] { border-color: var(--tab-news); color: var(--tab-news); }
-.section-head .media-period {
-  margin-left: 10px; font: inherit; font-size: var(--fs-foot); color: var(--text); background: transparent;
-  border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; cursor: pointer;
-}
 /* A code row: what it is, its repo, its state, a lock when private. */
 .code-glyph { display: inline-grid; place-items: center; color: var(--tab-videos); font-weight: 700; }
 .code-state { font-weight: 600; }

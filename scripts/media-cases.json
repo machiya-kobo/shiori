@@ -4599,5 +4599,588 @@
    },
    "want": false
   }
- ]
+ ],
+ "sorting": {
+  "items": [
+   {
+    "key": "track:mbid:00000000-0000-4000-8000-000000000002",
+    "kind": "track",
+    "title": "Night Drive",
+    "by": "Sample Band",
+    "context": "North Star",
+    "year": 2018,
+    "ids": {
+     "mbid": "00000000-0000-4000-8000-000000000002"
+    },
+    "image": "https://jellyfin.example.ts.net/Items/f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6/Images/Primary?tag=tag2&maxWidth=300",
+    "inLibrary": true,
+    "plays": 12,
+    "last": 1748820600,
+    "playedFrom": "koito",
+    "rating": 10,
+    "ratingFrom": "plex",
+    "open": {
+     "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+     "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F303",
+     "koito": "https://koito.example.ts.net/track/3"
+    }
+   },
+   {
+    "key": "film:tmdb:1001",
+    "kind": "film",
+    "title": "Example Film",
+    "year": 1999,
+    "ids": {
+     "tmdb": "1001",
+     "imdb": "tt0001001"
+    },
+    "image": "https://jellyfin.example.ts.net/Items/d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4/Images/Primary?tag=tag1&maxWidth=300",
+    "library": "Movies",
+    "added": 1706933106,
+    "inLibrary": true,
+    "plays": 3,
+    "last": 1577880000,
+    "playedFrom": "movary",
+    "rating": 9,
+    "ratingFrom": "movary",
+    "outside": [
+     {
+      "name": "IMDb",
+      "score": "7.8"
+     },
+     {
+      "name": "RT",
+      "score": "93%"
+     },
+     {
+      "name": "TMDB",
+      "score": "7.3"
+     }
+    ],
+    "open": {
+     "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+     "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F101",
+     "movary": "https://movary.example.ts.net/users/reader/movies/12"
+    }
+   },
+   {
+    "key": "album:mbid:00000000-0000-4000-8000-000000000003",
+    "kind": "album",
+    "title": "North Star & Friends",
+    "by": "Sample Band",
+    "ids": {
+     "mbid": "00000000-0000-4000-8000-000000000003"
+    },
+    "inLibrary": true,
+    "plays": 0,
+    "open": {
+     "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=18181818181818181818181818181818&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+    }
+   },
+   {
+    "key": "show:tvdb:444",
+    "kind": "show",
+    "title": "Example Show",
+    "year": 2025,
+    "ids": {
+     "tvdb": "444"
+    },
+    "image": "https://plex.example.ts.net:32400/library/metadata/202/thumb/1",
+    "inLibrary": true,
+    "plays": 3,
+    "last": 1750000000,
+    "playedFrom": "plex",
+    "episodes": {
+     "watched": 3,
+     "total": 8
+    },
+    "outside": [
+     {
+      "name": "TMDB",
+      "score": "7.3"
+     }
+    ],
+    "open": {
+     "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F202"
+    }
+   },
+   {
+    "key": "album:unheard:sampleband:2013",
+    "kind": "album",
+    "title": "Unheard",
+    "by": "Sample Band",
+    "year": 2013,
+    "inLibrary": true,
+    "plays": 0,
+    "open": {
+     "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F304"
+    }
+   },
+   {
+    "key": "collection:examplecollection::",
+    "kind": "collection",
+    "title": "Example Collection",
+    "inLibrary": true,
+    "open": {
+     "plex": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F404"
+    }
+   },
+   {
+    "key": "episode:tvdb:555",
+    "kind": "episode",
+    "title": "Pilot",
+    "by": "Example Show",
+    "context": "S1 · E2",
+    "ids": {
+     "tvdb": "555"
+    },
+    "inLibrary": true,
+    "open": {
+     "jellyfin": "https://jellyfin.example.ts.net/web/#/details?id=07070707070707070707070707070707&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+    }
+   },
+   {
+    "key": "album:northstar:sampleband:",
+    "kind": "album",
+    "title": "North Star",
+    "by": "Sample Band",
+    "image": "https://koito.example.ts.net/image/bbbb/300x300.webp",
+    "elsewhere": true,
+    "plays": 0,
+    "open": {
+     "koito": "https://koito.example.ts.net/album/19"
+    }
+   },
+   {
+    "key": "artist:mbid:00000000-0000-4000-8000-000000000001",
+    "kind": "artist",
+    "title": "Sample Band",
+    "ids": {
+     "mbid": "00000000-0000-4000-8000-000000000001"
+    },
+    "image": "https://koito.example.ts.net/image/aaaa/300x300.webp",
+    "elsewhere": true,
+    "open": {
+     "koito": "https://koito.example.ts.net/artist/5"
+    }
+   },
+   {
+    "key": "film:tmdb:1002",
+    "kind": "film",
+    "title": "Elsewhere Film",
+    "year": 2008,
+    "ids": {
+     "tmdb": "1002"
+    },
+    "image": "https://image.tmdb.org/t/p/w342/abc.jpg",
+    "elsewhere": true,
+    "plays": 1,
+    "last": 1250942400,
+    "playedFrom": "movary",
+    "open": {
+     "movary": "https://movary.example.ts.net/users/reader/movies/13"
+    }
+   },
+   {
+    "key": "film:badposter::",
+    "kind": "film",
+    "title": "Bad Poster",
+    "elsewhere": true
+   },
+   {
+    "key": "x:heard",
+    "kind": "track",
+    "title": "Áfter",
+    "when": 1767323045
+   },
+   {
+    "key": "x:top",
+    "kind": "artist",
+    "title": "zeta",
+    "plays": 55
+   }
+  ],
+  "sorts": [
+   {
+    "order": "best",
+    "want": [
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "film:tmdb:1001",
+     "album:mbid:00000000-0000-4000-8000-000000000003",
+     "show:tvdb:444",
+     "album:unheard:sampleband:2013",
+     "collection:examplecollection::",
+     "episode:tvdb:555",
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "film:tmdb:1002",
+     "film:badposter::",
+     "x:heard",
+     "x:top"
+    ]
+   },
+   {
+    "order": "newest",
+    "want": [
+     "x:heard",
+     "show:tvdb:444",
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "film:tmdb:1001",
+     "film:tmdb:1002",
+     "album:mbid:00000000-0000-4000-8000-000000000003",
+     "album:unheard:sampleband:2013",
+     "collection:examplecollection::",
+     "episode:tvdb:555",
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "film:badposter::",
+     "x:top"
+    ]
+   },
+   {
+    "order": "oldest",
+    "want": [
+     "film:tmdb:1002",
+     "film:tmdb:1001",
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "show:tvdb:444",
+     "x:heard",
+     "album:mbid:00000000-0000-4000-8000-000000000003",
+     "album:unheard:sampleband:2013",
+     "collection:examplecollection::",
+     "episode:tvdb:555",
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "film:badposter::",
+     "x:top"
+    ]
+   },
+   {
+    "order": "plays",
+    "want": [
+     "x:top",
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "film:tmdb:1001",
+     "show:tvdb:444",
+     "film:tmdb:1002",
+     "album:mbid:00000000-0000-4000-8000-000000000003",
+     "album:unheard:sampleband:2013",
+     "collection:examplecollection::",
+     "episode:tvdb:555",
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "film:badposter::",
+     "x:heard"
+    ]
+   },
+   {
+    "order": "rating",
+    "want": [
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "film:tmdb:1001",
+     "album:mbid:00000000-0000-4000-8000-000000000003",
+     "show:tvdb:444",
+     "album:unheard:sampleband:2013",
+     "collection:examplecollection::",
+     "episode:tvdb:555",
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "film:tmdb:1002",
+     "film:badposter::",
+     "x:heard",
+     "x:top"
+    ]
+   },
+   {
+    "order": "title",
+    "want": [
+     "x:heard",
+     "film:badposter::",
+     "film:tmdb:1002",
+     "collection:examplecollection::",
+     "film:tmdb:1001",
+     "show:tvdb:444",
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "album:northstar:sampleband:",
+     "album:mbid:00000000-0000-4000-8000-000000000003",
+     "episode:tvdb:555",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "album:unheard:sampleband:2013",
+     "x:top"
+    ]
+   },
+   {
+    "order": "added",
+    "want": [
+     "film:tmdb:1001",
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "album:mbid:00000000-0000-4000-8000-000000000003",
+     "show:tvdb:444",
+     "album:unheard:sampleband:2013",
+     "collection:examplecollection::",
+     "episode:tvdb:555",
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "film:tmdb:1002",
+     "film:badposter::",
+     "x:heard",
+     "x:top"
+    ]
+   },
+   {
+    "order": "nonsense",
+    "want": [
+     "track:mbid:00000000-0000-4000-8000-000000000002",
+     "film:tmdb:1001",
+     "album:mbid:00000000-0000-4000-8000-000000000003",
+     "show:tvdb:444",
+     "album:unheard:sampleband:2013",
+     "collection:examplecollection::",
+     "episode:tvdb:555",
+     "album:northstar:sampleband:",
+     "artist:mbid:00000000-0000-4000-8000-000000000001",
+     "film:tmdb:1002",
+     "film:badposter::",
+     "x:heard",
+     "x:top"
+    ]
+   }
+  ],
+  "groups": [
+   {
+    "grouping": "",
+    "offset": 0,
+    "want": [
+     {
+      "title": "",
+      "keys": [
+       "x:heard",
+       "show:tvdb:444",
+       "track:mbid:00000000-0000-4000-8000-000000000002",
+       "film:tmdb:1001",
+       "film:tmdb:1002",
+       "album:mbid:00000000-0000-4000-8000-000000000003",
+       "album:unheard:sampleband:2013",
+       "collection:examplecollection::",
+       "episode:tvdb:555",
+       "album:northstar:sampleband:",
+       "artist:mbid:00000000-0000-4000-8000-000000000001",
+       "film:badposter::",
+       "x:top"
+      ]
+     }
+    ]
+   },
+   {
+    "grouping": "kind",
+    "offset": 0,
+    "want": [
+     {
+      "title": "Films",
+      "keys": [
+       "film:tmdb:1001",
+       "film:tmdb:1002",
+       "film:badposter::"
+      ]
+     },
+     {
+      "title": "TV",
+      "keys": [
+       "show:tvdb:444",
+       "episode:tvdb:555"
+      ]
+     },
+     {
+      "title": "Music",
+      "keys": [
+       "x:heard",
+       "track:mbid:00000000-0000-4000-8000-000000000002",
+       "album:mbid:00000000-0000-4000-8000-000000000003",
+       "album:unheard:sampleband:2013",
+       "album:northstar:sampleband:",
+       "artist:mbid:00000000-0000-4000-8000-000000000001",
+       "x:top"
+      ]
+     },
+     {
+      "title": "Other",
+      "keys": [
+       "collection:examplecollection::"
+      ]
+     }
+    ]
+   },
+   {
+    "grouping": "month",
+    "offset": 0,
+    "want": [
+     {
+      "title": "January 2026",
+      "keys": [
+       "x:heard"
+      ]
+     },
+     {
+      "title": "June 2025",
+      "keys": [
+       "show:tvdb:444",
+       "track:mbid:00000000-0000-4000-8000-000000000002"
+      ]
+     },
+     {
+      "title": "January 2020",
+      "keys": [
+       "film:tmdb:1001"
+      ]
+     },
+     {
+      "title": "August 2009",
+      "keys": [
+       "film:tmdb:1002"
+      ]
+     },
+     {
+      "title": "Never Played",
+      "keys": [
+       "album:mbid:00000000-0000-4000-8000-000000000003",
+       "album:unheard:sampleband:2013",
+       "album:northstar:sampleband:"
+      ]
+     },
+     {
+      "title": "No Date",
+      "keys": [
+       "collection:examplecollection::",
+       "episode:tvdb:555",
+       "artist:mbid:00000000-0000-4000-8000-000000000001",
+       "film:badposter::",
+       "x:top"
+      ]
+     }
+    ]
+   },
+   {
+    "grouping": "month",
+    "offset": -420,
+    "want": [
+     {
+      "title": "January 2026",
+      "keys": [
+       "x:heard"
+      ]
+     },
+     {
+      "title": "June 2025",
+      "keys": [
+       "show:tvdb:444",
+       "track:mbid:00000000-0000-4000-8000-000000000002"
+      ]
+     },
+     {
+      "title": "January 2020",
+      "keys": [
+       "film:tmdb:1001"
+      ]
+     },
+     {
+      "title": "August 2009",
+      "keys": [
+       "film:tmdb:1002"
+      ]
+     },
+     {
+      "title": "Never Played",
+      "keys": [
+       "album:mbid:00000000-0000-4000-8000-000000000003",
+       "album:unheard:sampleband:2013",
+       "album:northstar:sampleband:"
+      ]
+     },
+     {
+      "title": "No Date",
+      "keys": [
+       "collection:examplecollection::",
+       "episode:tvdb:555",
+       "artist:mbid:00000000-0000-4000-8000-000000000001",
+       "film:badposter::",
+       "x:top"
+      ]
+     }
+    ]
+   },
+   {
+    "grouping": "month",
+    "offset": 540,
+    "want": [
+     {
+      "title": "January 2026",
+      "keys": [
+       "x:heard"
+      ]
+     },
+     {
+      "title": "June 2025",
+      "keys": [
+       "show:tvdb:444",
+       "track:mbid:00000000-0000-4000-8000-000000000002"
+      ]
+     },
+     {
+      "title": "January 2020",
+      "keys": [
+       "film:tmdb:1001"
+      ]
+     },
+     {
+      "title": "August 2009",
+      "keys": [
+       "film:tmdb:1002"
+      ]
+     },
+     {
+      "title": "Never Played",
+      "keys": [
+       "album:mbid:00000000-0000-4000-8000-000000000003",
+       "album:unheard:sampleband:2013",
+       "album:northstar:sampleband:"
+      ]
+     },
+     {
+      "title": "No Date",
+      "keys": [
+       "collection:examplecollection::",
+       "episode:tvdb:555",
+       "artist:mbid:00000000-0000-4000-8000-000000000001",
+       "film:badposter::",
+       "x:top"
+      ]
+     }
+    ]
+   },
+   {
+    "grouping": "other",
+    "offset": 0,
+    "want": [
+     {
+      "title": "",
+      "keys": [
+       "x:heard",
+       "show:tvdb:444",
+       "track:mbid:00000000-0000-4000-8000-000000000002",
+       "film:tmdb:1001",
+       "film:tmdb:1002",
+       "album:mbid:00000000-0000-4000-8000-000000000003",
+       "album:unheard:sampleband:2013",
+       "collection:examplecollection::",
+       "episode:tvdb:555",
+       "album:northstar:sampleband:",
+       "artist:mbid:00000000-0000-4000-8000-000000000001",
+       "film:badposter::",
+       "x:top"
+      ]
+     }
+    ]
+   }
+  ]
+ }
 }

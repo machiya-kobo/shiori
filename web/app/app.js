@@ -1389,7 +1389,7 @@ function viewLibrary(params) {
   searchInput.placeholder = PROMPTS[filter];
   fill($('list-top'), 
     segments(scopes(), filter, (s) => go('library', { s }, { replace: true })),
-    filter === 'opened' || filter === 'web' || filter === 'media' ? null : controls('library', params, { notes: filter === 'notes' }),
+    filter === 'opened' || filter === 'web' ? null : filter === 'media' ? mediaControls('library', params, { search: false }) : controls('library', params, { notes: filter === 'notes' }),
   );
   const list = freshList();
   if (filter === 'opened') {
@@ -1603,6 +1603,7 @@ function viewSearch(params) {
     // A tap on Media searches it on purpose too (m=1), without making the web's search one (w stays as it was).
     segments(scopes(), scope, (s) => go('search', { ...keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), ...(s === 'media' ? { m: '1' } : {}) }, { replace: true })),
     listed ? controls('search', params, { search: true, notes: scope === 'notes' }) : null,
+    scope === 'media' ? mediaControls('search', params, { search: true }) : null,
   );
   if (segmentTotals.query === q) for (const [value, n] of Object.entries(segmentTotals.counts)) setSegmentCount(value, n);
   if (scope !== 'opened') didYouMean(q, scope);
@@ -1630,7 +1631,7 @@ function viewSearch(params) {
   else if (scope === 'media') {
     // Searched on purpose only (Return, the pill): one search asks every media service, and Koito once per match.
     shownList = { title: q };
-    if (web || params.get('m') === '1') mediaList(list, q);
+    if (web || params.get('m') === '1') mediaList(list, q, params);
     else list.replaceChildren(status('Search Your Media', 'Press Return to search your music, films and shows.'));
   }
   else if (scope === 'files') {
@@ -1801,10 +1802,60 @@ async function smallwebList(container, q) {
 // /jellyfin/, /plex/, /koito/ and /movary/ (each adds its token there). Private: nothing of it goes to Hister, a model,
 // Remember What You Open, an export or a feed. A card opens in its service in a new tab.
 
-const MEDIA_KINDS = [['', 'All Kinds'], ['films', 'Films'], ['tv', 'TV'], ['music', 'Music'], ['other', 'Other']];
-const MEDIA_RATED = [['', 'Rating'], ['loved', '4★+'], ['liked', '3★+'], ['any', 'Any Rating'], ['unrated', 'Unrated']];
-const MEDIA_PERIODS = [['week', 'Week'], ['month', 'Month'], ['year', 'Year'], ['all_time', 'All Time']];
-let mediaFilters = {};
+const MEDIA_KINDS = [['films', 'Films'], ['tv', 'TV'], ['music', 'Music'], ['other', 'Other']];
+const MEDIA_RATED = [['loved', '4★+'], ['liked', '3★+'], ['any', 'Any Rating'], ['unrated', 'Unrated']];
+const MEDIA_PERIODS = [['week', 'This Week'], ['month', 'This Month'], ['year', 'This Year'], ['all_time', 'All Time']];
+/** The last search's results, so a change of Sort, Group or Filter redraws without asking the services again. */
+let mediaLast = { q: null, res: null };
+
+/** Media's choices, from the address (so Back keeps them): Sort `mo`, Group `mg`, Filter `mk`, `mp`, `mr`, period `p`. */
+function mediaChoices(params) {
+  const pick = (key, list) => (list.some(([v]) => v === params.get(key)) ? params.get(key) : undefined);
+  return {
+    order: pick('mo', S.MEDIA_ORDERS) || 'best',
+    grouping: pick('mg', S.MEDIA_GROUPINGS) || '',
+    filter: { kind: pick('mk', MEDIA_KINDS), played: params.get('mp') === 'never' ? 'never' : undefined, rated: pick('mr', MEDIA_RATED) },
+    period: pick('p', MEDIA_PERIODS) || 'month',
+  };
+}
+
+/**
+ * Media's bar, the other pills' Sort · Group · Filter (controls()): Sort and
+ * Group on a search, the top lists' period when browsing, and Filter (Kind,
+ * Never Played, Rating). Each choice goes in the address.
+ */
+function mediaControls(view, params, { search }) {
+  const c = mediaChoices(params);
+  const set = (change) => {
+    const next = Object.fromEntries(params);
+    for (const [k, v] of Object.entries(change)) if (v) next[k] = v; else delete next[k];
+    go(view, next, { replace: true });
+  };
+  const quiet = (iconName, text, active) => h('button', { type: 'button', class: `quiet${active ? ' active' : ''}`, 'aria-haspopup': 'menu' }, icon(iconName), text);
+  const named = (list, v) => (list.find(([k]) => k === v) || [])[1];
+  const filterName = [named(MEDIA_KINDS, c.filter.kind), c.filter.played ? 'Never Played' : '', named(MEDIA_RATED, c.filter.rated)].filter(Boolean).join(' · ');
+  return h(
+    'div',
+    { class: 'controls' },
+    search ? dropMenu(quiet('sort', named(S.MEDIA_ORDERS, c.order), false), () => S.MEDIA_ORDERS.map(([k, t]) => ({ text: t, checked: k === c.order, pick: () => set({ mo: k === 'best' ? '' : k }) }))) : null,
+    search
+      ? dropMenu(quiet('group', c.grouping ? named(S.MEDIA_GROUPINGS, c.grouping) : 'Group', !!c.grouping), () =>
+          // Month follows when you played: it sorts Newest (unless Oldest), as Day and Month do on the other pills.
+          S.MEDIA_GROUPINGS.map(([k, t]) => ({ text: t, checked: k === c.grouping, pick: () => set({ mg: k, mo: k === 'month' && c.order !== 'oldest' ? 'newest' : params.get('mo') }) })))
+      : null,
+    search ? null : dropMenu(quiet('clock', named(MEDIA_PERIODS, c.period), false), () => MEDIA_PERIODS.map(([k, t]) => ({ text: t, checked: k === c.period, pick: () => set({ p: k === 'month' ? '' : k }) }))),
+    dropMenu(quiet('filter', filterName || 'Filter', !!filterName), () => [
+      { text: 'All Kinds', checked: !c.filter.kind, pick: () => set({ mk: '' }) },
+      ...MEDIA_KINDS.map(([k, t]) => ({ text: t, checked: k === c.filter.kind, pick: () => set({ mk: k }) })),
+      '-',
+      { text: 'Played or Not', checked: !c.filter.played, pick: () => set({ mp: '' }) },
+      { text: 'Never Played', checked: !!c.filter.played, pick: () => set({ mp: 'never' }) },
+      '-',
+      { text: 'All Ratings', checked: !c.filter.rated, pick: () => set({ mr: '' }) },
+      ...MEDIA_RATED.map(([k, t]) => ({ text: t, checked: k === c.filter.rated, pick: () => set({ mr: k }) })),
+    ]),
+  );
+}
 const mediaOffset = () => -new Date().getTimezoneOffset();
 const MEDIA_ICONS = { film: 'film', show: 'film', episode: 'film', collection: 'stack', playlist: 'music', other: 'film' };
 
@@ -1855,40 +1906,28 @@ function mediaRow(item) {
   return row;
 }
 
-/** The Media pill's search: every service set up, one failing never failing it; Kind, Never Played and Rated. */
-async function mediaList(container, q) {
-  container.replaceChildren(h('div', { class: 'spinner' }));
-  let res;
-  try {
-    res = await S.mediaSearch(MEDIA, q, api.media);
-  } catch (error) {
-    return container.replaceChildren(status("Media Didn't Answer", error.message || '', () => mediaList(container, q)));
+/** The Media pill's search: every service set up, one failing never failing it; sorted, grouped and filtered as chosen. */
+async function mediaList(container, q, params) {
+  const c = mediaChoices(params);
+  let res = mediaLast.q === q ? mediaLast.res : null;
+  if (!res) {
+    container.replaceChildren(h('div', { class: 'spinner' }));
+    try {
+      res = await S.mediaSearch(MEDIA, q, api.media);
+    } catch (error) {
+      return container.replaceChildren(status("Media Didn't Answer", error.message || '', () => mediaList(container, q, params)));
+    }
+    mediaLast = { q, res };
   }
   setSegmentCount('media', res.items.length, q);
-  const box = h('div', {});
-  const draw = () => {
-    const items = S.mediaFilter(res.items, mediaFilters);
-    if (!res.items.length) return box.replaceChildren(status('No Media Found', res.failures.join(' · ') || `Nothing in your media matches “${q}”.`));
-    if (!items.length) return box.replaceChildren(status('Nothing Matches These Filters', 'Clear a filter to see more.'));
-    box.replaceChildren(h('ul', { class: 'rows' }, items.map(mediaRow)));
-  };
-  const select = (key, choices, label) => {
-    const el = h('select', { 'aria-label': label }, choices.map(([value, name]) => h('option', { value, selected: (mediaFilters[key] || '') === value }, name)));
-    el.addEventListener('change', () => ((mediaFilters = { ...mediaFilters, [key]: el.value || undefined }), draw()));
-    return el;
-  };
-  const never = h('button', { type: 'button', 'aria-pressed': mediaFilters.played === 'never' ? 'true' : 'false' }, 'Never Played');
-  never.addEventListener('click', () => {
-    mediaFilters = { ...mediaFilters, played: mediaFilters.played === 'never' ? undefined : 'never' };
-    never.setAttribute('aria-pressed', mediaFilters.played === 'never' ? 'true' : 'false');
-    draw();
-  });
-  container.replaceChildren(
-    res.failures.length ? h('p', { class: 'engine-health' }, res.failures.join(' · ')) : '',
-    h('div', { class: 'code-filters media-filters', role: 'group', 'aria-label': 'Filters' }, select('kind', MEDIA_KINDS, 'Kind'), never, select('rated', MEDIA_RATED, 'Rating')),
-    box,
-  );
-  draw();
+  if (!res.items.length) return container.replaceChildren(status('No Media Found', res.failures.join(' · ') || `Nothing in your media matches “${q}”.`));
+  const items = S.mediaSort(S.mediaFilter(res.items, c.filter), c.order);
+  if (!items.length) return container.replaceChildren(status('Nothing Matches These Filters', 'Clear a filter to see more.'));
+  const groups = S.mediaGroups(items, c.grouping, mediaOffset());
+  fill(container, res.failures.length ? h('p', { class: 'engine-health' }, res.failures.join(' · ')) : null,
+    groups.map((g) => (g.title
+      ? h('section', { class: 'list-section' }, h('div', { class: 'section-head' }, g.title), h('ul', { class: 'rows' }, g.items.map(mediaRow)))
+      : h('ul', { class: 'rows' }, g.items.map(mediaRow)))));
 }
 
 /** All's Your Media: the top five, the count leading to the Media pill. */
@@ -1910,30 +1949,26 @@ function yourMedia(pending, q) {
  *  what's new in your libraries. */
 async function mediaShelves(container, params) {
   container.replaceChildren(h('div', { class: 'spinner' }));
-  const period = MEDIA_PERIODS.some(([p]) => p === params.get('p')) ? params.get('p') : 'month';
+  const { period, filter } = mediaChoices(params);
   const res = await S.mediaBrowse(MEDIA, api.media, { period });
   const { view, params: now } = route();
   if (view !== 'library' || scopeOf(now) !== 'media') return;
-  const shelf = (title, items, extra = null) => (items.length
-    ? h('section', { class: 'list-section' }, h('div', { class: 'section-head' }, title, extra), h('ul', { class: 'rows' }, items.map(mediaRow)))
-    : null);
-  const periods = h('select', { class: 'media-period', 'aria-label': 'Period' }, MEDIA_PERIODS.map(([p, name]) => h('option', { value: p, selected: p === period }, name)));
-  periods.addEventListener('change', () => go('library', { s: 'media', p: periods.value }, { replace: true }));
+  const shelf = (title, all) => {
+    const items = S.mediaFilter(all, filter);
+    return items.length ? h('section', { class: 'list-section' }, h('div', { class: 'section-head' }, title), h('ul', { class: 'rows' }, items.map(mediaRow))) : null;
+  };
   const s = res.sections;
-  const top = s.artists.length || s.albums.length || s.tracks.length;
-  // The period sits on the first of the top lists drawn.
-  const firstTop = s.artists.length ? 'artists' : s.albums.length ? 'albums' : 'tracks';
   const shelves = [
     shelf('Now Playing', s.nowPlaying),
     shelf('Recently Played', s.listens),
     shelf('Recently Watched', s.watched),
-    shelf('Top Artists', s.artists, firstTop === 'artists' ? periods : null),
-    shelf('Top Albums', s.albums, firstTop === 'albums' ? periods : null),
-    shelf('Top Tracks', s.tracks, firstTop === 'tracks' ? periods : null),
+    shelf('Top Artists', s.artists),
+    shelf('Top Albums', s.albums),
+    shelf('Top Tracks', s.tracks),
     shelf('Watchlist', s.watchlist),
     shelf('Recently Added', s.added),
   ].filter(Boolean);
-  if (!shelves.length && !top) {
+  if (!shelves.length) {
     return container.replaceChildren(status('Nothing Here Yet', res.failures.join(' · ') || 'What you play and watch shows up here.', res.failures.length ? () => mediaShelves(container, params) : null));
   }
   fill(container, res.failures.length ? h('p', { class: 'engine-health' }, res.failures.join(' · ')) : null, shelves);

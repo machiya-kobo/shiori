@@ -36,7 +36,8 @@ final class MediaSearchModel {
     }
 }
 
-/// The Media pill's search: Kind, Never Played and Rating over the list.
+/// The Media pill's search, under the same Sort · Group · Filter bar as
+/// the other pills (`MediaControls`).
 struct MediaResults: View {
     let query: String
 
@@ -44,6 +45,8 @@ struct MediaResults: View {
     @Environment(\.palette) private var palette
     @State private var model: MediaSearchModel
     @State private var filter = Media.Filter()
+    @AppStorage("mediaOrder") private var order = "best"
+    @AppStorage("mediaGrouping") private var grouping = ""
 
     init(query: String) {
         self.query = query
@@ -53,7 +56,7 @@ struct MediaResults: View {
     var body: some View {
         content
             .task(id: query) { await model.load(using: app.media) }
-            .topBar { MediaFilterBar(filter: $filter) }
+            .topBar { MediaControls(order: $order, grouping: $grouping, filter: $filter) }
     }
 
     @ViewBuilder private var content: some View {
@@ -65,7 +68,7 @@ struct MediaResults: View {
         case .failed:
             MediaNotSetUp()
         case .loaded:
-            let items = Media.filter(model.items, filter)
+            let items = Media.sort(Media.filter(model.items, filter), order)
             if model.items.isEmpty {
                 ContentUnavailableView {
                     Label("No Media Found", systemImage: "music.note.list")
@@ -83,7 +86,18 @@ struct MediaResults: View {
             } else {
                 List {
                     if !model.failures.isEmpty { MediaFailuresRow(failures: model.failures) }
-                    ForEach(items) { MediaItemRow(item: $0) }
+                    let groups = Media.groups(items, grouping, offsetMinutes: TimeZone.current.secondsFromGMT() / 60)
+                    ForEach(groups, id: \.title) { group in
+                        if group.title.isEmpty {
+                            ForEach(group.items) { MediaItemRow(item: $0) }
+                        } else {
+                            Section {
+                                ForEach(group.items) { MediaItemRow(item: $0) }
+                            } header: {
+                                Text(group.title)
+                            }
+                        }
+                    }
                 }
                 .listStyle(.plain)
                 .themedBackground()
@@ -92,47 +106,140 @@ struct MediaResults: View {
     }
 }
 
-/// Kind, Never Played and Rating, in one line under the pills, as the Code pill's filters.
-struct MediaFilterBar: View {
+/// Media's bar, the other pills' Sort · Group · Filter: Sort and Group on a
+/// search (Best Match, Newest, Oldest, Most Played, Top Rated, Title,
+/// Recently Added; No Groups, Kind, Month), the top lists' period when
+/// browsing, and Filter (Kind, Never Played, Rating) with its chips and Clear.
+struct MediaControls: View {
+    var order: Binding<String>? = nil
+    var grouping: Binding<String>? = nil
+    var period: Binding<String>? = nil
     @Binding var filter: Media.Filter
+
+    @Environment(\.palette) private var palette
 
     static let kinds = [("films", "Films"), ("tv", "TV"), ("music", "Music"), ("other", "Other")]
     static let ratings = [("loved", "4★+"), ("liked", "3★+"), ("any", "Any Rating"), ("unrated", "Unrated")]
+    static let periods = [("week", "This Week"), ("month", "This Month"), ("year", "This Year"), ("all_time", "All Time")]
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 18) {
-                Menu {
-                    Picker("Kind", selection: $filter.kind) {
-                        Text("All Kinds").tag(String?.none)
-                        ForEach(Self.kinds, id: \.0) { Text($0.1).tag(String?.some($0.0)) }
-                    }
-                } label: {
-                    Label(Self.kinds.first { $0.0 == filter.kind }?.1 ?? "All Kinds", systemImage: "square.stack")
+            HStack(spacing: 16) {
+                if let order { sortMenu(order) }
+                if let grouping, let order { groupMenu(grouping, order: order) }
+                if let period { periodMenu(period) }
+                filterMenu
+                    .labelStyle(.titleAndIcon)
+                    .quietControl(active: !filter.isEmpty)
+                if let kind = filter.kind, let name = Self.kinds.first(where: { $0.0 == kind })?.1 {
+                    chip(name) { filter.kind = nil }
                 }
-                .quietControl(active: filter.kind != nil)
-                Button {
-                    filter.played = filter.played == nil ? "never" : nil
-                } label: {
-                    Label("Never Played", systemImage: filter.played != nil ? "checkmark.circle.fill" : "circle")
+                if filter.played != nil { chip("Never Played") { filter.played = nil } }
+                if let rated = filter.rated, let name = Self.ratings.first(where: { $0.0 == rated })?.1 {
+                    chip(name) { filter.rated = nil }
                 }
-                .quietControl(active: filter.played != nil)
-                Menu {
-                    Picker("Rating", selection: $filter.rated) {
-                        Text("All Ratings").tag(String?.none)
-                        ForEach(Self.ratings, id: \.0) { Text($0.1).tag(String?.some($0.0)) }
-                    }
-                } label: {
-                    Label(Self.ratings.first { $0.0 == filter.rated }?.1 ?? "Rating", systemImage: "star")
+                if !filter.isEmpty {
+                    Button("Clear") { filter = Media.Filter() }
+                        .buttonStyle(.borderless)
+                        .textStyle(.subheadline)
                 }
-                .quietControl(active: filter.rated != nil)
             }
-            .lineLimit(1)
-            .fixedSize()
             .padding(.horizontal)
+            .padding(.top, 6)
+            .padding(.bottom, 8)
         }
         .fadesOverflow()
-        .padding(.vertical, 2)
+        .endsTopBar()
+    }
+
+    private func sortMenu(_ order: Binding<String>) -> some View {
+        let name = Media.orders.first { $0.0 == order.wrappedValue }?.1 ?? "Best Match"
+        return Menu {
+            Picker("Sort", selection: order) {
+                ForEach(Media.orders, id: \.0) { Text($0.1).tag($0.0) }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label(name, systemImage: "arrow.up.arrow.down")
+        }
+        .quietControl()
+        .help("Sort")
+        .accessibilityLabel("Sort: \(name)")
+    }
+
+    /// Month follows when you played: choosing it sorts Newest (unless Oldest), as Day and Month do on the other pills.
+    private func groupMenu(_ grouping: Binding<String>, order: Binding<String>) -> some View {
+        let name = Media.groupings.first { $0.0 == grouping.wrappedValue }?.1 ?? "No Groups"
+        return Menu {
+            Picker("Group", selection: Binding(get: { grouping.wrappedValue }, set: { new in
+                grouping.wrappedValue = new
+                if new == "month", order.wrappedValue != "oldest" { order.wrappedValue = "newest" }
+            })) {
+                ForEach(Media.groupings, id: \.0) { Text($0.1).tag($0.0) }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label(grouping.wrappedValue.isEmpty ? "Group" : name, systemImage: "rectangle.3.group")
+        }
+        .quietControl(active: !grouping.wrappedValue.isEmpty)
+        .help("Group")
+        .accessibilityLabel("Group: \(name)")
+    }
+
+    private func periodMenu(_ period: Binding<String>) -> some View {
+        let name = Self.periods.first { $0.0 == period.wrappedValue }?.1 ?? "This Month"
+        return Menu {
+            Picker("Your Top", selection: period) {
+                ForEach(Self.periods, id: \.0) { Text($0.1).tag($0.0) }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label(name, systemImage: "calendar")
+        }
+        .quietControl()
+        .help("Your Top: which period")
+        .accessibilityLabel("Your Top: \(name)")
+    }
+
+    /// Kind, Played and Rating, each its own list in the one menu (no submenus).
+    private var filterMenu: some View {
+        Menu {
+            Picker("Kind", selection: $filter.kind) {
+                Text("All Kinds").tag(String?.none)
+                ForEach(Self.kinds, id: \.0) { Text($0.1).tag(String?.some($0.0)) }
+            }
+            .pickerStyle(.inline)
+            Picker("Played", selection: $filter.played) {
+                Text("Played or Not").tag(String?.none)
+                Text("Never Played").tag(String?.some("never"))
+            }
+            .pickerStyle(.inline)
+            Picker("Rating", selection: $filter.rated) {
+                Text("All Ratings").tag(String?.none)
+                ForEach(Self.ratings, id: \.0) { Text($0.1).tag(String?.some($0.0)) }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label(filter.isEmpty ? "Filter" : "Filtered", systemImage: filter.isEmpty
+                ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+        }
+        .help("Filter")
+        .accessibilityLabel(filter.isEmpty ? "Filter" : "Filter, filters on")
+    }
+
+    private func chip(_ text: String, remove: @escaping () -> Void) -> some View {
+        Button(action: remove) {
+            HStack(spacing: 4) {
+                Text(text)
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(palette.secondaryText)
+            }
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(palette.accent.opacity(0.35))
+        .foregroundStyle(palette.text)
+        .accessibilityLabel("\(text), remove filter")
+        .help("Remove this filter")
     }
 }
 
@@ -336,9 +443,7 @@ struct MediaShelvesView: View {
     @Environment(\.palette) private var palette
     @AppStorage("mediaTopPeriod") private var period = "month"
     @State private var shelves: MediaShelves?
-    @State private var loading = false
-
-    static let periods = [("week", "Week"), ("month", "Month"), ("year", "Year"), ("all_time", "All Time")]
+    @State private var filter = Media.Filter()
 
     var body: some View {
         Group {
@@ -354,6 +459,7 @@ struct MediaShelvesView: View {
         }
         .task(id: period) { await load() }
         .pullToRefresh { await load() }
+        .topBar { MediaControls(period: $period, filter: $filter) }
     }
 
     private func load() async {
@@ -379,17 +485,6 @@ struct MediaShelvesView: View {
                 shelf("Now Playing", s.nowPlaying)
                 shelf("Recently Played", s.listens)
                 shelf("Recently Watched", s.watched)
-                if !(s.artists.isEmpty && s.albums.isEmpty && s.tracks.isEmpty) {
-                    Section {
-                        Picker("Period", selection: $period) {
-                            ForEach(Self.periods, id: \.0) { Text($0.1).tag($0.0) }
-                        }
-                        .pickerStyle(.segmented)
-                        .listRowBackground(palette.background)
-                    } header: {
-                        Text("Your Top")
-                    }
-                }
                 shelf("Top Artists", s.artists)
                 shelf("Top Albums", s.albums)
                 shelf("Top Tracks", s.tracks)
@@ -401,7 +496,8 @@ struct MediaShelvesView: View {
         }
     }
 
-    @ViewBuilder private func shelf(_ title: String, _ items: [MediaItem]) -> some View {
+    @ViewBuilder private func shelf(_ title: String, _ all: [MediaItem]) -> some View {
+        let items = Media.filter(all, filter)
         if !items.isEmpty {
             Section {
                 ForEach(items) { MediaItemRow(item: $0) }

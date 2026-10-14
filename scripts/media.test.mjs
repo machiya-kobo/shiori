@@ -50,6 +50,15 @@ test('matching: titles reduced, ids first', () => {
   for (const c of cases.same) assert.equal(S.mediaSame(c.a, c.b), c.want, JSON.stringify([c.a, c.b]));
 });
 
+test('sort and group as the other pills', () => {
+  const { items, sorts, groups } = cases.sorting;
+  for (const c of sorts) assert.deepEqual(plain(S.mediaSort(items, c.order).map((x) => x.key)), c.want, c.order);
+  for (const c of groups) {
+    const got = S.mediaGroups(S.mediaSort(items, 'newest'), c.grouping, c.offset).map((g) => ({ title: g.title, keys: g.items.map((x) => x.key) }));
+    assert.deepEqual(plain(got), c.want, `${c.grouping} ${c.offset}`);
+  }
+});
+
 test('images only from the service itself or TMDB', () => {
   for (const c of cases.images) assert.equal(S.mediaImageURL(c.raw, c.ctx), c.want, c.raw);
 });

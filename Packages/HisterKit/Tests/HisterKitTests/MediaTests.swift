@@ -108,6 +108,22 @@ struct MediaTests {
         }
     }
 
+    @Test func sortAndGroupAsTheOtherPills() {
+        let sorting = Self.cases["sorting"] as? [String: Any] ?? [:]
+        let items = Self.items(sorting["items"])
+        let sorts = sorting["sorts"] as? [[String: Any]] ?? []
+        #expect(!sorts.isEmpty)
+        for c in sorts {
+            let order = c["order"] as? String ?? ""
+            #expect(Media.sort(items, order).map(\.key) == c["want"] as? [String], "\(order)")
+        }
+        for c in sorting["groups"] as? [[String: Any]] ?? [] {
+            let grouping = c["grouping"] as? String ?? "", offset = c["offset"] as? Int ?? 0
+            let got = Media.groups(Media.sort(items, "newest"), grouping, offsetMinutes: offset).map { ["title": $0.title, "keys": $0.items.map(\.key)] as [String: Any] }
+            #expect(Self.same(got, c["want"]!), "\(grouping) \(offset): \(Self.describe(got))")
+        }
+    }
+
     @Test func imagesOnlyFromTheServiceOrTMDB() {
         for c in Self.list("images") {
             #expect(Media.imageURL(c["raw"], Self.context(c["ctx"])) == c["want"] as? String, "\(c["raw"]!)")

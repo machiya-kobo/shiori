@@ -2066,7 +2066,10 @@
   function mediaFiltersFromAddress() {
     const p = new URLSearchParams(location.search);
     const pick = (key, allowed) => (allowed.includes(p.get(key)) ? p.get(key) : undefined);
-    return { kind: pick('mk', ['films', 'tv', 'music', 'other']), played: pick('mp', ['never']), rated: pick('mr', ['loved', 'liked', 'any', 'unrated']) };
+    return {
+      kind: pick('mk', ['films', 'tv', 'music', 'other']), played: pick('mp', ['never']), rated: pick('mr', ['loved', 'liked', 'any', 'unrated']),
+      order: pick('mo', S.MEDIA_ORDERS.map(([k]) => k)) || 'best', grouping: pick('mg', S.MEDIA_GROUPINGS.map(([k]) => k)) || '',
+    };
   }
 
   /** Kind, Never Played and Rating: each change kept in the address and drawn in place (the services aren't asked again). */
@@ -2091,7 +2094,9 @@
       never.setAttribute('aria-pressed', on ? 'true' : 'false');
       set('mp', on ? 'never' : '');
     });
-    return el('div', { class: 'code-filters media-filters', role: 'group', 'aria-label': 'Filters' },
+    return el('div', { class: 'code-filters media-filters', role: 'group', 'aria-label': 'Sort, group and filter' },
+      select('mo', S.MEDIA_ORDERS.map(([k, name]) => [k === 'best' ? '' : k, name]), 'Sort', f.order === 'best' ? '' : f.order),
+      select('mg', S.MEDIA_GROUPINGS, 'Group', f.grouping),
       select('mk', [['', 'All Kinds'], ['films', 'Films'], ['tv', 'TV'], ['music', 'Music'], ['other', 'Other']], 'Kind', f.kind),
       never,
       select('mr', [['', 'Rating'], ['loved', '4★+'], ['liked', '3★+'], ['any', 'Any Rating'], ['unrated', 'Unrated']], 'Rating', f.rated));
@@ -2462,8 +2467,9 @@
     setPillCount('media', res.items.length);
     const draw = () => {
       const f = mediaFiltersFromAddress();
-      const items = S.mediaFilter(res.items, f);
-      $('web-results').replaceChildren(...items.map(mediaCard));
+      const items = S.mediaSort(S.mediaFilter(res.items, f), f.order);
+      const groups = S.mediaGroups(items, f.grouping, -new Date().getTimezoneOffset());
+      $('web-results').replaceChildren(...groups.flatMap((g) => [g.title ? el('li', { class: 'media-group' }, g.title) : null, ...g.items.map(mediaCard)]).filter(Boolean));
       $('web-status').replaceChildren(items.length ? '' : 'Nothing matches these filters.');
     };
     $('web-results').before(mediaFilterBar(draw));
