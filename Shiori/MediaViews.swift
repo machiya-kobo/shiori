@@ -108,8 +108,8 @@ struct MediaResults: View {
 
 /// Media's bar, the other pills' Sort · Group · Filter: Sort (Best Match on
 /// a search, Newest, Oldest, Most Played, Top Rated, Title, Year, Recently
-/// Added), Group (Shelves when browsing, No Groups, Day, Month, Kind,
-/// Played), the top lists' period when browsing, and Filter, a sheet with a
+/// Added; browsing, the top lists' period too), Group (Shelves when
+/// browsing, No Groups, Day, Month, Kind, Played), and Filter, a sheet with a
 /// count beside every choice (Date, Kind, Played, Rating, Service), with
 /// chips to remove each and Clear.
 struct MediaControls: View {
@@ -134,7 +134,6 @@ struct MediaControls: View {
             HStack(spacing: 16) {
                 sortMenu
                 groupMenu
-                if let period, grouping == "shelves" { periodMenu(period) }
                 Button {
                     filtering = true
                 } label: {
@@ -174,6 +173,13 @@ struct MediaControls: View {
                 ForEach(orders, id: \.0) { Text($0.1).tag($0.0) }
             }
             .pickerStyle(.inline)
+            // Browsing: the top lists' period, here rather than a control of its own.
+            if let period {
+                Picker("Your Top", selection: period) {
+                    ForEach(Self.periods, id: \.0) { Text($0.1).tag($0.0) }
+                }
+                .pickerStyle(.inline)
+            }
         } label: {
             Label(name, systemImage: "arrow.up.arrow.down")
         }
@@ -199,21 +205,6 @@ struct MediaControls: View {
         .quietControl(active: !grouping.isEmpty && grouping != "shelves")
         .help("Group")
         .accessibilityLabel("Group: \(name)")
-    }
-
-    private func periodMenu(_ period: Binding<String>) -> some View {
-        let name = Self.periods.first { $0.0 == period.wrappedValue }?.1 ?? "This Month"
-        return Menu {
-            Picker("Your Top", selection: period) {
-                ForEach(Self.periods, id: \.0) { Text($0.1).tag($0.0) }
-            }
-            .pickerStyle(.inline)
-        } label: {
-            Label(name, systemImage: "calendar")
-        }
-        .quietControl()
-        .help("Your Top: which period")
-        .accessibilityLabel("Your Top: \(name)")
     }
 
     private func chip(_ text: String, remove: @escaping () -> Void) -> some View {

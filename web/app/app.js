@@ -1826,8 +1826,8 @@ function mediaChoices(params, { search = true } = {}) {
 }
 
 /**
- * Media's bar, the other pills' Sort · Group · Filter (controls()): Sort,
- * Group (Shelves first when browsing), the top lists' period with Shelves,
+ * Media's bar, the other pills' Sort · Group · Filter (controls()): Sort
+ * (browsing, the top lists' period too), Group (Shelves first when browsing),
  * and Filter (Date, Kind, Played, Rating, Service, each choice with how
  * many it keeps). Each choice goes in the address.
  */
@@ -1846,13 +1846,14 @@ function mediaControls(view, params, { search, items = [] }) {
   return h(
     'div',
     { class: 'controls' },
-    dropMenu(quiet('sort', named(orders, c.order) || orders[0][1], false), () => orders.map(([k, t]) => ({ text: t, checked: k === c.order, pick: () => set({ mo: k }) }))),
+    dropMenu(quiet('sort', named(orders, c.order) || orders[0][1], false), () => [
+      ...orders.map(([k, t]) => ({ text: t, checked: k === c.order, pick: () => set({ mo: k }) })),
+      // Browsing: the top lists' period, here rather than a control of its own.
+      ...(search ? [] : ['-', ...MEDIA_PERIODS.map(([k, t]) => ({ text: `Your Top: ${t}`, checked: k === c.period, pick: () => set({ p: k === 'month' ? '' : k }) }))]),
+    ]),
     dropMenu(quiet('group', c.grouping ? named(c.groupings, c.grouping) : 'Group', !!c.grouping && c.grouping !== 'shelves'), () =>
       // Day and Month follow when you played: they sort Newest (unless Oldest), as on the other pills.
       c.groupings.map(([k, t]) => ({ text: t, checked: k === c.grouping, pick: () => set({ mg: k, mo: (k === 'day' || k === 'month') && c.order !== 'oldest' ? 'newest' : params.get('mo') || undefined }) }))),
-    !search && c.grouping === 'shelves'
-      ? dropMenu(quiet('clock', named(MEDIA_PERIODS, c.period), false), () => MEDIA_PERIODS.map(([k, t]) => ({ text: t, checked: k === c.period, pick: () => set({ p: k === 'month' ? '' : k }) })))
-      : null,
     dropMenu(quiet('filter', filterName || 'Filter', !!filterName), () => S.MEDIA_FILTERS.flatMap(([key, title, choices], i) => [
       ...(i ? ['-'] : []),
       { text: key === 'date' ? 'Any Time' : `Any ${title}`, checked: !c.filter[key], pick: () => set({ ['m' + key]: '' }) },
