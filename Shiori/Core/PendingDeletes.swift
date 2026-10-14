@@ -23,6 +23,10 @@ import Observation
     @ObservationIgnored private let send: (StoredPage) async throws(HisterError) -> Void
     @ObservationIgnored private let isPrivate: (String) -> Bool
     @ObservationIgnored private let undoWindow: Duration
+    /// The window while a screen reader runs (VoiceOver needs time to reach
+    /// the toast), and whether one is running now.
+    @ObservationIgnored private let readerWindow: Duration
+    @ObservationIgnored private let readerRunning: () -> Bool
     @ObservationIgnored private let holdBackground: () -> (() -> Void)
 
     /// `send`: the delete itself (it refuses a private vault's note or a
@@ -33,11 +37,15 @@ import Observation
         send: @escaping (StoredPage) async throws(HisterError) -> Void,
         isPrivate: @escaping (String) -> Bool,
         undoWindow: Duration,
+        readerWindow: Duration? = nil,
+        readerRunning: @escaping () -> Bool = { false },
         holdBackground: @escaping () -> (() -> Void) = { {} }
     ) {
         self.send = send
         self.isPrivate = isPrivate
         self.undoWindow = undoWindow
+        self.readerWindow = readerWindow ?? undoWindow
+        self.readerRunning = readerRunning
         self.holdBackground = holdBackground
     }
 
@@ -50,7 +58,7 @@ import Observation
         hidden.insert(document.url)
         let pending = Pending(document: document)
         self.pending = pending
-        let window = undoWindow
+        let window = readerRunning() ? readerWindow : undoWindow
         pendingTask = Task { [weak self] in
             try? await Task.sleep(for: window)
             guard !Task.isCancelled else { return }

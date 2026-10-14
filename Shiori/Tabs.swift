@@ -686,5 +686,8 @@ struct UndoToast: View {
         #endif
         .accessibilityElement(children: .combine)
         .accessibilityAction(named: "Undo", undo)
+        // Nothing moves VoiceOver's focus here, so say it: the delete is
+        // final once the toast goes.
+        .onAppear { AccessibilityNotification.Announcement("Deleted \(title). Undo available.").post() }
     }
 }

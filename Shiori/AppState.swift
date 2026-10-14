@@ -734,6 +734,8 @@ final class AppState {
             },
             isPrivate: { Notes.isPrivateNote($0) },
             undoWindow: Self.undoWindow,
+            readerWindow: Self.readerUndoWindow,
+            readerRunning: { Self.voiceOverRunning },
             holdBackground: Self.holdBackground)
 
         let shared = SharedSettings.defaults
@@ -816,6 +818,16 @@ final class AppState {
     // MARK: Delete with Undo (`deletes`)
 
     static let undoWindow = Duration.seconds(6)
+    /// With VoiceOver on: time to hear the toast and reach its Undo.
+    static let readerUndoWindow = Duration.seconds(20)
+
+    static var voiceOverRunning: Bool {
+        #if os(iOS)
+        UIAccessibility.isVoiceOverRunning
+        #else
+        NSWorkspace.shared.isVoiceOverEnabled
+        #endif
+    }
 
     /// Time to finish a delete sent on the way to the background: iOS
     /// would suspend the app mid-DELETE. Nothing to hold on the Mac.

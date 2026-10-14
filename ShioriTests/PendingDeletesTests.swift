@@ -47,6 +47,19 @@ struct PendingDeletesTests {
         #expect(sent.urls.isEmpty)
     }
 
+    @Test func withVoiceOverOnTheWindowIsLonger() async throws {
+        let sent = Sent()
+        let deletes = PendingDeletes(
+            send: { (document: StoredPage) async throws(HisterError) -> Void in sent.urls.append(document.url) },
+            isPrivate: { _ in false }, undoWindow: .milliseconds(30), readerWindow: .seconds(60), readerRunning: { true })
+        deletes.start(page("https://example.com/a"))
+        try await Task.sleep(for: .milliseconds(200))
+        // Still waiting: the reader's window, not the short one.
+        #expect(sent.urls.isEmpty)
+        #expect(deletes.pending != nil)
+        deletes.undo()
+    }
+
     @Test func aSecondDeleteSendsTheFirst() async throws {
         let sent = Sent()
         let deletes = deletes(sent, window: .seconds(60))
