@@ -26,9 +26,9 @@ service is optional. With none set up, there's no Media pill.
   Lists), your watchlist and Recently Added. Group → Day or Month instead puts
   date headings over everything, by when you played it.
 - **On All:** Your Media, the top five, with the count leading to the pill.
-- **A card opens in its service:** Koito or Movary first, then Jellyfin, then
-  Plex. Its other places are links: the other services, IMDb, TMDB, Letterboxd
-  and MusicBrainz. Those sites are only ever opened as links, never fetched.
+- **A card opens in its service:** films and TV in Plex first, then Movary,
+  then Jellyfin; music in Koito first. Its other places are links: the other
+  services, IMDb, TMDB, Letterboxd and MusicBrainz. Those sites are only ever opened as links, never fetched.
 
 Searched on purpose only (Return, the pill), never while typing.
 

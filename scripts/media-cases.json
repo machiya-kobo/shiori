@@ -4376,8 +4376,13 @@
    "subtitle": "Film · 1999",
    "outside": "IMDb 7.8 · RT 93% · TMDB 7.3",
    "places": {
-    "href": "https://movary.example.ts.net/users/reader/movies/12",
+    "href": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F101",
     "places": [
+     {
+      "key": "plex",
+      "name": "Plex",
+      "url": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F101"
+     },
      {
       "key": "movary",
       "name": "Movary",
@@ -4387,11 +4392,6 @@
       "key": "jellyfin",
       "name": "Jellyfin",
       "url": "https://jellyfin.example.ts.net/web/#/details?id=d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4&serverId=b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
-     },
-     {
-      "key": "plex",
-      "name": "Plex",
-      "url": "https://plex.example.ts.net:32400/web/index.html#!/server/c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3/details?key=%2Flibrary%2Fmetadata%2F101"
      },
      {
       "key": "imdb",

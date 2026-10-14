@@ -2021,15 +2021,18 @@
 
   /**
    * Where a card opens and its other places: {href, places: [{key, name, url}]}.
-   * Koito or Movary first (the history), then Jellyfin, then Plex; the outside
-   * sites (IMDb, TMDB, Letterboxd, MusicBrainz) are links only, never fetched.
+   * Films and TV open in Plex first, then Movary, then Jellyfin; everything
+   * else in Koito or Movary first (the history), then Jellyfin, then Plex.
+   * The outside sites (IMDb, TMDB, Letterboxd, MusicBrainz) are links only,
+   * never fetched.
    */
   function mediaPlaces(item) {
     const it = item || {};
     const open = it.open || {};
     const ids = it.ids || {};
     const places = [];
-    for (const key of ['koito', 'movary', 'jellyfin', 'plex']) if (/^https?:\/\//.test(open[key] || '')) places.push({ key, name: MEDIA_NAMES[key], url: open[key] });
+    const video = ['film', 'collection', 'show', 'episode'].includes(it.kind);
+    for (const key of video ? ['plex', 'movary', 'jellyfin', 'koito'] : ['koito', 'movary', 'jellyfin', 'plex']) if (/^https?:\/\//.test(open[key] || '')) places.push({ key, name: MEDIA_NAMES[key], url: open[key] });
     const film = it.kind === 'film' || it.kind === 'collection';
     const tv = it.kind === 'show' || it.kind === 'episode';
     if (ids.imdb && (film || tv)) places.push({ key: 'imdb', name: 'IMDb', url: `https://www.imdb.com/title/${ids.imdb}/` });

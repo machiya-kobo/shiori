@@ -1031,12 +1031,14 @@ public enum Media {
         public var url: String
     }
 
-    /// Where a card opens and its other places. Koito or Movary first (the
-    /// history), then Jellyfin, then Plex; the outside sites (IMDb, TMDB,
-    /// Letterboxd, MusicBrainz) are links only, never fetched.
+    /// Where a card opens and its other places. Films and TV open in Plex
+    /// first, then Movary, then Jellyfin; everything else in Koito or Movary
+    /// first (the history), then Jellyfin, then Plex. The outside sites
+    /// (IMDb, TMDB, Letterboxd, MusicBrainz) are links only, never fetched.
     public static func places(_ it: MediaItem) -> (href: String, places: [Place]) {
         var places: [Place] = []
-        for s in [MediaService.koito, .movary, .jellyfin, .plex] {
+        let video = ["film", "collection", "show", "episode"].contains(it.kind)
+        for s in video ? [MediaService.plex, .movary, .jellyfin, .koito] : [MediaService.koito, .movary, .jellyfin, .plex] {
             if let url = it.open[s.rawValue], url.hasPrefix("http://") || url.hasPrefix("https://") { places.append(.init(key: s.rawValue, name: s.name, url: url)) }
         }
         let film = it.kind == "film" || it.kind == "collection"

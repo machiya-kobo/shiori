@@ -2124,7 +2124,7 @@
   }
 
   /**
-   * A media card: the title opening it in its service (Koito or Movary first),
+   * A media card: the title opening it in its service (S.mediaPlaces),
    * what it is, when you played it, your stars and the others' ratings, its
    * art (with Images in Previews on) and its other places as chips.
    */

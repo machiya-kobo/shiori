@@ -326,8 +326,8 @@ struct MediaFailuresRow: View {
 }
 
 /// One card: its art, the title, what it is, when you played it, your
-/// stars and the others' ratings. A tap opens it in its service (Koito or
-/// Movary first, then Jellyfin, then Plex); its menu has every place.
+/// stars and the others' ratings. A tap opens it in its service (films and
+/// TV in Plex first, music in Koito; `Media.places`); its menu has every place.
 struct MediaItemRow: View {
     let item: MediaItem
 
