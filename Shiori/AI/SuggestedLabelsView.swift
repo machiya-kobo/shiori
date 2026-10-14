@@ -137,6 +137,34 @@ struct SuggestedLabelsView: View {
         }
     }
 
+    @ViewBuilder private func choices(_ suggestion: PendingSuggestion) -> some View {
+        ForEach(suggestion.labels, id: \.self) { label in
+            Button { accept(suggestion, label) } label: { LabelChip(label: label).tapArea(vertical: 12, horizontal: 3) }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Apply \(label)")
+        }
+        if let newLabel = suggestion.newLabel {
+            Button { accept(suggestion, newLabel) } label: { LabelChip(label: "+ \(newLabel)").tapArea(vertical: 12, horizontal: 3) }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Apply the new label \(newLabel)")
+        }
+    }
+
+    @ViewBuilder private func otherAndSkip(_ suggestion: PendingSuggestion) -> some View {
+        // Named for their page: VoiceOver reads a list of them.
+        let page = suggestion.title.isEmpty ? (URL(string: suggestion.url)?.host() ?? suggestion.url) : suggestion.title
+        Button("Other…") { choosing = suggestion }
+            .buttonStyle(.borderless)
+            .help("Choose any label")
+            .tapArea(vertical: 12, horizontal: 4)
+            .accessibilityLabel("Other Label for \(page)")
+        Button("Skip") { labeller.skip(suggestion) }
+            .buttonStyle(.borderless)
+            .foregroundStyle(palette.secondaryText)
+            .tapArea(vertical: 12, horizontal: 4)
+            .accessibilityLabel("Skip \(page)")
+    }
+
     private func pendingRow(_ suggestion: PendingSuggestion) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Button {
@@ -152,26 +180,21 @@ struct SuggestedLabelsView: View {
                 }
             }
             .buttonStyle(.plain)
-            HStack(spacing: 8) {
-                ForEach(suggestion.labels, id: \.self) { label in
-                    Button { accept(suggestion, label) } label: { LabelChip(label: label).tapArea(vertical: 12, horizontal: 3) }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Apply \(label)")
+            // One line when it fits; else the choices, then Other… and
+            // Skip under them (a long label ran the row past the edge).
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    choices(suggestion)
+                    Spacer()
+                    otherAndSkip(suggestion)
                 }
-                if let newLabel = suggestion.newLabel {
-                    Button { accept(suggestion, newLabel) } label: { LabelChip(label: "+ \(newLabel)").tapArea(vertical: 12, horizontal: 3) }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Apply the new label \(newLabel)")
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) { choices(suggestion) }
+                    HStack(spacing: 16) {
+                        Spacer()
+                        otherAndSkip(suggestion)
+                    }
                 }
-                Spacer()
-                Button("Other…") { choosing = suggestion }
-                    .buttonStyle(.borderless)
-                    .help("Choose any label")
-                    .tapArea(vertical: 12, horizontal: 4)
-                Button("Skip") { labeller.skip(suggestion) }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(palette.secondaryText)
-                    .tapArea(vertical: 12, horizontal: 4)
             }
             .disabled(busy.contains(suggestion.url))
             if !suggestion.reason.isEmpty {
