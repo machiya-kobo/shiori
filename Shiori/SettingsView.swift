@@ -43,22 +43,22 @@ struct SettingsView: View {
             case .media: "Media"
             case .safari: "Safari"
             case .ai: "AI"
-            case .feeds: "Feeds & Export"
+            case .feeds: "Data"
             case .account: "Account"
             }
         }
         var symbol: String {
             switch self {
-            // One shape, so the Mac's tabs read the same size: each a
-            // symbol in a circle (Safari's compass is one), AI's sparkles
-            // the one open glyph of the same height.
+            // One shape, so the pages read the same size: each a symbol in
+            // a circle (Safari's compass is one). AI's sparkles have no
+            // circled symbol: `PageIcon` draws them in one.
             case .appearance: "circle.lefthalf.filled"
             case .search: "magnifyingglass.circle"
             case .results: "list.bullet.circle"
             case .media: "play.circle"
             case .safari: "safari"
             case .ai: "sparkles"
-            case .feeds: "antenna.radiowaves.left.and.right.circle"
+            case .feeds: "square.and.arrow.up.circle"
             case .account: "person.crop.circle"
             }
         }
@@ -108,7 +108,7 @@ struct SettingsView: View {
                                     .foregroundStyle(palette.secondaryText)
                             }
                         } icon: {
-                            Image(systemName: page.symbol).foregroundStyle(palette.accent)
+                            PageIcon(page: page).foregroundStyle(palette.accent)
                         }
                     }
                     .listRowBackground(palette.surface)
@@ -981,7 +981,7 @@ private struct SettingsPageStrip: View {
                     selection = page
                 } label: {
                     VStack(spacing: 3) {
-                        Image(systemName: page.symbol)
+                        PageIcon(page: page)
                             .font(.system(size: 19, weight: .regular))
                             .frame(width: 28, height: 26)
                         Text(page.title)
@@ -1005,4 +1005,20 @@ private struct SettingsPageStrip: View {
     }
 }
 #endif
+
+/// A Settings page's symbol. AI's sparkles are drawn inside a circle, as
+/// every other page's symbol is one, so none stands out.
+struct PageIcon: View {
+    let page: SettingsView.Page
+
+    var body: some View {
+        if page == .ai {
+            Image(systemName: "circle")
+                .overlay { Image(systemName: "sparkles").scaleEffect(0.6) }
+                .accessibilityHidden(true)
+        } else {
+            Image(systemName: page.symbol)
+        }
+    }
+}
 

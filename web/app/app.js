@@ -2624,7 +2624,7 @@ const SETTINGS_PAGES = [
   ['results', 'Results', 'list', 'How results look and open, and your history'],
   ['media', 'Media', 'music', 'Your libraries and what you played'],
   ['ai', 'AI', 'sparkles', 'AI Answer'],
-  ['feeds', 'Feeds & Export', 'feed', 'Feeds, NewsBlur, export'],
+  ['feeds', 'Data', 'feed', 'Feeds, NewsBlur, export'],
   ['account', 'Account', 'person', 'Signing in, about'],
 ];
 const MEDIA_NAMES = { jellyfin: 'Jellyfin', plex: 'Plex', koito: 'Koito', movary: 'Movary' };
