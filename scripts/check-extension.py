@@ -36,7 +36,9 @@ def problems(root, target="safari"):
         "background.js": ["const shioriHost", "installCaptureQueue", "installCombinedSearch"],
         "content.js": ["installPageSizeCap"],
         "popup.html": ["safari-popup.css", "shiori-popup.js"],
-        "search.html": ["search-core.js", "search.js", "palettes.css"],
+        "search.html": ["search-core.js", "search.js", "palettes.css", "backgrounds.js", "backgrounds.css"],
+        # The scene engine the page loads once a scene is picked (backgrounds.js).
+        "bg.js": ["window.annaiBg"],
         # The rooms' other themes (web/app/palettes.css), for every page on search.css.
         "palettes.css": [':root[data-palette="nord"]'],
     }

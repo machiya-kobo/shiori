@@ -127,6 +127,11 @@ prepend content.js patches/safari-content-shim.js
 # duckduckgo.com redirect.
 cp -- patches/shiori/search.html patches/shiori/search.css patches/shiori/search.js \
     patches/shiori/search-core.js "$RESOURCES/"
+# Backgrounds (Settings → Background): the controller, its styles, the scene
+# engine (loaded only once a scene is picked) and the scenes' previews.
+cp -- patches/shiori/backgrounds.js patches/shiori/backgrounds.css patches/shiori/bg.js "$RESOURCES/"
+mkdir -p -- "$RESOURCES/backgrounds"
+cp -- assets/backgrounds/bg-*.jpg "$RESOURCES/backgrounds/"
 # The Machiya rooms' other nine themes, the web app's own (scripts/palettes.mjs).
 cp -- web/app/palettes.css "$RESOURCES/palettes.css"
 # The DuckDuckGo hand-off (manifest.safari.json).

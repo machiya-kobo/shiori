@@ -1,0 +1,66 @@
+/* Backgrounds (backgrounds.js, docs/backgrounds.md): the scene, the rain and your picture or video sit in fixed
+   layers under the page; the page's panels turn to glass over them. Shared by the search page and the web app; each
+   says in its own stylesheet which of its surfaces are glass.
+
+   The glass keeps text at 4.5:1 (scripts/theme-contrast.test.mjs). The themes' colours sit right at that line, so
+   whatever shows through may only move a panel away from its text, never toward it. In a dark theme the glass dims
+   what's behind it (brightness 0.16) before it blurs it under half the panel's own colour, so the panel can only get
+   darker: the brightest a scene gets under the blur (measured), or a white picture of your own, still leaves every
+   colour at 4.5:1. That lets about a twelfth of the scene through; the rest shows around the panels, and the eye in
+   the corner shows it whole. A light theme's panels stay solid, since a night scene would only darken them, and so
+   do they where the browser can't blur or the system asks for less transparency. */
+:root { --glass-mix: 50%; --glass-filter: blur(20px) saturate(180%) brightness(0.16); }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="night"]) { --glass-mix: 100%; --glass-filter: none; }
+}
+:root[data-theme="day"] { --glass-mix: 100%; --glass-filter: none; }
+@media (prefers-reduced-transparency: reduce) {
+  :root:root { --glass-mix: 100%; --glass-filter: none; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root:root { --glass-mix: 100%; --glass-filter: none; }
+}
+
+/* The layers: the scene (or your picture or video), then the rain, under everything. 100lvh: the tallest the window
+   gets (a phone's toolbars hidden), so scrolling never uncovers or resizes them. */
+#bg, .bgimg, .bgvid, #rainfx {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100lvh; display: block; pointer-events: none;
+}
+#bg, .bgimg, .bgvid { z-index: -3; }
+#rainfx { z-index: -2; }
+.bgimg { background: center / cover no-repeat; }
+.bgvid { object-fit: cover; }
+html.has-bg body { background: transparent; }
+
+/* The corner, lower left: Rain and Watch. "On" (rain falling, the page hidden) is the accent ring. */
+.bgctl {
+  position: fixed; z-index: 20; left: calc(16px + env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex; gap: 6px; padding: 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 90%, transparent); border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 18px rgb(0 0 0 / 0.35);
+}
+.bgctl button {
+  display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 50%; cursor: pointer;
+  color: var(--text); background: var(--raised); border: 1px solid var(--line);
+}
+.bgctl button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.bgctl button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bgctl svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Watching: the background alone. A tap anywhere, Escape or the eye brings the page back. */
+html.has-bg body > :not(#bg, #rainfx, .bgimg, .bgvid, .bgctl, script) { transition: opacity 0.4s; }
+html.bg-watching body > :not(#bg, #rainfx, .bgimg, .bgvid, .bgctl, script) {
+  opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0s 0.4s;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.has-bg body > :not(#bg, #rainfx, .bgimg, .bgvid, .bgctl, script) { transition: none; }
+}
+
+/* Settings: the chosen scene's preview, your picture or video's buttons, a note when a file won't do. */
+.bg-thumb {
+  width: 168px; height: 70px; flex: none; border-radius: 8px; border: 1px solid var(--line);
+  background: #1a1b26 center / cover no-repeat; overflow: hidden;
+}
+.bg-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bg-actions { display: inline-flex; align-items: center; gap: 16px; }
+.bg-note { margin: 6px 4px 0; font-size: 0.8125rem; color: var(--danger, var(--tab-videos)); }
