@@ -460,10 +460,16 @@ test("every phone search field has the rooms' X and submit magnifier", () => {
   assert.match(pageCSS, /#go \{ display: none; \}\n@media \(max-width: 759px\) \{\n  #go \{ display: grid; \}/);
 });
 
-test('installed on an iPhone, the web app starts 24px under the status bar, as the rooms do', () => {
+test('installed, the first bar starts under the status bar and fades from its colour', () => {
   const appCSS = read('../web/app/app.css');
-  // Installed on an iPhone only: safe area + 24px.
-  assert.match(appCSS, /@supports \(-webkit-touch-callout: none\) \{\n  @media \(display-mode: standalone\) and \(max-width: 759px\) \{[^}]*padding-top: calc\(24px \+ env\(safe-area-inset-top\)\);/);
+  // Under an opaque status bar: no 24px gap, and the fade starts at the
+  // theme-color the page sends (--status-bar, from applyLook's pair).
+  assert.doesNotMatch(appCSS, /calc\(24px \+ env\(safe-area-inset-top\)\)/);
+  assert.match(appCSS, /@media \(display-mode: standalone\) \{[^}]*background-image: linear-gradient\(to bottom, var\(--status-bar\) 0%, color-mix\(in srgb, var\(--status-bar\) 0%, transparent\) 70%\);/);
+  assert.match(appCSS, /:root \{ --status-bar: var\(--bar-night, #16161e\); \}/);
+  const appJS = read('../web/app/app.js');
+  assert.match(appJS, /setProperty\('--bar-night', pair\[0\]\.content\)/);
+  assert.match(appJS, /setProperty\('--bar-day', pair\[1\]\.content\)/);
 });
 
 test("the web app's modules parse (the other tests read them as text)", () => {
