@@ -553,7 +553,7 @@ struct SearchScreen: View {
             run(recording: false)
         }
         .task { await app.loadCardsIfNeeded() }
-        .onChange(of: session.text) { _, new in
+        .onSessionTextChange { new in
             if new.isEmpty { session.submitted = nil }
         }
         // No search while typing (the user's call): Return or the field's

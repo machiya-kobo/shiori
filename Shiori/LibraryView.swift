@@ -46,9 +46,17 @@ struct LibraryView: View {
     // The live widths, saved only once they settle and only while the
     // preview still has room: a narrow window, Split View or Slide Over
     // squeezes the columns, and that isn't the user's choice.
+    // Written on every frame of a drag or a resize, so kept out of the
+    // view's state (each write redrew the whole layout): only what the
+    // layout needs is state, and in steps.
+    @State private var live = LiveWidths()
+    /// The window's width in 20-point steps (rounded down): what decides
+    /// the columns and their ideals.
     @State private var windowWidth = 0.0
-    @State private var liveSidebar = 0.0
-    @State private var liveResults = 0.0
+    #if os(macOS)
+    /// The results column's width in 4-point steps, for the field over it.
+    @State private var resultsColumn = 0.0
+    #endif
     /// The sidebar row, kept across launches (a search isn't).
     @SceneStorage("libraryItem") private var savedItem = "recent"
     /// The sidebar's Collections and Labels fold away (there can be
@@ -79,7 +87,7 @@ struct LibraryView: View {
                     searchField(content)
                         .environment(\.previewSelection, $session.selected)
                         // A label tag opens the label as its sidebar row.
-                        .environment(\.openLabel, { item = .label($0) })
+                        .environment(\.openLabel, OpenLabelAction(id: "library") { item = .label($0) })
                         #if os(macOS)
                         // A floor the split view can't restore past: macOS
                         // brings back its remembered divider (it came back
@@ -87,7 +95,13 @@ struct LibraryView: View {
                         .frame(minWidth: 420)
                         #endif
                         .navigationSplitViewColumnWidth(min: 420, ideal: resultsIdeal, max: 960)
-                        .onGeometryChange(for: Double.self) { $0.size.width } action: { liveResults = $0 }
+                        .onGeometryChange(for: Double.self) { $0.size.width } action: {
+                            live.results = $0
+                            scheduleSave()
+                        }
+                        #if os(macOS)
+                        .onGeometryChange(for: Double.self) { ($0.size.width / 4).rounded() * 4 } action: { resultsColumn = $0 }
+                        #endif
                 } detail: {
                     preview
                         .task(id: session.selected?.url) {
@@ -114,7 +128,7 @@ struct LibraryView: View {
                     NavigationStack(path: $narrowPath) {
                         searchField(content
                             .withDestinations()
-                            .environment(\.openLabel, { item = .label($0) }))
+                            .environment(\.openLabel, OpenLabelAction(id: "library") { item = .label($0) }))
                     }
                 }
             }
@@ -146,7 +160,11 @@ struct LibraryView: View {
         .toolbar(removing: .title)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         #endif
-        .onGeometryChange(for: Double.self) { $0.size.width } action: { windowWidth = $0 }
+        .onGeometryChange(for: Double.self) { $0.size.width } action: {
+            live.window = $0
+            scheduleSave()
+        }
+        .onGeometryChange(for: Double.self) { ($0.size.width / 20).rounded(.down) * 20 } action: { windowWidth = $0 }
         // Narrowed past the pane's width or widened again: the page that was
         // open stays open, pushed over the results or shown in the pane.
         .onChange(of: threeColumns) { _, three in
@@ -157,8 +175,6 @@ struct LibraryView: View {
                 narrowPath.append(page)
             }
         }
-        .task(id: liveSidebar) { await saveWidths() }
-        .task(id: liveResults) { await saveWidths() }
         // No search while typing (the user's call): Return, a recent search
         // or a pill runs it, and the field keeps the keyboard meanwhile.
         .onChange(of: session.scope) { _, scope in
@@ -191,7 +207,7 @@ struct LibraryView: View {
         // iPad alike: back to the Library's newest, the search's rows and its
         // sidebar row let go. Not while the field searches within a
         // collection or label.
-        .onChange(of: session.text) { _, new in
+        .onSessionTextChange { new in
             guard new.trimmingCharacters(in: .whitespaces).isEmpty, session.within == nil else { return }
             session.submitted = nil
             if case .search = item { item = .recent }
@@ -234,15 +250,21 @@ struct LibraryView: View {
         .task { await app.loadCardsIfNeeded() }
     }
 
+    /// The widths saved 400 ms after the last change, once they settle.
+    private func scheduleSave() {
+        live.saving?.cancel()
+        live.saving = Task { await saveWidths() }
+    }
+
     private func saveWidths() async {
         try? await Task.sleep(for: .milliseconds(400))
-        guard !Task.isCancelled, windowWidth > 0 else { return }
-        let columns = liveSidebar + (threeColumns ? liveResults : 0)
-        guard windowWidth - columns >= Self.previewRoom else { return }
+        guard !Task.isCancelled, live.window > 0 else { return }
+        let columns = live.sidebar + (threeColumns ? live.results : 0)
+        guard live.window - columns >= Self.previewRoom else { return }
         // Only a width dragged to: the golden default keeps following the
         // results column until then.
-        if liveSidebar > 0, abs(liveSidebar - sidebarIdeal) > 1 { sidebarWidth = liveSidebar }
-        if liveResults > 0, threeColumns { resultsWidth = liveResults }
+        if live.sidebar > 0, abs(live.sidebar - sidebarIdeal) > 1 { sidebarWidth = live.sidebar }
+        if live.results > 0, threeColumns { resultsWidth = live.results }
     }
 
     /// Three columns with Preview Pane on and room for a usable preview;
@@ -320,7 +342,7 @@ struct LibraryView: View {
     /// points in); the two-column layout (Preview Pane off) has no results
     /// column to span.
     private var searchWidth: CGFloat {
-        let column = threeColumns && liveResults > 0 ? liveResults : 420
+        let column = threeColumns && resultsColumn > 0 ? resultsColumn : 420
         return max(220, column - 16)
     }
     #endif
@@ -447,7 +469,10 @@ struct LibraryView: View {
             }
         }
         #endif
-        .onGeometryChange(for: Double.self) { $0.size.width } action: { liveSidebar = $0 }
+        .onGeometryChange(for: Double.self) { $0.size.width } action: {
+            live.sidebar = $0
+            scheduleSave()
+        }
         .pullToRefresh { await app.reloadRules() }
     }
 
@@ -593,4 +618,13 @@ private struct SidebarHeading: ViewModifier {
             .foregroundStyle(palette.tint(.teal))
             .textCase(nil)
     }
+}
+
+/// The columns' widths as they are, frame by frame, and the pending save:
+/// a reference, not observed, so a drag doesn't redraw the layout.
+private final class LiveWidths {
+    var window = 0.0
+    var sidebar = 0.0
+    var results = 0.0
+    var saving: Task<Void, Never>?
 }

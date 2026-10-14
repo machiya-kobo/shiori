@@ -14,12 +14,30 @@ struct ResultActions {
     var opened: @MainActor (StoredPage) -> Void = { _ in }
     /// A label tag tapped: that label's pages.
     var showLabel: @MainActor (String) -> Void = { _ in }
+    /// Who made these and for what (`ResultActionsHost`): closures can't be
+    /// compared, so without it every redraw of the host was a "new" value
+    /// and redrew every row that reads it. Nil is never equal.
+    var key: String?
+}
+
+extension ResultActions: Equatable {
+    static func == (a: ResultActions, b: ResultActions) -> Bool { a.key != nil && a.key == b.key }
+}
+
+/// Opens a label as the Mac's and iPad's sidebar row. Equal by its maker
+/// alone: the closure is made anew with every redraw of the layout, and an
+/// environment value that's never equal redraws every reader.
+struct OpenLabelAction: Equatable {
+    let id: String
+    let open: (String) -> Void
+    func callAsFunction(_ label: String) { open(label) }
+    static func == (a: OpenLabelAction, b: OpenLabelAction) -> Bool { a.id == b.id }
 }
 
 extension EnvironmentValues {
     /// Set by the Mac and iPad layout: a label opens as its sidebar row.
     /// Without it (the iPhone), the label's list is pushed.
-    @Entry var openLabel: ((String) -> Void)? = nil
+    @Entry var openLabel: OpenLabelAction? = nil
 }
 
 extension EnvironmentValues {
@@ -45,6 +63,8 @@ private struct ResultActionsHost: ViewModifier {
     @State private var previewing: PreviewRequest?
     @State private var saving: WebResult?
     @State private var failure: String?
+    /// This host, for `ResultActions.key`.
+    @State private var id = UUID()
 
     func body(content: Content) -> some View {
         content
@@ -68,7 +88,10 @@ private struct ResultActionsHost: ViewModifier {
                     },
                     showLabel: { label in
                         if let openLabel { openLabel(label) } else { labelRoute = QueryRoute(title: label, query: "label:\(label)") }
-                    }))
+                    },
+                    // What the closures above capture that can change: the
+                    // rest is this host's own state, the same every redraw.
+                    key: "\(id)|\(query ?? "\u{0}")|\(selection != nil)|\(openLabel?.id ?? "")"))
             .navigationDestination(item: $labelRoute) { ResultsScreen(route: $0) }
             .navigationDestination(item: $previewing) { DocumentView(document: $0.document) }
             .sheet(item: $labelling) { document in
