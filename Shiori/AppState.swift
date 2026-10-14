@@ -1066,6 +1066,11 @@ final class FaviconCache {
         case failed
     }
 
+    /// The icon if it's here already, without asking anyone.
+    func cached(_ key: String) -> PlatformImage? {
+        key.isEmpty ? nil : images.object(forKey: key as NSString)
+    }
+
     func image(for key: String, using client: HisterClient?) async -> PlatformImage? {
         guard !key.isEmpty, let client else { return nil }
         if let image = images.object(forKey: key as NSString) { return image }

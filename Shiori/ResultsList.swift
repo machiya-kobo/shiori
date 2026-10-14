@@ -564,7 +564,9 @@ struct FaviconView: View {
 
     var body: some View {
         Group {
-            if let image {
+            // One already fetched shows at once, not the globe until the
+            // task has asked for it.
+            if let image = image ?? app.favicons.cached(key) {
                 Image(platformImage: image)
                     .resizable()
                     .interpolation(.high)
