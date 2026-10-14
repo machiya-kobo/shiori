@@ -3497,21 +3497,16 @@
   }
 
   /**
-   * A fetch's options for `url`: with the credentials' headers when the
-   * host rule allows them, and then `redirect: 'error'`, so it never
+   * A fetch's options for `url`: with the credential's header when the
+   * host rule allows it, and then `redirect: 'error'`, so it never
    * follows a redirect anywhere. Everything else (credentials included) as
-   * given. `histerToken`: Hister's token too, as `X-Access-Token`, which
-   * rooms in Hister sign-in mode read first (they refuse the identity
-   * file's tokens) and rooms on the identity file ignore: so both go,
-   * whichever mode a room is in.
+   * given. Never Hister's token (`X-Access-Token`): it goes to Hister alone.
    */
-  function machiyaFetchOptions(url, token, rooms, init = {}, { histerToken: hister = '' } = {}) {
+  function machiyaFetchOptions(url, token, rooms, init = {}) {
     const clean = machiyaToken(token);
-    const histerClean = histerToken(hister);
-    if ((!clean && !histerClean) || !mayCarryMachiyaToken(url, rooms)) return init;
+    if (!clean || !mayCarryMachiyaToken(url, rooms)) return init;
     const headers = { ...(init.headers || {}) };
-    if (clean) headers.Authorization = machiyaAuthHeader(clean);
-    if (histerClean) headers['X-Access-Token'] = histerClean;
+    headers.Authorization = machiyaAuthHeader(clean);
     return { ...init, headers, redirect: 'error' };
   }
 

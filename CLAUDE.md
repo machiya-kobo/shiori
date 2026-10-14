@@ -103,7 +103,7 @@ From a fresh clone (`git clone --recurse-submodules`; or `git submodule update -
 - **Credentials** (docs/signing-in.md). Hister's token (`X-Access-Token`)
   goes to the Hister server and nowhere else; never in a URL, a log, a
   settings file or the offline queue, and no request carrying one follows a
-  redirect. The Machiya token (`mch_…` pasted, `mcd_…` from `POST /api/pair`)
+  redirect to another origin. The Machiya token (`mch_…` pasted, `mcd_…` from `POST /api/pair`)
   goes in `Authorization: Bearer`, only to the configured Kura and Konbini by
   origin (`S.machiyaRooms` / `Machiya.rooms`, twins), never across a
   redirect; rooms in Hister sign-in mode get the app's `mhs_` id, Linux and

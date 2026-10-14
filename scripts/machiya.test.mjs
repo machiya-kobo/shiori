@@ -153,19 +153,13 @@ test("pairing's refusals say what to do", async () => {
   await assert.rejects(S.machiyaPair(KURA, 'ABCD', 'x', async () => { throw new TypeError('offline'); }), (e) => e.kind === 'unreachable');
 });
 
-test("rooms in Hister sign-in mode get Hister's token as X-Access-Token, beside the identity token, under the same host rule", () => {
+test("the rooms never get Hister's token", () => {
   const init = { headers: { Accept: 'application/json' }, credentials: 'omit' };
   const HISTER = 'ABCDEFGHJKLMNPQRSTUVWXYZ23';
-  const both = S.machiyaFetchOptions(KURA + 'api/search', TOKEN, ROOMS, init, { histerToken: HISTER });
-  assert.deepEqual(plain(both.headers), { Accept: 'application/json', Authorization: 'Bearer ' + TOKEN, 'X-Access-Token': HISTER });
-  assert.equal(both.redirect, 'error');
-  const only = S.machiyaFetchOptions(KURA + 'api/search', '', ROOMS, init, { histerToken: HISTER });
-  assert.deepEqual(plain(only.headers), { Accept: 'application/json', 'X-Access-Token': HISTER });
-  // Never to Hister, SearXNG or any other host; nothing that isn't a token.
-  for (const url of ['https://hister.example/search', 'https://evil.example/', 'https://kura.example.evil.example/']) {
-    assert.equal(S.machiyaFetchOptions(url, '', ROOMS, init, { histerToken: HISTER }), init, url);
-  }
-  assert.equal(S.machiyaFetchOptions(KURA, '', ROOMS, init, { histerToken: 'not a token' }), init);
+  // A Hister token isn't a room's credential: nothing is added.
+  assert.equal(S.machiyaFetchOptions(KURA + 'api/search', HISTER, ROOMS, init), init);
+  const options = S.machiyaFetchOptions(KURA + 'api/search', TOKEN, ROOMS, init, { histerToken: HISTER });
+  assert.deepEqual(plain(options.headers), { Accept: 'application/json', Authorization: 'Bearer ' + TOKEN });
 });
 
 test('pairing sends nothing without a code or a room', async () => {

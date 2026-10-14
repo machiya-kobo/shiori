@@ -94,25 +94,20 @@ public enum Machiya {
         return rooms.contains(o)
     }
 
-    /// The request with the credentials' headers when the host rule allows
-    /// them, else as it was (any it had removed). `token`: the identity
+    /// The request with the credential's header when the host rule allows
+    /// it, else as it was (any it had removed). `token`: the identity
     /// file's, or the Hister sign-in's id (`mhs_…`), as `Authorization`.
-    /// `histerToken`: Hister's token too, as `X-Access-Token`, but never
-    /// beside an `mhs_` id (rooms read it first, and the device's own
-    /// session is the one to use); rooms in Hister sign-in mode take it,
-    /// rooms on the identity file ignore it.
-    public static func authorize(_ request: URLRequest, token: String, rooms: [String], histerToken: String? = nil) -> URLRequest {
+    /// Never Hister's token (`X-Access-Token`): it goes to Hister alone.
+    public static func authorize(_ request: URLRequest, token: String, rooms: [String]) -> URLRequest {
         var request = request
         request.setValue(nil, forHTTPHeaderField: HisterToken.header)
         let sid = HisterAccount.sessionID(token)
         let clean = Self.token(token).isEmpty ? (sid ?? "") : Self.token(token)
-        let hister = sid == nil ? HisterToken.clean(histerToken) : nil
-        guard !clean.isEmpty || hister != nil, let url = request.url, mayCarryToken(to: url, rooms: rooms) else {
+        guard !clean.isEmpty, let url = request.url, mayCarryToken(to: url, rooms: rooms) else {
             request.setValue(nil, forHTTPHeaderField: "Authorization")
             return request
         }
-        request.setValue(clean.isEmpty ? nil : authHeader(clean), forHTTPHeaderField: "Authorization")
-        if let hister { request.setValue(hister, forHTTPHeaderField: HisterToken.header) }
+        request.setValue(authHeader(clean), forHTTPHeaderField: "Authorization")
         return request
     }
 
@@ -259,18 +254,13 @@ public enum Machiya {
 public struct MachiyaSignIn: Sendable, Equatable {
     public var token: String
     public var rooms: [String]
-    /// Hister's token, for rooms in Hister sign-in mode (`X-Access-Token`).
-    public var histerToken: String?
 
-    /// nil without a token that looks like one (the identity file's, or
-    /// Hister's for rooms in Hister sign-in mode).
-    public init?(token: String, rooms: [String], histerToken: String? = nil) {
+    /// nil without a token that looks like one (the identity file's).
+    public init?(token: String, rooms: [String]) {
         let clean = Machiya.token(token)
-        let hister = HisterToken.clean(histerToken)
-        guard !clean.isEmpty || hister != nil else { return nil }
+        guard !clean.isEmpty else { return nil }
         self.token = clean
         self.rooms = rooms
-        self.histerToken = hister
     }
 
     /// Signed in through Hister (`HisterAccount`): the helper's id, which
@@ -284,7 +274,7 @@ public struct MachiyaSignIn: Sendable, Equatable {
 
     /// The request with the header where the host rule allows.
     public func authorize(_ request: URLRequest) -> URLRequest {
-        Machiya.authorize(request, token: token, rooms: rooms, histerToken: histerToken)
+        Machiya.authorize(request, token: token, rooms: rooms)
     }
 }
 

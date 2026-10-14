@@ -187,24 +187,21 @@ struct RoomCredentialsTests {
         return (request.value(forHTTPHeaderField: "Authorization"), request.value(forHTTPHeaderField: "X-Access-Token"))
     }
 
-    @Test func onlyTheHisterTokenGoesAsXAccessToken() throws {
-        let signIn = try #require(MachiyaSignIn(token: "", rooms: Self.rooms, histerToken: Self.hister))
-        #expect(headers(signIn) == (nil, Self.hister))
+    @Test func theRoomsNeverGetHistersToken() throws {
+        let signIn = try #require(MachiyaSignIn(token: Self.identity, rooms: Self.rooms))
+        #expect(headers(signIn) == ("Bearer \(Self.identity)", nil))
         #expect(headers(signIn, "https://hister.example/search") == (nil, nil))
-        #expect(MachiyaSignIn(token: "", rooms: Self.rooms, histerToken: "not a token") == nil)
-    }
-
-    @Test func bothGoTogetherWhileRoomsMayBeInEitherMode() throws {
-        let signIn = try #require(MachiyaSignIn(token: Self.identity, rooms: Self.rooms, histerToken: Self.hister))
-        #expect(headers(signIn) == ("Bearer \(Self.identity)", Self.hister))
+        // Hister's token isn't a room's credential.
+        #expect(MachiyaSignIn(token: Self.hister, rooms: Self.rooms) == nil)
+        // One a request carried already is taken off.
+        var request = URLRequest(url: URL(string: "https://kura.example/")!)
+        request.setValue(Self.hister, forHTTPHeaderField: "X-Access-Token")
+        #expect(signIn.authorize(request).value(forHTTPHeaderField: "X-Access-Token") == nil)
     }
 
     @Test func aSignedInDeviceSendsItsIdAlone() throws {
         let signIn = try #require(MachiyaSignIn(sessionID: Self.sid, rooms: Self.rooms))
         #expect(headers(signIn) == ("Bearer \(Self.sid)", nil))
-        // Even given a token, an mhs_ id goes alone.
-        let request = Machiya.authorize(URLRequest(url: URL(string: "https://kura.example/")!), token: Self.sid, rooms: Self.rooms, histerToken: Self.hister)
-        #expect(request.value(forHTTPHeaderField: "X-Access-Token") == nil)
     }
 
     @Test func aRedirectElsewhereDropsBoth() {
