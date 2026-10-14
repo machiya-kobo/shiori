@@ -11,7 +11,13 @@ struct PillsSection: View {
     var body: some View {
         let list = PillOrder.list(app.pills)
         let among = list.map(\.key)
+        @Bindable var app = app
         Section {
+            Picker("Pill Row", selection: $app.searchPage.pillRow) {
+                Text("Automatic").tag("auto")
+                Text("Show All").tag("all")
+                Text("One Row").tag("scroll")
+            }
             ForEach(Array(list.enumerated()), id: \.element.key) { index, pill in
                 let name = PillOrder.names[pill.key] ?? pill.key
                 HStack(spacing: 12) {
@@ -44,7 +50,7 @@ struct PillsSection: View {
         } header: {
             Text("Pills")
         } footer: {
-            Text("The pills over every list and search, in this order. All always shows; Opened only with Show Opened, Small Web only with Small Web on.")
+            Text("Pill Row is this device's own: Show All wraps them, One Row scrolls sideways, Automatic shows all on a wide window. All always shows; Opened only with Show Opened, Small Web only with Small Web on.")
         }
     }
 }

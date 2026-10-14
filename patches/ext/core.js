@@ -692,6 +692,7 @@ const shioriMachiya = (() => {
     pills: [],
     smallWebTab: true,
     smallWebOpen: 'gateway',
+    pillRow: 'auto',
     smallwebURL: '',
     // Sent by the app too; without them here the page never heard of a
     // change (refreshSettings keeps only these keys).

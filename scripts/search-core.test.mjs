@@ -1254,7 +1254,7 @@ test("a page's own Settings keep only what SharedSettings.apply would, and never
   const keyName = (k) => k.trim().replace(/^Key\./, '');
   const flags = swift.match(/static let flagKeys = \[([^\]]*)\]/)[1].split(',').map(keyName).filter(Boolean);
   assert.deepEqual(Array.from(S.PAGE_FLAG_KEYS), flags);
-  for (const [key, list] of [['resultStyle', 'resultStyles'], ['smallWebOpen', 'smallWebOpens'], ['palette', 'palettes'], ['textSize', 'textSizes']]) {
+  for (const [key, list] of [['resultStyle', 'resultStyles'], ['smallWebOpen', 'smallWebOpens'], ['pillRow', 'pillRows'], ['palette', 'palettes'], ['textSize', 'textSizes']]) {
     const values = [...swift.match(new RegExp(`static let ${list} = \\[([^\\]]*)\\]`))[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
     assert.deepEqual(Array.from(S.PAGE_CHOICES[key]), values, key);
   }

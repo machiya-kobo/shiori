@@ -92,6 +92,11 @@ nonisolated enum SharedSettings {
         static let smallWebOpen = "smallWebOpen"
         /// The pills' order and which show (`PillOrder`).
         static let pills = "pills"
+        /// How the pills sit when they don't fit: "auto" (all of them on a
+        /// wide window, one row on a phone), "all" (they wrap) or "scroll"
+        /// (one row that scrolls sideways). This device's own, never sent to
+        /// the account.
+        static let pillRow = "pillRow"
         /// This device's own text size (Use This Device's Size), over the
         /// shared `textSize`; never sent to the account.
         static let textSizeDevice = "textSizeDevice"
@@ -127,6 +132,7 @@ nonisolated enum SharedSettings {
     static let urlKeys = [Key.searxngURL, Key.niwaURL, Key.konbiniURL, Key.newsBlurURL, Key.smallwebURL]
     static let resultStyles = ["tint", "solid", "bar", "none"]
     static let smallWebOpens = ["gateway", "direct"]
+    static let pillRows = ["auto", "all", "scroll"]
     static let clickOpensChoices = ["auto", "original", "preview"]
     static let notesSources = ["", "kura", "hister"]
     /// The rooms' theme keys, `AppPalette.all`'s (here because the Safari
@@ -164,6 +170,7 @@ nonisolated enum SharedSettings {
         if let value = values[Key.palette] as? String, palettes.contains(value) { set(value, Key.palette) }
         if let value = values[Key.resultStyle] as? String, resultStyles.contains(value) { set(value, Key.resultStyle) }
         if let value = values[Key.smallWebOpen] as? String, smallWebOpens.contains(value) { set(value, Key.smallWebOpen) }
+        if let value = values[Key.pillRow] as? String, pillRows.contains(value) { set(value, Key.pillRow) }
         if let value = values[Key.notesSource] as? String, notesSources.contains(value) { set(value, Key.notesSource) }
         if let value = values[Key.pills] as? [Any], value.isEmpty || !PillOrder.clean(value).isEmpty {
             set(PillOrder.clean(value), Key.pills)
@@ -232,7 +239,7 @@ nonisolated enum SharedSettings {
         // The Hister server too, so the extension follows the app's.
         for key in [
             Key.obsidianVault, Key.niwaURL, Key.konbiniURL, Key.textSize, Key.serverURL, Key.resultStyle,
-            Key.smallwebURL, Key.smallWebOpen, Key.palette, Key.notesSource,
+            Key.smallwebURL, Key.smallWebOpen, Key.palette, Key.notesSource, Key.pillRow,
         ] {
             if let value = defaults.string(forKey: key) { payload[key] = value }
         }

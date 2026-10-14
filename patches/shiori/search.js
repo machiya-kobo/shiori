@@ -197,6 +197,7 @@
     smallwebURL: '',
     smallWebTab: true,
     smallWebOpen: 'gateway',
+    pillRow: 'auto',
     ...(stored.shioriSettings || {}),
   };
   // An older build's "Hister Tab Only" choice.
@@ -206,6 +207,8 @@
   // How your pages, notes and opened pages stand apart: search.css keys
   // the cards' tint, bar or nothing off this.
   document.body.dataset.resultStyle = ['tint', 'solid', 'bar', 'none'].includes(settings.resultStyle) ? settings.resultStyle : 'tint';
+  // Pill Row: the tabs wrap or scroll as chosen; Automatic leaves it to the width (search.css).
+  document.body.dataset.pillRow = ['all', 'scroll'].includes(settings.pillRow) ? settings.pillRow : 'auto';
   const histerBase = withSlash(stored.histerURL || '');
   // The gateway: on the page's own host for the hosted page (/smallweb/),
   // else its own address (the app's setting).
@@ -1067,7 +1070,10 @@
       ...(HOSTED ? [{ action: 'device-size' }] : []),
     ], () => `Follows you when signed in${HOSTED ? ', except This Device’s Size' : ''}. ${prefsStateLine()}`],
     // Their order, and which show (S.pillEditor).
-    ['Pills', [{ action: 'pills' }]],
+    ['Pills', [
+      { key: 'pillRow', label: 'Pill Row', options: [['auto', 'Automatic'], ['all', 'Show All'], ['scroll', 'One Row']] },
+      { action: 'pills' },
+    ], () => 'Pill Row is this device’s own: Show All wraps them, One Row scrolls sideways, Automatic shows all on a wide window.'],
     ['Web', [
       { key: 'webResults', label: 'Web Results' },
       { key: 'showInfobox', label: 'Info Box', needs: 'webResults' },
@@ -1103,7 +1109,7 @@
       { key: 'showOpened', label: 'Show Opened' },
     ]],
   ];
-  const LOOK_KEYS = ['theme', 'palette', 'textSize', 'previewPane'];
+  const LOOK_KEYS = ['theme', 'palette', 'textSize', 'previewPane', 'pillRow'];
   // What a choice shows while it was never set.
   // Notes From: until chosen, Kura when one is set up (S.notesSource).
   const CHOICE_DEFAULTS = { theme: 'system', palette: 'tokyo-night', notesSource: S.notesSource('', kuraSetUp) };

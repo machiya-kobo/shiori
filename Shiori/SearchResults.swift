@@ -560,15 +560,20 @@ private struct OverflowFade: ViewModifier {
             } action: { _, now in
                 ends = now
             }
+            // One gradient across the whole row: three views side by side left
+            // a hairline seam between them, a dark line through a pill there.
             .mask {
-                HStack(spacing: 0) {
-                    LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: ends.leading ? width : 0)
-                    Color.black
-                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: ends.trailing ? width : 0)
+                GeometryReader { geometry in
+                    let fade = min(width / max(geometry.size.width, 1), 0.5)
+                    LinearGradient(
+                        stops: [
+                            .init(color: ends.leading ? .clear : .black, location: 0),
+                            .init(color: .black, location: ends.leading ? fade : 0),
+                            .init(color: .black, location: ends.trailing ? 1 - fade : 1),
+                            .init(color: ends.trailing ? .clear : .black, location: 1),
+                        ],
+                        startPoint: .leading, endPoint: .trailing)
                 }
-                .animation(.easeOut(duration: 0.15), value: ends)
             }
     }
 }
@@ -600,20 +605,39 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
     let tint: (Choice) -> Palette.Tint
     let count: (Choice) -> Int?
     @Environment(\.palette) private var palette
+    @Environment(AppState.self) private var app
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
     @State private var rowBelow = false
+    @State private var position: ScrollPosition
 
-    /// Pills that don't fit wrap to a second row on the Mac and an iPad's
-    /// wide layout, so every one is in sight (one row again once the column
-    /// is wide enough); the iPhone keeps one sideways-scrolling row.
+    init(label: String, selection: Binding<Choice>, choices: [Choice], title: @escaping (Choice) -> String,
+         tint: @escaping (Choice) -> Palette.Tint, count: @escaping (Choice) -> Int?) {
+        self.label = label
+        self.selection = selection
+        self.choices = choices
+        self.title = title
+        self.tint = tint
+        self.count = count
+        _position = State(initialValue: ScrollPosition(x: PillRowMemory.offsets[label] ?? 0))
+    }
+
+    /// Pills that don't fit wrap to a second row, every one in sight (one row
+    /// again once the column is wide enough), or scroll in one row, as
+    /// Settings → Search → Pill Row says. Automatic: they wrap on the Mac and
+    /// an iPad's wide layout, and scroll on the iPhone.
     private var wraps: Bool {
-        #if os(iOS)
-        sizeClass == .regular
-        #else
-        true
-        #endif
+        switch app.searchPage.pillRow {
+        case "all": return true
+        case "scroll": return false
+        default:
+            #if os(iOS)
+            return sizeClass == .regular
+            #else
+            return true
+            #endif
+        }
     }
 
     func body(content: Content) -> some View {
@@ -639,7 +663,11 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
                     } else {
                     // Scrolls sideways when the pills don't fit (a phone
                     // with Small Web on, the largest text sizes), rather
-                    // than truncating; the chosen one is kept in view.
+                    // than truncating; the chosen one is kept in view. The
+                    // row is rebuilt with each list under it: it starts where
+                    // the last one was left (it jumped back to All, then
+                    // across to the chosen pill), and scrolls only when the
+                    // chosen pill is out of sight.
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 6) {
@@ -657,6 +685,10 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
                             .padding(.top, 8)
                             .padding(.bottom, 6)
                             #endif
+                        }
+                        .scrollPosition($position)
+                        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x } action: { _, x in
+                            PillRowMemory.offsets[label] = x
                         }
                         .fadesOverflow()
                         .onAppear { proxy.scrollTo(selection.wrappedValue.id) }
@@ -692,6 +724,13 @@ private struct TopChoices<Choice: Hashable & Identifiable>: ViewModifier {
         guard let n = count(choice) else { return Text(title(choice)) }
         return Text(title(choice)) + Text(" \(n.formatted())").fontWeight(.regular)
     }
+}
+
+/// Where each pill row was scrolled to, by its label, for the next one drawn
+/// in its place (a row is rebuilt with every list under it).
+@MainActor
+enum PillRowMemory {
+    static var offsets: [String: CGFloat] = [:]
 }
 
 /// Pills in rows: as many as fit on each, the rest on the next (6 points

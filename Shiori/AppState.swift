@@ -1024,6 +1024,9 @@ struct SearchPageOptions: Equatable {
     var smallwebURL = ""
     var smallWebTab = true
     var smallWebOpen = "gateway"
+    /// How the pills sit when they don't fit: "auto", "all" (wrap) or
+    /// "scroll" (`SharedSettings.Key.pillRow`). This device's own.
+    var pillRow = "auto"
 
     init() {}
 
@@ -1081,6 +1084,7 @@ struct SearchPageOptions: Equatable {
         if let v = defaults.string(forKey: K.smallwebURL), !v.isEmpty { smallwebURL = v }
         flag(K.smallWebTab, &smallWebTab)
         if let v = defaults.string(forKey: K.smallWebOpen), SharedSettings.smallWebOpens.contains(v) { smallWebOpen = v }
+        if let v = defaults.string(forKey: K.pillRow), SharedSettings.pillRows.contains(v) { pillRow = v }
     }
 
     func save(to defaults: UserDefaults?) {
@@ -1117,6 +1121,7 @@ struct SearchPageOptions: Equatable {
         defaults.set(smallwebURL, forKey: K.smallwebURL)
         defaults.set(smallWebTab, forKey: K.smallWebTab)
         defaults.set(smallWebOpen, forKey: K.smallWebOpen)
+        defaults.set(pillRow, forKey: K.pillRow)
         defaults.removeObject(forKey: K.histerPlacement)
     }
 }

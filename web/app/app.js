@@ -179,6 +179,8 @@ const DEFAULTS = {
   niwaURL: fromBuild('__SHIORI_KURA_URL__'), konbiniURL: fromBuild('__SHIORI_KONBINI_URL__'),
   foldRepeats: true, searchFilters: true, labelSuggestions: true, newsBlurURL: '', aiAnswer: true,
   showOpened: false, resultStyle: 'tint', clickOpens: 'auto', smallWebTab: true, smallWebOpen: 'gateway',
+  // How the pills sit when they don't fit: 'auto', 'all' (wrap) or 'scroll'. This browser's own.
+  pillRow: 'auto',
   // Which of Kura's vaults the Notes lists search: 'all', or one's name.
   notesVault: 'all',
   // Where notes come from: '' until chosen (Kura when one is set up), 'kura' or 'hister'.
@@ -301,6 +303,7 @@ function applyLook() {
   }
   // How your pages, notes and opened pages stand apart: app.css keys off it.
   document.body.dataset.resultStyle = ['tint', 'solid', 'bar', 'none'].includes(settings.resultStyle) ? settings.resultStyle : 'tint';
+  document.body.dataset.pillRow = ['all', 'scroll'].includes(settings.pillRow) ? settings.pillRow : 'auto';
   // What a click on a row opens (rows read clickOpensOriginal); app.css shows the › for Shiori's page when it doesn't.
   document.body.dataset.clickOpens = ['auto', 'original', 'preview'].includes(settings.clickOpens) ? settings.clickOpens : 'auto';
   // This device's own size (Use This Device's Size), else the shared one.
@@ -2570,7 +2573,7 @@ function viewSettings() {
         h('span', {}, 'Follows you when signed in, except This Device’s Size. '),
         h('span', { class: 'prefs-state' }, prefsStateLine()),
       ]),
-      pillsGroup(group),
+      pillsGroup(group, choice),
       group('Web', [
         toggle('webResults', 'Web Results'),
         AI_BUILT && settings.webResults ? toggle('aiAnswer', 'AI Answer') : null,
@@ -2683,7 +2686,7 @@ function deviceSizeRows() {
 }
 
 /** Settings → Pills: their order, and which show (S.pillEditor), redrawn in place. */
-function pillsGroup(group) {
+function pillsGroup(group, choice) {
   const items = S.PILLS.filter(([key]) => !['images', 'videos', 'news'].includes(key) && (key !== 'files' || hasLocalFiles));
   const box = h('div', {});
   const draw = (focus) => {
@@ -2697,7 +2700,8 @@ function pillsGroup(group) {
     }
   };
   draw();
-  return group('Pills', [box], 'The pills over every list and search, in this order. All always shows; Opened only with Show Opened, Small Web only with Small Web on.');
+  return group('Pills', [choice('pillRow', 'Pill Row', [['auto', 'Automatic'], ['all', 'Show All'], ['scroll', 'One Row']]), box],
+    'Pill Row is this browser’s own: Show All wraps them, One Row scrolls sideways, Automatic shows all on a wide window. Then their order, and which show.');
 }
 
 /**

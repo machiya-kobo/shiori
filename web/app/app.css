@@ -206,6 +206,9 @@ body.phone-preview #preview-column { display: flex; border: 0; }
    don't fit wrap to a second row, every one in sight; one row again once the
    column is wide enough. A phone keeps one sideways-scrolling row. */
 @media (min-width: 760px) { .segments { flex-wrap: wrap; overflow-x: visible; } }
+/* Settings → Pill Row: Show All wraps at any width, One Row always scrolls. */
+body[data-pill-row="all"] .segments { flex-wrap: wrap; overflow-x: visible; }
+body[data-pill-row="scroll"] .segments { flex-wrap: nowrap; overflow-x: auto; }
 /* An end with more to scroll to fades out (fadeEdges() sets data-fade), as
    the search page's tabs. */
 [data-fade] { --fade: 28px; }
