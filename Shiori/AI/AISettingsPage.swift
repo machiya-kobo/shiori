@@ -18,6 +18,7 @@ struct AISettingsPage: View {
     @State private var localToken = ""
     @State private var loaded = false
     @State private var revealed: Set<AIKeychain.Account> = []
+    @Environment(\.scenePhase) private var scenePhase
     @State private var appleCheck: Check = .idle
     @State private var anthropicCheck: Check = .idle
     @State private var openAICheck: Check = .idle
@@ -44,6 +45,9 @@ struct AISettingsPage: View {
         }
         .onAppear(perform: loadKeys)
         .onDisappear { revealed = [] }
+        // Hidden again before the app switcher's snapshot: its cover is
+        // under the Settings sheet, not over it.
+        .onChange(of: scenePhase) { _, phase in if phase != .active { revealed = [] } }
         .onChange(of: app.ai.anthropicModel) { _, _ in anthropicCheck = .idle }
         .onChange(of: app.ai.openAIModel) { _, _ in openAICheck = .idle }
         .onChange(of: anthropicKey) { _, key in keyChanged(key, .anthropic) }

@@ -165,6 +165,9 @@ targets:
         # Settings → App Icon; made by scripts/generate-shiori-icons.py.
         ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-Light"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # iOS asks before an app reaches the local network (a Hister, media
+        # or AI server at a LAN address or .local name): this is its reason.
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Shiori connects to the servers you set up on your local network, such as Hister, a media server or an AI model server."
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: >-
           UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
           UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
@@ -196,6 +199,7 @@ targets:
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) SHIORI_EXTENSION
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Save to Shiori
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Shiori connects to the servers you set up on your local network, such as Hister."
         SKIP_INSTALL: YES
         TARGETED_DEVICE_FAMILY: "1,2"
     info:
