@@ -26,6 +26,7 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 ## Your settings
 
 - **Pick a theme**: Tokyo Night, Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa, Everforest or Ayu, light and dark, and a text size of your own, on the Mac too.
+- **Set a background** on the web app and Shiori Search: a neon city in the rain (Tokyo, Seoul, Hong Kong, San Francisco and more), the rain on its own, or a picture or video of yours. It stays in that browser ([backgrounds.md](backgrounds.md)).
 - **Take your settings along.** Signed in to Hister, your theme, text size, views and results options follow you to every device and Machiya app. Addresses, sign-ins, AI and Use This Device's Size stay put.
 
 ## AI

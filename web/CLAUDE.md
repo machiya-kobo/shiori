@@ -38,3 +38,9 @@ Loaded when you work in `web/` (and for the search page in `patches/shiori/`). T
   back. Account contact reads the kept settings, never the preview.
 - The shared settings (theme, text size, hidden rooms) are `machiya_*` cookies
   on the network's domain (`S.houseSettings`).
+- **Backgrounds** (docs/backgrounds.md, `patches/shiori/backgrounds.*`, `bg.js`
+  from annai) are this browser's own: never the account, the cookies or
+  Safari's set-settings. Over one, a surface with text is glass only through
+  `--glass-mix` and `--glass-filter` (backgrounds.css), never a translucency
+  of its own: the themes sit at 4.5:1, so what shows through may only darken
+  a dark panel (`theme-contrast.test.mjs` holds it). Off loads nothing.

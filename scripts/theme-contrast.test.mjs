@@ -138,3 +138,50 @@ for (const [name, v] of Object.entries(themes)) {
     }
   });
 }
+
+// Over a background (patches/shiori/backgrounds.css): a dark theme's glass is its panel's colour at --glass-mix over
+// what's behind, dimmed by the filter's brightness and blurred. Text on it stays 4.5:1 against the brightest a scene
+// gets under that blur (measured in Chrome at 1280×800 and 390×844, every scene: the frost's 20px blur and 180%
+// saturation over bg.js's canvas) and against white, your own picture or video at its brightest. A light theme's glass
+// is solid. The web app's and the search page's glass are only these two variables, never a translucency of their own.
+const bgCSS = readFileSync(new URL('../patches/shiori/backgrounds.css', import.meta.url), 'utf8');
+const BRIGHTEST_UNDER_GLASS = ['#d97750', '#9a948e', '#7562c4', '#847db2', '#6b81a0', '#757c8c', '#ea42a8', '#797b81', '#19b078',
+  '#5a72c9', '#4d7660', '#a49f93', '#53a17d', '#91868b', '#3a709f', '#875b99', '#11bc90', '#34688f', '#aeaba8', '#aea299', '#ffffff'];
+test('over a background, glass: text stays 4.5:1 in every dark theme, and a light theme\'s glass is solid', async () => {
+  const root = bgCSS.match(/^:root \{ --glass-mix: (\d+)%; --glass-filter: ([^;]+); \}/m);
+  assert.ok(root, 'backgrounds.css sets --glass-mix and --glass-filter on :root');
+  const alpha = Number(root[1]) / 100;
+  const k = Number(root[2].match(/brightness\(([\d.]+)\)/)[1]);
+  assert.match(root[2], /blur\(20px\) saturate\(180%\) brightness/, 'the blur and saturation the brightest colours were measured under');
+  for (const light of [':root:not([data-theme="night"]) {', ':root[data-theme="day"] {', ':root:root {']) {
+    const i = bgCSS.indexOf(light);
+    assert.ok(i >= 0, light);
+    assert.match(bgCSS.slice(i, bgCSS.indexOf('}', i)), /--glass-mix: 100%; --glass-filter: none;/, light);
+  }
+  const { variant } = await import('./palettes.mjs');
+  const table = JSON.parse(readFileSync(new URL('../web/app/palettes.json', import.meta.url), 'utf8'));
+  const dim = (hex, f) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * f).toString(16).padStart(2, '0')).join('');
+  const darks = [['search.css Tokyo Night', themes.night], ['app.css Tokyo Night', appThemes.night],
+    ...Object.entries(table).map(([key, p]) => [key, variant(p.dark, 'dark')])];
+  for (const [name, v] of darks) {
+    for (const surface of ['bg', 'card']) {
+      for (const behind of BRIGHTEST_UNDER_GLASS) {
+        const glass = mix(v[surface], dim(behind, k), alpha);
+        for (const fg of TEXT.filter((t) => v[t])) {
+          const r = ratio(v[fg], glass);
+          assert.ok(r >= 4.5, `${name}: --${fg} on --${surface} glass over ${behind} is ${r.toFixed(2)}:1`);
+        }
+      }
+    }
+  }
+  // Every glass surface in the pages is these variables, filter and colour together.
+  for (const file of ['../web/app/app.css', '../patches/shiori/search.css']) {
+    const css = readFileSync(new URL(file, import.meta.url), 'utf8');
+    const rules = [...css.matchAll(/([^{}]+)\{([^{}]*var\(--glass-mix\)[^{}]*)\}/g)];
+    assert.ok(rules.length >= 2, `${file}: glass rules`);
+    for (const [, sel, body] of rules) {
+      assert.match(body, /color-mix\(in srgb, var\(--(bg|card)\) var\(--glass-mix\), transparent\)/, `${file} ${sel.trim()}`);
+      assert.match(body, /-webkit-backdrop-filter: var\(--glass-filter\); backdrop-filter: var\(--glass-filter\);/, `${file} ${sel.trim()}`);
+    }
+  }
+});

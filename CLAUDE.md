@@ -7,7 +7,7 @@ self-hosted apps. Read this before changing code: it holds the rules and
 the traps the code can't tell you. README has a short Quickstart; `docs/` has
 the rest (quickstart.md is the tested walkthrough; build.md, extension.md,
 signing-in.md, ai.md, linux.md, haiku.md, classic.md, smallweb.md,
-media.md, features.md). `CONTRIBUTING.md` says how to send a change.
+media.md, backgrounds.md, features.md). `CONTRIBUTING.md` says how to send a change.
 
 ## Layout
 
