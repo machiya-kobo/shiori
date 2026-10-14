@@ -138,6 +138,15 @@ let labelSchema: JSONValue = [
         #expect(try AnthropicClient.text(from: Data(reply.utf8)) == #"{"label":"alpha"}"#)
     }
 
+    @Test func aReplyThatHitTheCapIsCutShortWithWhatCame() {
+        let cut = #"{"content":[{"type":"text","text":"The page is about"}],"stop_reason":"max_tokens"}"#
+        #expect(throws: AIError.cutShort("The page is about")) { try AnthropicClient.text(from: Data(cut.utf8)) }
+        // Thinking took the room: cut short with nothing, not "returned nothing".
+        let thought = #"{"content":[{"type":"thinking","thinking":"…"}],"stop_reason":"max_tokens"}"#
+        #expect(throws: AIError.cutShort("")) { try AnthropicClient.text(from: Data(thought.utf8)) }
+        #expect(!AIReachability.mayFallThrough(AIError.cutShort("x")))
+    }
+
     @Test func aRefusalIsDeclinedNotAnAnswer() {
         let reply = #"{"content":[],"stop_reason":"refusal","stop_details":{"type":"refusal","category":null,"explanation":"No."}}"#
         #expect(throws: AIError.declined("No.")) { try AnthropicClient.text(from: Data(reply.utf8)) }
@@ -241,6 +250,8 @@ let labelSchema: JSONValue = [
         #expect(throws: AIError.declined("Can't help.")) { try OpenAICompatibleClient.text(from: Data(refused.utf8)) }
         let filtered = #"{"choices":[{"message":{"role":"assistant","content":""},"finish_reason":"content_filter"}]}"#
         #expect(throws: AIError.declined(nil)) { try OpenAICompatibleClient.text(from: Data(filtered.utf8)) }
+        let cut = #"{"choices":[{"message":{"role":"assistant","content":"Half an"},"finish_reason":"length"}]}"#
+        #expect(throws: AIError.cutShort("Half an")) { try OpenAICompatibleClient.text(from: Data(cut.utf8)) }
     }
 
     @Test func modelsListsTheIDs() async throws {

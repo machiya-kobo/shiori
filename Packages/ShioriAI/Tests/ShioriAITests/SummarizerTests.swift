@@ -22,6 +22,21 @@ final class RecordingEngine: AIEngine, @unchecked Sendable {
     }
 }
 
+/// A small engine whose first part's notes hit the cap.
+final class CutPartEngine: AIEngine, @unchecked Sendable {
+    let provider = AIProvider.appleIntelligence
+    let inputBudget = 2_000
+    private let lock = NSLock()
+    private var parts = 0
+
+    func respond(to request: AIRequest) async throws -> String {
+        if request.system.contains("notes taken") { return "The page.\n• the whole page" }
+        let first = lock.withLock { parts += 1; return parts == 1 }
+        if first { throw AIError.cutShort("• half a") }
+        return "• a point"
+    }
+}
+
 @Suite struct PageTextTests {
     @Test func htmlBecomesParagraphsWithoutMarkupOrScripts() {
         let html = """
@@ -87,6 +102,36 @@ final class RecordingEngine: AIEngine, @unchecked Sendable {
             .summarize(title: "T", url: "u", text: text, content: .page)
         #expect(summary.partial)
         #expect(engine.requests.count == Summarizer.maxParts + 1)
+    }
+
+    @Test func aCutShortAnswerIsKeptAndMarkedNeverPassedOn() async throws {
+        let cut = FakeEngine(.anthropic, .failure(AIError.cutShort("The page is about")))
+        let other = RecordingEngine(.openAI, budget: 60_000)
+        let summary = try await Summarizer(chain: EngineChain([cut, other]))
+            .summarize(title: "T", url: "u", text: "Some text.", content: .page)
+        #expect(summary.text == "The page is about")
+        #expect(summary.cutShort)
+        #expect(other.requests.isEmpty)
+        // Nothing came at all: an error, not an empty summary.
+        let empty = FakeEngine(.anthropic, .failure(AIError.cutShort("")))
+        await #expect(throws: AIError.cutShort("")) {
+            try await Summarizer(chain: EngineChain([empty])).summarize(title: "T", url: "u", text: "Some text.", content: .page)
+        }
+    }
+
+    @Test func aCutShortPartMakesTheSummaryCutShort() async throws {
+        let engine = CutPartEngine()
+        let text = (1...300).map { "Sentence \($0) says something." }.joined(separator: " ")
+        let summary = try await Summarizer(chain: EngineChain([engine])).summarize(title: "T", url: "u", text: text, content: .page)
+        #expect(summary.cutShort)
+    }
+
+    @Test func aSummaryCachedBeforeCutShortReadsAsWhole() throws {
+        let old = #"{"text":"t","provider":"anthropic","partial":false}"#
+        let summary = try JSONDecoder().decode(Summary.self, from: Data(old.utf8))
+        #expect(!summary.cutShort)
+        let again = try JSONDecoder().decode(Summary.self, from: JSONEncoder().encode(Summary(text: "t", provider: .local, partial: true, cutShort: true)))
+        #expect(again.cutShort && again.partial)
     }
 
     @Test func theWholeJobMovesToTheNextEngine() async throws {

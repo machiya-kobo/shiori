@@ -70,6 +70,9 @@ says so ("Summarized by Claude").
   to that.
 - Cached per page (url + Hister's `updated`) in the app's Caches, 300 at
   most, never in Hister (its metadata is last-writer-wins).
+- A summary or an answer that hit the model's token cap (Anthropic's
+  `max_tokens`, OpenAI's `length`) is shown marked Cut Short, with
+  Regenerate, and never cached.
 - **On the web** the hosted pages can use a companion service on the
   Hister host (`/shiori/ai/*`, same origin only): Machiya's
   [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md), in the reference compose's `shiori` profile; the pages ask for it only when built with `SHIORI_AI=1`

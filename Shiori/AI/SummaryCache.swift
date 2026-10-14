@@ -35,13 +35,14 @@ nonisolated enum SummaryCache {
         }
         guard let file = file(for: url), let data = try? Data(contentsOf: file),
               let entry = try? JSONDecoder().decode(Entry.self, from: data),
-              entry.url == url, entry.updated == updated, entry.style == Summarizer.style
+              entry.url == url, entry.updated == updated, entry.style == Summarizer.style, !entry.summary.cutShort
         else { return nil }
         return entry.summary
     }
 
     static func write(_ summary: Summary, for page: StoredPage, updated: Date) {
-        guard OfflineStore.keepable(page), let directory, let file = file(for: page.url) else { return }
+        // A cut-short summary is never kept as if whole.
+        guard !summary.cutShort, OfflineStore.keepable(page), let directory, let file = file(for: page.url) else { return }
         let entry = Entry(url: page.url, updated: updated, summary: summary, style: Summarizer.style)
         queue.async {
             guard let data = try? JSONEncoder().encode(entry) else { return }

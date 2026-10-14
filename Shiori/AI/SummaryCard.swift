@@ -65,7 +65,8 @@ struct SummaryCard: View {
     }
 
     private func byline(_ summary: Summary) -> String {
-        var text = "By \(summary.provider.displayName)"
+        // Regenerate, beside Copy, makes it again.
+        var text = summary.cutShort ? "Cut Short · By \(summary.provider.displayName)" : "By \(summary.provider.displayName)"
         if summary.partial { text += " · from the first part of a long page" }
         return text
     }

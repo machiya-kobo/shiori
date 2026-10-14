@@ -56,6 +56,12 @@ nonisolated final class RecordingEngine: AIEngine, @unchecked Sendable {
     }
 }
 
+/// An engine whose answer always hits its token cap.
+nonisolated struct CutShortEngine: AIEngine {
+    let provider = AIProvider.anthropic
+    func respond(to request: AIRequest) async throws -> String { throw AIError.cutShort("• half a point") }
+}
+
 /// Summarize for the page on screen: where each kind of page may go, the
 /// cache, Regenerate, and a result that comes back too late.
 struct PageSummaryTests {
@@ -109,6 +115,20 @@ struct PageSummaryTests {
         #expect(made.text.contains("a point"))
         #expect(engine.calls == 1)
         #expect(store.writes == 1)
+    }
+
+    @Test func aCutShortSummaryIsShownMarkedButNeverKept() async throws {
+        let engine = CutShortEngine()
+        let store = Store()
+        let summary = model([engine], store: store)
+        let doc = page("https://example.com/a")
+        summary.reset(for: doc.url)
+        summary.summarize(document: doc, preview: preview, isNote: false)
+        await summary.task?.value
+        guard case .done(let made) = summary.state else { Issue.record("not done: \(summary.state)"); return }
+        #expect(made.cutShort)
+        #expect(made.text.contains("half"))
+        #expect(store.writes == 0)
     }
 
     @Test func aNoteThatIsPrivateNowNeverReachesAnEngine() async throws {

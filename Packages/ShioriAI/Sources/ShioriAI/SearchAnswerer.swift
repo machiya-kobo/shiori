@@ -23,11 +23,25 @@ public struct SearchAnswer: Sendable, Equatable, Codable {
     public var text: String
     public var sources: [AnswerSource]
     public var provider: AIProvider
+    /// The model ran out of room before it finished: shown marked Cut
+    /// Short, never cached.
+    public var cutShort: Bool
 
-    public init(text: String, sources: [AnswerSource], provider: AIProvider) {
+    public init(text: String, sources: [AnswerSource], provider: AIProvider, cutShort: Bool = false) {
         self.text = text
         self.sources = sources
         self.provider = provider
+        self.cutShort = cutShort
+    }
+
+    enum CodingKeys: String, CodingKey { case text, sources, provider, cutShort }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        text = try c.decode(String.self, forKey: .text)
+        sources = try c.decode([AnswerSource].self, forKey: .sources)
+        provider = try c.decode(AIProvider.self, forKey: .provider)
+        cutShort = try c.decodeIfPresent(Bool.self, forKey: .cutShort) ?? false
     }
 
     /// The sources the text cites, in number order.
@@ -88,16 +102,17 @@ public struct SearchAnswerer: Sendable {
         let sources = Self.sources(from: results)
         guard !sources.isEmpty else { throw AIError.emptyContent }
         let language = Self.language(forQuery: query)
-        let ((text, points), provider) = try await chain.run(for: .page) { engine in
+        let ((text, points, cut), provider) = try await chain.run(for: .page) { engine in
             let small = engine.inputBudget < Self.smallBudget
             let read = small ? Array(sources.prefix(5)) : sources
             let points = small ? 0 : 3
             let request = AIRequest(
                 system: Self.system(language, points: points), user: Self.user(query: query, sources: read, budget: engine.inputBudget),
                 maxTokens: Summarizer.maxTokens, content: .page)
-            return (try await engine.respond(to: request), points)
+            let (answer, cut) = try await Summarizer.reply(engine, request)
+            return (answer, points, cut)
         }
-        return SearchAnswer(text: Summarizer.tidy(text, maxPoints: points), sources: sources, provider: provider)
+        return SearchAnswer(text: Summarizer.tidy(text, maxPoints: points), sources: sources, provider: provider, cutShort: cut)
     }
 
     /// The language to answer in, by name: the query's, when it's plainly in

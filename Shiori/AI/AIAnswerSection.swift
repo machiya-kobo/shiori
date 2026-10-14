@@ -79,6 +79,24 @@ struct AIAnswerSection: View {
                     .listRowBackground(tinted)
             }
         }
+        // Leaving stops the engine (cloud tokens, or the device's model):
+        // nothing is asked for an answer no one sees. Back on screen, an
+        // open section asks again (the cache has it if it finished).
+        .onAppear {
+            if open, state == .none { ask(fresh: false) }
+        }
+        .onDisappear { stopAsking() }
+        .onChange(of: query) {
+            stopAsking()
+            state = .none
+            if open { ask(fresh: false) }
+        }
+    }
+
+    private func stopAsking() {
+        asking?.cancel()
+        asking = nil
+        if state == .working { state = .none }
     }
 
     @ViewBuilder private var answerBody: some View {
@@ -88,10 +106,11 @@ struct AIAnswerSection: View {
                 ProgressView().controlSize(.small)
                 Text("Answering…").foregroundStyle(palette.secondaryText)
             }
-        case .failed(let message):
+        case .failed(let message, let retry):
             VStack(alignment: .leading, spacing: 6) {
                 Text(message).foregroundStyle(palette.text)
-                Button("Try Again") { ask(fresh: true) }
+                // A declined answer would be declined again.
+                if retry { Button("Try Again") { ask(fresh: true) } }
             }
         case .done(let answer):
             VStack(alignment: .leading, spacing: 8) {
@@ -118,7 +137,7 @@ struct AIAnswerSection: View {
                     }
                 }
                 HStack(spacing: 14) {
-                    Text("By \(answer.provider.displayName) · from the web results’ snippets")
+                    Text(byline(answer))
                         .textStyle(.caption)
                         .foregroundStyle(palette.secondaryText)
                     Spacer()
@@ -131,6 +150,11 @@ struct AIAnswerSection: View {
                 .buttonStyle(.borderless)
             }
         }
+    }
+
+    private func byline(_ answer: SearchAnswer) -> String {
+        let by = "By \(answer.provider.displayName) · from the web results’ snippets"
+        return answer.cutShort ? "Cut Short · " + by : by
     }
 
     /// A line with its [n] citations as small links to their sources.
@@ -167,13 +191,15 @@ struct AIAnswerSection: View {
         asking = Task {
             do {
                 let answer = try await SearchAnswerer(chain: chain).answer(query: query, results: results)
-                AnswerCache.write(answer, for: query)
+                // A cut-short answer is shown, never kept as if whole.
+                if !answer.cutShort { AnswerCache.write(answer, for: query) }
                 guard !Task.isCancelled else { return }
                 state = .done(answer)
             } catch is CancellationError {
             } catch {
                 guard !Task.isCancelled else { return }
-                state = .failed(error.localizedDescription)
+                let declined = if case AIError.declined = error { true } else { false }
+                state = .failed(error.localizedDescription, retry: !declined)
             }
         }
     }
@@ -185,6 +211,7 @@ extension SummaryState {
         case none
         case working
         case done(SearchAnswer)
-        case failed(String)
+        /// `retry`: Try Again may help (not for a declined answer).
+        case failed(String, retry: Bool)
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import Synchronization
 
 /// The AI engines' keys (Settings → AI), in the Keychain. One service,
 /// one account per provider. On iOS `AfterFirstUnlockThisDeviceOnly`:
@@ -22,17 +23,31 @@ nonisolated enum AIKeychain {
     /// so keys saved by an earlier build of the same app are still found.
     static let service = ShioriID.app + ".ai"
 
+    /// Read once, then from memory: the engines are built on every use (each
+    /// page of a labelling run), and a Keychain read on the Mac's login
+    /// keychain takes milliseconds on the main thread. `save` keeps it
+    /// current; only an answer the Keychain gave (found, or not there) is
+    /// kept, never a read that failed (a locked keychain).
     static func read(_ account: Account) -> String {
+        if let known = cache.withLock({ $0[account] }) { return known }
         var query = base(account)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound {
+            cache.withLock { $0[account] = "" }
+            return ""
+        }
         guard status == errSecSuccess, let data = result as? Data, let value = String(data: data, encoding: .utf8) else {
             return ""
         }
-        return value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        cache.withLock { $0[account] = key }
+        return key
     }
+
+    private static let cache = Mutex<[Account: String]>([:])
 
     /// Saves a key, or deletes it when empty. Update-then-add, never
     /// delete-then-add (which races and drops the item's attributes).
@@ -40,9 +55,13 @@ nonisolated enum AIKeychain {
     static func save(_ raw: String, for account: Account) -> Bool {
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let query = base(account)
+        // Read afresh next time unless this one is known to have landed.
+        cache.withLock { $0[account] = nil }
         if value.isEmpty {
             let status = SecItemDelete(query as CFDictionary)
-            return status == errSecSuccess || status == errSecItemNotFound
+            let gone = status == errSecSuccess || status == errSecItemNotFound
+            if gone { cache.withLock { $0[account] = "" } }
+            return gone
         }
         var attributes: [String: Any] = [kSecValueData as String: Data(value.utf8)]
         #if os(iOS)
@@ -52,6 +71,7 @@ nonisolated enum AIKeychain {
         if status == errSecItemNotFound {
             status = SecItemAdd(query.merging(attributes) { _, new in new } as CFDictionary, nil)
         }
+        if status == errSecSuccess { cache.withLock { $0[account] = value } }
         return status == errSecSuccess
     }
 

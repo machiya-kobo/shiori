@@ -7,11 +7,26 @@ public struct Summary: Sendable, Equatable, Codable {
     public var provider: AIProvider
     /// Only the first part of a very long page was read.
     public var partial: Bool
+    /// The model ran out of room before it finished (`AIError.cutShort`):
+    /// shown marked Cut Short, with Regenerate, and never cached.
+    public var cutShort: Bool
 
-    public init(text: String, provider: AIProvider, partial: Bool) {
+    public init(text: String, provider: AIProvider, partial: Bool, cutShort: Bool = false) {
         self.text = text
         self.provider = provider
         self.partial = partial
+        self.cutShort = cutShort
+    }
+
+    enum CodingKeys: String, CodingKey { case text, provider, partial, cutShort }
+
+    /// Summaries cached before `cutShort` lack it: whole ones.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        text = try c.decode(String.self, forKey: .text)
+        provider = try c.decode(AIProvider.self, forKey: .provider)
+        partial = try c.decode(Bool.self, forKey: .partial)
+        cutShort = try c.decodeIfPresent(Bool.self, forKey: .cutShort) ?? false
     }
 }
 
@@ -64,35 +79,51 @@ public struct Summarizer: Sendable {
         let (result, provider) = try await chain.run(for: content) { engine in
             try await Self.summarize(title: title, url: url, text: page.text, language: language, content: content, with: engine)
         }
-        return Summary(text: Self.tidy(result.text), provider: provider, partial: page.cut || result.partial)
+        return Summary(text: Self.tidy(result.text), provider: provider, partial: page.cut || result.partial, cutShort: result.cutShort)
+    }
+
+    /// One request's text, and whether it hit the token cap. A cut answer
+    /// with nothing in it is no summary: that stays an error.
+    static func reply(_ engine: any AIEngine, _ request: AIRequest) async throws -> (text: String, cut: Bool) {
+        do {
+            return (try await engine.respond(to: request), false)
+        } catch AIError.cutShort(let text) where !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return (text, true)
+        }
     }
 
     static func summarize(
         title: String, url: String, text: String, language: String?, content: AIContent, with engine: any AIEngine
-    ) async throws -> (text: String, partial: Bool) {
+    ) async throws -> (text: String, partial: Bool, cutShort: Bool) {
         let budget = max(engine.inputBudget, 2_000)
         if text.count <= budget {
             let request = AIRequest(
                 system: Prompts.summary(language), user: Prompts.page(title: title, url: url, text: text), maxTokens: maxTokens,
                 content: content)
-            return (try await engine.respond(to: request), false)
+            let (answer, cut) = try await reply(engine, request)
+            return (answer, false, cut)
         }
         let parts = PageText.chunks(text, size: budget)
         let read = Array(parts.prefix(maxParts))
         var notes: [String] = []
+        // A part's notes cut short make the summary built on them cut short too.
+        var cutShort = false
         for (index, part) in read.enumerated() {
             try Task.checkCancellation()
             let request = AIRequest(
                 system: Prompts.partNotes(language),
                 user: Prompts.page(title: title, url: url, text: part, part: (index + 1, read.count)),
                 maxTokens: 350, content: content)
-            notes.append(try await engine.respond(to: request))
+            let (note, cut) = try await reply(engine, request)
+            notes.append(note)
+            cutShort = cutShort || cut
         }
         let combined = PageText.prefix(notes.enumerated().map { "Part \($0.offset + 1):\n\($0.element)" }.joined(separator: "\n\n"), limit: budget)
         let request = AIRequest(
             system: Prompts.summaryFromNotes(language), user: Prompts.notes(title: title, url: url, notes: combined.text),
             maxTokens: maxTokens, content: content)
-        return (try await engine.respond(to: request), parts.count > read.count || combined.cut)
+        let (answer, cut) = try await reply(engine, request)
+        return (answer, parts.count > read.count || combined.cut, cutShort || cut)
     }
 
     /// The page's language by name ("English"), for the prompt: "the

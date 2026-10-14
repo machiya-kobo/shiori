@@ -21,7 +21,7 @@ public struct AnthropicClient: AIEngine {
 
     public var provider: AIProvider { .anthropic }
 
-    public init(apiKey: String, model: String, baseURL: URL = defaultBaseURL, session: URLSession = AIHTTP.session()) {
+    public init(apiKey: String, model: String, baseURL: URL = defaultBaseURL, session: URLSession = AIHTTP.shared) {
         self.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         self.model = model.trimmingCharacters(in: .whitespacesAndNewlines)
         self.baseURL = AIHTTP.base(baseURL)
@@ -135,7 +135,8 @@ public struct AnthropicClient: AIEngine {
     }
 
     /// The reply's text. A refusal comes back as HTTP 200 with
-    /// `stop_reason: "refusal"`, so it's checked before the content.
+    /// `stop_reason: "refusal"`, so it's checked before the content; one
+    /// that hit `max_tokens` is `cutShort`, with what came.
     static func text(from data: Data) throws -> String {
         struct Envelope: Decodable {
             struct Block: Decodable {
@@ -156,6 +157,7 @@ public struct AnthropicClient: AIEngine {
         guard let envelope = DecodeLog.decode(Envelope.self, from: data, what: "Anthropic reply") else { throw AIError.badResponse }
         if envelope.stopReason == "refusal" { throw AIError.declined(envelope.stopDetails?.explanation) }
         let text = envelope.content.filter { $0.type == "text" }.compactMap(\.text).joined()
+        if envelope.stopReason == "max_tokens" { throw AIError.cutShort(AIHTTP.stripFence(text)) }
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AIError.emptyContent }
         return AIHTTP.stripFence(text)
     }

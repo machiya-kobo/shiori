@@ -13,13 +13,13 @@ public struct OpenAICompatibleClient: AIEngine {
     let session: URLSession
 
     /// OpenAI itself.
-    public init(apiKey: String, model: String, session: URLSession = AIHTTP.session()) {
+    public init(apiKey: String, model: String, session: URLSession = AIHTTP.shared) {
         self.init(provider: .openAI, baseURL: Self.openAIBaseURL, apiKey: apiKey, model: model, session: session)
     }
 
     /// A model server of the user's own: the key is optional (stock Ollama
     /// takes none).
-    public init(localBaseURL: URL, apiKey: String, model: String, session: URLSession = AIHTTP.session()) {
+    public init(localBaseURL: URL, apiKey: String, model: String, session: URLSession = AIHTTP.shared) {
         self.init(provider: .local, baseURL: localBaseURL, apiKey: apiKey, model: model, session: session)
     }
 
@@ -127,7 +127,8 @@ public struct OpenAICompatibleClient: AIEngine {
     }
 
     /// The reply's text. A structured-output refusal comes back in
-    /// `message.refusal`, a filtered one as `finish_reason: content_filter`.
+    /// `message.refusal`, a filtered one as `finish_reason: content_filter`,
+    /// one that hit the token cap as `finish_reason: length` (`cutShort`).
     static func text(from data: Data) throws -> String {
         struct Envelope: Decodable {
             struct Choice: Decodable {
@@ -150,6 +151,7 @@ public struct OpenAICompatibleClient: AIEngine {
         }
         if let refusal = choice.message.refusal, !refusal.isEmpty { throw AIError.declined(refusal) }
         if choice.finishReason == "content_filter" { throw AIError.declined(nil) }
+        if choice.finishReason == "length" { throw AIError.cutShort(AIHTTP.stripFence(choice.message.content ?? "")) }
         guard let text = choice.message.content, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw AIError.emptyContent
         }

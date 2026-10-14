@@ -22,6 +22,11 @@ public enum AIError: Error, Equatable, LocalizedError {
     /// A plain http:// address, which the system's App Transport Security
     /// refuses: nothing was sent.
     case plainHTTP
+    /// The answer hit its length cap (Anthropic's `stop_reason:
+    /// "max_tokens"`, OpenAI's `finish_reason: "length"`): the text so far,
+    /// maybe empty when thinking took the room. Shown marked Cut Short,
+    /// never kept as if whole; no other engine is asked instead.
+    case cutShort(String)
 
     public var errorDescription: String? {
         switch self {
@@ -49,6 +54,8 @@ public enum AIError: Error, Equatable, LocalizedError {
             "No AI engine is switched on for this."
         case .plainHTTP:
             "This address uses http://, and Shiori needs https://."
+        case .cutShort:
+            "The model ran out of room before it finished."
         }
     }
 }

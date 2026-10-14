@@ -82,8 +82,9 @@ struct SummaryStore {
                 let made = try await Summarizer(chain: chain).summarize(
                     title: title, url: url, html: preview.contentHTML, content: content)
                 // Never kept for code, a file or a private vault's note
-                // (`SummaryCache.write` checks).
-                store.write(made, document, preview.updated)
+                // (`SummaryCache.write` checks), nor when it was cut short:
+                // shown marked, made again on Regenerate or the next look.
+                if !made.cutShort { store.write(made, document, preview.updated) }
                 guard !Task.isCancelled, url == self.url else { return }
                 state = .done(made)
             } catch {

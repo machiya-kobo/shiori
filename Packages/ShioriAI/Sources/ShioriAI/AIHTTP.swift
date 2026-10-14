@@ -9,6 +9,12 @@ private let log = Logger(subsystem: logSubsystem, category: "ai")
 public enum AIHTTP {
     public static let timeout: TimeInterval = 30
 
+    /// The one session every engine shares, as HisterKit's: its
+    /// connections are reused (no handshake per request), and a session
+    /// holds its delegate until it's invalidated, so one per client (one per
+    /// page in a labelling run) only piled up.
+    public static let shared = session()
+
     /// Ephemeral: no cookies, no cache, nothing of a request kept on disk.
     /// Follows no redirect: its requests carry API keys.
     public static func session(timeout: TimeInterval = timeout) -> URLSession {
