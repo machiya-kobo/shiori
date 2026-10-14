@@ -73,6 +73,13 @@ Loaded when you work in `Packages/HisterKit`. The same logic lives in JavaScript
   only. The web app's Add Page and share target save through
   `POST /smallweb/api/save` after `api.checkPageURL` refuses any note; the 202
   means queued: say "Saving…", never "Saved". `marks` are code-point offsets.
+- **Media** (docs/media.md): Jellyfin, Plex, Koito, Movary, each optional;
+  `Media` / `S.media*` twins on `scripts/media-cases.json`, `MediaClient` for
+  the apps. Only GETs to read endpoints (never Koito's `submit-listens`, never
+  Movary's `api/movies/search`, which searches TMDB). Played: Movary (films)
+  and Koito (music) first, the library's own count where they have nothing;
+  ratings Movary's for films, else Plex's. Private like a work note: never to
+  Hister, a model, a device cache, an export or a feed.
 - **AI** (docs/ai.md): off by default, per device, keys in the Keychain.
   Engine order is fixed: Apple Intelligence, a local server, one cloud engine;
   another engine tries only after "couldn't answer". **A note never goes to a

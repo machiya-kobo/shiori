@@ -247,10 +247,10 @@ test('Media: each service needs its address and token; its read API only, GET on
     for (const dir of ['search', 'app']) {
       for (const file of readdirSync(join(x.out, 'www', dir), { recursive: true })) {
         const path = join(x.out, 'www', dir, String(file));
-        if (statSync(path).isFile()) assert.doesNotMatch(readFileSync(path, 'latin1'), /TOKEN/, path);
+        if (statSync(path).isFile()) assert.doesNotMatch(readFileSync(path, 'latin1'), /TOKEN123|TOKEN-from-file/, path);
       }
     }
-    assert.doesNotMatch(x.r.stdout, /TOKEN/);
+    assert.doesNotMatch(x.r.stdout, /TOKEN123|TOKEN-from-file/);
     const stamp = 'jellyfin=https://jellyfin.example.ts.net/,plex=https://plex.example.ts.net/,koito=http://koito:4110/,movary=https://movary.example.ts.net/';
     assert.ok(x.read('www/search/_shiori/web-shim.js').includes(`const MEDIA_BUILD = '${stamp}';`));
     assert.ok(x.read('www/app/_shiori/app.js').includes(`fromBuild('${stamp}')`));

@@ -7,7 +7,7 @@ self-hosted apps. Read this before changing code: it holds the rules and
 the traps the code can't tell you. README has a short Quickstart; `docs/` has
 the rest (quickstart.md is the tested walkthrough; build.md, extension.md,
 signing-in.md, ai.md, linux.md, haiku.md, classic.md, smallweb.md,
-features.md). `CONTRIBUTING.md` says how to send a change.
+media.md, features.md). `CONTRIBUTING.md` says how to send a change.
 
 ## Layout
 
@@ -82,7 +82,9 @@ From a fresh clone (`git clone --recurse-submodules`; or `git submodule update -
   configured Hister server (and on its host the optional companion services
   `/shiori/feed` and `/shiori/ai/*`, hosted pages only, the latter only in a
   build with `SHIORI_AI=1`), Kura (notes), the small-web gateway, SearXNG, the
-  visited site's favicon and PDFs (upstream behavior). With Machiya's identity
+  visited site's favicon and PDFs (upstream behavior), and the media services
+  (docs/media.md: Jellyfin, Plex, Koito, Movary, GETs to their read endpoints
+  only; their art and `image.tmdb.org`'s, with Images in Previews on). With Machiya's identity
   file, Kura's `POST /api/pair` and, from the web app, Kura's `/api/prefs`.
   NewsBlur, status pages, the Wayback Machine and archive.is copies and the
   build's privacy front ends (`SHIORI_FRONTENDS`: `Elsewhere`) are only
@@ -111,7 +113,10 @@ From a fresh clone (`git clone --recurse-submodules`; or `git submodule update -
   in the background's memory only, never storage, and hands tokens to its own
   pages only, never a content script; its fetches keep `credentials: 'omit'`.
   The hosted pages hold none: the browser's `machiya_session` cookie goes to
-  `/kura/` and `/konbini/` only.
+  `/kura/` and `/konbini/` only. A media token (docs/media.md) goes in its
+  service's own header to that service alone, never across a redirect: in
+  the apps from `MediaKeychain` (never to the extension), on the hosted pages
+  added by the host's nginx, never held by the browser.
 - Never put `.searchSuggestions(.hidden, for: .content)` on a sheet's
   `.searchable`: on iOS 27 the sheet went blank.
 - **A note from a private vault** (address `/v/<vault>/n/…`; a vault Kura's

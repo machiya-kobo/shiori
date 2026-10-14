@@ -9,6 +9,7 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 - **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in and the ones you've visited marked.
 - **Search Gemini and Gopher** through a small-web gateway.
 - **Search your code** in the Code view: repos, READMEs, docs, issues, pull requests and releases imported into Hister. Filter by kind, forge, open or private; each opens at its forge.
+- **Search your media** on the Media pill: your Jellyfin and Plex libraries and what you played from Koito and Movary, one card per item, saying when you played it ("Never Played", "Played 3× · Last Mar 6, 2014") with your rating. Filter by kind, never played and rating; before a search, what's playing, your top artists and albums, your watchlist and what's new ([media.md](media.md)).
 - **Search your files** in the Files view: the folders Hister watches ([local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)), opened from Hister's copy.
 - **Browse** everything Hister holds, newest first, by label and collection (Hister's `@` aliases, like `@reading`), or by day and month.
 - **Read a page** as Hister's readable copy, scripts off, no referrer. Earlier versions, Show As, full screen, and images large on tap.
@@ -33,6 +34,6 @@ Off by default, on-device first: Summarize, label suggestions, Label New Pages a
 
 ## What it talks to
 
-Shiori talks only to the servers you configure: Hister and, if you set them, SearXNG, Kura, Konbini, a small-web gateway and the feed service, plus the AI providers you switch on (Settings → AI, off by default). Safari's extension also fetches the favicons and PDFs of the sites you visit, as upstream's does. A file never goes to an AI, and code only to an on-device model. Switch off Settings → Results → Images in Previews and a preview loads nothing from elsewhere. No analytics.
+Shiori talks only to the servers you configure: Hister and, if you set them, SearXNG, Kura, Konbini, a small-web gateway, the feed service and the media services (Jellyfin, Plex, Koito, Movary, with art from TMDB), plus the AI providers you switch on (Settings → AI, off by default). Safari's extension also fetches the favicons and PDFs of the sites you visit, as upstream's does. A file never goes to an AI, and code only to an on-device model. Switch off Settings → Results → Images in Previews and a preview loads nothing from elsewhere. No analytics.
 
 Shiori needs only a Hister. Kura (Machiya's notes app), Konbini (its project board), Niwa (its digital garden) and SearXNG are optional.

@@ -32,6 +32,7 @@ Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-c
 - **Search your notes** in your Obsidian vault, through Kura. A note opens in Obsidian, its Konbini card a tap away.
 - **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in, and Gemini and Gopher through a small-web gateway.
 - **Search your code**: repos, issues, pull requests and releases from Forgejo and GitHub, imported into Hister.
+- **Search your media**: your Jellyfin and Plex libraries and what you played from Koito and Movary, saying when you last played each and your rating.
 - **Search your files**: the folders Hister watches ([local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)).
 - **Browse and read** everything Hister holds, by label, collection (`@reading`) or day, as readable copies with scripts off.
 - **Save pages** from the share sheet on iPhone, iPad and Mac, by address, or with Shortcuts and Siri.
@@ -86,6 +87,8 @@ Each extra is its own app with a public image on ghcr.io/machiya-kobo. Run it, t
 | Subscribe to a search as RSS | shiori-feed | `SHIORI_FEED_URL` |
 | AI Answer and Summarize | shiori-ai, with an Anthropic API key | `SHIORI_AI_URL` |
 | One sign-in for every app | hister-login | `SHIORI_LOGIN_URL` |
+
+For Media, point Shiori at your own Jellyfin, Plex, Koito or Movary, each with a token of its own ([docs/media.md](docs/media.md)).
 
 Every setting, and how to check the image's signature, is in [In a container](web/README.md#in-a-container). Want them all? Machiya's Quickstart runs the whole stack.
 
