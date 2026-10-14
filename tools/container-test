@@ -51,9 +51,15 @@ class Engine:
             sys.exit(f"container-test: {self.name} {' '.join(args[:3])} failed:\n{r.stderr.strip()}")
         return r
 
-    def start(self, name, image, env=None, entrypoint=None, volumes=(), ports=(), cmd=(), user=None):
+    def rootless_podman(self):
+        if self.name != "podman":
+            return False
+        r = self.run("info", "-f", "{{.Host.Security.Rootless}}", check_=False)
+        return r.stdout.strip() == "true"
+
+    def start(self, name, image, env=None, entrypoint=None, volumes=(), ports=(), cmd=(), user=None, extra=()):
         args = ["run", "-d", "--name", name, "--network", NET, "--read-only", "--tmpfs", "/tmp", "--cap-drop=ALL",
-                "--security-opt=no-new-privileges"]
+                "--security-opt=no-new-privileges", *extra]
         if user:
             args += ["--user", user]
         for k, v in (env or {}).items():
@@ -275,11 +281,16 @@ def main():
         os.chmod(secrets, 0o755)
         mount = [f"{secrets}:/run/secrets:ro"]
         tokened = {**house, "SHIORI_KOITO_URL": f"http://{FAKE}:9012", "SHIORI_KOITO_TOKEN_FILE": "/run/secrets/koito"}
-        # Who owns it as the container sees it (rootless podman maps this host's user to its root).
-        owner = e.run("run", "--rm", "--entrypoint", "stat", *sum((["-v", v] for v in mount), []), image, "-c", "%u:%g",
+        # Who owns it as the container sees it. Rootless podman maps this
+        # host's user to the container's root, and nginx as root with every
+        # capability dropped can't chown its temp folders: keep the host's
+        # uid instead (keep-id), as production's 1000:1000 is.
+        keep = ["--userns=keep-id"] if e.rootless_podman() else []
+        owner = e.run("run", "--rm", *keep, "--entrypoint", "stat", *sum((["-v", v] for v in mount), []), image, "-c", "%u:%g",
                       "/run/secrets/koito", check_=False).stdout.strip()
         check(owner and owner.split(":")[0] != "101", "the file is another user's than the image's (101)", owner)
-        e.start("shiori-web-secret-101", image, env=tokened, volumes=mount)
+        # 101 by name: keep-id would otherwise make the host's user the default.
+        e.start("shiori-web-secret-101", image, env=tokened, volumes=mount, user="101", extra=keep)
         started.append("shiori-web-secret-101")
         time.sleep(3)
         state = e.run("inspect", "-f", "{{.State.Status}} {{.State.ExitCode}}", "shiori-web-secret-101").stdout.strip()
@@ -288,14 +299,21 @@ def main():
         check("SHIORI_KOITO_TOKEN_FILE" in log and "user:" in log and "koitofiletoken1" not in log,
               "and says to run it as the file's owner, never printing the token", log[-300:])
         e.rm("shiori-web-secret-101")
-        e.start("shiori-web-secret", image, env=tokened, volumes=mount, ports=[8080], user=owner)
-        started.append("shiori-web-secret")
-        p1 = e.port("shiori-web-secret", 8080)
-        check(wait(p1), f"as the file's owner ({owner}) it comes up, writing only to /tmp")
-        s, h, echo = get(p1, "/koito/apis/web/v1/search?q=x", {"Cookie": "hister=goodabcdefgh"})
-        check(s == 200 and echo.get("headers", {}).get("authorization") == "Token koitofiletoken1", "and the file's token reaches Koito", str(echo)[:150])
-        check(get(p1, "/")[0] == 200, "the search page answers")
-        e.rm("shiori-web-secret")
+        if owner.split(":")[0] == "0":
+            # Root owns it as the container sees it: running as root isn't the case under test.
+            print("   (skipped: the file's owner is root inside the container; run as another user to test this)")
+        else:
+            e.start("shiori-web-secret", image, env=tokened, volumes=mount, ports=[8080], user=owner, extra=keep)
+            started.append("shiori-web-secret")
+            p1 = e.port("shiori-web-secret", 8080)
+            up = wait(p1)
+            check(up, f"as the file's owner ({owner}) it comes up, writing only to /tmp", "" if up else e.logs("shiori-web-secret")[-300:])
+            if up:
+                # Only once it's up: a failed start ends this section, not the run.
+                s, h, echo = get(p1, "/koito/apis/web/v1/search?q=x", {"Cookie": "hister=goodabcdefgh"})
+                check(s == 200 and echo.get("headers", {}).get("authorization") == "Token koitofiletoken1", "and the file's token reaches Koito", str(echo)[:150])
+                check(get(p1, "/")[0] == 200, "the search page answers")
+            e.rm("shiori-web-secret")
         shutil.rmtree(secrets, ignore_errors=True)
 
         print("== with hister-login")
