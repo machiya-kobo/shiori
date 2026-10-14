@@ -24,7 +24,7 @@ struct ResultsList<Empty: View>: View {
     var body: some View {
         content
             // Again when the Kura address changes, for a notes list.
-            .task(id: "\(app.serverURL)|\(app.searchPage.niwaURL)|\(app.notesFrom.rawValue)|\(model.source == .notes ? app.notesVault : "")") { await load() }
+            .task(id: "\(app.serverURL)|\(app.searchPage.niwaURL)|\(app.notesFrom.rawValue)|\(model.source == .notes ? app.notesVault : "")|\(app.searchPage.showOpened)") { await load() }
             .pullToRefresh { await load() }
             // Every minute while the app is in front and the list is up:
             // anything new shows as a banner, never by redrawing the list
@@ -72,6 +72,10 @@ struct ResultsList<Empty: View>: View {
         model.notesFromHister = app.notesFrom == .hister
         model.vaults = model.source == .notes && app.notesFrom == .kura ? app.notesVault : nil
         model.offlineOrigin = OfflineStore.origin(server: app.serverURL, kura: app.searchPage.niwaURL)
+        // Show Opened off: the pages you opened for this search are ordinary
+        // results, first (Hister sends them apart, not among the rest).
+        model.openedInline = !app.searchPage.showOpened
+        model.keepOpened = { [app] in !app.isNotePage($0) && !LocalFiles.isLocalFile($0) }
         await model.load(using: app.client)
     }
 

@@ -611,16 +611,6 @@ struct OpenedSection: View {
     }
 }
 
-extension StoredPage {
-    /// An opened result as a page to preview (its text comes with the preview).
-    init(opened: OpenedResult) {
-        self.init(
-            url: opened.url, title: opened.title, domain: opened.domain ?? URL(string: opened.url)?.host() ?? "",
-            label: "", added: opened.added ?? .distantPast, updated: opened.updated ?? opened.added ?? .distantPast,
-            faviconKey: "", snippetHTML: "")
-    }
-}
-
 /// Copy a query's feed, or open NewsBlur's subscribe page for it.
 struct FeedButtons: View {
     let feed: URL?

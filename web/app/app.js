@@ -918,6 +918,11 @@ function resultsList(container, options) {
           const openedList = h('ul', { class: 'rows' });
           for (const o of reply.opened) openedList.append(docRow({ url: o.url, title: o.title, updated: o.updated, domain: o.domain, opened: true }));
           container.append(openedList);
+        } else if (reply.opened.length) {
+          // Hister sends the pages you opened apart from the rest: unmarked
+          // and first, or they'd be missing from their own search.
+          reply.documents = S.openedFirst(reply.opened, reply.documents, (u) => !S.isNoteURL(u, settings.niwaURL, settings.konbiniURL) && !S.isLocalFile(u))
+            .map((d) => ({ ...d, opened: false }));
         }
         container.append(list, sentinel);
       }
@@ -1695,12 +1700,14 @@ async function searchAll(container, q, { web = true } = {}) {
   // An opened note (Hister's `history` carries no label) is known by its address.
   const isPage = (d) => d.label !== 'vault' && !S.isNoteURL(d.url, settings.niwaURL, settings.konbiniURL);
   if (pages) {
-    // The pages you opened for this search first (Hister ranks them first
-    // and counts them in the total), then the rest: without them, "6
-    // results" showed one page once "You Opened" left All.
-    const opened = settings.showOpened === true ? (pages.opened || []).map((o) => ({ url: o.url, title: o.title, updated: o.updated, domain: o.domain, opened: true })) : [];
-    const seen = new Set();
-    pages.documents = [...opened, ...pages.documents].filter((d) => isPage(d) && !seen.has(d.url) && seen.add(d.url)).slice(0, ALL_COUNT);
+    // The pages you opened for this search first (Hister ranks them first,
+    // counts them in the total and sends them apart), then the rest; marked
+    // only with Show Opened on. Dropped, a page you opened went missing
+    // from its own search.
+    const marked = settings.showOpened === true;
+    pages.documents = S.openedFirst(pages.opened, pages.documents.filter(isPage), (u) => isPage({ url: u }))
+      .map((d) => ({ ...d, opened: marked && !!d.opened }))
+      .slice(0, ALL_COUNT);
   }
   container.replaceChildren();
   const answer = answerCard(q);
@@ -1710,8 +1717,8 @@ async function searchAll(container, q, { web = true } = {}) {
   // a page of each goes among the web results, pages and notes taking
   // turns, spread evenly (S.alternate, S.mixCounts), each row saying whose
   // it is, and their totals go on the Pages and Notes pills.
-  const hiddenOpened = settings.showOpened === true ? 0 : ((pages && pages.opened) || []).filter((o) => !S.isNoteURL(o.url, settings.niwaURL, settings.konbiniURL)).length;
-  if (pages) setSegmentCount('hister', Math.max((pages.total || 0) - hiddenOpened, pages.documents.length), q);
+  // Hister's total counts the pages you opened, and they're shown.
+  if (pages) setSegmentCount('hister', Math.max(pages.total || 0, pages.documents.length), q);
   // The Code pill's count (Hister's own index, nothing spent); code is never listed here.
   if (hasCodeDocs) api.search(S.codeQuery(q), { limit: 1 }).then((r) => setSegmentCount('code', r.total, q)).catch(() => {});
   if (notes && !notes.signIn) setSegmentCount('notes', Math.max(notes.total || 0, (notes.documents || []).length), q);

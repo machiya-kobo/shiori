@@ -1795,19 +1795,23 @@
   });
 
   /**
-   * Results you opened before, first; the rest without them. `skipNotes`:
-   * Your Pages on All, which leaves notes to Your Notes (`history` has no
-   * label, so a note is known by its Niwa or Konbini address).
+   * Results you opened before, first; the rest without them. Hister sends
+   * them apart (`history`, taken out of `documents`), so they're always
+   * shown, marked as opened only with Show Opened on: dropped, a page you
+   * opened went missing from its own search. `skipNotes`: Your Pages on
+   * All, which leaves notes to Your Notes (`history` has no label, so a
+   * note is known by its Niwa or Konbini address).
    */
   function withOpened(result, docs, { skipNotes = false } = {}) {
-    const opened = settings.rememberOpened === false || settings.showOpened !== true
-      ? []
-      : (result.history || []).filter((h) => isHTTP(h.url) && !(skipNotes && S.isNoteURL(h.url, niwaBase, konbiniBase)));
+    const marked = settings.showOpened === true;
+    const opened = S.openedFirst(result.history, [], (u) => !(skipNotes && S.isNoteURL(u, niwaBase, konbiniBase)));
     const urls = new Set(opened.map((h) => h.url));
     const cards = opened.map((h) => {
-      const card = histerCard({ url: h.url, title: h.title, updated: h.updated, added: h.added });
-      card.classList.add('opened-card');
-      card.querySelector('.meta')?.prepend(chip('you opened', 'hister'));
+      const card = histerCard({ url: h.url, title: h.title, domain: h.domain, updated: h.updated, added: h.added });
+      if (marked) {
+        card.classList.add('opened-card');
+        card.querySelector('.meta')?.prepend(chip('you opened', 'hister'));
+      }
       return card;
     });
     return { cards, docs: docs.filter((d) => !urls.has(d.url)) };
@@ -2854,10 +2858,8 @@
       // The pages you opened (lifted to the top) first, then the rest.
       myPages = [...first.cards, ...first.docs.map(histerCard)];
       const shown = first.cards.length + first.docs.length;
-      // Hister counts the pages you opened in its total: hidden (Show
-      // Opened off), they leave the count too.
-      const hiddenOpened = settings.showOpened === true ? 0 : (result.history || []).filter((h) => isHTTP(h.url) && !S.isNoteURL(h.url, niwaBase, konbiniBase)).length;
-      setPillCount('hister', Math.max((result.total || 0) - hiddenOpened, shown));
+      // Hister counts the pages you opened in its total, and they're shown.
+      setPillCount('hister', Math.max(result.total || 0, shown));
     } catch (error) {
       // Hister unreachable: the web block (or the fallback) carries on.
       if (error && error.status) answered = true;

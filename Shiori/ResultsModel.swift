@@ -124,6 +124,12 @@ final class ResultsModel {
     /// Notes from Hister instead (`AppState.notesFrom`): the default vault's
     /// alone (`HisterClient.searchNotes`). Set by the list before it loads.
     var notesFromHister = false
+    /// The pages you opened for this search, shown as ordinary results
+    /// first (Show Opened off) rather than in `opened`: Hister takes them
+    /// out of `documents`, so they'd be missing from their own search.
+    /// `keepOpened` leaves out what this list doesn't show (a note, a file).
+    var openedInline = false
+    @ObservationIgnored var keepOpened: (String) -> Bool = { _ in true }
     /// Whether this list has notes to show at all.
     private var hasNotes: Bool { notesFromHister || kura != nil }
     /// Which of Kura's vaults a notes list searches ("all", or a name);
@@ -361,6 +367,7 @@ final class ResultsModel {
             let first = try await search(client, query, sort: sort, options: options)
             var all = try await allResults(using: client, limit: Self.allLimit)
             guard mine == generation else { return }
+            if openedInline { all = OpenedFirst.pages(opened: first.opened, documents: all, keep: keepOpened) }
             if order == .title {
                 all.sort { $0.displayTitle.localizedStandardCompare($1.displayTitle) == .orderedAscending }
             }
@@ -369,7 +376,7 @@ final class ResultsModel {
             total = first.total
             nextPageKey = nil
             capped = all.count >= Self.allLimit
-            opened = first.opened
+            opened = openedInline ? [] : first.opened
             if first.facets != nil || !options.facets { facets = first.facets }
             phase = .loaded
         } catch .cancelled {
@@ -452,10 +459,10 @@ final class ResultsModel {
             guard mine == generation else { return }
             documents = []
             seen = []
-            append(page.documents)
+            append(openedInline ? OpenedFirst.pages(opened: page.opened, documents: page.documents, keep: keepOpened) : page.documents)
             total = page.total
             nextPageKey = page.nextPageKey
-            opened = page.opened
+            opened = openedInline ? [] : page.opened
             if page.facets != nil || !options.facets { facets = page.facets }
             phase = .loaded
             savedOnline()

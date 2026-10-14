@@ -87,10 +87,10 @@ struct AllResults: View {
             }
     }
 
-    /// Hister's total has no notes (they're Kura's), and leaves out the pages
-    /// you opened while Show Opened is off.
+    /// Hister's total has no notes (they're Kura's); it counts the pages you
+    /// opened, which are always shown.
     private var totals: [Int] {
-        [max(pages.total - hiddenOpened, yourPages().count), max(notes.total, shown(notes, count: Self.count).count), codeTotal, media.items.count]
+        [max(pages.total, yourPages().count), max(notes.total, shown(notes, count: Self.count).count), codeTotal, media.items.count]
     }
 
     private func load() async {
@@ -159,22 +159,14 @@ struct AllResults: View {
     }
 
     /// Your Pages' five: the pages you opened for this search first (Hister
-    /// ranks them first, and counts them in the total), then the rest.
-    /// Without them, "6 results" showed one page once the "You Opened"
-    /// section left All.
+    /// ranks them first, counts them in the total, and sends them apart from
+    /// the rest), then the rest. Always shown, marked only with Show Opened
+    /// on: dropped, a page you opened went missing from its own search.
     private func yourPages() -> [StoredPage] {
-        let opened = app.searchPage.showOpened
-            ? pages.opened.map { StoredPage(opened: $0) }.filter { !app.isNotePage($0.url) } : []
-        var seen = Set<String>()
-        return Array((opened + pages.documents)
-            .filter { !app.deletes.hidden.contains($0.url) && seen.insert($0.url).inserted }
-            .prefix(Self.count))
-    }
-
-    /// Pages you opened, left out while Show Opened is off: Hister counts
-    /// them in its total, so the count drops them too.
-    private var hiddenOpened: Int {
-        app.searchPage.showOpened ? 0 : pages.opened.filter { !app.isNotePage($0.url) }.count
+        let all = OpenedFirst.pages(opened: pages.opened, documents: pages.documents) {
+            !app.isNotePage($0) && !LocalFiles.isLocalFile($0)
+        }
+        return Array(all.filter { !app.deletes.hidden.contains($0.url) }.prefix(Self.count))
     }
 
     @ViewBuilder private var content: some View {
@@ -221,7 +213,7 @@ struct AllResults: View {
                 }
                 // No headings: the web's results, yours among them. No "You
                 // Opened" here either: it only grew, and pushed the rest down.
-                let opened = Set(pages.opened.map(\.url))
+                let opened = app.searchPage.showOpened ? Set(pages.opened.map(\.url)) : []
                 let yours = Self.alternate(mine, vault)
                 if webOn {
                     webSection(webResults, yours: yours, opened: opened)

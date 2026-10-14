@@ -1374,3 +1374,14 @@ test('Open in Hister: the rooms\' Hister on a hosted page, never back to the pag
   assert.equal(S.histerUIBase('', 'https://hister.example', ''), 'https://hister.example/');
   assert.equal(S.histerUIBase('', '', ''), '');
 });
+
+const openedFirstCases = JSON.parse(readFileSync(fileURLToPath(new URL('./opened-first-cases.json', import.meta.url)), 'utf8'));
+
+test('a page you opened stays in its search, first and once', () => {
+  for (const c of openedFirstCases.cases) {
+    const got = S.openedFirst(c.history, c.documents, (u) => !c.skip.includes(u));
+    assert.deepEqual(Array.from(got, (d) => d.url), c.want, c.name);
+    const lifted = new Set(c.history.map((h) => h.url));
+    for (const d of got) assert.equal(!!d.opened, lifted.has(d.url) && !c.documents.some((x) => x.url === d.url && !lifted.has(x.url)), c.name);
+  }
+});

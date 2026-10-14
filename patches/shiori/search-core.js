@@ -1077,6 +1077,23 @@
   }
 
   /**
+   * The pages you opened for a search first, then the rest. Hister takes an
+   * opened page out of `documents` and sends it only in `history` (it ranks
+   * it first), so a list that dropped `history` lost the page from its
+   * search. Each entry becomes a result with what it carries (no snippet or
+   * label), `opened: true` so a list may mark it; only web addresses, and
+   * `keep` leaves out what the list doesn't show (a note, a file). Duplicates
+   * go. HisterKit's OpenedFirst, on scripts/opened-first-cases.json.
+   */
+  function openedFirst(history, documents, keep = () => true) {
+    const opened = (history || [])
+      .filter((h) => h && typeof h.url === 'string' && /^https?:\/\//i.test(h.url) && keep(h.url))
+      .map((h) => ({ url: h.url, title: h.title || '', domain: h.domain || '', added: h.added, updated: h.updated || h.added, opened: true }));
+    const seen = new Set();
+    return [...opened, ...(documents || [])].filter((d) => d && !seen.has(d.url) && seen.add(d.url));
+  }
+
+  /**
    * Two lists that each come newest first, a page at a time, as one (the
    * web app's Library All: pages from Hister, notes from Kura). A result is
    * placed only once the other list's next one is known, or it has ended.
@@ -3782,6 +3799,7 @@
     localFilePath,
     typedQuery,
     newestFirstMerge,
+    openedFirst,
     newItemsCount,
     newsBlurSubscribeURL,
     labelChipIndex,

@@ -1,0 +1,39 @@
+{
+  "cases": [
+    {
+      "name": "the page you opened first, then the rest, once",
+      "history": [{ "url": "https://a.example.com/x", "title": "X" }],
+      "documents": [{ "url": "https://b.example.com/" }, { "url": "https://a.example.com/x" }],
+      "skip": [],
+      "want": ["https://a.example.com/x", "https://b.example.com/"]
+    },
+    {
+      "name": "two opened keep Hister's order",
+      "history": [{ "url": "https://f.example.com/2", "title": "Two" }, { "url": "https://f.example.com/1", "title": "One" }],
+      "documents": [{ "url": "https://f.example.com/3" }],
+      "skip": [],
+      "want": ["https://f.example.com/2", "https://f.example.com/1", "https://f.example.com/3"]
+    },
+    {
+      "name": "a note the list doesn't show is left out",
+      "history": [{ "url": "https://kura.example.com/n/a", "title": "A note" }, { "url": "https://c.example.com/", "title": "C" }],
+      "documents": [],
+      "skip": ["https://kura.example.com/n/a"],
+      "want": ["https://c.example.com/"]
+    },
+    {
+      "name": "only web addresses",
+      "history": [{ "url": "gemini://g.example.com/", "title": "G" }, { "url": "javascript:alert(1)", "title": "J" }, { "url": "HTTPS://H.example.com/", "title": "H" }],
+      "documents": [{ "url": "https://d.example.com/" }],
+      "skip": [],
+      "want": ["HTTPS://H.example.com/", "https://d.example.com/"]
+    },
+    {
+      "name": "nothing opened",
+      "history": [],
+      "documents": [{ "url": "https://e.example.com/" }, { "url": "https://e.example.com/2" }],
+      "skip": [],
+      "want": ["https://e.example.com/", "https://e.example.com/2"]
+    }
+  ]
+}
