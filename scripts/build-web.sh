@@ -23,6 +23,11 @@ status=${3:-}
 rm -rf -- "$out"
 mkdir -p -- "$out/_shiori"
 cp -- patches/shiori/search.js patches/shiori/search-core.js patches/shiori/search.css web/app/palettes.css "$out/_shiori/"
+# Backgrounds: the controller, its styles, the scene engine (loaded only once a
+# scene is picked) and the scenes' previews.
+cp -- patches/shiori/backgrounds.js patches/shiori/backgrounds.css patches/shiori/bg.js "$out/_shiori/"
+mkdir -p -- "$out/_shiori/backgrounds"
+cp -- assets/backgrounds/bg-*.jpg "$out/_shiori/backgrounds/"
 cp -- web/shim.js "$out/_shiori/web-shim.js"
 # The neighbours' icons (Hister, SearXNG): neutral glyphs unless the build
 # names a folder holding their own logos (hister.png, searxng.svg) in
@@ -42,6 +47,8 @@ html = open(src, encoding="utf-8").read()
 for old, new in (
     ('href="search.css"', 'href="/_shiori/search.css"'),
     ('href="palettes.css"', 'href="/_shiori/palettes.css"'),
+    ('href="backgrounds.css"', 'href="/_shiori/backgrounds.css"'),
+    ('<script src="backgrounds.js"></script>', '<script src="/_shiori/backgrounds.js"></script>'),
     ('<script src="search-core.js"></script>',
      '<script src="/_shiori/web-shim.js"></script>\n    <script src="/_shiori/search-core.js"></script>'),
     ('<script src="search.js"></script>', '<script src="/_shiori/search.js"></script>'),
@@ -71,9 +78,9 @@ python3 scripts/stamp-env.py "$@"
 # Each file's address carries the build, so a browser holding an older copy
 # (they're cached for minutes) never runs new HTML with old scripts.
 version=${SHIORI_BUILD_ID:-$(git rev-parse --short HEAD 2>/dev/null || date +%s)}
-sed -i.bak -E "s#(/_shiori/(web-shim|search-core|search|palettes)\.(js|css))\"#\1?v=$version\"#g" "$out/index.html" && rm -f -- "$out/index.html.bak"
+sed -i.bak -E "s#(/_shiori/(web-shim|search-core|search|palettes|backgrounds)\.(js|css))\"#\1?v=$version\"#g" "$out/index.html" && rm -f -- "$out/index.html.bak"
 
-for needle in '/_shiori/web-shim.js' '/_shiori/search.js' '/_shiori/search.css' '/_shiori/palettes.css' 'opensearch.xml'; do
+for needle in '/_shiori/web-shim.js' '/_shiori/search.js' '/_shiori/search.css' '/_shiori/palettes.css' '/_shiori/backgrounds.js' '/_shiori/backgrounds.css' 'opensearch.xml'; do
   grep -q -- "$needle" "$out/index.html" || { echo "build-web: index.html lacks $needle (did search.html change?)" >&2; exit 1; }
 done
 

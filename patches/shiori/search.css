@@ -995,3 +995,42 @@ body.dense .vault-card > .title::before { background: var(--notes); }
 .room-icon[data-room="searxng"] { background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjN2FhMmY3IiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI5Ii8+PHBhdGggZD0iTTMgMTJoMThNMTIgM2MzIDMgMyAxNSAwIDE4TTEyIDNjLTMgMy0zIDE1IDAgMTgiLz48L3N2Zz4K"); }
 /* END ROOM ICONS */
 .sign-out { margin: 0; display: inline; }
+
+/* Over a background (backgrounds.css): the header, what's in the results' column, the footer, the preview and the
+   sheet are glass, and the rest is open: the scene shows beside the column, between its sections and in the second
+   column when there's no Info card. Cards keep their own colours on the glass. The start page's column is one pane of
+   glass, a layer of its own behind the body (the body itself can't be glass: a filter there would hold the fixed
+   layers to it). */
+html.has-bg header,
+html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
+html.has-bg body:not(.home) > footer {
+  background: color-mix(in srgb, var(--bg) var(--glass-mix), transparent);
+  -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+}
+html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
+html.has-bg body:not(.home) > footer {
+  border-radius: 14px; margin-inline: -8px; padding: 4px 8px;
+}
+html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav):not([hidden]) + :is(section, p, nav) { margin-top: 8px; }
+html.has-bg body.home { position: relative; }
+html.has-bg body.home::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: color-mix(in srgb, var(--bg) var(--glass-mix), transparent);
+  -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+}
+html.has-bg #preview-pane {
+  background: color-mix(in srgb, var(--card) var(--glass-mix), transparent);
+  -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+}
+@media (min-width: 761px) {
+  html.has-bg #settings.msheet {
+    background: color-mix(in srgb, var(--bg) var(--glass-mix), transparent);
+    -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+  }
+}
+/* The layers fill the window whatever Text Size zooms the body by (--z, --vw: search.js keeps them). */
+html.has-bg :is(#bg, #rainfx, .bgimg, .bgvid) { width: var(--vw, 100vw); height: calc(100lvh / var(--z, 1)); }
+/* The last results scroll clear of the corner. */
+html.has-bgctl body:not(.home) { padding-bottom: 88px; }
+/* Settings → Background: Choose… in the accent; Remove keeps the red of a removal. */
+.setting .bg-actions button.link:not(.danger) { color: var(--accent); }

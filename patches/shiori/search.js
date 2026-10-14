@@ -108,6 +108,14 @@
   });
   document.title = q ? `${q} – Shiori` : 'Shiori';
   if (header) drawHeader(header);
+  // The background (Settings → Background, this browser's own): its signs name the pills on show.
+  const BG = globalThis.ShioriBackgrounds;
+  BG?.init({
+    words: () => {
+      const shown = [...document.querySelectorAll('#categories a')].map((a) => a.firstChild?.textContent || '');
+      return shown.length ? shown : S.PILLS.map(([, name]) => name);
+    },
+  });
   // All's first page has the two columns (results, and the Info card
   // beside them) from the first paint: they came only when the card did,
   // so on a reload the search bar and tabs drew narrow, then snapped wide
@@ -1165,6 +1173,23 @@
     return [el('h3', { class: 'group-title' }, 'Account'), el('div', { class: 'group' }, ...rows.filter(Boolean))];
   }
 
+  /** Settings → Background: a scene, the rain, your picture or video (backgrounds.js; this browser's own). */
+  function backgroundGroup() {
+    if (!BG) return [];
+    const rows = BG.rows({
+      buttonClass: 'link',
+      redraw: () => $('settings').open && drawSettings(),
+      row: (label, control, id, extra) =>
+        el('div', { class: `setting${extra ? ` ${extra}` : ''}` }, id ? el('label', { for: id }, label) : el('span', {}, label), control),
+    });
+    return [
+      el('h3', { class: 'group-title' }, 'Background'),
+      el('div', { class: 'group' }, ...rows.filter((r) => r.classList.contains('setting'))),
+      ...rows.filter((r) => !r.classList.contains('setting')),
+      el('p', { class: 'group-foot' }, 'This browser’s own. Your picture or video stays here, never uploaded.'),
+    ];
+  }
+
   function drawSettings() {
     askAccount();
     const body = [];
@@ -1257,6 +1282,8 @@
       }
       body.push(group);
       if (foot) body.push(el('p', { class: 'group-foot' }, foot()));
+      // Background follows Appearance (the web app's Appearance page holds both).
+      if (title === 'Appearance') body.push(...backgroundGroup());
     }
     // Account (the hosted page's) and About close the sheet, in the house's order.
     body.push(...accountGroup());
@@ -1447,6 +1474,7 @@
   $('settings-open').addEventListener('click', () => {
     if ($('settings').open) return;
     sheetDraft = { before: JSON.parse(JSON.stringify(settings)), values: {}, recent: [...recent], device: S.deviceTextSize(document.cookie), saved: false };
+    BG?.begin();
     // Opening Settings asks the account afresh (the hosted page); the state line follows.
     void contactAccount().then(() => $('settings').open && drawSettings());
     drawSettings();
@@ -1466,6 +1494,8 @@
       if (key === 'clearRecentSearches' || JSON.stringify(value) !== JSON.stringify(sheetDraft.before[key])) values[key] = value;
     }
     if (Object.keys(values).length) keepSettings(values);
+    // The background is kept here before any reload below.
+    if (BG) saving.push(BG.save());
     $('settings').close();
   });
   /** Closed without Save: the settings, recent searches and this device's size as they were. */
@@ -1476,6 +1506,7 @@
     if (S.deviceTextSize(document.cookie) !== draft.device) setDeviceTextSize(draft.device);
     else applyLook(settings.theme, settings.textSize, settings.palette);
     previewPane.update();
+    void BG?.cancel();
   }
   // The page going away (a link in the sheet, the tab closing) is a Cancel.
   addEventListener('pagehide', () => $('settings').open && $('settings').close());
