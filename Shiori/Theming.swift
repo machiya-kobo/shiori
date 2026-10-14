@@ -104,6 +104,8 @@ extension View {
 /// A small capsule naming a page's topic label.
 struct LabelChip: View {
     let label: String
+    /// What VoiceOver says, when the chip isn't a label (a note's vault).
+    var spoken: String?
     @Environment(\.palette) private var palette
 
     var body: some View {
@@ -115,6 +117,6 @@ struct LabelChip: View {
             .padding(.vertical, 2)
             // Outlined, as the search page draws its tags.
             .overlay(Capsule().strokeBorder(colour, lineWidth: 1))
-            .accessibilityLabel("Label: \(label)")
+            .accessibilityLabel(spoken ?? "Label: \(label)")
     }
 }

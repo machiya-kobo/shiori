@@ -106,6 +106,8 @@ fileprivate final class FocusReportingSearchField: NSSearchField {
         label.textColor = .placeholderTextColor
         label.lineBreakMode = .byClipping
         label.isHidden = true
+        // Drawn type-ahead, not a second field: VoiceOver reads the field's value.
+        label.setAccessibilityElement(false)
         label.addGestureRecognizer(NSClickGestureRecognizer(target: self, action: #selector(ghostClicked)))
         addSubview(label)
         return label

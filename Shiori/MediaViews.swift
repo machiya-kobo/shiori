@@ -358,6 +358,7 @@ struct MediaItemRow: View {
                             .textStyle(.footnote)
                             .foregroundStyle(palette.secondaryText)
                             .lineLimit(2)
+                            .accessibilityLabel(spokenPlayedLine)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -401,6 +402,15 @@ struct MediaItemRow: View {
             out += part
         }
         return out
+    }
+
+    /// The same line for VoiceOver: the stars as words ("4.5 of 5 stars"),
+    /// not "black star, black star…".
+    private var spokenPlayedLine: String {
+        let played = Media.playedLine(item, offsetMinutes: TimeZone.current.secondsFromGMT() / 60)
+        let rating = item.rating.map { min(10, Int(Double($0).rounded(.toNearestOrAwayFromZero))) } ?? 0
+        let stars = rating > 0 ? "\((Double(rating) / 2).formatted()) of 5 stars" : ""
+        return [played, stars, Media.outsideLine(item)].filter { !$0.isEmpty }.joined(separator: ", ")
     }
 }
 

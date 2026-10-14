@@ -456,7 +456,7 @@ struct DocumentRow: View {
                         guard !chip.name.isEmpty else { return }
                         app.notesVault = chip.name
                         session?.scope = .notes
-                    } label: { LabelChip(label: chip.text).tapArea(vertical: 8, horizontal: 6) }
+                    } label: { LabelChip(label: chip.text, spoken: chip.text).tapArea(vertical: 8, horizontal: 6) }
                         .buttonStyle(.borderless)
                         .keepsFocusRing()
                         .help(chip.name.isEmpty ? "A note" : "Notes in \(chip.text)")
