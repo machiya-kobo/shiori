@@ -2603,9 +2603,12 @@
     const noun = vault ? 'notes' : files ? 'files' : code ? 'results' : 'pages';
     // Hister's total is your pages alone (notes are Kura's), so both can say "of".
     $('timing').textContent = `${from}–${from + lifted + docs.length - 1} of ${(result.total || docs.length).toLocaleString()} ${noun}`;
-    $('hister-more-tab').href = `${histerBase}?q=${encodeURIComponent(files ? S.filesQuery(q) : code ? S.codeQuery(q, codeFiltersFromAddress()) : q)}`;
+    // Hister's own search page: the rooms' Hister address on a hosted page
+    // (this host's `/` is this page), the extension's server otherwise.
+    const histerUI = S.histerUIBase('__SHIORI_ROOMS__', histerBase, /^https?:$/.test(location.protocol) ? location.origin : '');
+    $('hister-more-tab').href = `${histerUI}?q=${encodeURIComponent(files ? S.filesQuery(q) : code ? S.codeQuery(q, codeFiltersFromAddress()) : q)}`;
     // "Open in Hister" is for Hister's own results, not Kura's.
-    $('hister-more-tab').hidden = vault;
+    $('hister-more-tab').hidden = vault || !histerUI;
     $('pages').hidden = false;
     // A close-match page key belongs to the other spelling: no next page.
     if (result.page_key && docs.length >= PAGE_SIZE && !result.closeMatches) $('next').href = link({ p: page + 1, hk: result.page_key });

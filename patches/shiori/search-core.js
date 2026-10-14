@@ -1304,6 +1304,25 @@
     return ROOMS.filter((r) => /^https?:\/\/[^/]/.test(urls[r.key] || '')).map((r) => ({ ...r, url: urls[r.key] }));
   }
 
+  /**
+   * Where "Open in Hister" goes: Hister's own pages. On a hosted page the
+   * Hister API comes through the page's own host, whose `/` is Shiori's
+   * page, not Hister's: there it's the rooms' Hister address, and with none
+   * '' (no link, rather than one back to this page).
+   */
+  function histerUIBase(stamped, histerBase, pageOrigin = '') {
+    const room = rooms(stamped).find((r) => r.key === 'hister');
+    if (room) return room.url.endsWith('/') ? room.url : room.url + '/';
+    const base = String(histerBase || '');
+    if (!/^https?:\/\/[^/]/.test(base)) return '';
+    try {
+      if (pageOrigin && new URL(base).origin === pageOrigin) return '';
+    } catch (_) {
+      return '';
+    }
+    return base.endsWith('/') ? base : base + '/';
+  }
+
   // --- Small Web: Gemini and Gopher (docs/smallweb.md) -----------------------
   // Through your server's small-web gateway, searched only on submit. HisterKit's SmallWeb.swift is the twin.
 
@@ -3692,6 +3711,7 @@
     mediaSearch,
     mediaBrowse,
     smallwebSearchURL,
+    histerUIBase,
     smallwebResults,
     unansweredEngines,
     engineHealthLine,

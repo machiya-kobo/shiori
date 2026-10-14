@@ -1366,3 +1366,11 @@ test("the web engines that didn't answer, and the line that says so", () => {
   }
   assert.deepEqual([...S.unansweredEngines(null)], []);
 });
+
+test('Open in Hister: the rooms\' Hister on a hosted page, never back to the page itself', () => {
+  assert.equal(S.histerUIBase('hister=https://hister.example', 'https://search.example/', 'https://search.example'), 'https://hister.example/');
+  assert.equal(S.histerUIBase('__SHIORI_ROOMS__', 'https://search.example/', 'https://search.example'), '');
+  assert.equal(S.histerUIBase('__SHIORI_ROOMS__', 'https://hister.example/', 'safari-web-extension://x'), 'https://hister.example/');
+  assert.equal(S.histerUIBase('', 'https://hister.example', ''), 'https://hister.example/');
+  assert.equal(S.histerUIBase('', '', ''), '');
+});
