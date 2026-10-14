@@ -5,6 +5,8 @@ import Testing
 /// Delete with Undo: nothing goes to Hister inside the window, a second
 /// delete sends the first, a failure brings the page back, and a private
 /// vault's note is never sent.
+/// Time-limited: they wait on real clocks, and a hang should fail, not stall.
+@Suite(.timeLimit(.minutes(1)))
 struct PendingDeletesTests {
     /// What was sent, in order; `fails` makes every send fail.
     final class Sent {

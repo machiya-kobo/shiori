@@ -4,6 +4,7 @@ import Testing
 
 /// The app's checks before anything about a page goes to Hister: a private
 /// vault's note and a file never, the Library's `*` never remembered.
+extension SharedVaultState {
 struct HisterGuardTests {
     static let work = "https://kura.example/v/work/n/plan"
     static let file = "file:///home/user/notes.txt"
@@ -16,6 +17,7 @@ struct HisterGuardTests {
     }
 
     @Test func rememberWhatYouOpenSkipsPrivateNotesFilesAndBrowsing() {
+        Notes.useVaults([])
         #expect(HisterGuard.mayRecordOpened(url: Self.page, query: "rust"))
         #expect(HisterGuard.mayRecordOpened(url: Self.note, query: "garden"))
         #expect(!HisterGuard.mayRecordOpened(url: Self.work, query: "plan"))
@@ -26,13 +28,16 @@ struct HisterGuardTests {
     }
 
     @Test func labelsNeverGoToAPrivateNoteOrAFile() {
+        Notes.useVaults([])
         #expect(HisterGuard.mayLabel(url: Self.page))
         #expect(!HisterGuard.mayLabel(url: Self.work))
         #expect(!HisterGuard.mayLabel(url: Self.file))
     }
 
     @Test func anExportLeavesPrivateNotesOut() {
+        Notes.useVaults([])
         let pages = [Self.page, Self.work, Self.note, "https://kura.example/v/team/f/folder"].map(stored)
         #expect(HisterGuard.exportable(pages).map(\.url) == [Self.page, Self.note])
     }
+}
 }

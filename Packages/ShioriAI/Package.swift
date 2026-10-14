@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "ShioriAI",
     platforms: [
-        .iOS("18.0"),
+        .iOS("18.6"),
         .macOS("15.0"),
     ],
     products: [

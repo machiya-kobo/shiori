@@ -4,6 +4,12 @@ import Testing
 
 /// Offline reading's copies: kept and read back per server, never a private
 /// vault's note, a file or code, and only the newest previews.
+/// Every suite that reads or sets the shared vaults (`Notes.useVaults`,
+/// one set for the whole process) runs inside this one, one test at a time:
+/// side by side, one suite's "team is shared" broke another's "private".
+@Suite(.serialized) enum SharedVaultState {}
+
+extension SharedVaultState {
 @Suite(.serialized)
 struct OfflineStoreTests {
     let origin = OfflineStore.origin(server: "https://hister.example/", kura: "https://kura.example/")
@@ -132,4 +138,5 @@ struct OfflineStoreTests {
         await OfflineStore.settled()
         #expect(OfflineStore.preview(for: a, origin: other) == nil)
     }
+}
 }

@@ -64,6 +64,8 @@ nonisolated struct CutShortEngine: AIEngine {
 
 /// Summarize for the page on screen: where each kind of page may go, the
 /// cache, Regenerate, and a result that comes back too late.
+/// Time-limited: they wait on real clocks, and a hang should fail, not stall.
+@Suite(.timeLimit(.minutes(1)))
 struct PageSummaryTests {
     /// The cache, in memory: what was written, and what reads back.
     final class Store {
