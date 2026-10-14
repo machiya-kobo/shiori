@@ -193,6 +193,7 @@ struct PreviewWebView {
         context.coordinator.onFailure = onFailure
         guard context.coordinator.loadedHTML != html else { return }
         context.coordinator.loadedHTML = html
+        context.coordinator.awaitingLoad = true
         webView.loadHTMLString(html, baseURL: baseURL)
     }
 
@@ -201,6 +202,10 @@ struct PreviewWebView {
         var onFinish: () -> Void = {}
         var onFailure: () -> Void = {}
         var loadedHTML: String?
+        /// Set just before our own `loadHTMLString`: the one main-frame load
+        /// the preview allows. Anything after it (a `<meta http-equiv=refresh>`,
+        /// a form) is the page navigating itself, and is refused.
+        var awaitingLoad = false
         private let log = Logger(subsystem: ShioriID.app, category: "preview")
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -216,6 +221,10 @@ struct PreviewWebView {
         func webView(
             _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: any Error
         ) {
+            // A load we refused (or replaced with a newer one) isn't the
+            // page failing: the page on screen stays.
+            let error = error as NSError
+            if (error.domain == "WebKitErrorDomain" && error.code == 102) || error.code == NSURLErrorCancelled { return }
             log.error("preview failed provisionally: \(error.localizedDescription, privacy: .private)")
             onFailure()
         }
@@ -230,12 +239,17 @@ struct PreviewWebView {
             _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
             decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
         ) {
-            if action.navigationType == .linkActivated, let url = action.request.url {
-                openLink(url)
+            if action.navigationType == .linkActivated {
+                // A web address only, as every other opened link (`SafeHref`):
+                // never file:, javascript:, data: or one of Shiori's own
+                // shiori:// actions from a page's text.
+                if let url = SafeHref.url(action.request.url?.absoluteString) { openLink(url) }
                 decisionHandler(.cancel)
-            } else if action.navigationType == .other, action.targetFrame?.isMainFrame == true {
-                // The initial loadHTMLString.
-                decisionHandler(.allow)
+            } else if action.targetFrame?.isMainFrame == true {
+                // The initial loadHTMLString, and nothing after it.
+                let ours = awaitingLoad && action.navigationType == .other
+                awaitingLoad = false
+                decisionHandler(ours ? .allow : .cancel)
             } else {
                 decisionHandler(action.targetFrame?.isMainFrame == false ? .allow : .cancel)
             }
