@@ -106,7 +106,6 @@ final class ResultsModel {
     private(set) var total = 0
     private(set) var phase: Phase = .idle
     private(set) var isLoadingMore = false
-    private(set) var suggestion: String?
     /// Results you opened before for this search (first page), shown first.
     private(set) var opened: [OpenedResult] = []
     /// Counts per filter value, from the first page.
@@ -316,7 +315,6 @@ final class ResultsModel {
             self.merge = merge
             nextPageKey = nil
             total = pages.total + (notes?.total ?? 0)
-            suggestion = nil
             opened = []
             if pages.facets != nil || !options.facets { facets = pages.facets }
             phase = .loaded
@@ -371,7 +369,6 @@ final class ResultsModel {
             total = first.total
             nextPageKey = nil
             capped = all.count >= Self.allLimit
-            suggestion = first.suggestion
             opened = first.opened
             if first.facets != nil || !options.facets { facets = first.facets }
             phase = .loaded
@@ -421,7 +418,6 @@ final class ResultsModel {
         total = documents.count
         nextPageKey = nil
         merge = nil
-        suggestion = nil
         opened = []
         offlineAsOf = copy.savedAt
         phase = .loaded
@@ -459,8 +455,6 @@ final class ResultsModel {
             append(page.documents)
             total = page.total
             nextPageKey = page.nextPageKey
-            // Hister's suggestion is a past search of yours, often this one.
-            suggestion = page.suggestion.flatMap { $0.caseInsensitiveCompare(baseQuery) == .orderedSame ? nil : $0 }
             opened = page.opened
             if page.facets != nil || !options.facets { facets = page.facets }
             phase = .loaded

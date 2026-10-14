@@ -154,11 +154,6 @@ struct ResultsList<Empty: View>: View {
                     .textStyle(.callout)
                     .foregroundStyle(palette.secondaryText)
                     .listRowBackground(palette.background)
-            } else if let suggestion = model.suggestion {
-                Text("Did you mean “\(suggestion)”?")
-                    .textStyle(.callout)
-                    .foregroundStyle(palette.secondaryText)
-                    .listRowBackground(palette.background)
             }
             OpenedSection(model: model)
             let sections = model.sections(of: visible)
