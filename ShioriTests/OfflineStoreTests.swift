@@ -125,6 +125,18 @@ struct OfflineStoreTests {
         OfflineStore.clear()
         await OfflineStore.settled()
         #expect(OfflineStore.list("pages", origin: origin) == nil)
+        // Fetched before a clear, asked to be kept after it: never written.
+        let before = OfflineStore.epoch
+        OfflineStore.clear()
+        OfflineStore.savePreview(preview("a"), for: a, origin: origin, epoch: before)
+        OfflineStore.saveList("pages", origin: origin, pages: [a], epoch: before)
+        await OfflineStore.settled()
+        #expect(OfflineStore.preview(for: a, origin: origin) == nil)
+        #expect(OfflineStore.list("pages", origin: origin) == nil)
+        // Asked for under the current one: kept.
+        OfflineStore.savePreview(preview("a"), for: a, origin: origin, epoch: OfflineStore.epoch)
+        await OfflineStore.settled()
+        #expect(OfflineStore.preview(for: a, origin: origin) != nil)
     }
 
     @Test func aPreviewIsForgottenWhicheverServerItCameFrom() async {

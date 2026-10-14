@@ -20,6 +20,8 @@ struct DocumentView: View {
     @State private var offlineAsOf: Date?
     /// Another of the server's extractors, from Show As (nil: its default).
     @State private var extractor: String?
+    /// Counts loads, so only the newest one's answer is shown (`load`).
+    @State private var loadGeneration = 0
     @State private var extractors: [Extractor] = []
     @State private var versions: [PageVersion] = []
     @State private var showingVersions = false
@@ -370,6 +372,15 @@ struct DocumentView: View {
     }
 
     private func load() async {
+        // The newest load wins: Show As starts one while the page's own may
+        // still be on its way, and an older answer landing last put the
+        // other view back on screen.
+        loadGeneration += 1
+        let generation = loadGeneration
+        let asked = extractor
+        // A copy fetched before a sign-out is never kept after it.
+        let epoch = OfflineStore.epoch
+        func current() -> Bool { generation == loadGeneration }
         let isNote = app.noteLinks(for: document) != nil || Notes.otherVault(of: document.url) != nil
         if isNote, app.notesFrom == .hister, !Notes.histerNoteShown(document.url) {
             // Notes from Hister: the default vault's alone. Another vault's
@@ -396,12 +407,13 @@ struct DocumentView: View {
             }
             do {
                 let html = try await kura.noteHTML(path: path, vault: vault)
+                guard current() else { return }
                 loaded(PagePreview(
                     title: document.displayTitle, contentHTML: html, added: document.added, updated: document.updated,
-                    label: Notes.label, visits: 0, author: nil, summary: nil))
+                    label: Notes.label, visits: 0, author: nil, summary: nil), extractor: asked, epoch: epoch)
             } catch .cancelled {
             } catch let failure {
-                failed(failure)
+                if current() { failed(failure, extractor: asked) }
             }
             return
         }
@@ -410,10 +422,12 @@ struct DocumentView: View {
             return
         }
         do {
-            loaded(try await client.preview(of: document.url, extractor: extractor))
+            let fresh = try await client.preview(of: document.url, extractor: asked)
+            guard current() else { return }
+            loaded(fresh, extractor: asked, epoch: epoch)
         } catch .cancelled {
         } catch let failure {
-            failed(failure)
+            if current() { failed(failure, extractor: asked) }
         }
     }
 
@@ -422,17 +436,17 @@ struct DocumentView: View {
 
     /// A fresh preview, kept for reading offline (the server's own view
     /// only, not another Show As).
-    private func loaded(_ fresh: PagePreview) {
+    private func loaded(_ fresh: PagePreview, extractor: String?, epoch: Int) {
         if preview != fresh { rendered = false }
         preview = fresh
         error = nil
         offlineAsOf = nil
-        if extractor == nil { OfflineStore.savePreview(fresh, for: document, origin: offlineOrigin) }
+        if extractor == nil { OfflineStore.savePreview(fresh, for: document, origin: offlineOrigin, epoch: epoch) }
     }
 
     /// Out of reach: the copy kept from the last time, if any; a copy
     /// already on screen stays.
-    private func failed(_ failure: HisterError) {
+    private func failed(_ failure: HisterError, extractor: String?) {
         if offlineAsOf != nil { return }
         if failure == .unreachable, extractor == nil, preview == nil,
            let copy = OfflineStore.preview(for: document, origin: offlineOrigin) {

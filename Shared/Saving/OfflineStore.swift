@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import HisterKit
+import Synchronization
 
 /// What the apps can show without the network: the first page of each
 /// Library list (All, Pages, Notes, newest first) and the last
@@ -16,7 +17,8 @@ import HisterKit
 ///
 /// Writes, pruning, forgetting and clearing run on one serial queue off the
 /// caller's (the main) actor, in the order asked: a save asked for before a
-/// sign-out's clear can't land after it. Reads stay where the UI waits.
+/// sign-out's clear can't land after it, nor one fetched before it and
+/// asked for after (`epoch`). Reads stay where the UI waits.
 nonisolated enum OfflineStore {
     static let previewLimit = 50
     /// The first page a Library list loads.
@@ -39,11 +41,19 @@ nonisolated enum OfflineStore {
 
     // MARK: Lists
 
-    static func saveList(_ name: String, origin: String, pages: [StoredPage], now: Date = .now) {
+    /// Bumped by every `clear`. A caller reads it before asking the server
+    /// and passes it with the copy: one fetched under the credential a
+    /// sign-out just cleared is then never written.
+    static var epoch: Int { epochs.withLock { $0 } }
+    private static let epochs = Mutex(0)
+    private static func current(_ epoch: Int) -> Bool { epochs.withLock { $0 == epoch } }
+
+    static func saveList(_ name: String, origin: String, pages: [StoredPage], now: Date = .now, epoch: Int = OfflineStore.epoch) {
         // Which pages may be kept is decided now; the rest happens off this actor.
         let kept = Array(pages.filter(keepable).prefix(listLimit))
         guard let file = file("lists", "\(origin)|\(name)") else { return }
         queue.async {
+            guard current(epoch) else { return }
             write(ListEntry(origin: origin, savedAt: now, pages: kept.map(Page.init)), to: file)
             prune(file.deletingLastPathComponent(), keeping: listFiles)
         }
@@ -64,11 +74,12 @@ nonisolated enum OfflineStore {
 
     /// One copy per page, named by its address alone (so `forget` finds it
     /// without reading anything); the origin inside is checked on reading.
-    static func savePreview(_ preview: PagePreview, for page: StoredPage, origin: String, now: Date = .now) {
+    static func savePreview(_ preview: PagePreview, for page: StoredPage, origin: String, now: Date = .now, epoch: Int = OfflineStore.epoch) {
         guard keepable(page), let file = previewFile(page.url), let folder = directory?.appending(path: "previews", directoryHint: .isDirectory)
         else { return }
         let url = page.url
         queue.async {
+            guard current(epoch) else { return }
             write(PreviewEntry(origin: origin, url: url, savedAt: now, preview: Preview(preview)), to: file)
             prune(folder, keeping: previewLimit)
         }
@@ -103,6 +114,9 @@ nonisolated enum OfflineStore {
 
     /// Everything, on signing out.
     static func clear() {
+        // At once, not on the queue: a copy asked for before this, and
+        // still waiting there, is dropped.
+        epochs.withLock { $0 &+= 1 }
         guard let directory else { return }
         queue.async { try? FileManager.default.removeItem(at: directory) }
     }

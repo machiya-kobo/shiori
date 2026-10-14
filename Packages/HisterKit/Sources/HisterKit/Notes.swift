@@ -139,7 +139,7 @@ public enum Notes {
     /// Kura's `/api/vaults` list, as last read; a failure passes `[]` and
     /// shares none. search-core's `useVaults` is the twin.
     public static func useVaults(_ vaults: [KuraVault]) {
-        let shared = Set(vaults.filter { !$0.isDefault && !$0.isPrivate }.map(\.name))
+        let shared = shared(vaults)
         sharedVaults.withLock { $0 = shared }
     }
 
@@ -148,10 +148,22 @@ public enum Notes {
     /// Fails closed: an address that can't be parsed, and a name that isn't
     /// one Kura allows, are private. search-core's `isPrivateNote` is the twin.
     public static func isPrivateNote(_ url: String) -> Bool {
+        isPrivateNote(url, shared: sharedVaults.withLock { $0 })
+    }
+
+    private static func isPrivateNote(_ url: String, shared: Set<String>) -> Bool {
         guard kuraPath(of: url) != nil else { return true }
         guard let vault = otherVault(of: url) else { return false }
-        return !isVaultName(vault) || !sharedVaults.withLock { $0.contains(vault) }
+        return !isVaultName(vault) || !shared.contains(vault)
     }
+
+    private static func shared(_ vaults: [KuraVault]) -> Set<String> {
+        Set(vaults.filter { !$0.isDefault && !$0.isPrivate }.map(\.name))
+    }
+
+    /// Numbers the fresh reads: only an answer newer than the last one kept
+    /// replaces it (a slow older one, landing later, doesn't).
+    private static let reads = Mutex<(issued: Int, kept: Int)>((0, 0))
 
     /// `isPrivateNote` with Kura asked afresh: before another vault's note
     /// (its address, title or text) goes to Hister or an AI engine, since a
@@ -160,11 +172,27 @@ public enum Notes {
     /// shares none. The default vault's notes and other pages ask nothing.
     /// The cached `isPrivateNote` is enough for what's only shown.
     /// search-core's `isPrivateNoteNow` is the twin.
+    /// The answer is this read's own; it's kept for the cached check when
+    /// it's the newest, and a cancelled read (the asker gone) changes
+    /// nothing kept. Either way a failure or a cancel is private.
     public static func isPrivateNoteNow(_ url: String, read: @Sendable () async throws -> [KuraVault]) async -> Bool {
         guard otherVault(of: url) != nil else { return isPrivateNote(url) }
-        let vaults = (try? await read()) ?? []
-        useVaults(vaults)
-        return isPrivateNote(url)
+        let ticket = reads.withLock { $0.issued += 1; return $0.issued }
+        let vaults: [KuraVault]
+        do {
+            vaults = try await read()
+        } catch {
+            if Task.isCancelled { return true }
+            vaults = []
+        }
+        let found = shared(vaults)
+        let newest = reads.withLock { state in
+            guard ticket > state.kept else { return false }
+            state.kept = ticket
+            return true
+        }
+        if newest { sharedVaults.withLock { $0 = found } }
+        return isPrivateNote(url, shared: found)
     }
 
     /// The same, asking this Kura (none: every other vault is private).

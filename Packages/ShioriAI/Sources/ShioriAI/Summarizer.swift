@@ -66,8 +66,11 @@ public struct Summarizer: Sendable {
     }
 
     /// From the readable HTML the preview shows. Converted here, off the
-    /// caller's actor (a nonisolated async function in this package runs
-    /// on the global executor), since a long page's markup takes a moment.
+    /// caller's actor, since a long page's markup takes a moment: said
+    /// with `@concurrent`, not left to this package's settings (with
+    /// `NonisolatedNonsendingByDefault` on, a plain nonisolated async
+    /// function would run on its caller's actor, the main one).
+    @concurrent
     public func summarize(title: String, url: String, html: String, content: AIContent) async throws -> Summary {
         try await summarize(title: title, url: url, text: PageText.plain(fromHTML: html), content: content)
     }

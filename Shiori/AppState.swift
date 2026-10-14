@@ -58,18 +58,29 @@ final class AppState {
     /// the foreground (at most every 30 s), after signing in and on opening
     /// Settings (`force`). Then the App Group's values are taken up.
     func syncAccountPrefs(force: Bool = false) async {
-        guard let base = client?.baseURL else { prefsState = .notSignedIn; return }
-        let credential: AccountPrefs.Credential? =
-            if let account = histerAccount { .session(account.sessionID) } else if !histerToken.isEmpty { .token(histerToken) } else { nil }
-        guard let credential, let defaults = SharedSettings.defaults else { prefsState = .notSignedIn; return }
+        guard client?.baseURL != nil else { prefsState = .notSignedIn; return }
         if !force, let at = prefsContactAt, Date.now.timeIntervalSince(at) < 30 { return }
         // One contact at a time (the foreground and Settings can ask together).
         guard !prefsBusy else { return }
         prefsBusy = true
         defer { prefsBusy = false }
-        prefsContactAt = .now
-        prefsState = await AccountPrefs.contact(base: base, credential: credential, defaults: defaults)
-        reloadSharedSettings()
+        // Another server or sign-in while a contact was out (signing in asks
+        // for one, which the busy check would have dropped): its state is
+        // the old account's, so the new one is asked again.
+        while true {
+            guard let base = client?.baseURL else { prefsState = .notSignedIn; return }
+            let credential: AccountPrefs.Credential? =
+                if let account = histerAccount { .session(account.sessionID) } else if !histerToken.isEmpty { .token(histerToken) } else { nil }
+            guard let credential, let defaults = SharedSettings.defaults else { prefsState = .notSignedIn; return }
+            let generation = clientGeneration
+            prefsContactAt = .now
+            let state = await AccountPrefs.contact(base: base, credential: credential, defaults: defaults)
+            guard generation != clientGeneration else {
+                prefsState = state
+                reloadSharedSettings()
+                return
+            }
+        }
     }
 
     var theme: AppTheme {
@@ -182,7 +193,15 @@ final class AppState {
         recentSearches = []
     }
 
-    private(set) var client: HisterClient?
+    private(set) var client: HisterClient? {
+        didSet { clientGeneration &+= 1 }
+    }
+    /// Bumped with every new client (another server or credential): an
+    /// answer that set off under the old one is dropped, not applied.
+    @ObservationIgnored private var clientGeneration = 0
+    /// The same for the rooms (Kura, Konbini): bumped when the sign-in they
+    /// carry changes.
+    @ObservationIgnored private var roomsGeneration = 0
 
     /// The SearXNG instance, for the app's web search.
     var searx: SearxClient? { SearxClient(serverURL: searxngURL) }
@@ -279,6 +298,7 @@ final class AppState {
     /// A new credential: a new client, and what came from the old one asked again.
     private func credentialsChanged() {
         client = makeClient()
+        roomsGeneration &+= 1
         rulesLoaded = false
         capabilities = nil
         vaultsNextRead = nil
@@ -316,9 +336,13 @@ final class AppState {
             histerOAuthProviders = []
             return
         }
+        // Answers about a server no longer set are dropped (its check runs anew).
+        let generation = clientGeneration
         let offered = await HisterAccount.available(server: server)
+        guard generation == clientGeneration else { return }
         if offered != histerSignInOffered { histerSignInOffered = offered }
         let providers = offered ? await HisterAccount.oauthProviders(server: server) : []
+        guard generation == clientGeneration else { return }
         if providers != histerOAuthProviders { histerOAuthProviders = providers }
     }
 
@@ -410,6 +434,7 @@ final class AppState {
 
     /// Reads the sign-in again, and Kura's vaults and Konbini's cards with it.
     private func machiyaChanged() {
+        roomsGeneration &+= 1
         machiyaToken = MachiyaKeychain.token
         machiyaPrincipal = MachiyaKeychain.principal
         vaultsNextRead = nil
@@ -481,7 +506,11 @@ final class AppState {
     private func rebuildMedia() {
         var accounts: [MediaService: MediaAccount] = [:]
         for service in MediaService.allCases where !mediaOff.contains(service) {
-            if let account = MediaAccount(base: mediaAddresses[service] ?? "", token: MediaKeychain.read(service)) { accounts[service] = account }
+            // The Keychain only for a service with an address: at launch,
+            // with none set up, no read at all (each is a trip to securityd).
+            let base = mediaAddresses[service] ?? ""
+            guard !base.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
+            if let account = MediaAccount(base: base, token: MediaKeychain.read(service)) { accounts[service] = account }
         }
         media = accounts.isEmpty ? nil : MediaClient(accounts: accounts)
     }
@@ -527,7 +556,9 @@ final class AppState {
     let favicons = FaviconCache()
 
     /// Konbini's cards, for linking vault notes to their cards.
-    private(set) var konbiniCards: [Notes.Card] = []
+    private(set) var konbiniCards: [Notes.Card] = [] {
+        didSet { noteLinksMemo = [:] }
+    }
     /// When the cards may be asked for again: never once they've come
     /// (nil: now). Set before the fetch, so one at a time goes out.
     private var cardsNextRead: Date?
@@ -537,7 +568,14 @@ final class AppState {
         guard !searchPage.konbiniURL.isEmpty else { return }
         if let next = cardsNextRead, Date.now < next { return }
         cardsNextRead = .distantFuture
-        if let cards = await Notes.fetchCards(base: searchPage.konbiniURL, signIn: machiyaSignIn) {
+        let base = searchPage.konbiniURL, generation = roomsGeneration
+        let fetched = await Notes.fetchCards(base: base, signIn: machiyaSignIn)
+        guard base == searchPage.konbiniURL, generation == roomsGeneration else {
+            // Another Konbini or sign-in meanwhile: this answer isn't its.
+            cardsNextRead = nil
+            return
+        }
+        if let cards = fetched {
             konbiniCards = cards
         } else {
             // Konbini didn't answer: asked again in a while, not never.
@@ -549,7 +587,9 @@ final class AppState {
     /// another vault's note's place and links, and which vaults are shared
     /// (`Notes.useVaults`). Read again when older than ten minutes, so a
     /// vault made private again counts; a failed read shares none.
-    private(set) var kuraVaults: [KuraVault] = []
+    private(set) var kuraVaults: [KuraVault] = [] {
+        didSet { noteLinksMemo = [:] }
+    }
     /// When the vaults are read again: ten minutes after a read, half a
     /// minute after a failed one (until then every vault counts as
     /// private). Set before the call, so one at a time goes out.
@@ -562,12 +602,23 @@ final class AppState {
         }
         if let next = vaultsNextRead, Date.now < next { return }
         vaultsNextRead = .now.addingTimeInterval(30)
+        let generation = roomsGeneration
+        // Another Kura or sign-in while it was out: not this one's answer.
+        // Every other vault counts as private until the new one's comes.
+        func stale() -> Bool {
+            guard notesKura?.baseURL != kura.baseURL || generation != roomsGeneration else { return false }
+            Notes.useVaults([])
+            vaultsNextRead = nil
+            return true
+        }
         do {
             let found = try await kura.vaults()
+            if stale() { return }
             kuraVaults = found
             Notes.useVaults(found)
             vaultsNextRead = .now.addingTimeInterval(10 * 60)
         } catch {
+            if stale() { return }
             Notes.useVaults([])
         }
     }
@@ -600,7 +651,12 @@ final class AppState {
         var niwaURL = ""
         var konbiniURL = ""
     }
-    private(set) var noteSources = NoteSources()
+    private(set) var noteSources = NoteSources() {
+        didSet { if noteSources != oldValue { noteLinksMemo = [:] } }
+    }
+    /// `noteLinks` worked out once per note (a row asks for its own several
+    /// times a draw), emptied whenever what goes into it changes.
+    @ObservationIgnored private var noteLinksMemo: [String: NoteLinks] = [:]
 
     /// What Search → All reads (how many, and whether the web shows).
     struct AllSearchOptions: Equatable {
@@ -656,8 +712,13 @@ final class AppState {
 
     func loadLocalFiles() async {
         guard let client else { hasLocalFiles = false; return }
-        if let page = try? await client.search(LocalFiles.query(""), limit: 1) { hasLocalFiles = page.total > 0 }
-        if let page = try? await client.search(CodeDocs.query(""), limit: 1) { hasCodeDocs = page.total > 0 }
+        let generation = clientGeneration
+        let files = try? await client.search(LocalFiles.query(""), limit: 1)
+        guard generation == clientGeneration else { return }
+        if let files { hasLocalFiles = files.total > 0 }
+        let code = try? await client.search(CodeDocs.query(""), limit: 1)
+        guard generation == clientGeneration else { return }
+        if let code { hasCodeDocs = code.total > 0 }
     }
 
     // MARK: Code
@@ -694,16 +755,26 @@ final class AppState {
     }
 
     func noteLinks(for document: StoredPage) -> NoteLinks? {
-        guard label(of: document) == Notes.label || document.label == Notes.label,
-            let path = Notes.path(of: document.url, cards: konbiniCards)
-        else { return nil }
+        guard label(of: document) == Notes.label || document.label == Notes.label else { return nil }
+        // Read, so a row still redraws when one of them changes.
+        let cards = konbiniCards, sources = noteSources, vaults = kuraVaults
+        if let known = noteLinksMemo[document.url] { return known }
+        guard let links = makeNoteLinks(for: document, cards: cards, sources: sources, vaults: vaults) else { return nil }
+        if noteLinksMemo.count > 2000 { noteLinksMemo = [:] }
+        noteLinksMemo[document.url] = links
+        return links
+    }
+
+    private func makeNoteLinks(for document: StoredPage, cards konbiniCards: [Notes.Card], sources noteSources: NoteSources,
+                               vaults: [KuraVault]) -> NoteLinks? {
+        guard let path = Notes.path(of: document.url, cards: konbiniCards) else { return nil }
         let host = URL(string: document.url)?.host() ?? ""
         let page = URL(string: document.url)
         let crumbs = path.replacing(/\.md$/, with: "").split(separator: "/").joined(separator: " › ")
         // A work vault's note: its own vault's name and Obsidian vault, read
         // in Kura, never a Konbini card.
         if let name = Notes.otherVault(of: document.url) {
-            let vault = kuraVault(name)
+            let vault = vaults.first { $0.name == name }
             return NoteLinks(
                 place: "\(vault?.title ?? name) › \(crumbs)",
                 obsidian: Notes.obsidianURL(vault: vault?.obsidian ?? name, path: path),
@@ -846,8 +917,11 @@ final class AppState {
 
     func loadRulesIfNeeded() async {
         guard !rulesLoaded, let client else { return }
+        let generation = clientGeneration
         do {
             let fetched = try await client.rules()
+            // Another server or credential meanwhile: its own load follows.
+            guard generation == clientGeneration else { return }
             rules = fetched
             rulesLoaded = true
             labellingAccountChanged()
@@ -857,6 +931,7 @@ final class AppState {
             await loadLocalFiles()
         } catch .cancelled {
         } catch {
+            guard generation == clientGeneration else { return }
             // Tried again on the next screen that needs them; say why here.
             rulesFailure = error
             Self.log.notice("Rules not loaded: \(error.userMessage, privacy: .private)")

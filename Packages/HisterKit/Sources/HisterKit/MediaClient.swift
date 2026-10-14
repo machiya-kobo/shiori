@@ -61,6 +61,13 @@ public actor MediaClient {
     /// Each service's facts (Movary's user, Jellyfin's user and server, Plex's machine), asked once.
     var contexts: [MediaService: MediaContext] = [:]
     var factStatus: [MediaService: Int?] = [:]
+    /// The facts being asked now: a second search or browse waits for these
+    /// (the actor lets it in at the first await) rather than asking again.
+    private var asking: Task<Void, Never>?
+    /// When a service's facts last failed: asked again only after
+    /// `factRetry`, not by every search (each wait could take seconds).
+    private var factFailedAt: [MediaService: Date] = [:]
+    static let factRetry: TimeInterval = 60
     /// How many of Koito's matches get their play counts asked.
     static let koitoCounts = 12
 
@@ -172,8 +179,17 @@ public actor MediaClient {
     }
 
     func facts() async {
+        if let asking { return await asking.value }
+        let task = Task { await askFacts() }
+        asking = task
+        await task.value
+        asking = nil
+    }
+
+    private func askFacts() async {
         func ask(_ service: MediaService, _ what: String, _ have: (MediaContext) -> Bool) async {
             guard let account = accounts[service], !have(context(service)) else { return }
+            if let failed = factFailedAt[service], Date.now.timeIntervalSince(failed) < Self.factRetry { return }
             do {
                 let reply = try await get(service, Media.requestURL(service, what, base: account.base))
                 let f = Media.parseFacts(service, what, reply: reply)
@@ -183,8 +199,10 @@ public actor MediaClient {
                 if let machine = f["machine"] as? String { c.machine = machine }
                 contexts[service] = c
                 factStatus[service] = nil
+                factFailedAt[service] = nil
             } catch {
                 factStatus[service] = .some(error.status)
+                factFailedAt[service] = .now
             }
         }
         async let movary: Void = ask(.movary, "me") { !$0.user.isEmpty }

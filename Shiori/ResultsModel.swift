@@ -154,6 +154,9 @@ final class ResultsModel {
     private var nextPageKey: String?
     /// Bumped on every fresh load, so a stale page never lands.
     private var generation = 0
+    /// `OfflineStore.epoch` as the load set off: a page fetched before a
+    /// sign-out is never kept after it.
+    @ObservationIgnored private var offlineEpoch = 0
 
     init(
         query: String, sort: SearchSort = .relevance, source: Source = .pages, filterable: Bool = true,
@@ -386,7 +389,8 @@ final class ResultsModel {
             guard mine == generation else { return }
             if openedInline { all = OpenedFirst.pages(opened: first.opened, documents: all, keep: keepOpened) }
             if order == .title {
-                all.sort { $0.displayTitle.localizedStandardCompare($1.displayTitle) == .orderedAscending }
+                all = await Self.byTitle(all)
+                guard mine == generation else { return }
             }
             documents = all
             seen = Set(all.map(\.url))
@@ -402,6 +406,14 @@ final class ResultsModel {
             guard mine == generation else { return }
             if documents.isEmpty { phase = .failed(error) } else { refreshFailure = error }
         }
+    }
+
+    /// Up to a thousand titles in A–Z order (each a localized compare), off
+    /// the main actor: `@concurrent`, since this target's functions run on
+    /// the main actor unless they say otherwise.
+    @concurrent
+    nonisolated private static func byTitle(_ pages: [StoredPage]) async -> [StoredPage] {
+        pages.sorted { $0.displayTitle.localizedStandardCompare($1.displayTitle) == .orderedAscending }
     }
 
     /// Every result for Export, up to `limit`, paging on from the first
@@ -428,7 +440,7 @@ final class ResultsModel {
     /// A first page that loaded: kept for offline reading.
     private func savedOnline() {
         offlineAsOf = nil
-        if keepsOffline, let offlineName { OfflineStore.saveList(offlineName, origin: offlineOrigin, pages: documents) }
+        if keepsOffline, let offlineName { OfflineStore.saveList(offlineName, origin: offlineOrigin, pages: documents, epoch: offlineEpoch) }
     }
 
     /// Hister (or Kura) out of reach with nothing on screen: the copy kept
@@ -457,6 +469,7 @@ final class ResultsModel {
         newCount = 0
         generation += 1
         let mine = generation
+        offlineEpoch = OfflineStore.epoch
         if documents.isEmpty { phase = .loading }
         moreFailed = false
         // Kept for a failed reload: the rows stay, and so does their paging.

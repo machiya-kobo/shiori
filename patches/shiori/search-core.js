@@ -513,39 +513,58 @@
   // false`), from the last useVaults. Empty until then, so every other
   // vault is private until Kura says otherwise.
   let sharedVaults = new Set();
+  const sharedIn = (list) => new Set(
+    (Array.isArray(list) ? list : [])
+      .filter((v) => v && typeof v.name === 'string' && v.default !== true && v.private === false)
+      .map((v) => v.name),
+  );
   /** Kura's /api/vaults list, as last read; anything else (a failure: []) shares none. */
   function useVaults(list) {
-    sharedVaults = new Set(
-      (Array.isArray(list) ? list : [])
-        .filter((v) => v && typeof v.name === 'string' && v.default !== true && v.private === false)
-        .map((v) => v.name),
-    );
+    sharedVaults = sharedIn(list);
   }
   /**
    * A private vault's note: another vault's, unless Kura marks that vault
    * shared. Everything that must not reach a private note (Hister, AI,
    * caches, exports) asks this. HisterKit's Notes.isPrivateNote is the twin.
    */
-  const isPrivateNote = (url) => {
+  const isPrivateNote = (url) => privateGiven(url, sharedVaults);
+  const privateGiven = (url, shared) => {
     // Fails closed: an address that can't be parsed, and a name that isn't
     // one Kura allows, are private.
     if (kuraPath(url) === null) return true;
     const vault = noteVault(url);
-    return vault !== null && (!VAULT_NAME.test(vault) || !sharedVaults.has(vault));
+    return vault !== null && (!VAULT_NAME.test(vault) || !shared.has(vault));
   };
+  // Numbers the fresh reads: only an answer newer than the last one kept
+  // replaces it (a slow older one, landing later, doesn't).
+  let vaultReadsIssued = 0;
+  let vaultReadKept = 0;
   /**
    * isPrivateNote with Kura asked afresh: before another vault's note (its
    * address, title or text) goes to Hister or an AI engine, since a shared
    * vault can be made private again at any time. `read` answers
    * /api/vaults' list; its answer is kept (useVaults), and a failed read
    * shares none. The default vault's notes and other pages ask nothing.
-   * The cached isPrivateNote is enough for what's only shown.
+   * The cached isPrivateNote is enough for what's only shown. The answer
+   * is this read's own, kept for the cached check when it's the newest.
    * HisterKit's Notes.isPrivateNoteNow is the twin.
    */
   async function isPrivateNoteNow(url, read) {
     if (noteVault(url) === null) return isPrivateNote(url);
-    await loadVaults(read);
-    return isPrivateNote(url);
+    const ticket = ++vaultReadsIssued;
+    let list = [];
+    try {
+      const got = await read();
+      list = Array.isArray(got) ? got : [];
+    } catch (_) {
+      list = [];
+    }
+    const found = sharedIn(list);
+    if (ticket > vaultReadKept) {
+      vaultReadKept = ticket;
+      sharedVaults = found;
+    }
+    return privateGiven(url, found);
   }
   /**
    * Kura's vaults through `read` (it answers /api/vaults' list), passed to
@@ -1072,6 +1091,14 @@
    * below the top; neither is new at the top. HisterKit's NewItems
    * (Shiori/Core) is the twin, with the same cases.
    */
+  /**
+   * The wait before a list next asks what's new: doubled while the count
+   * stays the same, up to `most`, back to `first` once it changes.
+   * The apps' NewItems.wait is the twin, with the same cases.
+   */
+  function newItemsWait(wait, changed, { first = 60_000, most = 600_000 } = {}) {
+    return changed ? first : Math.min(Math.max(wait, first) * 2, most);
+  }
   function newItemsCount(candidates, seen, newestShown) {
     return (candidates || []).filter((d) => !seen.has(d.url) && (!newestShown || (Number(d.updated) || 0) > newestShown)).length;
   }
@@ -3808,6 +3835,7 @@
     newestFirstMerge,
     openedFirst,
     newItemsCount,
+    newItemsWait,
     newsBlurSubscribeURL,
     labelChipIndex,
     countText,

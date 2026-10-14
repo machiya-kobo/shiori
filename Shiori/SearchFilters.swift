@@ -225,8 +225,15 @@ struct ListControls: View {
         let pages = try await model.allResults(using: client)
         let link = app.feedURL(query: model.query, title: title, source: model.source)
         return ExportFile(
-            data: Export.data(pages, as: format, title: title, link: link),
+            data: await encode(pages, as: format, title: title, link: link),
             format: format, name: Export.fileName(title, format: format))
+    }
+
+    /// Up to a thousand rows written out, off the main actor (this target's
+    /// default): `@concurrent` says so where a plain async function wouldn't.
+    @concurrent
+    nonisolated private static func encode(_ pages: [StoredPage], as format: Export.Format, title: String, link: URL?) async -> Data {
+        Export.data(pages, as: format, title: title, link: link)
     }
 
     private func export(_ format: Export.Format) async {
@@ -566,15 +573,16 @@ struct OpenedSection: View {
     }
 
     /// An opened result as a page; a note by its address, since Hister
-    /// sends opened results without their label.
-    private func page(_ opened: OpenedResult) -> StoredPage {
+    /// sends opened results without their label. The list's order for j
+    /// and k makes them the same way.
+    static func page(_ opened: OpenedResult, app: AppState) -> StoredPage {
         var page = StoredPage(opened: opened)
         if app.isNotePage(page.url) { page.label = Notes.label }
         return page
     }
 
     @ViewBuilder private func row(_ opened: OpenedResult) -> some View {
-        let page = page(opened)
+        let page = Self.page(opened, app: app)
         let note = app.noteLinks(for: page)
         let original = app.rowStyle.clickOpensOriginal(pane: selection != nil)
         let label = DocumentRow(document: page, label: app.label(of: page), notePlace: note?.place)

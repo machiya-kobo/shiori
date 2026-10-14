@@ -312,6 +312,39 @@ struct KuraLiveTests {
         Notes.useVaults([])
     }
 
+    @Test func aCancelledCheckIsPrivateButChangesNothingKept() async {
+        let work = "https://kura.example/v/work/n/X"
+        let shared = [KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: false, obsidian: "work")]
+        Notes.useVaults(shared)
+        let task = Task {
+            await Notes.isPrivateNoteNow(work, read: {
+                try await Task.sleep(for: .seconds(10))
+                return shared
+            })
+        }
+        task.cancel()
+        #expect(await task.value, "cancelled: private")
+        #expect(!Notes.isPrivateNote(work), "the kept answer stands")
+        Notes.useVaults([])
+    }
+
+    @Test func aSlowOlderAnswerDoesntReplaceANewerOne() async {
+        let work = "https://kura.example/v/work/n/X"
+        let shared = [KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: false, obsidian: "work")]
+        let madePrivate = [KuraVault(name: "work", title: "Work", isDefault: false, isPrivate: true, obsidian: "work")]
+        Notes.useVaults([])
+        let gate = AsyncStream<Void>.makeStream()
+        // The first check asks, then waits; the second asks later and answers first.
+        let older = Task { await Notes.isPrivateNoteNow(work, read: { for await _ in gate.stream { break }; return shared }) }
+        try? await Task.sleep(for: .milliseconds(50))
+        let newer = await Notes.isPrivateNoteNow(work, read: { madePrivate })
+        #expect(newer)
+        gate.continuation.yield()
+        #expect(await older.value == false, "each check answers from its own read")
+        #expect(Notes.isPrivateNote(work), "the newer answer is the one kept")
+        Notes.useVaults([])
+    }
+
     @Test func aVaultWithoutThePrivateFlagIsPrivate() throws {
         let reply = Data(#"[{"name":"personal","default":true},{"name":"work"}]"#.utf8)
         let vaults = try JSONDecoder().decode([KuraVault].self, from: reply)

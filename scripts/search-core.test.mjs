@@ -723,6 +723,22 @@ test('Kura is asked again before anything is sent: shared when cached, private w
   S.useVaults([]);
 });
 
+// HisterKit's VaultTests.aSlowOlderAnswerDoesntReplaceANewerOne, case for case.
+test('a slow older answer about the vaults does not replace a newer one', async () => {
+  const work = 'https://kura.example/v/work/n/X';
+  const shared = [{ name: 'work', default: false, private: false }];
+  const madePrivate = [{ name: 'work', default: false, private: true }];
+  S.useVaults([]);
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const older = S.isPrivateNoteNow(work, async () => { await gate; return shared; });
+  assert.equal(await S.isPrivateNoteNow(work, async () => madePrivate), true);
+  release();
+  assert.equal(await older, false, 'each check answers from its own read');
+  assert.equal(S.isPrivateNote(work), true, 'the newer answer is the one kept');
+  S.useVaults([]);
+});
+
 test('loadVaults passes what Kura says to useVaults, and [] when it fails', async () => {
   const list = [{ name: 'personal', default: true, private: false }, { name: 'team', default: false, private: false }];
   assert.deepEqual(await S.loadVaults(async () => list), list);
@@ -1326,6 +1342,15 @@ test('New Items counts only results newer than the top (NewItemsTests, the twin)
   assert.equal(S.newItemsCount([doc('e', 1), doc('a', 10), doc('b', 20), doc('c', 30), doc('d', 40)], seen, top), 1);
   assert.equal(S.newItemsCount([doc('a', 10), doc('b', 20), doc('c', 30)], seen, top), 0);
   assert.equal(S.newItemsCount([doc('a', 1), doc('b', 2)], new Set(), 0), 2);
+});
+
+test('New Items asks less often while nothing changes (NewItemsTests, the twin)', () => {
+  const o = { first: 60, most: 600 };
+  assert.equal(S.newItemsWait(60, false, o), 120);
+  assert.equal(S.newItemsWait(480, false, o), 600);
+  assert.equal(S.newItemsWait(600, false, o), 600);
+  assert.equal(S.newItemsWait(600, true, o), 60);
+  assert.equal(S.newItemsWait(10, false, o), 120);
 });
 
 // Notes from Kura or from Hister: the twins' shared cases.
