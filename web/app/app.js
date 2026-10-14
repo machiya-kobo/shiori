@@ -1604,7 +1604,8 @@ function viewList(params) {
 // rooms' colours).
 // Files: the folders Hister watches, green (a hue no room wears).
 // Code: your repos (code-import's), red, the one hue left.
-const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['media', 'Media', 'purple'], ['opened', 'Opened', 'purple']];
+// Media purple; Opened the rooms' slate (--opened), so the two never match.
+const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['media', 'Media', 'purple'], ['opened', 'Opened', 'slate']];
 /** The pills: Opened only while Show Opened is on (on by default); Files only while Hister has some. */
 const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'notes' || S.notesTabShown(!!settings.niwaURL, settings.notesSource)) && (v !== 'opened' || settings.showOpened !== false) && (v !== 'smallweb' || (SMALLWEB && settings.smallWebTab !== false)) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs) && (v !== 'media' || S.mediaConfigured(MEDIA)));
 /** The pill's key in the shared vocabulary (S.PILLS). */

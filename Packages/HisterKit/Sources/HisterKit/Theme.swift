@@ -85,6 +85,10 @@ public struct Palette: Sendable {
         var highlight: UInt32
         var danger: UInt32
         var chips: [UInt32]
+        /// Pages you opened (the Opened pill, `Tint.slate`): the rooms'
+        /// slate, the web's `--opened`. Kept out of `chips`, so a label's
+        /// colour (its hash over the eight) never lands on it.
+        var slate: UInt32
     }
 
     public let hex: Hex
@@ -130,7 +134,8 @@ public struct Palette: Sendable {
             background: 0x1A1B26, surface: 0x16161E, raised: 0x292E42,
             text: 0xC0CAF5, secondaryText: 0xA9B1D6, accent: 0x7AA2F7,
             highlight: 0xE0AF68, danger: 0xF7768E,
-            chips: [0x7AA2F7, 0x7DCFFF, 0xBB9AF7, 0x9ECE6A, 0xFF9E64, 0xF7768E, 0xE0AF68, 0x1ABC9C]),
+            chips: [0x7AA2F7, 0x7DCFFF, 0xBB9AF7, 0x9ECE6A, 0xFF9E64, 0xF7768E, 0xE0AF68, 0x1ABC9C],
+            slate: 0x989DBA),
         highlightOpacity: 0.35, isDark: true, tintOpacity: 0.14, tintsOverSurface: false)
 
     public static let day = Palette(
@@ -143,21 +148,28 @@ public struct Palette: Sendable {
             // as text on the background (its own accent is 3.1:1).
             text: 0x3760BF, secondaryText: 0x4C5A8F, accent: 0x155FC5,
             highlight: 0x8C6C3E, danger: 0xBD204C,
-            chips: [0x155FC5, 0x006B8F, 0x802CEE, 0x506B34, 0x9A5000, 0xBD204C, 0x7A5E36, 0x0D6E5C]),
+            chips: [0x155FC5, 0x006B8F, 0x802CEE, 0x506B34, 0x9A5000, 0xBD204C, 0x7A5E36, 0x0D6E5C],
+            slate: 0x4C5A8F),
         highlightOpacity: 0.25, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)
 
     /// What a tinted card lies on: the page or the surface.
     public var tintBase: Color { tintsOverSurface ? surface : background }
 
     /// The chip colours by name, in `hex.chips` order (Tokyo Night's blue,
-    /// cyan, purple, green, orange, red, yellow, teal): the tabs use them as
-    /// Safari's results page does its category pills.
-    public enum Tint: Int, Sendable {
-        case blue, cyan, purple, green, orange, red, yellow, teal
+    /// cyan, purple, green, orange, red, yellow, teal), then slate
+    /// (`hex.slate`, no label's): the tabs use them as Safari's results page
+    /// does its category pills.
+    public enum Tint: Int, Sendable, CaseIterable {
+        case blue, cyan, purple, green, orange, red, yellow, teal, slate
     }
 
     public func tint(_ tint: Tint) -> Color {
-        hex.chips.indices.contains(tint.rawValue) ? Color(hex: hex.chips[tint.rawValue]) : accent
+        Color(hex: tintHex(tint))
+    }
+
+    public func tintHex(_ tint: Tint) -> UInt32 {
+        if tint == .slate { return hex.slate }
+        return hex.chips.indices.contains(tint.rawValue) ? hex.chips[tint.rawValue] : hex.accent
     }
 
     /// How much of its colour a hovered pill's fill takes, over `raised`.
@@ -173,7 +185,7 @@ public struct Palette: Sendable {
     }
 
     public func pillHoverHex(_ tint: Tint) -> (fill: UInt32, ink: UInt32) {
-        let colour = hex.chips.indices.contains(tint.rawValue) ? hex.chips[tint.rawValue] : hex.accent
+        let colour = tintHex(tint)
         let fill = Palette.mix(colour, hex.raised, Palette.hoverMix)
         return (fill, Palette.readable(colour, on: fill, lighter: isDark))
     }

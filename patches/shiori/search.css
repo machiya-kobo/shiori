@@ -22,6 +22,9 @@
      The web and Images take Shiori's second hue, the lens's yellow, since
      orange now means notes; Obsidian teal, clear of Konbini's magenta. */
   --notes: #ff9e64; --konbini: #bb9af7; --niwa: #9ece6a; --web: #e0af68; --obsidian: #1abc9c; --smallweb: #1abc9c;
+  /* Pages you opened: the rooms' slate, clear of Media's purple, lightened (as palettes.mjs's readableOn does)
+     until it reads on the apps' cards too, which take 14% of a tint here (Theme.swift's Palette.night). */
+  --opened: #989dba;
   --tint-mix: 9%;
   /* Label colours, one of eight by the app's hash of the label (S.labelChipIndex). */
   --chip0: #7aa2f7; --chip1: #7dcfff; --chip2: #bb9af7; --chip3: #9ece6a;
@@ -29,7 +32,7 @@
   /* The Rooms menu, as the rooms draw it (scripts/palettes.mjs's rooms-* for Tokyo Night: vaultkit's --menu-fg). */
   --rooms-bg: #16161e; --rooms-on: #292e42; --rooms-text: #c0caf5; --rooms-muted: #8d94b8;
   /* A hovered pill's fill and its text, readable there (scripts/palettes.mjs PILLS). */
-  --tab-general-hover-bg: #3d556f; --tab-general-hover: #80d0ff; --accent-hover-bg: #3c4a6d; --accent-hover: #9cbaf9; --notes-hover-bg: #5c494a; --notes-hover: #ffab78; --web-hover-bg: #554d4b; --web-hover: #e4b97b; --tab-images-hover-bg: #45544c; --tab-images-hover: #a3d172; --tab-videos-hover-bg: #5a3f54; --tab-videos-hover: #f99aac; --tab-news-hover-bg: #4c486d; --tab-news-hover: #cbb2f9; --smallweb-hover-bg: #3b5763; --smallweb-hover: #73daca; --kept-hover-bg: #45544c; --kept-hover: #a3d172;
+  --tab-general-hover-bg: #3d556f; --tab-general-hover: #80d0ff; --accent-hover-bg: #3c4a6d; --accent-hover: #9cbaf9; --notes-hover-bg: #5c494a; --notes-hover: #ffab78; --web-hover-bg: #554d4b; --web-hover: #e4b97b; --tab-images-hover-bg: #45544c; --tab-images-hover: #a3d172; --tab-videos-hover-bg: #5a3f54; --tab-videos-hover: #f99aac; --tab-news-hover-bg: #4c486d; --tab-news-hover: #cbb2f9; --smallweb-hover-bg: #3b5763; --smallweb-hover: #73daca; --kept-hover-bg: #45544c; --kept-hover: #a3d172; --opened-hover-bg: #44495f; --opened-hover: #b5b9cd;
   --rooms-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 6px 18px rgb(0 0 0 / 0.25);
   color-scheme: dark;
 }
@@ -40,13 +43,13 @@
     --hit: #7a5e36; --highlight: rgb(140 108 62 / 0.22); --kept: #506b34; --visited: #006b8f;
     --shadow: 0 1px 2px rgb(55 96 191 / 0.12);
     --tab-general: #006b8f; --tab-images: #506b34; --tab-videos: #bd204c; --tab-news: #802cee;
-  --notes: #9a5000; --konbini: #802cee; --niwa: #506b34; --web: #7a5e36; --obsidian: #0d6e5c; --smallweb: #0d6e5c;
+  --notes: #9a5000; --konbini: #802cee; --niwa: #506b34; --web: #7a5e36; --obsidian: #0d6e5c; --smallweb: #0d6e5c; --opened: #4c5a8f;
     --tint-mix: 8%;
     --chip0: #155fc5; --chip1: #006b8f; --chip2: #802cee; --chip3: #506b34;
     --chip4: #9a5000; --chip5: #bd204c; --chip6: #7a5e36; --chip7: #0d6e5c;
     --rooms-bg: #d0d5e3; --rooms-on: #eef0f6; --rooms-text: #3258af; --rooms-muted: #4c5a8f;
     /* A hovered pill's fill and its text, readable there (scripts/palettes.mjs PILLS). */
-    --tab-general-hover-bg: #9ebccf; --tab-general-hover: #004e69; --accent-hover-bg: #a3b9dc; --accent-hover: #104792; --notes-hover-bg: #c3b5ad; --notes-hover: #713b00; --web-hover-bg: #bbb8b9; --web-hover: #5a4528; --tab-images-hover-bg: #b1bcb9; --tab-images-hover: #3b5027; --tab-videos-hover-bg: #cbaabf; --tab-videos-hover: #861736; --tab-news-hover-bg: #bdace6; --tab-news-hover: #5b0fbe; --smallweb-hover-bg: #a1bcc3; --smallweb-hover: #095043; --kept-hover-bg: #b1bcb9; --kept-hover: #3b5027;
+    --tab-general-hover-bg: #9ebccf; --tab-general-hover: #004e69; --accent-hover-bg: #a3b9dc; --accent-hover: #104792; --notes-hover-bg: #c3b5ad; --notes-hover: #713b00; --web-hover-bg: #bbb8b9; --web-hover: #5a4528; --tab-images-hover-bg: #b1bcb9; --tab-images-hover: #3b5027; --tab-videos-hover-bg: #cbaabf; --tab-videos-hover: #861736; --tab-news-hover-bg: #bdace6; --tab-news-hover: #5b0fbe; --smallweb-hover-bg: #a1bcc3; --smallweb-hover: #095043; --kept-hover-bg: #b1bcb9; --kept-hover: #3b5027; --opened-hover-bg: #b0b7cf; --opened-hover: #3c4771;
     --rooms-shadow: 0 1px 2px rgb(55 96 191 / 0.12), 0 6px 18px rgb(55 96 191 / 0.12);
     color-scheme: light;
   }
@@ -57,13 +60,13 @@
   --hit: #7a5e36; --highlight: rgb(140 108 62 / 0.22); --kept: #506b34; --visited: #006b8f;
   --shadow: 0 1px 2px rgb(55 96 191 / 0.12);
   --tab-general: #006b8f; --tab-images: #506b34; --tab-videos: #bd204c; --tab-news: #802cee;
-  --notes: #9a5000; --konbini: #802cee; --niwa: #506b34; --web: #7a5e36; --obsidian: #0d6e5c; --smallweb: #0d6e5c;
+  --notes: #9a5000; --konbini: #802cee; --niwa: #506b34; --web: #7a5e36; --obsidian: #0d6e5c; --smallweb: #0d6e5c; --opened: #4c5a8f;
   --tint-mix: 8%;
   --chip0: #155fc5; --chip1: #006b8f; --chip2: #802cee; --chip3: #506b34;
   --chip4: #9a5000; --chip5: #bd204c; --chip6: #7a5e36; --chip7: #0d6e5c;
   --rooms-bg: #d0d5e3; --rooms-on: #eef0f6; --rooms-text: #3258af; --rooms-muted: #4c5a8f;
   /* A hovered pill's fill and its text, readable there (scripts/palettes.mjs PILLS). */
-  --tab-general-hover-bg: #9ebccf; --tab-general-hover: #004e69; --accent-hover-bg: #a3b9dc; --accent-hover: #104792; --notes-hover-bg: #c3b5ad; --notes-hover: #713b00; --web-hover-bg: #bbb8b9; --web-hover: #5a4528; --tab-images-hover-bg: #b1bcb9; --tab-images-hover: #3b5027; --tab-videos-hover-bg: #cbaabf; --tab-videos-hover: #861736; --tab-news-hover-bg: #bdace6; --tab-news-hover: #5b0fbe; --smallweb-hover-bg: #a1bcc3; --smallweb-hover: #095043; --kept-hover-bg: #b1bcb9; --kept-hover: #3b5027;
+  --tab-general-hover-bg: #9ebccf; --tab-general-hover: #004e69; --accent-hover-bg: #a3b9dc; --accent-hover: #104792; --notes-hover-bg: #c3b5ad; --notes-hover: #713b00; --web-hover-bg: #bbb8b9; --web-hover: #5a4528; --tab-images-hover-bg: #b1bcb9; --tab-images-hover: #3b5027; --tab-videos-hover-bg: #cbaabf; --tab-videos-hover: #861736; --tab-news-hover-bg: #bdace6; --tab-news-hover: #5b0fbe; --smallweb-hover-bg: #a1bcc3; --smallweb-hover: #095043; --kept-hover-bg: #b1bcb9; --kept-hover: #3b5027; --opened-hover-bg: #b0b7cf; --opened-hover: #3c4771;
   --rooms-shadow: 0 1px 2px rgb(55 96 191 / 0.12), 0 6px 18px rgb(55 96 191 / 0.12);
   color-scheme: light;
 }
@@ -302,7 +305,7 @@ body[data-pill-row="scroll"] #categories { flex-wrap: nowrap; overflow-x: auto; 
 /* The folders Hister watches: green, a hue no room wears. */
 #categories a[data-cat="files"] { --tab: var(--kept); --tab-hover-bg: var(--kept-hover-bg); --tab-hover: var(--kept-hover); }
 #categories a[data-cat="code"] { --tab: var(--tab-videos); --tab-hover-bg: var(--tab-videos-hover-bg); --tab-hover: var(--tab-videos-hover); }
-/* Media (your libraries and what you played): purple, which Opened only wears while Show Opened is on. */
+/* Media (your libraries and what you played): purple, its own (Opened is slate). */
 #categories a[data-cat="media"] { --tab: var(--tab-news); --tab-hover-bg: var(--tab-news-hover-bg); --tab-hover: var(--tab-news-hover); }
 .card.smallweb-card .url .origin { color: var(--smallweb); font-weight: 600; }
 .smallweb-card .places { align-items: center; }
@@ -380,15 +383,15 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
   border-radius: 10px; background: var(--raised);
 }
 /* Your pages and notes tinted whole in their pill's colour (Pages blue,
-   Notes green, opened purple) with an outline in it. The fill is the most each theme allows with every text
+   Notes orange, opened slate) with an outline in it. The fill is the most each theme allows with every text
    colour at 4.5:1 or better: --tint-mix, 9% dark, 8% light (theme-contrast.test.mjs). */
 .hister-card { --tint: var(--accent); }
 .hister-card, .vault-card, .smallweb-card, .media-card {
   background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card));
   border: 1px solid color-mix(in srgb, var(--tint) 55%, transparent);
 }
-/* Pages you opened before: the Opened pill's purple. */
-.opened-card { --tint: var(--tab-news); }
+/* Pages you opened before: the Opened pill's slate. */
+.opened-card { --tint: var(--opened); }
 /* A file from the folders Hister watches: the Files tab's green. */
 .file-card { --tint: var(--kept); }
 /* Your repos (code-import's): red, the one hue left. */

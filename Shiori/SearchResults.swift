@@ -33,10 +33,10 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .files: .green
         // Your repos (code-import): red, the one hue left.
         case .code: .red
-        // Your libraries and what you played: purple, which Opened only
-        // wears while Show Opened is on (on by default).
+        // Your libraries and what you played: purple.
         case .media: .purple
-        case .opened: .purple
+        // What you opened: the rooms' slate, so it never looks like Media.
+        case .opened: .slate
         }
     }
 

@@ -27,7 +27,7 @@ function ratio(a, b) {
 }
 
 const themes = { night: block(':root {'), day: block(':root[data-theme="day"]') };
-const TEXT = ['text', 'secondary', 'accent', 'kept', 'visited', 'tab-general', 'tab-images', 'tab-videos', 'tab-news', 'notes', 'konbini', 'niwa', 'web', 'obsidian', 'smallweb'];
+const TEXT = ['text', 'secondary', 'accent', 'kept', 'visited', 'tab-general', 'tab-images', 'tab-videos', 'tab-news', 'notes', 'konbini', 'niwa', 'web', 'obsidian', 'smallweb', 'opened'];
 
 for (const [name, v] of Object.entries(themes)) {
   test(`${name}: every text colour is at least 4.5:1 on the page and on cards`, () => {
@@ -40,7 +40,7 @@ for (const [name, v] of Object.entries(themes)) {
   });
 
   test(`${name}: a selected category pill's text (the page colour on the tab's) is at least 4.5:1`, () => {
-    for (const tab of ['accent', 'kept', 'notes', 'web', 'smallweb', 'tab-general', 'tab-images', 'tab-videos', 'tab-news']) {
+    for (const tab of ['accent', 'kept', 'notes', 'web', 'smallweb', 'tab-general', 'tab-images', 'tab-videos', 'tab-news', 'opened']) {
       const r = ratio(v.bg, v[tab]);
       assert.ok(r >= 4.5, `--bg on --${tab} is ${r.toFixed(2)}:1`);
     }
@@ -51,7 +51,7 @@ test('the two copies of Tokyo Night Day (system light, and chosen) are the same'
   assert.deepEqual(block(':root:not([data-theme="night"])'), themes.day);
 });
 
-// Tinted cards (your pages blue, notes orange, opened purple): the tint mixed
+// Tinted cards (your pages blue, notes orange, opened slate): the tint mixed
 // into the card at the theme's --tint-mix must leave every text colour,
 // chips included, at 4.5:1 or better.
 function tintMix(selector) {
@@ -61,8 +61,8 @@ function tintMix(selector) {
   assert.ok(m, `no --tint-mix in ${selector}`);
   return Number(m[1]) / 100;
 }
-// Every card's tint: pages, notes, opened, files, code, Small Web.
-const CARD_TINTS = ['accent', 'notes', 'tab-news', 'kept', 'tab-videos', 'smallweb'];
+// Every card's tint: pages, notes, media, files, code, Small Web, opened.
+const CARD_TINTS = ['accent', 'notes', 'tab-news', 'kept', 'tab-videos', 'smallweb', 'opened'];
 function mix(a, b, p) {
   const ch = (h, i) => parseInt(h.slice(i, i + 2), 16);
   return '#' + [1, 3, 5].map((i) => Math.round(ch(a, i) * p + ch(b, i) * (1 - p)).toString(16).padStart(2, '0')).join('');

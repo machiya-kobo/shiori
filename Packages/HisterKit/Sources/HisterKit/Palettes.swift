@@ -11,14 +11,14 @@ extension AppPalette {
                     background: 0x002B36, surface: 0x00212B, raised: 0x073642,
                     text: 0x93A1A1, secondaryText: 0x839496, accent: 0x3295DA,
                     highlight: 0xB58900, danger: 0xE56865,
-                    chips: [0x3295DA, 0x2AA198, 0xDE66A0, 0x859900, 0xE96833, 0xE56865, 0xB58900, 0x2AA198]),
+                    chips: [0x3295DA, 0x2AA198, 0xDE66A0, 0x859900, 0xE96833, 0xE56865, 0xB58900, 0x2AA198], slate: 0x868ACE),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xFDF6E3, surface: 0xFFFBF0, raised: 0xEEE8D5,
                     text: 0x586E75, secondaryText: 0x5B6F76, accent: 0x1E70A9,
                     highlight: 0x876600, danger: 0xCF2623,
-                    chips: [0x1E70A9, 0x1F7770, 0xC52B76, 0x627000, 0xBB4514, 0xCF2623, 0x876600, 0x1F7770]),
+                    chips: [0x1E70A9, 0x1F7770, 0xC52B76, 0x627000, 0xBB4514, 0xCF2623, 0x876600, 0x1F7770], slate: 0x5C61BD),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "nord", name: "Nord",
@@ -27,14 +27,14 @@ extension AppPalette {
                     background: 0x2E3440, surface: 0x272C36, raised: 0x3B4252,
                     text: 0xECEFF4, secondaryText: 0xD8DEE9, accent: 0x8AA7C5,
                     highlight: 0xEBCB8B, danger: 0xD39299,
-                    chips: [0x8AA7C5, 0x88C0D0, 0xBB99B5, 0xA3BE8C, 0xD5947F, 0xD39299, 0xEBCB8B, 0x8FBCBB]),
+                    chips: [0x8AA7C5, 0x88C0D0, 0xBB99B5, 0xA3BE8C, 0xD5947F, 0xD39299, 0xEBCB8B, 0x8FBCBB], slate: 0x9AA4B7),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xECEFF4, surface: 0xF6F8FB, raised: 0xE5E9F0,
-                    text: 0x2E3440, secondaryText: 0x3B4252, accent: 0x4C6D94,
-                    highlight: 0x896218, danger: 0xB14852,
-                    chips: [0x4C6D94, 0x337183, 0x885B81, 0x587241, 0xA85237, 0xB14852, 0x896218, 0x447271]),
+                    text: 0x2E3440, secondaryText: 0x3B4252, accent: 0x4B6C93,
+                    highlight: 0x896317, danger: 0xB04751,
+                    chips: [0x4B6C93, 0x347283, 0x895B80, 0x587241, 0xA65137, 0xB04751, 0x896317, 0x447271], slate: 0x4C566A),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "dracula", name: "Dracula",
@@ -43,14 +43,14 @@ extension AppPalette {
                     background: 0x282A36, surface: 0x21222C, raised: 0x44475A,
                     text: 0xF8F8F2, secondaryText: 0xE2E2DC, accent: 0xBD93F9,
                     highlight: 0xF1FA8C, danger: 0xFF6F6F,
-                    chips: [0xBD93F9, 0x8BE9FD, 0xFF79C6, 0x50FA7B, 0xFFB86C, 0xFF6F6F, 0xF1FA8C, 0x8BE9FD]),
+                    chips: [0xBD93F9, 0x8BE9FD, 0xFF79C6, 0x50FA7B, 0xFFB86C, 0xFF6F6F, 0xF1FA8C, 0x8BE9FD], slate: 0x919CBF),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xFFFBEB, surface: 0xFFFFFF, raised: 0xF3EFDD,
                     text: 0x1F1F1F, secondaryText: 0x3A3A3A, accent: 0x644AC9,
                     highlight: 0x806A14, danger: 0xC73929,
-                    chips: [0x644AC9, 0x036A96, 0xA3144D, 0x14710A, 0xA34D14, 0xC73929, 0x806A14, 0x036A96]),
+                    chips: [0x644AC9, 0x036A96, 0xA3144D, 0x14710A, 0xA34D14, 0xC73929, 0x806A14, 0x036A96], slate: 0x635D43),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "catppuccin", name: "Catppuccin",
@@ -59,14 +59,14 @@ extension AppPalette {
                     background: 0x1E1E2E, surface: 0x181825, raised: 0x313244,
                     text: 0xCDD6F4, secondaryText: 0xBAC2DE, accent: 0x89B4FA,
                     highlight: 0xF9E2AF, danger: 0xF38BA8,
-                    chips: [0x89B4FA, 0x89DCEB, 0xCBA6F7, 0xA6E3A1, 0xFAB387, 0xF38BA8, 0xF9E2AF, 0x94E2D5]),
+                    chips: [0x89B4FA, 0x89DCEB, 0xCBA6F7, 0xA6E3A1, 0xFAB387, 0xF38BA8, 0xF9E2AF, 0x94E2D5], slate: 0x8D92A7),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xEFF1F5, surface: 0xF8F9FB, raised: 0xE6E9EF,
                     text: 0x4C4F69, secondaryText: 0x5C5F77, accent: 0x0D5AF5,
                     highlight: 0x925D13, danger: 0xD00F38,
-                    chips: [0x0D5AF5, 0x03709C, 0x8737EF, 0x307820, 0xB64301, 0xD00F38, 0x925D13, 0x12757A]),
+                    chips: [0x0D5AF5, 0x03709C, 0x8737EF, 0x307820, 0xB64301, 0xD00F38, 0x925D13, 0x12757A], slate: 0x65687B),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "gruvbox", name: "Gruvbox",
@@ -75,14 +75,14 @@ extension AppPalette {
                     background: 0x282828, surface: 0x1D2021, raised: 0x3C3836,
                     text: 0xEBDBB2, secondaryText: 0xD5C4A1, accent: 0x83A598,
                     highlight: 0xFABD2F, danger: 0xFB6452,
-                    chips: [0x83A598, 0x83A598, 0xD3869B, 0xB8BB26, 0xFE8019, 0xFB6452, 0xFABD2F, 0x8EC07C]),
+                    chips: [0x83A598, 0x83A598, 0xD3869B, 0xB8BB26, 0xFE8019, 0xFB6452, 0xFABD2F, 0x8EC07C], slate: 0xA89984),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xFBF1C7, surface: 0xF9F5D7, raised: 0xEBDBB2,
                     text: 0x3C3836, secondaryText: 0x504945, accent: 0x076678,
                     highlight: 0x8C5B10, danger: 0x9D0006,
-                    chips: [0x076678, 0x076678, 0x8F3F71, 0x6B670C, 0xAF3A03, 0x9D0006, 0x8C5B10, 0x3C6F50]),
+                    chips: [0x076678, 0x076678, 0x8F3F71, 0x6B670C, 0xAF3A03, 0x9D0006, 0x8C5B10, 0x3C6F50], slate: 0x70635A),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "rose-pine", name: "Rosé Pine",
@@ -91,14 +91,14 @@ extension AppPalette {
                     background: 0x191724, surface: 0x14121D, raised: 0x26233A,
                     text: 0xE0DEF4, secondaryText: 0xC8C5E0, accent: 0x9CCFD8,
                     highlight: 0xF6C177, danger: 0xEB6F92,
-                    chips: [0x9CCFD8, 0x9CCFD8, 0xC4A7E7, 0x4094B6, 0xEBBCBA, 0xEB6F92, 0xF6C177, 0x9CCFD8]),
+                    chips: [0x9CCFD8, 0x9CCFD8, 0xC4A7E7, 0x4094B6, 0xEBBCBA, 0xEB6F92, 0xF6C177, 0x9CCFD8], slate: 0x908CAA),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xFAF4ED, surface: 0xFFFAF3, raised: 0xF2E9E1,
                     text: 0x575279, secondaryText: 0x6C688C, accent: 0x286983,
                     highlight: 0x995F10, danger: 0xA75068,
-                    chips: [0x286983, 0x43737C, 0x7A6196, 0x43737C, 0xBE413B, 0xA75068, 0x995F10, 0x43737C]),
+                    chips: [0x286983, 0x43737C, 0x7A6196, 0x43737C, 0xBE413B, 0xA75068, 0x995F10, 0x43737C], slate: 0x6C6986),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "kanagawa", name: "Kanagawa",
@@ -107,14 +107,14 @@ extension AppPalette {
                     background: 0x1F1F28, surface: 0x16161D, raised: 0x2A2A37,
                     text: 0xDCD7BA, secondaryText: 0xC8C093, accent: 0x7E9CD8,
                     highlight: 0xE6C384, danger: 0xE46876,
-                    chips: [0x7E9CD8, 0x7FB4CA, 0x9984BB, 0x98BB6C, 0xFFA066, 0xE46876, 0xE6C384, 0x7AA89F]),
+                    chips: [0x7E9CD8, 0x7FB4CA, 0x9984BB, 0x98BB6C, 0xFFA066, 0xE46876, 0xE6C384, 0x7AA89F], slate: 0x938AA9),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xF2ECBC, surface: 0xF7F3D6, raised: 0xE5DDB0,
                     text: 0x545464, secondaryText: 0x43436C, accent: 0x4B6798,
                     highlight: 0x6D6839, danger: 0xB93548,
-                    chips: [0x4B6798, 0x3C6D7E, 0x624C83, 0x586E3E, 0x9C5300, 0xB93548, 0x6D6839, 0x4E6C67]),
+                    chips: [0x4B6798, 0x3C6D7E, 0x624C83, 0x586E3E, 0x9C5300, 0xB93548, 0x6D6839, 0x4E6C67], slate: 0x6A675B),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "everforest", name: "Everforest",
@@ -123,14 +123,14 @@ extension AppPalette {
                     background: 0x2D353B, surface: 0x232A2E, raised: 0x343F44,
                     text: 0xD3C6AA, secondaryText: 0xC0B597, accent: 0x7FBBB3,
                     highlight: 0xDBBC7F, danger: 0xE78284,
-                    chips: [0x7FBBB3, 0x7FBBB3, 0xD699B6, 0xA7C080, 0xE69875, 0xE78284, 0xDBBC7F, 0x83C092]),
+                    chips: [0x7FBBB3, 0x7FBBB3, 0xD699B6, 0xA7C080, 0xE69875, 0xE78284, 0xDBBC7F, 0x83C092], slate: 0x96A29A),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xFDF6E3, surface: 0xFFFBEF, raised: 0xEFEBD4,
                     text: 0x5C6A72, secondaryText: 0x5C6A72, accent: 0x2C7196,
                     highlight: 0x8A6300, danger: 0xD60C09,
-                    chips: [0x2C7196, 0x2C7196, 0xBE298F, 0x627001, 0xAD4E09, 0xD60C09, 0x8A6300, 0x26785A]),
+                    chips: [0x2C7196, 0x2C7196, 0xBE298F, 0x627001, 0xAD4E09, 0xD60C09, 0x8A6300, 0x26785A], slate: 0x606D60),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
         AppPalette(
             key: "ayu", name: "Ayu",
@@ -139,14 +139,14 @@ extension AppPalette {
                     background: 0x0B0E14, surface: 0x07090D, raised: 0x131721,
                     text: 0xBFBDB6, secondaryText: 0xACAAA2, accent: 0x59C2FF,
                     highlight: 0xFFB454, danger: 0xF07178,
-                    chips: [0x59C2FF, 0x39BAE6, 0xD2A6FF, 0xAAD94C, 0xFF8F40, 0xF07178, 0xFFB454, 0x95E6CB]),
+                    chips: [0x59C2FF, 0x39BAE6, 0xD2A6FF, 0xAAD94C, 0xFF8F40, 0xF07178, 0xFFB454, 0x95E6CB], slate: 0x7C8491),
                 highlightOpacity: 0.30, isDark: true, tintOpacity: 0.09, tintsOverSurface: true),
             light: Palette(
                 hex: Palette.Hex(
                     background: 0xFCFCFC, surface: 0xFFFFFF, raised: 0xF0F0F0,
                     text: 0x5C6166, secondaryText: 0x5C6166, accent: 0x1771B2,
                     highlight: 0x99600B, danger: 0xD71717,
-                    chips: [0x1771B2, 0x247490, 0x8954BD, 0x587500, 0xB44F05, 0xD71717, 0x99600B, 0x2B7960]),
+                    chips: [0x1771B2, 0x247490, 0x8954BD, 0x587500, 0xB44F05, 0xD71717, 0x99600B, 0x2B7960], slate: 0x6B6D71),
                 highlightOpacity: 0.22, isDark: false, tintOpacity: 0.08, tintsOverSurface: true)),
     ]
 }

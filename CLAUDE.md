@@ -145,7 +145,7 @@ From a fresh clone (`git clone --recurse-submodules`; or `git submodule update -
   `SnippetAndSuggestionTests`. New colors go in the tests.
 - **Liquid Glass stays on the system chrome**: the theme colors only the
   content layer, and sheets are content (they keep the theme's background). Result cards are tinted in their pill's color (pages blue,
-  notes orange, opened purple, files green, code red, Small Web teal).
+  notes orange, opened slate, files green, code red, Small Web teal, media purple).
 - **Hover shows what a click does** (Machiya's style guide). A result's title
   is a plain `TitleLink` button, underlined with the link cursor (a
   borderless button is AppKit's on the Mac and its label never hears hover).

@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { TABLE_PATH, CSS_PATH, SWIFT_PATH, TEXT, TINTS, PILLS, css, swift, bars, variant, roomsShadow, ratio, mix, luminance } from './palettes.mjs';
+import { TABLE_PATH, CSS_PATH, SWIFT_PATH, TEXT, TINTS, PILLS, HOVER_MIX, css, swift, bars, variant, roomsShadow, ratio, mix, luminance, readableOn } from './palettes.mjs';
 
 const table = JSON.parse(readFileSync(TABLE_PATH, 'utf8'));
 const read = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -145,7 +145,8 @@ test('a hovered pill reads on its hover fill: every theme, every pill (--<pill>-
       }
     }
   }
-  // search.css's Tokyo Night carries the generator's.
+  // search.css's Tokyo Night carries the generator's. Its Opened is its own (--opened, lighter in the dark, where the
+  // apps' cards take 14% of a tint), and so is that pill's hover, made from it the same way.
   const css = read('../patches/shiori/search.css');
   const block = (selector) => {
     const at = css.indexOf(selector);
@@ -154,6 +155,9 @@ test('a hovered pill reads on its hover fill: every theme, every pill (--<pill>-
   for (const [selector, mode] of [[':root {', 'dark'], [':root:not([data-theme="night"]) {', 'light'], [':root[data-theme="day"] {', 'light']]) {
     const tokens = Object.fromEntries([...block(selector).matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
     const v = variant(table['tokyo-night'][mode], mode);
+    assert.ok(tokens.opened, `${selector} --opened`);
+    v['opened-hover-bg'] = mix(tokens.opened, v.raised, HOVER_MIX);
+    v['opened-hover'] = readableOn(tokens.opened, [v['opened-hover-bg']], mode === 'light');
     for (const t of PILLS) {
       assert.equal(tokens[`${t}-hover-bg`], v[`${t}-hover-bg`], `${selector} ${t}-hover-bg`);
       assert.equal(tokens[`${t}-hover`], v[`${t}-hover`], `${selector} ${t}-hover`);

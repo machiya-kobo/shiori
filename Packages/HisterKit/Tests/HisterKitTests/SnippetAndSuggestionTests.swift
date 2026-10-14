@@ -147,12 +147,12 @@ struct ThemeTests {
         // Lists sit on the background; Settings rows, sheets and cards on
         // the surface; result cards (Result Style → Tint) on the page's or
         // surface's colour tinted in their pill's: Pages blue, Notes orange,
-        // Opened purple, Files green, Code red, Small Web teal. (Raised is for borders, placeholders and a
+        // Opened slate, Files green, Code red, Small Web teal, Media purple. (Raised is for borders, placeholders and a
         // moment's press, never text.)
         let base = palette.tintsOverSurface ? h.surface : h.background
-        let tinted = [Palette.Tint.blue, .orange, .purple, .green, .red, .teal].map { mix(h.chips[$0.rawValue], base, palette.tintOpacity) }
+        let tinted = [Palette.Tint.blue, .orange, .purple, .green, .red, .teal, .slate].map { mix(palette.tintHex($0), base, palette.tintOpacity) }
         for backdrop in [h.background, h.surface] + tinted {
-            for colour in [h.text, h.secondaryText, h.accent, h.danger] + h.chips {
+            for colour in [h.text, h.secondaryText, h.accent, h.danger, h.slate] + h.chips {
                 #expect(ratio(colour, backdrop) >= 4.5, "\(name): \(Palette.css(colour)) on \(Palette.css(backdrop))")
             }
         }
@@ -164,7 +164,7 @@ struct ThemeTests {
     @Test(arguments: variants)
     func hoveredPillsReadOnTheirHoverFill(name: String, palette: Palette) {
         let h = palette.hex
-        for tint in [Palette.Tint.blue, .cyan, .purple, .green, .orange, .red, .yellow, .teal] {
+        for tint in Palette.Tint.allCases {
             let (fill, ink) = palette.pillHoverHex(tint)
             #expect(Palette.contrast(ink, fill) >= 4.5, "\(name) \(tint): \(Palette.css(ink)) on \(Palette.css(fill))")
             #expect(Palette.contrast(fill, h.background) > Palette.contrast(h.raised, h.background), "\(name) \(tint): the fill shows")
@@ -175,5 +175,54 @@ struct ThemeTests {
 
     @Test func aLabelAlwaysGetsTheSameChipColour() {
         #expect(Palette.night.chipColor(for: "books") == Palette.night.chipColor(for: "books"))
+        // Slate (Opened) is no label's: the hash still picks among the eight.
+        for (name, palette) in Self.variants {
+            #expect(palette.hex.chips.count == 8, "\(name)")
+            #expect(!palette.hex.chips.contains(palette.hex.slate), "\(name)")
+        }
+        #expect(Palette.night.chipHex(for: "books") == Palette.night.hex.chips[Int("books".unicodeScalars.reduce(UInt32(5381)) { ($0 &* 33) &+ $1.value } % 8)])
+    }
+
+    /// The rooms' themes as web/app/palettes.css has them: Opened's slate
+    /// and every pill's hover fill and text are the web's (`--opened`,
+    /// `--<pill>-hover-bg`, `--<pill>-hover`), twins made by scripts/palettes.mjs.
+    /// Tokyo Night's Opened is search.css's, its hover fill and text too in
+    /// the dark (whose raised shade the two share).
+    @Test func pillColoursAreTheWebsTwins() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        var css = try String(contentsOf: root.appendingPathComponent("patches/shiori/search.css"), encoding: .utf8)
+        func tokens(_ selector: String) -> [String: UInt32] {
+            guard let start = css.range(of: selector + " {"), let end = css.range(of: "}", range: start.upperBound..<css.endIndex) else { return [:] }
+            let body = String(css[start.upperBound..<end.lowerBound])
+            let pattern = try! NSRegularExpression(pattern: #"--([\w-]+):\s*#([0-9a-fA-F]{6})\b"#)
+            var out: [String: UInt32] = [:]
+            for m in pattern.matches(in: body, range: NSRange(body.startIndex..., in: body)) {
+                guard let name = Range(m.range(at: 1), in: body), let value = Range(m.range(at: 2), in: body) else { continue }
+                out[String(body[name])] = UInt32(body[value], radix: 16)
+            }
+            return out
+        }
+        let night = tokens(":root"), day = tokens(":root[data-theme=\"day\"]")
+        #expect(night["opened"] == Palette.night.hex.slate)
+        #expect(day["opened"] == Palette.day.hex.slate)
+        #expect(night["opened-hover-bg"] == Palette.night.pillHoverHex(.slate).fill)
+        #expect(night["opened-hover"] == Palette.night.pillHoverHex(.slate).ink)
+
+        css = try String(contentsOf: root.appendingPathComponent("web/app/palettes.css"), encoding: .utf8)
+        let pills: [(String, Palette.Tint)] = [("tab-general", .cyan), ("accent", .blue), ("notes", .orange), ("web", .yellow),
+            ("tab-images", .green), ("tab-videos", .red), ("tab-news", .purple), ("smallweb", .teal), ("kept", .green), ("opened", .slate)]
+        for theme in AppPalette.generated {
+            for (selector, palette) in [(":root[data-palette=\"\(theme.key)\"]", theme.dark), (":root[data-palette=\"\(theme.key)\"][data-theme=\"day\"]", theme.light)] {
+                let web = tokens(selector)
+                #expect(web["opened"] == palette.hex.slate, "\(selector) --opened")
+                for (pill, tint) in pills {
+                    let (fill, ink) = palette.pillHoverHex(tint)
+                    #expect(web["\(pill)-hover-bg"] == fill, "\(selector) --\(pill)-hover-bg")
+                    #expect(web["\(pill)-hover"] == ink, "\(selector) --\(pill)-hover")
+                }
+            }
+        }
     }
 }

@@ -114,7 +114,7 @@ private struct ResultActionsHost: ViewModifier {
 }
 
 /// A result row drawn as a card tinted in its pill's colour, with an outline
-/// in it: blue for your pages, orange for notes (Kura's), purple for pages you opened,
+/// in it: blue for your pages, orange for notes (Kura's), slate for pages you opened,
 /// as the search page's cards. The fill is
 /// the most each theme allows with every text colour at 4.5:1 or better:
 /// 14% on Tokyo Night's background, 8% on Tokyo Night Day's surface, and for
@@ -238,7 +238,7 @@ extension View {
 struct DocumentItem: View {
     let document: StoredPage
     /// One of the pages you opened for this search (All's Your Pages lifts
-    /// them to the top): the Opened pill's purple.
+    /// them to the top): the Opened pill's slate.
     var opened = false
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette

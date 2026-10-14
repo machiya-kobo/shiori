@@ -250,6 +250,7 @@ body[data-pill-row="scroll"] .segments { flex-wrap: nowrap; overflow-x: auto; }
 .segments button[data-tint="blue"] { --tab: var(--accent); --tab-hover-bg: var(--accent-hover-bg); --tab-hover: var(--accent-hover); }
 .segments button[data-tint="orange"] { --tab: var(--notes); --tab-hover-bg: var(--notes-hover-bg); --tab-hover: var(--notes-hover); }
 .segments button[data-tint="purple"] { --tab: var(--tab-news); --tab-hover-bg: var(--tab-news-hover-bg); --tab-hover: var(--tab-news-hover); }
+.segments button[data-tint="slate"] { --tab: var(--opened); --tab-hover-bg: var(--opened-hover-bg); --tab-hover: var(--opened-hover); }
 .segments button[data-tint="yellow"] { --tab: var(--web); --tab-hover-bg: var(--web-hover-bg); --tab-hover: var(--web-hover); }
 .segments button[data-tint="teal"] { --tab: var(--smallweb); --tab-hover-bg: var(--smallweb-hover-bg); --tab-hover: var(--smallweb-hover); }
 .segments button[data-tint="green"] { --tab: var(--kept); --tab-hover-bg: var(--kept-hover-bg); --tab-hover: var(--kept-hover); }
@@ -363,7 +364,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
   border-bottom: 1px solid var(--line); cursor: pointer; text-decoration: none; color: inherit;
 }
 /* Each result a card tinted in its pill's colour, blue for your pages,
-   orange for notes, purple for pages you opened, with an outline in it, as
+   orange for notes, slate for pages you opened, with an outline in it, as
    the search page's. On the card colour, not the page's:
    there any tint left the light theme's text under 4.5:1. Its sides line up
    with the search field, the pills and Sort · Group · Filter (12px in). */
@@ -373,7 +374,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
   background: color-mix(in srgb, var(--tint) var(--tint-mix), var(--card));
 }
 .doc-row.note-row { --tint: var(--notes); }
-.doc-row.opened-row { --tint: var(--tab-news); }
+.doc-row.opened-row { --tint: var(--opened); }
 .doc-row.file-row { --tint: var(--kept); }
 .doc-row.code-row { --tint: var(--tab-videos); }
 .doc-row.smallweb-row { --tint: var(--smallweb); }
