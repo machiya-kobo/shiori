@@ -2618,7 +2618,7 @@ addEventListener('pagehide', () => commitDelete({ keepalive: true }));
  * with the companion.
  */
 const SETTINGS_PAGES = [
-  ['appearance', 'Appearance', 'palette', 'Theme, mode and text size'],
+  ['appearance', 'Appearance', 'palette', 'Theme, mode, text size and background'],
   ['search', 'Search', 'search', 'Pills, the web, Small Web and your notes'],
   ['results', 'Results', 'list', 'How results look and open, and your history'],
   ['media', 'Media', 'music', 'Your libraries and what you played'],
@@ -2651,6 +2651,7 @@ function openSettings(page = null) {
   settingsPageKey = settingsPages().some(([key]) => key === page) ? page : null;
   if (sheet.open) return drawSettings({ focusTitle: true });
   settingsDraft = { before: { ...settings }, recents: [...recents], device: deviceTextSize(), keys: new Set(), clearRecents: false, saved: false };
+  BG?.begin();
   listSearch = '';
   // Opening Settings asks the account afresh; the state line follows.
   void contactAccount().then(() => {
@@ -2711,8 +2712,10 @@ function saveSettings() {
     recents = [];
     writeLocal('shioriAppRecents', recents);
   }
+  // The background is kept in this browser before any reload.
+  const background = BG ? BG.save() : Promise.resolve();
   $('settings-sheet').close();
-  if (changed.some((key) => SHEET_RELOAD.includes(key))) location.reload();
+  if (changed.some((key) => SHEET_RELOAD.includes(key))) void background.finally(() => location.reload());
   else if (changed.some((key) => !SHEET_LOOK.includes(key))) render();
 }
 
@@ -2722,6 +2725,7 @@ function revertSettings(draft) {
   recents = draft.recents;
   if (deviceTextSize() !== draft.device) setDeviceTextSize(draft.device);
   else applyLook();
+  void BG?.cancel();
 }
 
 /** The Settings tab (a phone) and the sidebar's gear are lit while the sheet is open. */
@@ -2786,7 +2790,7 @@ function settingsPage(key, title) {
       ], [
         h('span', {}, 'Follows you when signed in, except This Device’s Size. '),
         h('span', { class: 'prefs-state' }, prefsStateLine()),
-      ]);
+      ]).concat(backgroundGroup(group));
     case 'search':
       // Every section the apps' way: its switch first, then its choices.
       return [
@@ -2891,6 +2895,22 @@ function accountGroup(group) {
     draw();
   });
   return box;
+}
+
+/** Settings → Appearance → Background: a scene, the rain, your picture or video (backgrounds.js; this browser's own). */
+function backgroundGroup(group) {
+  if (!BG) return [];
+  const rows = BG.rows({
+    buttonClass: 'link-button',
+    redraw: () => settingsDraft && settingsPageKey === 'appearance' && drawSettings(),
+    row: (label, control, id, extra) =>
+      h('div', { class: `item${extra ? ` ${extra}` : ''}` }, id ? h('label', { for: id }, label) : h('span', {}, label), control),
+  });
+  const items = rows.filter((r) => r.classList.contains('item'));
+  return [
+    ...group('Background', items, 'This browser’s own. Your picture or video stays here, never uploaded.'),
+    ...rows.filter((r) => !r.classList.contains('item')),
+  ];
 }
 
 /** Settings' state line for Appearance (the contract's). */
@@ -3408,6 +3428,9 @@ $('back').replaceChildren(icon('back'));
 $('back').addEventListener('click', () => history.back());
 
 applyLook();
+// The background (Settings → Appearance → Background, this browser's own): its signs name the pills on show.
+const BG = globalThis.ShioriBackgrounds;
+BG?.init({ words: () => scopes().map(([, name]) => name) });
 /**
  * The bars over the list (title, search field, pills, Sort · Group · Filter)
  * are frosted and the list scrolls under them (app.css): its top padding

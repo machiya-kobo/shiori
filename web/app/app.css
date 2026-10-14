@@ -797,3 +797,37 @@ html.pull-settle .pull { transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.3,
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .new-items[hidden] { display: none; }
+
+/* Over a background (backgrounds.css): the sidebar and the list are glass, and from 760px they float with the scene
+   around them; the preview's column is open, its bar and any message on glass, the page itself on its own colour.
+   Cards and rows keep their own colours on the glass. The corner (Rain, Watch) sits above a phone's tab bar, and the
+   toasts above the corner. */
+html.has-bg #list-column, html.has-bg #preview-bar:has(.where), html.has-bg #preview > .status {
+  background: color-mix(in srgb, var(--bg) var(--glass-mix), transparent);
+  -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+}
+html.has-bg #sidebar {
+  background: color-mix(in srgb, var(--card) var(--glass-mix), transparent);
+  -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+}
+html.has-bg #preview-column { border-left: 0; }
+html.has-bg #preview > .status { margin: 16px; border-radius: 14px; }
+@media (min-width: 760px) {
+  html.has-bg #app { padding: 8px; gap: 8px; }
+  html.has-bg #sidebar, html.has-bg #list-column { border: 1px solid var(--line); border-radius: 14px; }
+  html.has-bg #list-column { overflow: clip; }
+  html.has-bg #preview-bar:has(.where) { border-radius: 14px; border: 1px solid var(--line); }
+  html.has-bg #preview iframe { border-radius: 14px; margin-top: 8px; }
+  html.has-bgctl #sidebar { padding-bottom: 72px; }
+  html.has-bg dialog.msheet {
+    background: color-mix(in srgb, var(--bg) var(--glass-mix), transparent);
+    -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+  }
+}
+@media (max-width: 759px) {
+  .bgctl { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  body.phone-preview .bgctl { bottom: calc(16px + env(safe-area-inset-bottom)); }
+  html.has-bgctl .toast, html.has-bgctl .update-toast { bottom: calc(140px + env(safe-area-inset-bottom)); }
+  html.has-bgctl #list { padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
+}
+html.has-bg #preview-bar:not(:has(.where)) { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }

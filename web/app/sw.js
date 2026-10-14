@@ -12,6 +12,10 @@ const SHELL = [
   '/_shiori/theme.css',
   '/_shiori/palettes.css',
   '/_shiori/search-core.js',
+  // Backgrounds (backgrounds.js): the scene engine too, so a scene draws offline.
+  '/_shiori/backgrounds.js',
+  '/_shiori/backgrounds.css',
+  '/_shiori/bg.js',
   '/_shiori/shiori-small.svg',
   '/_shiori/shiori.ico',
   '/_shiori/icon-256.png',
