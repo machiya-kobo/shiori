@@ -202,6 +202,17 @@ struct DocumentView: View {
     private static let pagePlacement: ToolbarItemPlacement = .primaryAction
     #endif
 
+    /// A gap between the toolbar's groups (the original's Open and Share,
+    /// the places, ⋯) on iOS 26, where they otherwise merge into one glass
+    /// capsule.
+    #if os(iOS)
+    @ToolbarContentBuilder private var pageGroupGap: some ToolbarContent {
+        if #available(iOS 26, *) {
+            ToolbarSpacer(.fixed, placement: Self.pagePlacement)
+        }
+    }
+    #endif
+
     @ToolbarContentBuilder private func toolbar(note: AppState.NoteLinks?) -> some ToolbarContent {
         #if os(macOS)
         // The Mac's one window toolbar puts the page's items right after the
@@ -229,6 +240,9 @@ struct DocumentView: View {
                 ShareLink(item: url)
                     .help("Share")
             }
+            #if os(iOS)
+            pageGroupGap
+            #endif
         }
         if case let places = places(note: note), !places.isEmpty {
             // One grouped control of plain symbols, the system's colours:
@@ -256,6 +270,9 @@ struct DocumentView: View {
                     .disabled(preview == nil || summary == .working)
             }
         }
+        #if os(iOS)
+        pageGroupGap
+        #endif
         ToolbarItem(placement: Self.pagePlacement) {
             Menu {
                 // First, and flat: what the toolbar left out.
