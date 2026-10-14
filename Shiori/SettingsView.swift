@@ -18,6 +18,10 @@ struct SettingsView: View {
     // the page: the Machiya token goes to them, never to a half-typed host.
     @State private var kuraDraft = ""
     @State private var konbiniDraft = ""
+    #if os(macOS)
+    /// The Mac's page, kept between openings.
+    @AppStorage("settingsPage") private var macPage: Page = .appearance
+    #endif
 
     enum ConnectionCheck: Equatable {
         case idle, checking
@@ -74,13 +78,17 @@ struct SettingsView: View {
 
     var body: some View {
         #if os(macOS)
-        TabView {
-            ForEach(Page.allCases) { page in
-                self.page(page)
-                    .tabItem { Label(page.title, systemImage: page.symbol) }
-                    .tag(page)
-            }
+        // Our own row of pages, not TabView's toolbar: there each item was
+        // as wide as its label, so the symbols sat unevenly apart and an
+        // icon's size followed its shape. Here every page has the same
+        // width and the same box for its symbol.
+        VStack(spacing: 0) {
+            SettingsPageStrip(selection: $macPage)
+            Divider()
+            page(macPage)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .navigationTitle(macPage.title)
         .onAppear(perform: loadDrafts)
         .onDisappear(perform: saveDrafts)
         // Opening Settings asks the account for the shared settings.
@@ -955,3 +963,46 @@ struct SettingsField: View {
         }
     }
 }
+
+#if os(macOS)
+/// The Mac Settings window's pages across the top, as a preferences
+/// toolbar draws them, but evenly: equal widths, one box for every symbol
+/// (sized by the font, so a circle and the sparkles stand the same height),
+/// and every label on one baseline.
+private struct SettingsPageStrip: View {
+    @Binding var selection: SettingsView.Page
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(SettingsView.Page.allCases) { page in
+                let chosen = page == selection
+                Button {
+                    selection = page
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: page.symbol)
+                            .font(.system(size: 19, weight: .regular))
+                            .frame(width: 28, height: 26)
+                        Text(page.title)
+                            .textStyle(.caption)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(chosen ? palette.accent : palette.secondaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(chosen ? palette.raised : .clear, in: .rect(cornerRadius: 7))
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(chosen ? .isSelected : [])
+                .help(page.title)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+    }
+}
+#endif
+
