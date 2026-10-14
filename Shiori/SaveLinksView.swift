@@ -131,7 +131,19 @@ final class SaveLinksModel {
             let forms = batch.flatMap { row in
                 SaveLinks.isSmallWeb(row.link.url) ? [row.link.url, SaveLinks.smallWebKey(row.link.url)] : [row.link.url]
             }
-            let held = await client.savedLabels(for: forms)
+            let held: [String: String]
+            do {
+                held = try await client.heldLabels(for: forms)
+            } catch {
+                // Not known, so not ticked: a failed lookup never reads as
+                // "not in Hister" (each save asks again anyway).
+                for row in batch where row.status == .checking {
+                    guard let i = rows.firstIndex(where: { $0.id == row.id }) else { continue }
+                    rows[i].status = .failed("Hister didn't answer, so this wasn't checked.")
+                    rows[i].selected = false
+                }
+                continue
+            }
             for row in batch where row.status == .checking {
                 guard let i = rows.firstIndex(where: { $0.id == row.id }) else { continue }
                 let inHister = held[row.link.url] != nil

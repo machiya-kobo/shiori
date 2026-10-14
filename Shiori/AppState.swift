@@ -671,6 +671,8 @@ final class AppState {
     /// which only browsing can send).
     struct Waiting: Equatable {
         var outbox = Outbox.Status(count: 0, oldest: nil)
+        /// Pages the outbox gave up on (refused, too old, out of tries).
+        var notSaved: [Outbox.NotSaved] = []
         var safari = 0
         var safariOldest: Date?
         var safariReportedAt: Date?
@@ -684,7 +686,7 @@ final class AppState {
     var saveOutbox: Outbox? { outbox }
 
     func refreshWaiting() {
-        var next = Waiting(outbox: outbox?.status() ?? .init(count: 0, oldest: nil))
+        var next = Waiting(outbox: outbox?.status() ?? .init(count: 0, oldest: nil), notSaved: outbox?.notSaved() ?? [])
         if let report = SharedSettings.defaults?.dictionary(forKey: SharedSettings.Key.extensionQueue) {
             next.safari = report["count"] as? Int ?? 0
             next.safariOldest = (report["oldest"] as? Double).map { Date(timeIntervalSince1970: $0) }
@@ -701,14 +703,31 @@ final class AppState {
         }
         isSending = true
         // A page kept as its link alone is downloaded here first.
-        let result = await outbox.drain(using: client, fetch: { try await PageFetcher.fetch($0) })
+        let result = await outbox.drain(using: client, fetch: { try await PageFetcher.fetchPreferringHTTPS($0) })
         isSending = false
-        sendStopped = if case .stopped = result { true } else { false }
+        sendStop = switch result {
+        case .sent: nil
+        case .stopped: .unreachable
+        case .signedOut: .signedOut
+        }
         refreshWaiting()
     }
 
-    /// The last Send Now (or foreground send) stopped: Hister didn't answer.
-    private(set) var sendStopped = false
+    /// Forgets the pages the outbox gave up on (Settings' Clear).
+    func clearNotSaved() {
+        outbox?.clearNotSaved()
+        refreshWaiting()
+    }
+
+    enum SendStop: Equatable {
+        /// Hister didn't answer, or answered unwell.
+        case unreachable
+        /// Hister wants this device signed in.
+        case signedOut
+    }
+
+    /// Why the last Send Now (or foreground send) stopped, if it did.
+    private(set) var sendStop: SendStop?
 
     init(defaults: UserDefaults = .standard, bundle: Bundle = .main) {
         let fallback = (bundle.object(forInfoDictionaryKey: "ShioriDefaultServerURL") as? String) ?? ""

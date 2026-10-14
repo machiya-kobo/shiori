@@ -58,6 +58,10 @@ nonisolated enum Saver {
     /// The same, with the server and the outbox given (the tests' way in).
     static func save(_ input: Input, label: String?, via: String, client: HisterClient, outbox: Outbox?,
                      fetch: @Sendable (URL) async throws -> PageFetcher.Fetched = { try await PageFetcher.fetch($0) }) async -> Outcome {
+        // A web page only: never a file:// or any other scheme's address.
+        guard let scheme = input.url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            return .rejected("Only web pages (http or https) can be saved.")
+        }
         // Another vault's note never, not even fetched (fail closed).
         if Notes.otherVault(of: input.url.absoluteString) != nil {
             return .rejected("A note from another vault stays in Kura.")
@@ -67,7 +71,8 @@ nonisolated enum Saver {
             label: label, via: via)
         if (page.html ?? "").isEmpty && (page.text ?? "").isEmpty {
             do {
-                let fetched = try await fetch(input.url)
+                // An http:// link is tried as https:// first, as Save This Note's Links does.
+                let fetched = try await PageFetcher.fetchPreferringHTTPS(input.url, fetch: fetch)
                 page.url = fetched.url
                 page.html = fetched.html
                 if page.title.isEmpty { page.title = fetched.title }
@@ -79,7 +84,15 @@ nonisolated enum Saver {
                 let kept = queue(page, in: outbox)
                 return kept == .queued ? .waiting("The site is busy (it answered \(error.status)). Saved on this device; it will be tried again later.") : kept
             } catch {
-                // Out of reach: saved as its link, and downloaded when the outbox drains.
+                if Task.isCancelled { return .cancelled }
+                if (error as? URLError)?.code == .appTransportSecurityRequiresSecureConnection {
+                    return .failed("Couldn't download this page (it's plain http, which Shiori can't fetch).")
+                }
+                // Out of reach: kept as its link and downloaded when the
+                // outbox drains, never sent to Hister as an empty page.
+                if page.title.isEmpty { page.title = input.url.host() ?? input.url.absoluteString }
+                let kept = queue(page, in: outbox)
+                return kept == .queued ? .waiting("Couldn't download the page just now. Saved on this device; it will be tried again later.") : kept
             }
         }
         if page.title.isEmpty { page.title = input.url.host() ?? input.url.absoluteString }
@@ -103,12 +116,16 @@ nonisolated enum Saver {
         } catch .server(let status, _) where status >= 500 || status == 429 {
             return queue(page, in: outbox)
         } catch .signedOut {
-            // Kept until this device signs in again (the outbox waits too).
-            return queue(page, in: outbox)
+            // Kept until this device signs in again (the outbox waits too):
+            // said as that, not as Hister being out of reach.
+            let kept = queue(page, in: outbox)
+            return kept == .queued ? .waiting(Self.waitingForSignIn) : kept
         } catch {
             return .failed(error.saveMessage)
         }
     }
+
+    static let waitingForSignIn = "Hister wants you signed in. Saved on this device; it will be sent once you sign in (Settings → Account)."
 
     private static func queue(_ page: NewPage, in outbox: Outbox?) -> Outcome {
         guard let outbox else {
@@ -117,6 +134,8 @@ nonisolated enum Saver {
         do {
             try outbox.enqueue(page)
             return .queued
+        } catch is Outbox.Full {
+            return .failed("Too many pages are waiting to be sent, so this one wasn't kept.")
         } catch {
             return .failed("Hister is out of reach, and the page couldn't be kept for later.")
         }
@@ -164,6 +183,29 @@ extension Saver {
         }
     }
 
+    /// The same for several forms of one address, in one search where
+    /// they fit in one (`heldLabels`), else one by one (`holds`).
+    private static func heldOutcome(forms: [String], client: HisterClient) async -> LinkOutcome? {
+        let searchable = forms.filter(HisterClient.lookupTakes)
+        if !searchable.isEmpty {
+            do {
+                if !(try await client.heldLabels(for: searchable)).isEmpty { return .alreadyInHister }
+            } catch .cancelled where Task.isCancelled {
+                return .cancelled
+            } catch .signedOut {
+                return .failed("Hister wants you signed in: Settings → Account.")
+            } catch .unreachable, .untrusted, .cancelled {
+                return .failed("Hister is out of reach, so this couldn't be checked: try again later.")
+            } catch {
+                return .failed("Couldn't ask Hister whether it has this page.")
+            }
+        }
+        for form in forms where !HisterClient.lookupTakes(form) {
+            if let held = await heldOutcome(form, client: client) { return held }
+        }
+        return nil
+    }
+
     /// Saves one of a note's links (Shiori saves pages into Hister; the
     /// other rooms only look up what it holds).
     /// - Never a URL Hister holds: it's looked up right before the save
@@ -186,25 +228,15 @@ extension Saver {
         guard let url = URL(string: link.url) else { return .failed("That isn't a web address.") }
         if SaveLinks.looksLikeFile(link.url) { return .failed(Self.notAPage) }
         if let held = await heldOutcome(link.url, client: client) { return held }
-        // An http:// link is tried as https:// first: the apps' transport
-        // security refuses plain http (a short link such as go.example
-        // answers on https too), and Hister keeps whatever address it lands on.
-        var attempt = url
-        if url.scheme?.lowercased() == "http", var secure = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-            secure.scheme = "https"
-            attempt = secure.url ?? url
-        }
+        // An http:// link is tried as https:// first (`fetchPreferringHTTPS`),
+        // and Hister keeps whatever address it lands on.
         var fetchedPage: PageFetcher.Fetched?
         do {
-            fetchedPage = try await fetch(attempt)
+            fetchedPage = try await PageFetcher.fetchPreferringHTTPS(url, fetch: fetch)
         } catch let error as PageFetcher.SiteError {
             // The site's own error page (404, a bot check) is never saved as the page.
             return .failed(error.message)
-        } catch {
-            if attempt != url {
-                do { fetchedPage = try await fetch(url) } catch let error as PageFetcher.SiteError { return .failed(error.message) } catch {}
-            }
-        }
+        } catch {}
         guard let fetched = fetchedPage else {
             if Task.isCancelled { return .cancelled }
             return .failed(url.scheme?.lowercased() == "http"
@@ -228,9 +260,11 @@ extension Saver {
         } catch .cancelled where Task.isCancelled {
             return .cancelled
         } catch .unreachable, .untrusted, .plainHTTP, .cancelled {
-            return queue(page, in: outbox) == .queued ? .queued : .failed("Hister is out of reach, and the page couldn't be kept for later.")
+            let kept = queue(page, in: outbox)
+            return kept == .queued ? .queued : .failed(kept.message)
         } catch .server(let status, _) where status >= 500 || status == 429 {
-            return queue(page, in: outbox) == .queued ? .queued : .failed("Hister is out of reach, and the page couldn't be kept for later.")
+            let kept = queue(page, in: outbox)
+            return kept == .queued ? .queued : .failed(kept.message)
         } catch {
             return .failed(error.saveMessage)
         }
@@ -249,7 +283,7 @@ extension Saver {
     ) async -> LinkOutcome {
         guard let smallweb else { return .failed("Needs the small-web gateway (Settings → Search).") }
         let forms = Array(Set([link.url, SaveLinks.smallWebKey(link.url)]))
-        if !(await client.savedLabels(for: forms)).isEmpty { return .alreadyInHister }
+        if let held = await heldOutcome(forms: forms, client: client) { return held }
         for attempt in 0..<4 {
             do {
                 return .viaGateway(try await smallweb.save(link.url))

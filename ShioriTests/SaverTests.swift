@@ -122,4 +122,73 @@ struct SaverTests {
                                        fetch: { _ in Issue.record("fetched a private note"); throw URLError(.cancelled) })
         #expect(outcome == .rejected("A note from another vault stays in Kura."))
     }
+    @Test func onlyAWebPageIsSavedNeverAFile() async {
+        StubProtocol.handle(Self.host) { _ in (201, Data()) }
+        for raw in ["file:///etc/hosts", "ftp://example.com/file", "shiori://settings"] {
+            let other = Saver.Input(url: URL(string: raw)!, title: nil, html: nil, text: nil)
+            let outcome = await Saver.save(other, label: nil, via: "shortcut", client: client, outbox: outbox,
+                                           fetch: { _ in Issue.record("fetched \(raw)"); throw URLError(.cancelled) })
+            #expect(outcome == .rejected("Only web pages (http or https) can be saved."))
+        }
+        #expect(StubProtocol.requests(Self.host).isEmpty)
+        #expect(outbox.status().count == 0)
+    }
+
+    @Test func aPlainHTTPLinkIsTriedAsHTTPSFirst() async throws {
+        StubProtocol.handle(Self.host) { _ in (201, Data()) }
+        let link = Saver.Input(url: URL(string: "http://short.example/x")!, title: nil, html: nil, text: nil)
+        let asked = Asked()
+        let outcome = await Saver.save(link, label: nil, via: "share", client: client, outbox: outbox, fetch: { url in
+            asked.add(url.absoluteString)
+            return PageFetcher.Fetched(url: url.absoluteString, title: "X", html: "<p>x</p>")
+        })
+        #expect(outcome == .saved)
+        #expect(asked.all == ["https://short.example/x"])
+        let body = try JSONSerialization.jsonObject(with: try #require(StubProtocol.requests(Self.host).first?.httpBody)) as? [String: Any]
+        #expect(body?["url"] as? String == "https://short.example/x")
+    }
+
+    @Test func noHTTPSFallsBackToTheAddressGiven() async {
+        StubProtocol.handle(Self.host) { _ in (201, Data()) }
+        let link = Saver.Input(url: URL(string: "http://old.example/x")!, title: nil, html: nil, text: nil)
+        let asked = Asked()
+        let outcome = await Saver.save(link, label: nil, via: "share", client: client, outbox: outbox, fetch: { url in
+            asked.add(url.absoluteString)
+            if url.scheme == "https" { throw URLError(.cannotConnectToHost) }
+            return PageFetcher.Fetched(url: url.absoluteString, title: "X", html: "<p>x</p>")
+        })
+        #expect(outcome == .saved)
+        #expect(asked.all == ["https://old.example/x", "http://old.example/x"])
+    }
+
+    @Test func aLinkThatWontDownloadWaitsAndIsNeverSentEmpty() async throws {
+        StubProtocol.handle(Self.host) { _ in (201, Data()) }
+        let link = Saver.Input(url: URL(string: "https://down.example/page")!, title: nil, html: nil, text: nil)
+        let outcome = await Saver.save(link, label: nil, via: "share", client: client, outbox: outbox,
+                                       fetch: { _ in throw URLError(.timedOut) })
+        guard case .waiting = outcome else {
+            Issue.record("Expected waiting, got \(outcome)")
+            return
+        }
+        #expect(StubProtocol.requests(Self.host).isEmpty)
+        let kept = try #require(outbox.pages.first)
+        #expect(kept.url == "https://down.example/page")
+        #expect((kept.html ?? "").isEmpty)
+    }
+
+    @Test func signedOutWaitsForASignInNotForHister() async {
+        StubProtocol.handle(Self.host) { _ in (401, Data()) }
+        let outcome = await Saver.save(input, label: nil, via: "share", client: client, outbox: outbox)
+        #expect(outcome == .waiting(Saver.waitingForSignIn))
+        #expect(!outcome.message.contains("out of reach"))
+        #expect(outbox.status().count == 1)
+    }
+}
+
+/// What a fetch was asked for, from its @Sendable closure.
+nonisolated private final class Asked: @unchecked Sendable {
+    private let lock = NSLock()
+    private var urls: [String] = []
+    func add(_ url: String) { lock.withLock { urls.append(url) } }
+    var all: [String] { lock.withLock { urls } }
 }

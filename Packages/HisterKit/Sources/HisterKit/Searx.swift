@@ -207,6 +207,8 @@ extension HisterClient {
     /// kept), in a few searches: url:(a|a/|b|…) in batches short enough to
     /// send (`lookupQueries`). URLs with ( ) | or spaces can't go in the
     /// alternation and are skipped.
+    /// Best effort (a failed search marks nothing): for marks on results,
+    /// never for deciding whether to save (`heldLabels`).
     public func savedLabels(for urls: [String]) async -> [String: String] {
         let queries = Self.lookupQueries(urls)
         guard !queries.isEmpty else { return [:] }
@@ -214,12 +216,40 @@ extension HisterClient {
             for query in queries { group.addTask { try? await search(query, limit: 100) } }
             return await group.reduce(into: [SearchPage]()) { if let page = $1 { $0.append(page) } }
         }
+        return Self.labels(in: pages)
+    }
+
+    /// The same, but a search that fails throws rather than reading as
+    /// "not held" (`api/add` would replace a stored page's metadata). URLs
+    /// `lookupQueries` can't take are left out: ask `holds` for those.
+    public func heldLabels(for urls: [String]) async throws(HisterError) -> [String: String] {
+        let queries = Self.lookupQueries(urls)
+        guard !queries.isEmpty else { return [:] }
+        do {
+            let pages = try await withThrowingTaskGroup(of: SearchPage.self) { group in
+                for query in queries { group.addTask { try await search(query, limit: 100) } }
+                return try await group.reduce(into: [SearchPage]()) { $0.append($1) }
+            }
+            return Self.labels(in: pages)
+        } catch let error as HisterError {
+            throw error
+        } catch {
+            throw .cancelled
+        }
+    }
+
+    private static func labels(in pages: [SearchPage]) -> [String: String] {
         var labels: [String: String] = [:]
         for d in pages.flatMap(\.documents) {
             labels[d.url] = d.label
             labels[d.url.hasSuffix("/") ? String(d.url.dropLast()) : d.url + "/"] = d.label
         }
         return labels
+    }
+
+    /// Whether `lookupQueries` can put this URL in a search.
+    public static func lookupTakes(_ url: String) -> Bool {
+        !url.isEmpty && url.rangeOfCharacter(from: CharacterSet(charactersIn: "()|\"").union(.whitespacesAndNewlines)) == nil
     }
 
     /// A query's longest: a proxy in front of Hister (the hosted pages'
@@ -233,7 +263,7 @@ extension HisterClient {
     public static func lookupQueries(_ urls: [String], max: Int = lookupMax) -> [String] {
         var pairs: [[String]] = []
         var seen = Set<String>()
-        for u in urls where !u.isEmpty && u.rangeOfCharacter(from: CharacterSet(charactersIn: "()|\"").union(.whitespacesAndNewlines)) == nil {
+        for u in urls where lookupTakes(u) {
             let other = u.hasSuffix("/") ? String(u.dropLast()) : u + "/"
             let fresh = [u, other].filter { seen.insert($0).inserted }
             if !fresh.isEmpty { pairs.append(fresh) }

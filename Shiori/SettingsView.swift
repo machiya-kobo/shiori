@@ -701,8 +701,10 @@ private struct WaitingSection: View {
                     Task { await app.sendWaiting() }
                 }
                 .disabled(app.isSending)
-                if app.sendStopped, !app.isSending {
-                    Label("Hister didn't answer, so these are still waiting. They'll go when it's reachable.",
+                if let stop = app.sendStop, !app.isSending {
+                    Label(stop == .signedOut
+                          ? "Hister wants you signed in, so these are still waiting. They'll go once you sign in."
+                          : "Hister didn't answer, so these are still waiting. They'll go when it's reachable.",
                           systemImage: "exclamationmark.triangle")
                         .textStyle(.footnote)
                         .foregroundStyle(palette.secondaryText)
@@ -714,6 +716,34 @@ private struct WaitingSection: View {
             Text("Pages keep the time you saved them. Safari's go out as you browse once Hister is reachable; the rest when Shiori opens.")
         }
         .onAppear { app.refreshWaiting() }
+        if !waiting.notSaved.isEmpty {
+            Section {
+                ForEach(waiting.notSaved) { page in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(page.title.isEmpty ? (page.url.isEmpty ? "A Page" : page.url) : page.title)
+                            .textStyle(.body)
+                            .foregroundStyle(palette.text)
+                            .lineLimit(2)
+                        if !page.title.isEmpty, !page.url.isEmpty {
+                            Text(page.url)
+                                .textStyle(.caption)
+                                .foregroundStyle(palette.secondaryText)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        Text("\(page.reason) · \(page.date.formatted(.relative(presentation: .named)))")
+                            .textStyle(.footnote)
+                            .foregroundStyle(palette.secondaryText)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                Button("Clear", role: .destructive) { app.clearNotSaved() }
+            } header: {
+                Text("Not Saved")
+            } footer: {
+                Text("Waiting pages Shiori gave up on, and why.")
+            }
+        }
     }
 
     private func describe(_ count: Int, oldest: Date?) -> String {

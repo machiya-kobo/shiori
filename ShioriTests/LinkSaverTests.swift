@@ -175,6 +175,16 @@ struct LinkSaverTests {
         #expect(StubProtocol.requests(Self.gateway).isEmpty)
     }
 
+    @Test func aGeminiLookupThatFailsIsNeverReadAsNotHeld() async {
+        // The search fails: nothing goes to the gateway.
+        StubProtocol.handle(Self.host) { _ in (502, Data()) }
+        let gateway = smallweb([(202, "{}")])
+        if case .failed = await Saver.saveLink(gemini, label: nil, anyway: false, client: client, outbox: outbox, smallweb: gateway, wait: noWait) {} else {
+            Issue.record("a failed lookup must not hand the link to the gateway")
+        }
+        #expect(StubProtocol.requests(Self.gateway).isEmpty)
+    }
+
     @Test func aFullGatewayIsWaitedOut() async {
         hister()
         let gateway = smallweb([(429, "{}"), (429, "{}"), (202, #"{"queued": true, "url": "gemini://example.org/log/"}"#)])
