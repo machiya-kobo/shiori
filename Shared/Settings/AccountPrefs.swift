@@ -11,8 +11,8 @@ import os
 /// answer is merged by the contract's rules (`PrefsSync.sync`), written to
 /// the App Group, and what the account lacks is sent. A change made in
 /// Safari's results page is in the App Group too, so it's picked up the same
-/// way. Failures are silent: the App Group stays the first-paint and offline
-/// copy, and Settings' state line says so.
+/// way. Failures are quiet (logged, never a popup): the App Group stays the
+/// first-paint and offline copy, and Settings' state line says so.
 enum AccountPrefs {
     enum State: Equatable {
         /// No sign-in on this device (and no Hister token): nothing follows.
@@ -233,16 +233,29 @@ enum AccountPrefs {
             // The credential never follows a redirect anywhere.
             let (data, response) = try await session.data(for: request, delegate: NoRedirects())
             guard let http = response as? HTTPURLResponse else { return .failed(.unavailable) }
+            // What went wrong is logged by status or field names, never a
+            // value: those are the person's settings.
+            let method = request.httpMethod ?? "GET"
             switch http.statusCode {
             case 200:
-                guard let wire = try? JSONDecoder().decode(Wire.self, from: data) else { return .failed(.unavailable) }
+                guard let wire = try? JSONDecoder().decode(Wire.self, from: data) else {
+                    log.error("Account settings reply didn't decode")
+                    return .failed(.unavailable)
+                }
                 return .ok(PrefsSync.Snapshot(rev: wire.rev, prefs: wire.prefs ?? [:], updated: wire.updated ?? [:]))
             case 304: return .unchanged
-            case 400: return .refused
-            case 401: return .failed(.signInNeeded)
-            default: return .failed(.unavailable)
+            case 400:
+                log.notice("Account settings \(method, privacy: .public) refused (400)")
+                return .refused
+            case 401:
+                log.notice("Account settings \(method, privacy: .public): sign in again (401)")
+                return .failed(.signInNeeded)
+            default:
+                log.error("Account settings \(method, privacy: .public) failed: status \(http.statusCode, privacy: .public)")
+                return .failed(.unavailable)
             }
         } catch {
+            log.error("Account settings unreachable: \((error as? URLError)?.code.rawValue ?? 0, privacy: .public)")
             return .failed(.unavailable)
         }
     }

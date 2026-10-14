@@ -169,14 +169,26 @@ struct AccountPrefsTests {
 
     /// Against a real helper (read and write), only when PREFS_LIVE_URL (Hister's
     /// host) and PREFS_LIVE_TOKEN_FILE (a dev Hister token) are set: never the
-    /// owner's own. Cleans up the keys it wrote.
+    /// owner's own. Puts back only what it changed, as it was before.
     @Test(.enabled(if: ProcessInfo.processInfo.environment["PREFS_LIVE_URL"] != nil))
     func theLiveHelperTakesAndGives() async throws {
         let env = ProcessInfo.processInfo.environment
         let base = try #require(URL(string: env["PREFS_LIVE_URL"]!))
         let token = try String(contentsOfFile: try #require(env["PREFS_LIVE_TOKEN_FILE"]), encoding: .utf8)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let live = UserDefaults(suiteName: "prefs-live-\(UUID().uuidString)")!
+        // The account as it was, read on the helper's own session (no
+        // redirect followed: the request carries the token).
+        func prefs() async throws -> [String: String] {
+            let request = AccountPrefs.request(base: base, credential: .token(token), method: "GET")
+            let (data, response) = try await AccountPrefs.session.data(for: request)
+            #expect((response as? HTTPURLResponse)?.statusCode == 200)
+            let object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+            return (object["prefs"] as? [String: String]) ?? [:]
+        }
+        let before = try await prefs()
+        let suite = "prefs-live-\(UUID().uuidString)"
+        let live = UserDefaults(suiteName: suite)!
+        defer { live.removePersistentDomain(forName: suite) }
         live.set("night", forKey: "theme")
         live.set(false, forKey: "showRelated")
         // First contact: the account's blanks filled with this device's values.
@@ -189,13 +201,21 @@ struct AccountPrefsTests {
         let snapshot = try JSONDecoder().decode(PrefsSync.Snapshot.self, from: seen)
         #expect(snapshot.prefs["theme"] == "day")
         #expect(snapshot.prefs["shiori.show_related"] == "off")
-        // Clean up: every key this test may have written goes.
-        var request = AccountPrefs.request(base: base, credential: .token(token), method: "PUT")
-        let keys = Array(snapshot.prefs.keys)
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["prefs": Dictionary(uniqueKeysWithValues: keys.map { ($0, NSNull()) })])
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let (_, response) = try await URLSession.shared.data(for: request)
-        #expect((response as? HTTPURLResponse)?.statusCode == 200)
+        // Clean up: each key whose value moved goes back to what it was
+        // (or away, if it wasn't there); the rest are left alone.
+        let after = try await prefs()
+        var restore: [String: Any] = [:]
+        for key in Set(after.keys).union(before.keys) where after[key] != before[key] {
+            restore[key] = before[key].map { $0 as Any } ?? NSNull()
+        }
+        if !restore.isEmpty {
+            var request = AccountPrefs.request(base: base, credential: .token(token), method: "PUT")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["prefs": restore])
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            let (_, response) = try await AccountPrefs.session.data(for: request)
+            #expect((response as? HTTPURLResponse)?.statusCode == 200)
+        }
+        #expect(try await prefs() == before)
     }
 
     @Test func anUnknownValueIsNeverTaken() async {

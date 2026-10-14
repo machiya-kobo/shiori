@@ -1,5 +1,11 @@
 {
   "$comment": "Cases for the preferences twins: S.prefsSync (search-core.js) and HisterKit's PrefsSync, both run every one. The contract: machiya docs/contracts/prefs.md (client rules).",
+  "followingFlags": [
+    "combinedSearch", "showInfobox", "showRelated", "showThumbnails", "histerInGeneral", "histerTab",
+    "vaultInGeneral", "vaultTab", "webResults", "searchHistory", "previewImages", "rememberOpened",
+    "searchFilters", "foldRepeats", "labelSuggestions", "showOpened", "smallWebTab"
+  ],
+  "deviceFlags": ["semanticSearch", "previewPane", "aiAnswer"],
   "sync": [
     {
       "name": "the account's value wins on a first contact",

@@ -54,7 +54,10 @@ From a fresh clone (`git clone --recurse-submodules`; or `git submodule update -
   - Haiku UI: `haiku/tests/ui-run.sh` on a Haiku machine, against
     `haiku/fake-services.py`. Classic: `classic/docs/TESTING.md`.
   - `HISTER_LIVE_URL` and `KURA_LIVE_URL` add read-only checks against
-    real servers. `tests/test_private_names.py` scans tracked files for the
+    real servers. Two write, so point them only at a throwaway Hister:
+    `HISTER_USERS_URL` (with `HISTER_USERS_NAME` and `HISTER_USERS_PASSWORD`:
+    a login, then a logout) and `PREFS_LIVE_URL` (with `PREFS_LIVE_TOKEN_FILE`,
+    a dev token: account settings, put back as they were). `tests/test_private_names.py` scans tracked files for the
     names listed in `~/.config/machiya/private-names` (skipped without it).
 - **Never test a write against a live Hister.** Use the stubs in the tests,
   `linux/fake-hister.py`, or a throwaway Hister. Reads against your own are fine.

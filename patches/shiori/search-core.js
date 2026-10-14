@@ -2360,7 +2360,14 @@
   // the results' options (never an address, an AI setting or a device's own).
   // Read when called: the page settings' lists are declared further down.
   // Not the AI Answer switch (AI stays on the device), nor this device's pane or search mode.
-  const shioriFlags = () => PAGE_FLAG_KEYS.filter((k) => !['semanticSearch', 'previewPane', 'aiAnswer'].includes(k));
+  // Listed, not "every flag but": a new switch stays on the device until it's
+  // added here and in PrefsSync.flags (prefs-sync-cases.json's followingFlags).
+  const PREFS_SHIORI_FLAGS = [
+    'combinedSearch', 'showInfobox', 'showRelated', 'showThumbnails', 'histerInGeneral', 'histerTab',
+    'vaultInGeneral', 'vaultTab', 'webResults', 'searchHistory', 'previewImages', 'rememberOpened',
+    'searchFilters', 'foldRepeats', 'labelSuggestions', 'showOpened', 'smallWebTab',
+  ];
+  const shioriFlags = () => PREFS_SHIORI_FLAGS;
   const shioriChoices = () => ({ resultStyle: PAGE_CHOICES.resultStyle, smallWebOpen: PAGE_CHOICES.smallWebOpen });
   const PREFS_SHIORI_COUNTS = ['histerCount', 'vaultCount'];
   const snake = (key) => key.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase());

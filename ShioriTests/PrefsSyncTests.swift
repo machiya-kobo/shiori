@@ -76,6 +76,15 @@ struct PrefsSyncTests {
         for (key, value) in PrefsSync.accountValues(sample) { #expect(PrefsSync.valid(key, value), "\(key)=\(value)") }
     }
 
+    @Test func theSwitchesThatFollowThePersonAreAFixedList() throws {
+        let cases = try Self.json("prefs-sync-cases.json")
+        let following = try #require(cases["followingFlags"] as? [String])
+        let device = try #require(cases["deviceFlags"] as? [String])
+        #expect(PrefsSync.flags == following)
+        // A new switch fails here until it's put in one list or the other.
+        #expect(SharedSettings.flagKeys.sorted() == (following + device).sorted())
+    }
+
     @Test func theAccountsValuesComeBackAsSettings() {
         let local = PrefsSync.localValues(["theme": "night", "shiori.show_infobox": "off", "shiori.hister_count": "10", "palette": nil])
         #expect(local["theme"] as? String == "night")

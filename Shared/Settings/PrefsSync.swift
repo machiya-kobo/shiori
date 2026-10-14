@@ -17,9 +17,17 @@ enum PrefsSync {
     /// Shiori's own settings that follow the person, as `shiori.<snake_case>`:
     /// the results' options. Never an address, an AI setting (AI Answer
     /// included) or this device's own (the preview pane, the search mode).
-    static var flags: [String] {
-        SharedSettings.flagKeys.filter { !["semanticSearch", "previewPane", "aiAnswer"].contains($0) }
-    }
+    /// Listed, not "every flag but": a new switch stays on this device until
+    /// it's added here (and to search-core's twin; prefs-sync-cases.json's
+    /// `followingFlags` holds both to the same list).
+    static let flags = [
+        SharedSettings.Key.combinedSearch, SharedSettings.Key.showInfobox, SharedSettings.Key.showRelated,
+        SharedSettings.Key.showThumbnails, SharedSettings.Key.histerInGeneral, SharedSettings.Key.histerTab,
+        SharedSettings.Key.vaultInGeneral, SharedSettings.Key.vaultTab, SharedSettings.Key.webResults,
+        SharedSettings.Key.searchHistory, SharedSettings.Key.previewImages, SharedSettings.Key.rememberOpened,
+        SharedSettings.Key.searchFilters, SharedSettings.Key.foldRepeats, SharedSettings.Key.labelSuggestions,
+        SharedSettings.Key.showOpened, SharedSettings.Key.smallWebTab,
+    ]
     static let counts = [SharedSettings.Key.histerCount, SharedSettings.Key.vaultCount]
     static let choices: [String: [String]] = [
         SharedSettings.Key.resultStyle: SharedSettings.resultStyles,

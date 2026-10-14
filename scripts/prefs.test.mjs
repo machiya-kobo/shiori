@@ -62,6 +62,13 @@ test("Shiori's keys and values are the contract's (prefs.schema.json)", () => {
   for (const [key, value] of Object.entries(plain(sample))) assert.ok(S.prefsValid(key, value), `${key}=${value}`);
 });
 
+test('the switches that follow the person are a fixed list, and every switch is in it or kept on the device', () => {
+  const flags = Object.keys(S.prefsShioriKeys()).filter((k) => S.PAGE_FLAG_KEYS.includes(k));
+  assert.deepEqual(flags, cases.followingFlags);
+  // A new switch fails here until it's put in one list or the other.
+  assert.deepEqual([...S.PAGE_FLAG_KEYS].sort(), [...cases.followingFlags, ...cases.deviceFlags].sort());
+});
+
 test('the account\'s values come back as Shiori\'s settings; a removal is the default', () => {
   assert.deepEqual(plain(S.localValues({ theme: 'night', 'shiori.show_infobox': 'off', 'shiori.hister_count': '10', 'shiori.result_style': 'bar' })),
     { theme: 'night', showInfobox: false, histerCount: 10, resultStyle: 'bar' });
