@@ -5,6 +5,22 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.8.0 (2026-10-13)
+
+- Media: a Media pill for your Jellyfin and Plex libraries and what you
+  played from Koito and Movary, in the apps, the web app and the hosted
+  search page. One card per item says when you played it ("Never Played",
+  "Played 3× · Last Mar 6, 2014") with your rating as stars; filter by
+  kind, never played and rating. Before a search: what's playing, what
+  you played and watched, your top artists, albums and tracks, your
+  watchlist and Recently Added. All shows Your Media's top five. Each
+  service is optional; Shiori only reads them, and nothing of it goes to
+  Hister or any AI (docs/media.md).
+- shiori-web: `/jellyfin/`, `/plex/`, `/koito/` and `/movary/` routes that
+  add the host's own token (`SHIORI_<NAME>_URL`, `SHIORI_<NAME>_TOKEN`).
+- Search page: a beforeunload alone (a link that never leaves, such as a
+  note's Obsidian link) counts as leaving for 3 seconds only.
+
 ## 1.7.2 (2026-10-13)
 
 - Search page: leaving it while the web is still loading (the sign-in, a
