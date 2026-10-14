@@ -67,7 +67,9 @@ public struct HisterClient: Sendable {
     static let log = Logger(subsystem: logSubsystem, category: "network")
 
     /// A session that gives up quickly: the server is only reachable over a
-    /// VPN, and a search should say "unreachable" rather than spin.
+    /// VPN, and a search should say "unreachable" rather than spin. Its
+    /// cache is memory only, never disk: replies hold private notes and
+    /// media history, which never go to a cache on the device.
     public static let defaultSession: URLSession = {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 12
@@ -75,8 +77,17 @@ public struct HisterClient: Sendable {
         config.waitsForConnectivity = false
         config.httpCookieStorage = nil
         config.httpShouldSetCookies = false
+        config.urlCache = memoryCache
         return URLSession(configuration: config)
     }()
+
+    /// The shared session's cache: memory only, for this run.
+    public static let memoryCache = URLCache(memoryCapacity: 16 * 1024 * 1024, diskCapacity: 0)
+
+    /// Empties it (signing out).
+    public static func clearCache() {
+        memoryCache.removeAllCachedResponses()
+    }
 
     /// Returns nil unless `serverURL` is an absolute http(s) URL.
     public init?(

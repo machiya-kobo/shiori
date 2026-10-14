@@ -308,6 +308,7 @@ final class AppState {
         // What was kept for reading offline was this account's.
         OfflineStore.clear()
         SummaryCache.clear()
+        HisterClient.clearCache()
         credentialsChanged()
     }
 
@@ -366,6 +367,7 @@ final class AppState {
         // Kura's notes kept for reading offline came with this sign-in.
         OfflineStore.clear()
         SummaryCache.clear()
+        HisterClient.clearCache()
         machiyaChanged()
     }
 
