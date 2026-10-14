@@ -45,13 +45,16 @@ struct SettingsView: View {
         }
         var symbol: String {
             switch self {
-            case .appearance: "paintbrush"
-            case .search: "magnifyingglass"
-            case .results: "list.bullet.rectangle"
-            case .media: "music.note.tv"
+            // One shape, so the Mac's tabs read the same size: each a
+            // symbol in a circle (Safari's compass is one), AI's sparkles
+            // the one open glyph of the same height.
+            case .appearance: "circle.lefthalf.filled"
+            case .search: "magnifyingglass.circle"
+            case .results: "list.bullet.circle"
+            case .media: "play.circle"
             case .safari: "safari"
             case .ai: "sparkles"
-            case .feeds: "dot.radiowaves.up.forward"
+            case .feeds: "antenna.radiowaves.left.and.right.circle"
             case .account: "person.crop.circle"
             }
         }
