@@ -59,6 +59,15 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
             guard let handler else { throw URLError(.cannotFindHost) }
             let (status, body) = try handler(request)
             let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: fields)!
+            // A 3xx with a Location: offered to the session as a redirect, the
+            // request's headers carried over as URLSession carries custom ones.
+            // The task's delegate decides; refused, the reply itself is the answer.
+            if (300..<400).contains(status), let location = fields?["Location"],
+               let target = URL(string: location, relativeTo: request.url)?.absoluteURL {
+                var next = request
+                next.url = target
+                client?.urlProtocol(self, wasRedirectedTo: next, redirectResponse: response)
+            }
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: body)
             client?.urlProtocolDidFinishLoading(self)

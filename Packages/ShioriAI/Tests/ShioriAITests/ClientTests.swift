@@ -47,7 +47,16 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
         do {
             guard let handler else { throw URLError(.cannotFindHost) }
             let (status, body) = try handler(request)
-            let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
+            // 307 here: a redirect elsewhere, offered to the session (its
+            // delegate decides), the request's headers carried over.
+            let redirect = status == 307 ? String(decoding: body, as: UTF8.self) : nil
+            let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil,
+                                           headerFields: redirect.map { ["Location": $0] })!
+            if let redirect, let target = URL(string: redirect) {
+                var next = request
+                next.url = target
+                client?.urlProtocol(self, wasRedirectedTo: next, redirectResponse: response)
+            }
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: body)
             client?.urlProtocolDidFinishLoading(self)
@@ -262,3 +271,24 @@ let labelSchema: JSONValue = [
         #expect(AIHTTP.errorMessage(from: Data("<html>".utf8)) == nil)
     }
 }
+
+/// The cloud clients' session follows no redirect: its requests carry API
+/// keys (`x-api-key`, `Authorization`), and URLSession strips only the latter.
+@Suite(.serialized)
+struct AIRedirectTests {
+    @Test func anAPIKeyNeverFollowsARedirect() async throws {
+        let from = "ai-redirect.example", elsewhere = "ai-elsewhere.example"
+        StubProtocol.handle(from) { _ in (307, Data("https://\(elsewhere)/v1/messages".utf8)) }
+        StubProtocol.handle(elsewhere) { _ in (200, Data("{}".utf8)) }
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [StubProtocol.self]
+        let session = AIHTTP.session(timeout: 5, configuration: config)
+        var request = URLRequest(url: URL(string: "https://\(from)/v1/messages")!)
+        request.httpMethod = "POST"
+        request.setValue("sk-secret", forHTTPHeaderField: "x-api-key")
+        _ = try? await session.data(for: request)
+        #expect(!StubProtocol.requests(from).isEmpty)
+        #expect(StubProtocol.requests(elsewhere).isEmpty)
+    }
+}
+

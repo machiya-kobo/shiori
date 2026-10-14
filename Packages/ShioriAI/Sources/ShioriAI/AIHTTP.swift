@@ -12,7 +12,11 @@ public enum AIHTTP {
     /// Ephemeral: no cookies, no cache, nothing of a request kept on disk.
     /// Follows no redirect: its requests carry API keys.
     public static func session(timeout: TimeInterval = timeout) -> URLSession {
-        let config = URLSessionConfiguration.ephemeral
+        session(timeout: timeout, configuration: .ephemeral)
+    }
+
+    /// The same on a given configuration (the tests' stubbed one).
+    static func session(timeout: TimeInterval, configuration config: URLSessionConfiguration) -> URLSession {
         config.timeoutIntervalForRequest = timeout
         config.timeoutIntervalForResource = timeout * 2
         return URLSession(configuration: config, delegate: NoRedirects(), delegateQueue: nil)
