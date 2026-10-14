@@ -34,6 +34,11 @@ struct DocumentView: View {
     @State private var pageSummary: PageSummary?
     /// A code document's repo note in Kura (`Repos/<name>.git.md`), when it has one.
     @State private var repoNote: URL?
+    /// The preview's page, built once per change of what goes in it: the
+    /// body runs again on every summary step and render, and a long page's
+    /// HTML (and its image links, a regex over the whole article) cost a
+    /// stutter each time.
+    @State private var previewPage = PreviewPageCache()
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
@@ -90,14 +95,20 @@ struct DocumentView: View {
 
     @ViewBuilder private func content(note: AppState.NoteLinks?) -> some View {
         if let preview {
+            // A note's chip names its vault ("Work vault"), as in the lists.
+            let label = app.label(of: document) == Notes.label
+                ? Notes.vaultChip(of: document.url, vaults: app.kuraVaults).text : app.label(of: document)
+            let images = app.searchPage.previewImages, kura = app.searchPage.niwaURL, css = palette.cssVariables
             PreviewWebView(
-                html: PreviewPage.html(
-                    document: document, preview: preview,
-                    // A note's chip names its vault ("Work vault"), as in the lists.
-                    label: app.label(of: document) == Notes.label
-                        ? Notes.vaultChip(of: document.url, vaults: app.kuraVaults).text : app.label(of: document),
-                    palette: palette,
-                    place: note?.place, images: app.searchPage.previewImages, kura: app.searchPage.niwaURL),
+                html: previewPage.html(
+                    for: PreviewPageCache.Key(
+                        url: document.url, updated: preview.updated, size: preview.contentHTML.utf8.count, title: preview.title,
+                        label: label, palette: css, place: note?.place, images: images, kura: kura)
+                ) {
+                    PreviewPage.html(
+                        document: document, preview: preview, label: label, palette: palette,
+                        place: note?.place, images: images, kura: kura)
+                },
                 baseURL: URL(string: document.url),
                 openLink: { url in
                     if app.searchPage.previewImages, PreviewPage.isImage(url) { enlarged = EnlargedImage(url: url) } else { openURL(url) }
@@ -449,4 +460,33 @@ struct OpenPlace: Identifiable {
     let help: String
     let symbol: String
     let open: () -> Void
+}
+
+/// One built preview page and what it was built from. A class, so the body
+/// can keep it without a state change; the same string comes back while
+/// nothing changed, which also makes the web view's "already loaded" check
+/// a pointer compare.
+final class PreviewPageCache {
+    struct Key: Hashable {
+        var url: String
+        var updated: Date
+        var size: Int
+        var title: String
+        var label: String
+        var palette: String
+        var place: String?
+        var images: Bool
+        var kura: String
+    }
+
+    private var key: Key?
+    private var built = ""
+
+    func html(for key: Key, make: () -> String) -> String {
+        if key != self.key {
+            built = make()
+            self.key = key
+        }
+        return built
+    }
 }
