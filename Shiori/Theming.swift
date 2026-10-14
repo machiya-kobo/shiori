@@ -79,6 +79,16 @@ private struct ThemedBackground: ViewModifier {
 }
 
 extension View {
+    /// Says `text` to VoiceOver when it shows and whenever it changes: a
+    /// result that arrives on its own (an answer, a summary, Test
+    /// Connection, new items) doesn't move VoiceOver's focus to it.
+    func announces(_ text: String) -> some View {
+        onChange(of: text, initial: true) { _, said in
+            guard !said.isEmpty else { return }
+            AccessibilityNotification.Announcement(said).post()
+        }
+    }
+
     /// A larger target to tap than the control draws (toward the 44 points
     /// the HIG asks for): `vertical` and `horizontal` points more on each
     /// side, the layout unchanged. On a Button, or its label.

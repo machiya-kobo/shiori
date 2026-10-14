@@ -114,6 +114,7 @@ struct AIAnswerSection: View {
                 // A declined answer would be declined again.
                 if retry { Button("Try Again") { ask(fresh: true) } }
             }
+            .announces(message)
         case .done(let answer):
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(answer.text.split(separator: "\n").enumerated()), id: \.offset) { _, line in
@@ -142,6 +143,7 @@ struct AIAnswerSection: View {
                     Text(byline(answer))
                         .textStyle(.caption)
                         .foregroundStyle(palette.secondaryText)
+                        .announces("AI answer ready")
                     Spacer()
                     Button("Copy", systemImage: "doc.on.doc") { Pasteboard.copy(answer.text) }
                         .help("Copy the answer")

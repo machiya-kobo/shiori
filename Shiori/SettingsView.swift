@@ -436,12 +436,14 @@ struct SettingsView: View {
             } icon: {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(palette.tint(.green))
             }
+            .announces("Connected: \(total.formatted()) pages")
         case .failed(let message):
             Label {
                 Text(message)
             } icon: {
                 Image(systemName: "xmark.circle.fill").foregroundStyle(palette.danger)
             }
+            .announces(message)
         }
     }
 

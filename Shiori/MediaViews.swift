@@ -697,6 +697,7 @@ struct MediaSettingsPage: View {
                     .textStyle(.callout)
                     .foregroundStyle(works(check) ? palette.tint(.green) : palette.danger)
                     .lineLimit(2)
+                    .announces(text(check, service))
             } else if account == nil {
                 Text((addresses[service] ?? "").isEmpty ? "Not set up" : "Needs a token")
                     .textStyle(.callout)

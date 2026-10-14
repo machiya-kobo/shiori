@@ -342,6 +342,7 @@ private struct SuggestButton: View {
                     Text(result)
                         .textStyle(.caption)
                         .foregroundStyle(palette.secondaryText)
+                        .announces(result)
                 }
             }
             Spacer()

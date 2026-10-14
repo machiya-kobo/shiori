@@ -638,6 +638,7 @@ struct OfflineNote: View {
         .foregroundStyle(palette.secondaryText)
         .help("Try Again")
         .accessibilityHint("Tries your server again")
+        .announces(asOf.offlineAsOf)
     }
 }
 
@@ -660,5 +661,6 @@ struct NewItemsBanner: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint("Shows them at the top of the list")
+        .announces(count == 1 ? "1 new item" : "\(count.formatted()) new items")
     }
 }

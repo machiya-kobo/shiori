@@ -318,18 +318,21 @@ struct AISettingsPage: View {
             } icon: {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(palette.tint(.green))
             }
+            .announces(message)
         case .failed(let message):
             Label {
                 Text(message)
             } icon: {
                 Image(systemName: "xmark.circle.fill").foregroundStyle(palette.danger)
             }
+            .announces(message)
         case .otherModels(let message, let nearest):
             Label {
                 Text(message)
             } icon: {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(palette.tint(.orange))
             }
+            .announces(message)
             ForEach(nearest, id: \.self) { model in
                 Button("Use \(model)") { use(model) }
                     .textStyle(.body, design: .monospaced)

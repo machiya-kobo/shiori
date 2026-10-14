@@ -54,9 +54,11 @@ struct SummaryCard: View {
                 Text(byline(summary))
                     .textStyle(.caption)
                     .foregroundStyle(palette.secondaryText)
+                    .announces("Summary ready")
             case .failed(let message):
                 Text(message)
                     .foregroundStyle(palette.text)
+                    .announces(message)
                 Button("Try Again", action: regenerate)
             }
         }
