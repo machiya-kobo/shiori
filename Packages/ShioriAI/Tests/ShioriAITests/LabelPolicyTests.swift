@@ -129,7 +129,8 @@ import Testing
             corrections: [LabelCorrection(title: "Discord", host: "discord.com", suggested: "tech", chosen: "")],
             content: .page)
         let user = try #require(engine.last).user
-        #expect(user.contains("</page>\nYour labelled pages most like this one:\n- “Sample OS Containers” (docs.os.example): alpha"))
+        #expect(user.contains("</page>\n<filing>\nYour labelled pages most like this one:\n- “Sample OS Containers” (docs.os.example): alpha"))
+        #expect(user.hasSuffix("</filing>"))
         #expect(!user.contains("Not a choice"))
         #expect(user.contains("- “Discord” (discord.com): not tech"))
     }

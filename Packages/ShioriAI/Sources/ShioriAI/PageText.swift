@@ -5,26 +5,64 @@ import Foundation
 public enum PageText {
     public static func plain(fromHTML html: String) -> String {
         var text = html
-        // Whole elements whose text isn't the page's, across lines too ((?s): "." takes a line break).
-        for tag in ["script", "style", "noscript", "svg", "template"] {
-            text = text.replacingOccurrences(
-                of: "(?s)<\(tag)\\b[^>]*>.*?</\(tag)\\s*>", with: " ", options: [.regularExpression, .caseInsensitive])
-        }
-        text = text.replacingOccurrences(of: "(?s)<!--.*?-->", with: " ", options: .regularExpression)
-        // Block ends and breaks become line breaks, list items bullets.
-        text = text.replacingOccurrences(of: "<li\\b[^>]*>", with: "\n• ", options: [.regularExpression, .caseInsensitive])
-        text = text.replacingOccurrences(
-            of: "<(br|/p|/div|/h[1-6]|/li|/tr|/blockquote|/pre|/section|/article|/header|/footer|hr)\\b[^>]*>",
-            with: "\n", options: [.regularExpression, .caseInsensitive])
-        text = text.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        for (pattern, template) in markup { text = pattern.replace(in: text, with: template) }
         text = decodeEntities(text)
-        // Tidy: runs of spaces to one, three or more line breaks to two.
-        text = text.replacingOccurrences(of: "[ \\t\\u{00A0}]+", with: " ", options: .regularExpression)
-        text = text.replacingOccurrences(of: " *\\n *", with: "\n", options: .regularExpression)
-        text = text.replacingOccurrences(of: "\\n{3,}", with: "\n\n", options: .regularExpression)
-        // A list's items one to a line.
-        text = text.replacingOccurrences(of: "\\n+• ", with: "\n• ", options: .regularExpression)
+        for (pattern, template) in spacing { text = pattern.replace(in: text, with: template) }
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Compiled once: a labelling run converts a page per request, and
+    /// `replacingOccurrences(options: .regularExpression)` compiled each of
+    /// these on every call.
+    private static let markup: [(NSRegularExpression, String)] = {
+        // Whole elements whose text isn't the page's, across lines too (dot matches line breaks).
+        var rules = ["script", "style", "noscript", "svg", "template"].map {
+            (pattern("<\($0)\\b[^>]*>.*?</\($0)\\s*>", [.caseInsensitive, .dotMatchesLineSeparators]), " ")
+        }
+        rules.append((pattern("<!--.*?-->", [.dotMatchesLineSeparators]), " "))
+        // Block ends and breaks become line breaks, list items bullets.
+        rules.append((pattern("<li\\b[^>]*>", [.caseInsensitive]), "\n• "))
+        rules.append((pattern(
+            "<(br|/p|/div|/h[1-6]|/li|/tr|/blockquote|/pre|/section|/article|/header|/footer|hr)\\b[^>]*>",
+            [.caseInsensitive]), "\n"))
+        rules.append((pattern("<[^>]+>"), ""))
+        return rules
+    }()
+
+    /// Tidy: runs of spaces to one, three or more line breaks to two, a
+    /// list's items one to a line.
+    private static let spacing: [(NSRegularExpression, String)] = [
+        (pattern("[ \\t\\u00A0]+"), " "),
+        (pattern(" *\\n *"), "\n"),
+        (pattern("\\n{3,}"), "\n\n"),
+        (pattern("\\n+• "), "\n• "),
+    ]
+
+    static func pattern(_ text: String, _ options: NSRegularExpression.Options = []) -> NSRegularExpression {
+        try! NSRegularExpression(pattern: text, options: options)
+    }
+
+    /// An engine's budget (characters, at about 2.5 a token) for this text:
+    /// smaller for scripts that take a token or so a character (Chinese,
+    /// Japanese, Korean, Thai) or about two (Arabic, Hebrew, Devanagari),
+    /// which overflowed Apple Intelligence's 4K context at the Latin rate.
+    /// Measured on the first few thousand characters.
+    public static func budget(_ budget: Int, for text: String) -> Int {
+        var weight = 0.0
+        var count = 0
+        for scalar in text.unicodeScalars.prefix(4_000) where !scalar.properties.isWhitespace {
+            count += 1
+            switch scalar.value {
+            case 0x0E00...0x0EFF, 0x1100...0x11FF, 0x2E80...0x9FFF, 0xAC00...0xD7AF, 0xF900...0xFAFF, 0xFF00...0xFFEF, 0x20000...0x3FFFF:
+                weight += 2.5
+            case 0x0590...0x08FF, 0x0900...0x0DFF:
+                weight += 1.25
+            default:
+                weight += 1
+            }
+        }
+        guard count > 0 else { return budget }
+        return max(1_000, Int(Double(budget) / (weight / Double(count))))
     }
 
     /// At most `limit` characters, cut at a paragraph or sentence or word
@@ -91,5 +129,12 @@ public enum PageText {
             index = text.index(after: amp)
         }
         return out + text[index...]
+    }
+}
+
+extension NSRegularExpression {
+    /// Every match replaced with `template` (no `$` references in Shiori's).
+    func replace(in text: String, with template: String) -> String {
+        stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: template)
     }
 }

@@ -8,11 +8,21 @@ import Foundation
 /// Shiori's own tags delimit the block.
 enum PromptFence {
     static func text(_ text: String, tags: [String]) -> String {
-        guard !tags.isEmpty else { return text }
-        let names = tags.map { NSRegularExpression.escapedPattern(for: $0) }.joined(separator: "|")
-        guard let pattern = try? Regex("(?i)<\\s*/?\\s*(?:\(names))\\s*>") else { return text }
-        return text.replacing(pattern) { match in
-            String(text[match.range]).replacingOccurrences(of: "<", with: "‹").replacingOccurrences(of: ">", with: "›")
+        guard !tags.isEmpty, text.contains("<") else { return text }
+        let names = Set(tags.map { $0.lowercased() })
+        let whole = NSRange(text.startIndex..., in: text)
+        var out = text
+        // Backwards, so earlier ranges stay put as later ones change.
+        for match in tag.matches(in: text, range: whole).reversed() {
+            guard let name = Range(match.range(at: 1), in: text), names.contains(text[name].lowercased()),
+                  let range = Range(match.range, in: out)
+            else { continue }
+            out.replaceSubrange(range, with: out[range].replacingOccurrences(of: "<", with: "‹").replacingOccurrences(of: ">", with: "›"))
         }
+        return out
     }
+
+    /// Any tag-shaped run, compiled once (three prompts' worth of text per
+    /// request went through a fresh regex each time); the name decides.
+    private static let tag = try! NSRegularExpression(pattern: #"<\s*/?\s*([A-Za-z][A-Za-z0-9_-]*)\s*>"#)
 }

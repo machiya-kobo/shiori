@@ -22,6 +22,22 @@ final class RecordingEngine: AIEngine, @unchecked Sendable {
     }
 }
 
+/// Says it's too long for anything over 3,000 characters, though its budget
+/// says 6,000 (a dense script, say).
+final class ShortContextEngine: AIEngine, @unchecked Sendable {
+    let provider = AIProvider.appleIntelligence
+    let inputBudget = 6_000
+    private let lock = NSLock()
+    private var _longest = 0
+    var longest: Int { lock.withLock { _longest } }
+
+    func respond(to request: AIRequest) async throws -> String {
+        if request.user.count > 3_200 { throw AIError.tooLong }
+        lock.withLock { _longest = max(_longest, request.user.count) }
+        return "• a point"
+    }
+}
+
 /// A small engine whose first part's notes hit the cap.
 final class CutPartEngine: AIEngine, @unchecked Sendable {
     let provider = AIProvider.appleIntelligence
@@ -132,6 +148,14 @@ final class CutPartEngine: AIEngine, @unchecked Sendable {
         #expect(!summary.cutShort)
         let again = try JSONDecoder().decode(Summary.self, from: JSONEncoder().encode(Summary(text: "t", provider: .local, partial: true, cutShort: true)))
         #expect(again.cutShort && again.partial)
+    }
+
+    @Test func tooLongIsReadAgainInSmallerParts() async throws {
+        let engine = ShortContextEngine()
+        let text = String(repeating: "Another sentence here. ", count: 200)  // ~4.6K, under the budget
+        let summary = try await Summarizer(chain: EngineChain([engine])).summarize(title: "T", url: "u", text: text, content: .page)
+        #expect(summary.provider == .appleIntelligence)
+        #expect(engine.longest < 4_000)
     }
 
     @Test func theWholeJobMovesToTheNextEngine() async throws {

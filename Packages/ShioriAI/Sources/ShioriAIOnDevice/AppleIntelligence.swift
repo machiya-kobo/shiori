@@ -108,6 +108,8 @@ public struct AppleIntelligenceEngine: AIEngine {
             // Cancelled, not unavailable: no other engine is asked instead.
             throw error
         } catch {
+            // A cancelled generation may surface as the framework's own error.
+            if Task.isCancelled { throw CancellationError() }
             throw Self.mapped(error)
         }
         #else
@@ -162,21 +164,32 @@ public struct AppleIntelligenceEngine: AIEngine {
     }
 
     /// The framework's errors as the engine chain reads them: a refusal or
-    /// guardrail is "declined", a limit or a missing asset "unavailable";
-    /// both let the next engine try. An answer that didn't decode is
+    /// guardrail is "declined"; a rate limit, a busy session, assets away
+    /// or a timeout "busy" (transient: the next engine may try, and a
+    /// labelling run leaves the page for later rather than marking it
+    /// done); anything else "unavailable". An answer that didn't decode is
     /// `badResponse`: shown, not routed around. iOS/macOS 27 throw
-    /// `LanguageModelError`, 26 threw `GenerationError`: both are read.
+    /// `LanguageModelError` and friends, 26 threw `GenerationError`: both
+    /// are read.
     @available(iOS 26, macOS 26, *)
     static func mapped(_ error: Error) -> Error {
-        if #available(iOS 27, macOS 27, *), let error = error as? LanguageModelError {
-            switch error {
-            case .guardrailViolation, .refusal:
-                return AIError.declined(nil)
-            case .contextSizeExceeded:
-                return AIError.tooLong
-            default:
-                return AIError.unavailable("Apple Intelligence: \(error.localizedDescription)")
+        let busy = AIError.busy("Apple Intelligence is busy. Try again in a moment.")
+        if #available(iOS 27, macOS 27, *) {
+            if let error = error as? LanguageModelError {
+                switch error {
+                case .guardrailViolation, .refusal:
+                    return AIError.declined(nil)
+                case .contextSizeExceeded:
+                    return AIError.tooLong
+                case .rateLimited, .timeout:
+                    return busy
+                default:
+                    return AIError.unavailable("Apple Intelligence: \(error.localizedDescription)")
+                }
             }
+            if (error as? LanguageModelSession.Error) == .concurrentRequests || error is SystemLanguageModel.Error { return busy }
+            // The structured answer didn't read.
+            if error is GeneratedContent.ParsingError { return AIError.badResponse }
         }
         if let error = error as? LanguageModelSession.GenerationError {
             switch error {
@@ -187,6 +200,8 @@ public struct AppleIntelligenceEngine: AIEngine {
             case .decodingFailure:
                 // An answer that didn't read is shown, not routed around.
                 return AIError.badResponse
+            case .rateLimited, .concurrentRequests, .assetsUnavailable:
+                return busy
             default:
                 return AIError.unavailable("Apple Intelligence: \(error.localizedDescription)")
             }

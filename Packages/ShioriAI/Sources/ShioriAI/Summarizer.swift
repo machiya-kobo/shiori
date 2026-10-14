@@ -77,7 +77,19 @@ public struct Summarizer: Sendable {
         guard !page.text.isEmpty else { throw AIError.emptyContent }
         let language = Self.language(of: page.text)
         let (result, provider) = try await chain.run(for: content) { engine in
-            try await Self.summarize(title: title, url: url, text: page.text, language: language, content: content, with: engine)
+            // A small context (the device's) sized for the page's script.
+            let budget = engine.inputBudget < SearchAnswerer.smallBudget
+                ? PageText.budget(max(engine.inputBudget, 2_000), for: page.text) : max(engine.inputBudget, 2_000)
+            do {
+                return try await Self.summarize(
+                    title: title, url: url, text: page.text, language: language, content: content, with: engine, budget: budget)
+            } catch AIError.tooLong {
+                // Still more tokens than the budget guessed (a dense script,
+                // a long title): in smaller parts, once, before the next engine.
+                return try await Self.summarize(
+                    title: title, url: url, text: page.text, language: language, content: content, with: engine,
+                    budget: max(budget / 2, 1_000))
+            }
         }
         return Summary(text: Self.tidy(result.text), provider: provider, partial: page.cut || result.partial, cutShort: result.cutShort)
     }
@@ -93,9 +105,10 @@ public struct Summarizer: Sendable {
     }
 
     static func summarize(
-        title: String, url: String, text: String, language: String?, content: AIContent, with engine: any AIEngine
+        title: String, url: String, text: String, language: String?, content: AIContent, with engine: any AIEngine,
+        budget: Int? = nil
     ) async throws -> (text: String, partial: Bool, cutShort: Bool) {
-        let budget = max(engine.inputBudget, 2_000)
+        let budget = budget ?? max(engine.inputBudget, 2_000)
         if text.count <= budget {
             let request = AIRequest(
                 system: Prompts.summary(language), user: Prompts.page(title: title, url: url, text: text), maxTokens: maxTokens,
@@ -144,7 +157,7 @@ public struct Summarizer: Sendable {
         let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
             // Emphasis, which the prompt forbids but the on-device model
             // still writes (*1984*). A "* " bullet has a space; this doesn't.
-            .map { $0.replacingOccurrences(of: #"\*{1,2}([^*\s][^*]*?)\*{1,2}"#, with: "$1", options: .regularExpression) }
+            .map { emphasis.replace(in: $0, with: "$1") }
         func bullet(_ line: String) -> String? {
             for mark in ["• ", "- ", "* ", "•"] where line.hasPrefix(mark) {
                 return "• " + line.dropFirst(mark.count).trimmingCharacters(in: .whitespaces)
@@ -156,6 +169,8 @@ public struct Summarizer: Sendable {
         let opening = lines.prefix { bullet($0) == nil }.joined(separator: " ")
         return ([opening].filter { !$0.isEmpty } + points.prefix(maxPoints)).joined(separator: "\n")
     }
+
+    private static let emphasis = PageText.pattern(#"\*{1,2}([^*\s][^*]*?)\*{1,2}"#)
 
     enum Prompts {
         static func inLanguage(_ language: String?) -> String {

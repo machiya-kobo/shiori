@@ -17,6 +17,11 @@ public enum AIError: Error, Equatable, LocalizedError {
     /// The request didn't fit the model's context (Apple Intelligence's is
     /// 4K tokens): a shorter one may.
     case tooLong
+    /// The engine couldn't answer now but may in a moment (Apple
+    /// Intelligence rate-limited, busy with another request, its assets
+    /// away, timed out): transient, so the next engine may try, and a
+    /// labelling run leaves the page for the next one.
+    case busy(String)
     /// No engine is switched on for this content.
     case noEngine
     /// A plain http:// address, which the system's App Transport Security
@@ -50,6 +55,8 @@ public enum AIError: Error, Equatable, LocalizedError {
             reason.map { "The model declined: \($0)" } ?? "The model declined to answer."
         case .tooLong:
             "The page was too long for the model."
+        case .busy(let reason):
+            reason
         case .noEngine:
             "No AI engine is switched on for this."
         case .plainHTTP:
@@ -72,6 +79,7 @@ public enum AIReachability {
     /// Couldn't get an answer now: no network, busy, a server fault.
     public static func isTransient(_ error: Error) -> Bool {
         if let urlError = error as? URLError { return transientURLCodes.contains(urlError.code) }
+        if case AIError.busy = error { return true }
         if case AIError.badStatus(let code, _) = error { return code == 408 || code == 429 || (500...599).contains(code) }
         return false
     }

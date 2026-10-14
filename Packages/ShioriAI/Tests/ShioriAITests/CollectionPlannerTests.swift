@@ -17,6 +17,9 @@ import Testing
         #expect(AliasValue.adding("two", to: "label:one") == "label:(one|two)")
         #expect(AliasValue.adding("home", to: "label:(home|family)") == nil)
         #expect(AliasValue.adding("x", to: "label:(a|b) domain:c") == nil)
+        // Only a label the value would read back.
+        #expect(AliasValue.adding("c++", to: "label:(a|b)") == nil)
+        #expect(AliasValue.adding("a b", to: "label:a") == nil)
     }
 
     @Test func aPlacementIsOnlyEverAnExistingCollection() async throws {
