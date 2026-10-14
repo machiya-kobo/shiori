@@ -629,6 +629,8 @@ dialog .dialog-body .row { grid-template-columns: minmax(0, 1fr) auto; }
 .settings .group { background: var(--card); border-radius: 12px; overflow: hidden; }
 .settings .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 .settings .item:last-child { border-bottom: 0; }
+.settings .pills-open { width: 100%; font: inherit; color: var(--text); background: transparent; border: 0; border-bottom: 1px solid var(--line); cursor: pointer; text-align: left; }
+.settings .pills-open .value { color: var(--secondary); }
 /* Settings → Pills (S.pillEditor). */
 .settings .pill-editor { list-style: none; margin: 0; padding: 0; }
 .settings .pill-row { justify-content: flex-start; gap: 8px; }

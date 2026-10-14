@@ -1073,7 +1073,7 @@
     ['Pills', [
       { key: 'pillRow', label: 'Pill Row', options: [['auto', 'Automatic'], ['scroll', 'One Row']] },
       { action: 'pills' },
-    ], () => 'Pill Row is this device’s own: Automatic wraps them to another row when they don’t fit, One Row scrolls sideways.'],
+    ], () => 'Automatic wraps them to another row when they don’t fit; One Row scrolls sideways (this device’s own). Pills: their order, and which show.'],
     ['Web', [
       { key: 'webResults', label: 'Web Results' },
       { key: 'showInfobox', label: 'Info Box', needs: 'webResults' },
@@ -1110,6 +1110,8 @@
     ]],
   ];
   const LOOK_KEYS = ['theme', 'palette', 'textSize', 'previewPane', 'pillRow'];
+  // Settings → Pills: whether the pills' editor is open.
+  let pillsOpen = false;
   // What a choice shows while it was never set.
   // Notes From: until chosen, Kura when one is set up (S.notesSource).
   const CHOICE_DEFAULTS = { theme: 'system', palette: 'tokyo-night', notesSource: S.notesSource('', kuraSetUp) };
@@ -1189,7 +1191,23 @@
         let control;
         if (row.action === 'pills') {
           const items = S.PILLS.filter(([key]) => key !== 'opened' && (key !== 'files' || hasFiles) && (key !== 'code' || hasCode) && (key !== 'media' || mediaOn));
-          group.append(
+          // The editor opens in place from one row ("10 of 12 Shown"): a dozen
+          // rows of arrows and switches made Pills the longest group. Open or
+          // shut stays so across the sheet's redraws.
+          const shown = items.filter(([key]) => !(settings.pills || []).includes('-' + key)).length;
+          const label = () => `${shown} of ${items.length} Shown ${pillsOpen ? '⌄' : '›'}`;
+          const value = el('span', { class: 'value' }, label());
+          const opener = el('button', { type: 'button', class: 'setting pills-open', 'aria-expanded': String(pillsOpen) }, el('span', {}, 'Pills'), value);
+          group.append(opener);
+          const editor = el('div', { hidden: !pillsOpen });
+          opener.addEventListener('click', () => {
+            pillsOpen = !pillsOpen;
+            editor.hidden = !pillsOpen;
+            opener.setAttribute('aria-expanded', String(pillsOpen));
+            value.textContent = label();
+          });
+          group.append(editor);
+          editor.append(
             S.pillEditor(items, settings.pills, (next, control) => {
               change({ pills: next });
               // The sheet was redrawn: the keyboard stays on what was used.

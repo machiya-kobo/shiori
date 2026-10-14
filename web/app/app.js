@@ -2705,8 +2705,14 @@ function deviceSizeRows() {
 /** Settings → Pills: their order, and which show (S.pillEditor), redrawn in place. */
 function pillsGroup(group, choice) {
   const items = S.PILLS.filter(([key]) => !['images', 'videos', 'news'].includes(key) && (key !== 'files' || hasLocalFiles));
-  const box = h('div', {});
+  // The editor opens in place from one row ("10 of 12 Shown"): twelve rows of
+  // arrows and switches made the group the longest in Settings.
+  const box = h('div', { class: 'pill-editor-box', hidden: true });
+  const shown = () => items.filter(([key]) => !(settings.pills || []).includes('-' + key)).length;
+  const summary = h('span', { class: 'value' });
+  const opener = h('button', { type: 'button', class: 'item pills-open', 'aria-expanded': 'false' }, h('span', {}, 'Pills'), summary);
   const draw = (focus) => {
+    summary.textContent = `${shown()} of ${items.length} Shown ${box.hidden ? '›' : '⌄'}`;
     box.replaceChildren(S.pillEditor(items, settings.pills, (next, control) => {
       changeSetting('pills', next);
       draw(control);
@@ -2716,9 +2722,14 @@ function pillsGroup(group, choice) {
       (again && !again.disabled ? again : box.querySelector('.switch'))?.focus();
     }
   };
+  opener.addEventListener('click', () => {
+    box.hidden = !box.hidden;
+    opener.setAttribute('aria-expanded', String(!box.hidden));
+    draw();
+  });
   draw();
-  return group('Pills', [choice('pillRow', 'Pill Row', [['auto', 'Automatic'], ['scroll', 'One Row']]), box],
-    'Pill Row is this browser’s own: Automatic wraps them to another row when they don’t fit, One Row scrolls sideways. Then their order, and which show.');
+  return group('Pills', [choice('pillRow', 'Pill Row', [['auto', 'Automatic'], ['scroll', 'One Row']]), opener, box],
+    'Automatic wraps them to another row when they don’t fit; One Row scrolls sideways (this browser’s own). Pills: their order, and which show.');
 }
 
 /**

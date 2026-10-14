@@ -676,6 +676,9 @@ body.pending footer { visibility: hidden; }
   min-height: 44px; padding: 6px 14px; font: -apple-system-body;
 }
 .setting + .setting { border-top: 1px solid var(--line); }
+/* Settings → Pills: the row that opens the pills' editor, a whole-row button. */
+.setting.pills-open { width: 100%; font: inherit; color: var(--text); background: transparent; border: 0; cursor: pointer; text-align: left; }
+.setting.pills-open .value { color: var(--secondary); }
 /* The pills' order and which show (S.pillEditor). */
 .pill-editor { list-style: none; margin: 0; padding: 0; }
 .pill-row { gap: 8px; }
