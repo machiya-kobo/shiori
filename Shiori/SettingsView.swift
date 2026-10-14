@@ -518,6 +518,7 @@ private struct Step: View {
 
 #if os(macOS)
 private struct MacExtensionStatus: View {
+    @Environment(\.palette) private var palette
     @State private var enabled: Bool?
 
     var body: some View {
