@@ -570,6 +570,20 @@ struct MediaShelvesView: View {
             }
             .listStyle(.plain)
             .themedBackground()
+            // A filter that matches nothing: said, with a way back, rather
+            // than an empty list.
+            .overlay {
+                if !filter.isEmpty, Media.filter(everything, filter, now: Int(Date().timeIntervalSince1970)).isEmpty {
+                    ContentUnavailableView {
+                        Label("Nothing Matches These Filters", systemImage: "line.3.horizontal.decrease.circle")
+                    } description: {
+                        Text("Clear a filter to see more.")
+                    } actions: {
+                        Button("Clear Filter") { filter = Media.Filter() }
+                            .buttonStyle(.bordered)
+                    }
+                }
+            }
         }
     }
 

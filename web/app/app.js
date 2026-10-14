@@ -2026,6 +2026,10 @@ async function mediaShelves(container, params) {
     shelf('Watchlist', s.watchlist),
     shelf('Recently Added', s.added),
   ].filter(Boolean);
+  // Shelves there, but the filter matches none of them: say so, as the groups do.
+  if (!shelves.length && everything.length && S.mediaFilter(everything, filter, nowSecs()).length === 0) {
+    return container.replaceChildren(status('Nothing Matches These Filters', 'Clear a filter to see more.'));
+  }
   if (!shelves.length) {
     return container.replaceChildren(status('Nothing Here Yet', res.failures.join(' · ') || 'What you play and watch shows up here.', res.failures.length ? () => mediaShelves(container, params) : null));
   }
