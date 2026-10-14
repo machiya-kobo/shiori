@@ -397,7 +397,11 @@ struct SaveSheet: View {
         saving = false
         guard result != .cancelled else { return }
         outcome = result
-        if result.isKept {
+        // Said aloud: nothing moves VoiceOver's focus to the outcome.
+        AccessibilityNotification.Announcement(result.message).post()
+        // Gone after a moment, unless a screen reader is still reading it:
+        // then Done closes it.
+        if result.isKept, !AppState.voiceOverRunning {
             try? await Task.sleep(for: .seconds(1))
             dismiss()
         }
