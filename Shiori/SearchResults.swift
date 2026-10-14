@@ -73,6 +73,25 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
 /// and (beside a preview pane) the selected page. Owned by `RootView` and
 /// shared by both layouts, so an iPad crossing from three columns to the
 /// tabs (Split View, Stage Manager) keeps it instead of starting over.
+extension View {
+    /// Runs `action` with the field's new text. A modifier of its own, not
+    /// an `onChange(of: session.text)` in a screen's body: that made the
+    /// whole screen (its lists with it) read the text, and redraw on every
+    /// keystroke.
+    func onSessionTextChange(_ action: @escaping (String) -> Void) -> some View {
+        modifier(SessionTextChange(action: action))
+    }
+}
+
+private struct SessionTextChange: ViewModifier {
+    let action: (String) -> Void
+    @Environment(SearchSession.self) private var session
+
+    func body(content: Content) -> some View {
+        content.onChange(of: session.text) { _, new in action(new) }
+    }
+}
+
 @Observable final class SearchSession {
     var text = ""
     /// The search being shown, if any.
@@ -300,6 +319,9 @@ struct ResultsListContainer<Content: View>: View {
     /// banner); 0 never scrolls.
     var topRequests = 0
     var top: StoredPage.ID?
+    /// The rows in order, from the list's data, for j and k; nil: as the
+    /// rows report themselves (`ListOrderKey`).
+    var rows: [StoredPage]?
     @ViewBuilder var content: () -> Content
     @Environment(\.previewSelection) private var selection
     @Environment(\.openURL) private var openURL
@@ -308,8 +330,10 @@ struct ResultsListContainer<Content: View>: View {
 
     @Environment(SearchSession.self) private var session
     @Environment(\.palette) private var palette
-    /// The rows in order, as they report themselves (`ListOrderKey`).
-    @State private var order: [StoredPage] = []
+    /// The rows in order, as they report themselves (`ListOrderKey`),
+    /// when the list doesn't say (`rows`).
+    @State private var reported: [StoredPage] = []
+    private var order: [StoredPage] { rows ?? reported }
     /// The first of a two-key command (gg, dd) and when it was pressed.
     @State private var pending: (key: Character, at: Date)?
     @State private var showingKeys = false
@@ -329,7 +353,7 @@ struct ResultsListContainer<Content: View>: View {
                     content()
                 }
                 .focused($focused)
-                .onPreferenceChange(ListOrderKey.self) { order = $0 }
+                .onPreferenceChange(ListOrderKey.self) { if rows == nil { reported = $0 } }
                 .onKeyPress(phases: .down) { press in viKey(press, selection: selection) }
                 .onChange(of: selection.wrappedValue) { _, new in
                     if let new { withAnimation { proxy.scrollTo(new.id) } }

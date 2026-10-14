@@ -25,6 +25,16 @@ struct NewItemsTests {
         #expect(NewItems.count(fetched, seen: Set(shown.map(\.url)), newestShown: shown.map(\.updated).max()) == 0)
     }
 
+    @Test func itAsksLessOftenWhileNothingChanges() {
+        let first = Duration.seconds(60), most = Duration.seconds(600)
+        func wait(_ s: Int64, _ changed: Bool) -> Duration { NewItems.wait(after: .seconds(s), changed: changed, first: first, most: most) }
+        #expect(wait(60, false) == .seconds(120))
+        #expect(wait(480, false) == .seconds(600))
+        #expect(wait(600, false) == .seconds(600))
+        #expect(wait(600, true) == .seconds(60))
+        #expect(wait(10, false) == .seconds(120))
+    }
+
     @Test func anEmptyListCountsEverythingUnseen() {
         #expect(NewItems.count([page("a", 1), page("b", 2)], seen: [], newestShown: nil) == 2)
     }

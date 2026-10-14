@@ -95,6 +95,8 @@ Loaded when you work in `Shiori/`. The project-wide rules, layout and build/test
   vault's note, a file or code (a copy that turns private is deleted on
   reading); signing out, another token or another user empties it.
 - **Lists watch for new items, never redraw under you**: every 60 s while
-  visible, an open list asks Hister and Kura (never the web) what arrived
+  visible (doubling up to 10 minutes while nothing changes,
+  `NewItems.wait` / `S.newItemsWait`), an open list asks Hister and Kura
+  (never the web) what arrived
   (`ResultsModel.checkForNew`, the web's `watchForNew`); an "N New Items"
   banner with a refresh icon (never an up arrow) reloads on a tap.

@@ -991,7 +991,9 @@ function resultsList(container, options) {
    * newest-first list counts the first page's results it hasn't shown,
    * any other order how much the total grew. The list stays as it is (a
    * place in it isn't lost); a banner says "N New Items", and a click
-   * reloads it and goes to the top. Never the web.
+   * reloads it and goes to the top. Never the web. While nothing
+   * changes it asks less often, up to every ten minutes, and again every
+   * minute once something does.
    */
   function watchForNew() {
     const token = String(Math.random());
@@ -1015,21 +1017,31 @@ function resultsList(container, options) {
       const reply = source === 'notes' ? await notesList(query, { sort, limit: 1, vault: settings.notesVault || 'all' }) : await api.search(query, { sort, limit: 1 });
       return Math.max(0, (reply.total || 0) - firstTotal);
     }
-    const timer = setInterval(async () => {
+    let wait = NEW_ITEMS_POLL_MS;
+    let last = 0;
+    const tick = async () => {
       // A redrawn or departed list stops its own watch.
-      if (!container.isConnected || container.dataset.watch !== token) return clearInterval(timer);
-      if (document.visibilityState !== 'visible' || loading || !list.isConnected) return;
-      const n = await count().catch(() => null);
-      if (n === null || container.dataset.watch !== token) return;
-      banner.textContent = `↻ ${n === 1 ? '1 New Item' : `${n.toLocaleString()} New Items`}`;
-      banner.hidden = n < 1;
-      if (n > 0 && !wrap.isConnected) container.prepend(wrap);
-    }, NEW_ITEMS_POLL_MS);
+      if (!container.isConnected || container.dataset.watch !== token) return;
+      if (document.visibilityState === 'visible' && !loading && list.isConnected) {
+        const n = await count().catch(() => null);
+        if (container.dataset.watch !== token) return;
+        if (n !== null) {
+          banner.textContent = `↻ ${n === 1 ? '1 New Item' : `${n.toLocaleString()} New Items`}`;
+          banner.hidden = n < 1;
+          if (n > 0 && !wrap.isConnected) container.prepend(wrap);
+          wait = S.newItemsWait(wait, n !== last, { first: NEW_ITEMS_POLL_MS, most: NEW_ITEMS_POLL_MAX_MS });
+          last = n;
+        }
+      }
+      setTimeout(tick, wait);
+    };
+    setTimeout(tick, wait);
   }
 }
 
-/** How often an open list asks whether anything arrived (Hister and Kura only). */
+/** How often an open list asks whether anything arrived (Hister and Kura only), at first and at most. */
 const NEW_ITEMS_POLL_MS = 60_000;
+const NEW_ITEMS_POLL_MAX_MS = 10 * 60_000;
 
 // --- Sort · Group · Filter, as the apps' row under the tabs ----------------------
 

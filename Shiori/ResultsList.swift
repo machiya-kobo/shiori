@@ -26,14 +26,18 @@ struct ResultsList<Empty: View>: View {
             // Again when the Kura address changes, for a notes list.
             .task(id: "\(app.serverURL)|\(app.searchPage.niwaURL)|\(app.notesFrom.rawValue)|\(model.source == .notes ? app.notesVault : "")|\(app.searchPage.showOpened)") { await load() }
             .pullToRefresh { await load() }
-            // Every minute while the app is in front and the list is up:
-            // anything new shows as a banner, never by redrawing the list
-            // under you.
+            // Every minute while the app is in front and the list is up,
+            // less often (up to ten minutes) while nothing changes: anything
+            // new shows as a banner, never by redrawing the list under you.
             .task(id: "\(app.serverURL)|\(model.query)") {
+                var wait = Self.pollInterval
                 while !Task.isCancelled {
-                    try? await Task.sleep(for: Self.pollInterval)
+                    try? await Task.sleep(for: wait)
                     guard !Task.isCancelled else { return }
-                    if scenePhase == .active { await model.checkForNew(using: app.client) }
+                    guard scenePhase == .active else { continue }
+                    let before = model.newCount
+                    await model.checkForNew(using: app.client)
+                    wait = NewItems.wait(after: wait, changed: model.newCount != before, first: Self.pollInterval)
                 }
             }
             .overlay(alignment: .top) {
@@ -102,12 +106,50 @@ struct ResultsList<Empty: View>: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .themedBackground()
         default:
-            if visible.isEmpty {
+            // Worked out once per draw (it was filtered four times, and
+            // grouped and folded twice).
+            let shown = Shown(visible: visible, model: model, folds: folds)
+            if shown.visible.isEmpty {
                 empty()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .themedBackground()
             } else {
-                list
+                list(shown)
+            }
+        }
+    }
+
+    /// The rows as drawn: the pages left after deletes, in their groups,
+    /// each group's runs folded or not.
+    private struct Shown {
+        struct Group: Identifiable {
+            let id: String
+            let title: String
+            let pages: [StoredPage]
+            /// The pages with runs of one site folded; nil when nothing folds.
+            let runs: [SiteRuns.Item]?
+        }
+        let visible: [StoredPage]
+        let groups: [Group]
+
+        init(visible: [StoredPage], model: ResultsModel, folds: Bool) {
+            self.visible = visible
+            let sections = model.grouping == .none
+                ? [ResultsModel.Section(id: "all", title: "", pages: visible)] : model.sections(of: visible)
+            groups = sections.map { Group(id: $0.id, title: $0.title, pages: $0.pages, runs: folds ? SiteRuns.items($0.pages) : nil) }
+        }
+
+        /// The pages a reader can land on, in order, for j and k: a folded
+        /// run's only when it's open.
+        func order(unfolded: Set<String>) -> [StoredPage] {
+            groups.flatMap { group -> [StoredPage] in
+                guard let runs = group.runs else { return group.pages }
+                return runs.flatMap { item -> [StoredPage] in
+                    switch item {
+                    case .page(let page): [page]
+                    case .folded(_, let hidden): unfolded.contains(item.id) ? hidden : []
+                    }
+                }
             }
         }
     }
@@ -115,9 +157,9 @@ struct ResultsList<Empty: View>: View {
     /// Grouped by site, a section is one site already: nothing to fold.
     private var folds: Bool { app.searchPage.foldRepeats && model.grouping != .site }
 
-    @ViewBuilder private func rows(_ pages: [StoredPage]) -> some View {
-        if folds {
-            ForEach(SiteRuns.items(pages)) { item in
+    @ViewBuilder private func rows(_ group: Shown.Group) -> some View {
+        if let runs = group.runs {
+            ForEach(runs) { item in
                 switch item {
                 case .page(let document):
                     row(document)
@@ -133,7 +175,7 @@ struct ResultsList<Empty: View>: View {
                 }
             }
         } else {
-            ForEach(pages) { row($0) }
+            ForEach(group.pages) { row($0) }
         }
     }
 
@@ -152,8 +194,13 @@ struct ResultsList<Empty: View>: View {
             .themedBackground()
     }
 
-    private var list: some View {
-        ResultsListContainer(topRequests: topRequests, top: visible.first?.id) {
+    private func list(_ shown: Shown) -> some View {
+        // The order j and k move through, from the data: rows reporting
+        // themselves (`ListOrderKey`) redrew the list as each came on
+        // screen, and named only those a lazy list had made.
+        let opened = app.searchPage.showOpened ? model.opened.map { OpenedSection.page($0, app: app) } : []
+        return ResultsListContainer(topRequests: topRequests, top: shown.visible.first?.id,
+                                    rows: opened + shown.order(unfolded: unfolded)) {
             if let failure = model.refreshFailure {
                 ListFailureRow(text: "Couldn't reload: \(failure.userMessage)") { Task { await load() } }
             }
@@ -164,13 +211,12 @@ struct ResultsList<Empty: View>: View {
                     .listRowBackground(palette.background)
             }
             OpenedSection(model: model)
-            let sections = model.sections(of: visible)
-            if model.grouping == .none {
-                rows(visible)
+            if model.grouping == .none, let all = shown.groups.first {
+                rows(all)
             } else {
-                ForEach(sections) { section in
+                ForEach(shown.groups) { section in
                     Section {
-                        rows(section.pages)
+                        rows(section)
                     } header: {
                         HStack {
                             Text(section.title)
@@ -479,7 +525,19 @@ struct DocumentRow: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Built once per page, snippet and theme, not on every redraw of the row.
     private func attributed(_ snippet: Snippet) -> AttributedString {
+        let key = "\(document.url)\u{1F}\(document.snippetHTML)\u{1F}\(palette.textStyleKey)"
+        if let cached = Self.attributedCache[key] { return cached }
+        let out = makeAttributed(snippet)
+        if Self.attributedCache.count > 500 { Self.attributedCache.removeAll() }
+        Self.attributedCache[key] = out
+        return out
+    }
+
+    private static var attributedCache: [String: AttributedString] = [:]
+
+    private func makeAttributed(_ snippet: Snippet) -> AttributedString {
         var out = AttributedString()
         for run in snippet.runs {
             var piece = AttributedString(run.text)

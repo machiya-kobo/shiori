@@ -113,6 +113,9 @@ public struct Palette: Sendable {
     public var surface: Color { Color(hex: hex.surface) }
     public var raised: Color { Color(hex: hex.raised) }
     public var text: Color { Color(hex: hex.text) }
+    /// Names the colours text is drawn and highlighted in, for a cache of
+    /// text styled with them (two themes can share a colour scheme).
+    public var textStyleKey: String { "\(hex.text)-\(hex.highlight)-\(highlightOpacity)" }
     /// Every text colour here, chips included, is at least 4.5:1 on
     /// `background` (ThemeTests checks).
     /// Secondary text.
