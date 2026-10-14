@@ -55,6 +55,20 @@ struct AISettingsTests {
         #expect(AISettings(from: defaults) == AISettings())
     }
 
+    @Test func noAIKeyOfAnyTypeIsTakenFromThePage() {
+        // Every AI key, with every kind of value a page could send, through
+        // both ways in: a page must never turn AI on or point it anywhere.
+        let values: [Any] = [true, false, 1, "anthropic", "http://evil.example/v1", ["work"]]
+        for key in AISettings.Key.all {
+            for value in values {
+                #expect(!SharedSettings.apply([key: value], to: defaults), "\(key) taken from outside")
+                SharedSettings.applyFromPage([key: value], to: defaults)
+                #expect(defaults.object(forKey: key) == nil, "\(key) written from the page")
+            }
+        }
+        #expect(AISettings(from: defaults) == AISettings())
+    }
+
     @Test func onlyAnHTTPAddressIsALocalServer() {
         var settings = AISettings()
         settings.localURL = "http://server:11434/v1"
