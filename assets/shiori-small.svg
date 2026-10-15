@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-<!-- Shiori icon for favicon sizes (16-48 px): the ribbon and the lens, bold, 32 units in from the edge so nothing touches the tile at 16 px; drawn by scripts/generate-shiori-icons.py (--favicon) -->
+<!-- Shiori icon for favicon sizes (16-48 px): the ribbon and the lens, bold, 32 units in from the edge so nothing touches the tile at 16 px; drawn by scripts/generate-shiori-icons.py with its favicon option -->
 <rect width="512" height="512" rx="112" fill="#1a1b26"/>
 <polygon points="96,48 256,48 256,384 176,312 96,384" fill="#7aa2f7"/>
 <circle cx="300" cy="300" r="70" fill="#1a1b26"/>

@@ -208,7 +208,7 @@ def favicon_svg():
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">\n'
         '<!-- Shiori icon for favicon sizes (16-48 px): the ribbon and the lens, bold, 32 units in from the '
-        'edge so nothing touches the tile at 16 px; drawn by scripts/generate-shiori-icons.py (--favicon) -->\n'
+        'edge so nothing touches the tile at 16 px; drawn by scripts/generate-shiori-icons.py with its favicon option -->\n'
         f'<rect width="512" height="512" rx="{FAV_TILE}" fill="#%02x%02x%02x"/>\n' % FAV_BG
         + f'<polygon points="{poly}" fill="#%02x%02x%02x"/>\n' % FAV_RIBBON
         + f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="#%02x%02x%02x"/>\n' % FAV_BG

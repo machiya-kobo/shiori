@@ -58,6 +58,16 @@ test("both pages' tab icon is the rooms' set: an SVG, an .ico and the touch icon
   assert.match(svg, /<rect width="512" height="512" rx="112" fill="#1a1b26"\/>/);
 });
 
+test('every SVG the repository ships is well-formed XML: a "--" in a comment and a browser draws it broken', () => {
+  const files = execFileSync('git', ['ls-files', '*.svg'], { cwd: repo, encoding: 'utf8' }).split('\n').filter(Boolean);
+  assert.ok(files.length > 0);
+  for (const file of files) {
+    for (const [, inner] of readFileSync(join(repo, file), 'utf8').matchAll(/<!--([\s\S]*?)-->/g)) {
+      assert.ok(!inner.includes('--') && !inner.endsWith('-'), `${file}: a comment holds "--"`);
+    }
+  }
+});
+
 test("every file the pages ship has a Content-Type: nginx has no mime.types, so an unlisted extension is octet-stream", { skip }, () => {
   const x = run(BASE);
   try {
