@@ -5,6 +5,11 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.10.5 (2026-10-15)
+
+- Search page: a preview's text fits its pane in Safari. With the page's
+  Text Size zoom (always on a Mac), the right sixth of the text was cut off.
+
 ## 1.10.4 (2026-10-15)
 
 - Search page: the preview pane lines up with the results, stays under

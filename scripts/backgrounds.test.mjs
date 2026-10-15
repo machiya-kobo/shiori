@@ -254,3 +254,9 @@ test("the preview ends above the corner and fits the window in the zoomed page's
   assert.match(page, /html\.has-bgctl #preview-pane \{ height: calc\(var\(--vh, 100vh\) - var\(--header-h, 0px\) - 90px\); \}/);
   assert.match(read('../web/app/app.css'), /html\.has-bgctl #preview \{ padding-bottom: calc\(74px \+ env\(safe-area-inset-bottom\)\); \}/);
 });
+
+test("the preview's frame stays at zoom 1 and its page takes Text Size's zoom (WebKit cut a sixth off the right)", () => {
+  const js = read('../patches/shiori/search.js');
+  assert.match(js, /if \(frame\) frame\.style\.zoom = z === 1 \? '' : String\(1 \/ z\);/);
+  assert.match(js, /return `:root\{color-scheme:light dark\$\{z === 1 \? '' : `;zoom:\$\{z\}`\}\}/);
+});

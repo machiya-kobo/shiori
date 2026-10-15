@@ -791,10 +791,15 @@
     }
     // A wide table fits the pane, as in the apps (PreviewWebView): smaller
     // text, addresses and code may break anywhere, words stay whole.
+    // Text Size zooms the body, and WebKit lays a frame inside it out at the
+    // zoomed width but draws it zoomed again (a sixth was cut off on the
+    // right at 1.2). So the frame is held at zoom 1 (fitUnits) and its page
+    // takes the zoom itself, which both engines lay out as they draw it.
     function pageCSS() {
       const css = getComputedStyle(document.documentElement);
       const v = (name) => css.getPropertyValue(name).trim();
-      return `:root{color-scheme:light dark}
+      const z = parseFloat(document.body.style.zoom) || 1;
+      return `:root{color-scheme:light dark${z === 1 ? '' : `;zoom:${z}`}}
         body{margin:0;padding:18px 22px 40px;font:-apple-system-body;line-height:1.55;color:${v('--text')};background:${v('--bg')};overflow-wrap:anywhere}
         h1{font:-apple-system-title2;font-weight:700;margin:0 0 .3em}
         .meta{color:${v('--secondary')};font:-apple-system-footnote;margin:0 0 1.2em;padding-bottom:.8em;border-bottom:1px solid ${v('--line')}}
@@ -1663,6 +1668,9 @@
     root.style.setProperty('--z', String(z));
     root.style.setProperty('--vw', `${root.clientWidth / z}px`);
     root.style.setProperty('--vh', `${window.innerHeight / z}px`);
+    // The preview's frame stays at zoom 1; its page zooms itself (previewPane's pageCSS).
+    const frame = document.getElementById('preview-frame');
+    if (frame) frame.style.zoom = z === 1 ? '' : String(1 / z);
     alignField();
   }
 
