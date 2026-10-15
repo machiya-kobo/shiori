@@ -32,9 +32,9 @@
 .bgvid { object-fit: cover; }
 html.has-bg body { background: transparent; }
 
-/* The corner, lower left: Rain and Watch. "On" (rain falling, the page hidden) is the accent ring. */
+/* The corner, lower right: Rain and Watch. "On" (rain falling, the page hidden) is the accent ring. */
 .bgctl {
-  position: fixed; z-index: 20; left: calc(16px + env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom));
+  position: fixed; z-index: 20; right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
   display: flex; gap: 6px; padding: 6px; border-radius: 999px;
   background: color-mix(in srgb, var(--card) 90%, transparent); border: 1px solid var(--line);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 18px rgb(0 0 0 / 0.35);

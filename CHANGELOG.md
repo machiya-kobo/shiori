@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.10.3 (2026-10-15)
+
+- Backgrounds: the Rain and Watch buttons sit in the lower-right corner,
+  where they no longer cover the left edge of the results. On the web app
+  the list scrolls clear of them on a wide window too.
+
 ## 1.10.2 (2026-10-14)
 
 - shiori-web: the nginx base image is updated to the current

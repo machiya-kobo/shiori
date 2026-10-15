@@ -811,7 +811,8 @@ html.has-bg #preview > .status { margin: 16px; border-radius: 14px; }
   html.has-bg #list-column { overflow: clip; }
   html.has-bg #preview-bar:has(.where) { border-radius: 14px; border: 1px solid var(--line); }
   html.has-bg #preview iframe { border-radius: 14px; margin-top: 8px; }
-  html.has-bgctl #sidebar { padding-bottom: 72px; }
+  /* The corner (lower right) sits over the list when no preview is beside it: the last rows scroll clear. */
+  html.has-bgctl #list { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
   html.has-bg dialog.msheet {
     background: color-mix(in srgb, var(--bg) var(--glass-mix), transparent);
     -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);

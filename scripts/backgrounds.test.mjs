@@ -231,3 +231,15 @@ test("the pages and builds carry it: both pages load it, the builds copy it, the
   assert.match(csp, /media-src 'self' blob:/);
   assert.match(csp, /img-src 'self' data: https:;/, 'pictures go as data:, so img-src needs no blob:');
 });
+
+test("the corner is pinned lower right with the safe-area insets, and the lists scroll clear of it", () => {
+  const corner = CSS.match(/\.bgctl \{[^}]*\}/)[0];
+  assert.match(corner, /right: calc\(16px \+ env\(safe-area-inset-right\)\); bottom: calc\(16px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.doesNotMatch(corner, /\bleft:/);
+  // The search page pads its body; the web app pads its list, on a phone past the tab bar too.
+  assert.match(read('../patches/shiori/search.css'), /html\.has-bgctl body:not\(\.home\) \{ padding-bottom: 88px; \}/);
+  const app = read('../web/app/app.css');
+  assert.match(app, /html\.has-bgctl #list \{ padding-bottom: calc\(88px \+ env\(safe-area-inset-bottom\)\); \}/);
+  assert.match(app, /html\.has-bgctl #list \{ padding-bottom: calc\(140px \+ env\(safe-area-inset-bottom\)\); \}/);
+  assert.doesNotMatch(app, /has-bgctl #sidebar/);
+});

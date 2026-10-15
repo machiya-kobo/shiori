@@ -216,7 +216,7 @@
     else if (!reduced()) v.play().catch(() => {});
   });
 
-  // ---- the corner: Rain and Watch, lower left, while a background shows -----------------------------------------
+  // ---- the corner: Rain and Watch, lower right, while a background shows -----------------------------------------
   const RAIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 15a5 5 0 1 1 1.6-9.7A6 6 0 0 1 20 9a4 4 0 0 1-2 7.5H7z"/><path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2"/></svg>';
   const EYE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
   const watching = () => document.documentElement.classList.contains('bg-watching');
