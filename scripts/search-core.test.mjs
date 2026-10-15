@@ -1410,3 +1410,13 @@ test('a page you opened stays in its search, first and once', () => {
     for (const d of got) assert.equal(!!d.opened, lifted.has(d.url) && !c.documents.some((x) => x.url === d.url && !lifted.has(x.url)), c.name);
   }
 });
+
+test('layoutScale: off the Mac a wide window widens the two columns, up to the Mac zoom\'s 1.2', () => {
+  assert.equal(S.layoutScale(1100), 1, 'no room past the columns');
+  assert.equal(S.layoutScale(1344), 1, 'exactly the columns and the margins');
+  assert.equal(S.layoutScale(1440), 1.08);
+  assert.equal(S.layoutScale(1920), 1.2, 'capped at the Mac\'s');
+  assert.equal(S.layoutScale(3840), 1.2);
+  assert.equal(S.layoutScale(1920, 20), 1.18, 'a larger root font needs more room');
+  assert.equal(S.layoutScale(NaN), 1);
+});

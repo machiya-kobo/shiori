@@ -1670,10 +1670,23 @@
     root.style.setProperty('--z', String(z));
     root.style.setProperty('--vw', `${root.clientWidth / z}px`);
     root.style.setProperty('--vh', `${window.innerHeight / z}px`);
+    root.style.setProperty('--ls', String(layoutScale(root.clientWidth / z)));
     // The preview's frame stays at zoom 1; its page zooms itself (previewPane's pageCSS).
     const frame = document.getElementById('preview-frame');
     if (frame) frame.style.zoom = z === 1 ? '' : String(1 / z);
     alignField();
+  }
+
+  /**
+   * How much a wide window widens the two columns (--ls, search.css): on a Mac
+   * the page's zoom (MAC_BASE) already makes them 1.2 times as wide, text and
+   * all. Elsewhere the text already reads at its size, so only the columns
+   * grow, as far as the window has room (40px a side kept), up to the Mac's.
+   */
+  function layoutScale(width) {
+    if (IS_MAC) return 1;
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    return S.layoutScale(width, rem, MAC_BASE);
   }
 
   function pageZoom(textSize) {

@@ -12,6 +12,17 @@
     return /(^|\s)!\S/.test(q || '');
   }
 
+  /**
+   * The wide layout's scale off the Mac: the two columns (76rem, plus 48px of
+   * gap and padding) grow with a window wider than they are, keeping 40px a
+   * side, from 1 to `most` (the Mac's zoom, 1.2), rounded to a hundredth.
+   */
+  function layoutScale(width, rem = 16, most = 1.2) {
+    const room = (Number(width) - 48 - 80) / (76 * (Number(rem) || 16));
+    if (!Number.isFinite(room)) return 1;
+    return Math.round(Math.min(most, Math.max(1, room)) * 100) / 100;
+  }
+
   /** The query for the web search, or '' when it was only Hister syntax. */
   function webQuery(q) {
     return (q || '')
@@ -3867,6 +3878,7 @@
     originalLink,
     elsewhereLinks,
     hasBang,
+    layoutScale,
     webQuery,
     normalizeURL,
     urlLookupQuery,

@@ -137,19 +137,19 @@ body:not(.home) #q:focus { border-color: var(--accent); }
 body:not(.home) .field-button { width: calc(32 * var(--u)); height: calc(32 * var(--u)); right: calc(8 * var(--u)); }
 body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 * var(--u)); }
 @media (min-width: 1100px) {
-  body.two-col, body.with-preview { --body-max: calc(76rem + 48px); }
+  body.two-col, body.with-preview { --body-max: calc(76rem * var(--ls, 1) + 48px); }
   /* From 1100px up the field is in the top row, next to the name and in line
      with the results: its right edge is the results column's, its left edge
      the column's too where the name leaves room (else just after the name).
      --col-l / --col-w / --col-r are the page's own grid: the column, 24px,
-     then the Info card's 28rem (with a preview open, 34rem). */
+     then the Info card's 28rem (with a preview open, 34rem), each times --ls. */
   body:not(.home) {
     --content-w: min(var(--vw) - 24px, var(--body-max) - 24px);
     --col-l: calc((var(--vw) - var(--content-w)) / 2);
     --col-w: var(--content-w);
   }
-  body.two-col:not(.with-preview):not(.home) { --col-w: calc(var(--content-w) - 28rem - 24px); }
-  body.with-preview:not(.home) { --col-w: 34rem; }
+  body.two-col:not(.with-preview):not(.home) { --col-w: calc(var(--content-w) - 28rem * var(--ls, 1) - 24px); }
+  body.with-preview:not(.home) { --col-w: calc(34rem * var(--ls, 1)); }
   body:not(.home) header {
     --col-r: calc(var(--col-l) + var(--col-w));
     grid-template-columns:
@@ -753,10 +753,11 @@ html.dialog-open, html.dialog-open body { overflow: hidden; }
    the card goes back above the results; so it does on a phone. */
 @media (min-width: 1100px) {
   /* Exactly the two columns (plus the gap and the body's padding), so the
-     header above spans them edge to edge. */
-  body.two-col:not(.with-preview) { max-width: calc(48rem + 28rem + 24px + 24px); }
+     header above spans them edge to edge. --ls widens them in a wide window
+     off the Mac (search.js's fitUnits: the Mac's zoom already does). */
+  body.two-col:not(.with-preview) { max-width: calc((48rem + 28rem) * var(--ls, 1) + 24px + 24px); }
   body.two-col:not(.with-preview) > main {
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 28rem);
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, calc(28rem * var(--ls, 1)));
     column-gap: 24px; align-items: start;
   }
   body.two-col:not(.with-preview) > main > * { grid-column: 1; }
@@ -785,8 +786,8 @@ html.dialog-open, html.dialog-open body { overflow: hidden; }
    to the left edge). Inside that, the preview gets the larger share: the
    cards had room to spare and a page read cut off in 28rem. */
 body.with-preview {
-  max-width: calc(48rem + 28rem + 24px + 24px);
-  display: grid; grid-template-columns: minmax(0, 34rem) minmax(0, 1fr); column-gap: 24px;
+  max-width: calc((48rem + 28rem) * var(--ls, 1) + 24px + 24px);
+  display: grid; grid-template-columns: minmax(0, calc(34rem * var(--ls, 1))) minmax(0, 1fr); column-gap: 24px;
   align-items: start;
 }
 /* While a preview is open the Info card steps aside (it had moved above
@@ -892,7 +893,7 @@ body.settling #skeleton { display: block; position: absolute; inset: 0 0 auto 0;
 /* Beside the results only where the Info card goes beside them (the
    phone drew the result placeholders in a sliver). */
 @media (min-width: 1100px) {
-  body.two-col.settling:not(.with-preview) #skeleton { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 28rem); column-gap: 24px; align-items: start; }
+  body.two-col.settling:not(.with-preview) #skeleton { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, calc(28rem * var(--ls, 1))); column-gap: 24px; align-items: start; }
   body.two-col:is([data-cat="general"], [data-cat="web"]) .sk-info { display: block; margin-top: 38px; }
 }
 .sk-line { height: 0.8em; border-radius: 6px; margin: 0.6em 0; background: linear-gradient(90deg, var(--raised) 0%, var(--line) 50%, var(--raised) 100%); background-size: 200% 100%; animation: sk-shimmer 1.2s ease-in-out infinite; }
@@ -1012,7 +1013,7 @@ body.dense .vault-card > .title::before { background: var(--notes); }
 html.has-bg header,
 html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
 html.has-bg body:not(.home) > footer {
-  background: color-mix(in srgb, var(--bg) var(--glass-mix), transparent);
+  background: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under));
   -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
 }
 html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
@@ -1023,16 +1024,16 @@ html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more),
 html.has-bg body.home { position: relative; }
 html.has-bg body.home::before {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: color-mix(in srgb, var(--bg) var(--glass-mix), transparent);
+  background: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under));
   -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
 }
 html.has-bg #preview-pane {
-  background: color-mix(in srgb, var(--card) var(--glass-mix), transparent);
+  background: color-mix(in srgb, var(--card) var(--glass-mix), var(--glass-under));
   -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
 }
 @media (min-width: 761px) {
   html.has-bg #settings.msheet {
-    background: color-mix(in srgb, var(--bg) var(--glass-mix), transparent);
+    background: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under));
     -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
   }
 }
