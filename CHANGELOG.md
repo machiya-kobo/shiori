@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.10.1 (2026-10-14)
+
+- Web app: the installed app's status bar is see-through again, as before
+  1.9.0: the header is plain frost up under the clock and starts 12px
+  below it on an iPhone. Remove the app from the Home Screen and add it
+  again to get it.
+
 ## 1.10.0 (2026-10-14)
 
 - Backgrounds, from annai: 16 animated night scenes (Tokyo, Osaka, Seoul,
