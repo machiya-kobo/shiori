@@ -8,8 +8,18 @@
    darker: the brightest a scene gets under the blur (measured), or a white picture of your own, still leaves every
    colour at 4.5:1. That lets about a twelfth of the scene through; the rest shows around the panels, and the eye in
    the corner shows it whole. A light theme's panels stay solid, since a night scene would only darken them, and so
-   do they where the browser can't blur or the system asks for less transparency. */
-:root { --glass-mix: 50%; --glass-filter: blur(20px) saturate(180%) brightness(0.16); }
+   do they where the browser can't blur or the system asks for less transparency.
+
+   While the background moves (a scene, the rain or a video: html.bg-moving), the glass has no backdrop filter, which
+   the browser would work out again for every frame (more than a core in Firefox on Linux). Its panel is mixed with
+   black at 1 − the brightness instead of with nothing, which lets exactly the same share through, undimmed:
+   half the panel's colour, then 0.92 black over 0.08 of what's behind, the filter's 0.5 × 0.16. Unblurred, so the
+   test holds it against white behind it, as for your own picture. */
+:root { --glass-mix: 50%; --glass-filter: blur(20px) saturate(180%) brightness(0.16); --glass-under: transparent; }
+html.bg-moving { --glass-filter: none; --glass-under: rgb(0 0 0 / 0.84); }
+/* The frosted bars inside the glass (headings, the web app's list bars) saw only their panel while it had a filter;
+   with none they would see the moving layers, so they take the panel's own fill. */
+html.bg-moving { --frost: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under)); --frost-filter: none; }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="night"]) { --glass-mix: 100%; --glass-filter: none; }
 }
@@ -39,6 +49,7 @@ html.has-bg body { background: transparent; }
   background: color-mix(in srgb, var(--card) 90%, transparent); border: 1px solid var(--line);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 18px rgb(0 0 0 / 0.35);
 }
+html.bg-moving .bgctl { -webkit-backdrop-filter: none; backdrop-filter: none; }
 .bgctl button {
   display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 50%; cursor: pointer;
   color: var(--text); background: var(--raised); border: 1px solid var(--line);

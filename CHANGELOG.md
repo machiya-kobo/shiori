@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.11.1 (2026-10-15)
+
+- Search page: in a wide window off the Mac (Firefox on Linux, Windows) the
+  columns grow to fill it as they do on a Mac, up to the same width; the
+  margins beside them were twice the Mac's.
+- Backgrounds: a moving scene, the rain or a video no longer makes the
+  browser blur them under every panel for every frame. The panels dim
+  them with black instead, which looks the same and takes about a quarter
+  less of the processor in Firefox on Linux.
+
 ## 1.11.0 (2026-10-15)
 
 - Basic Search: with JavaScript off, the search page goes to `/basic`, a

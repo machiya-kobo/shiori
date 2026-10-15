@@ -148,7 +148,7 @@ const bgCSS = readFileSync(new URL('../patches/shiori/backgrounds.css', import.m
 const BRIGHTEST_UNDER_GLASS = ['#d97750', '#9a948e', '#7562c4', '#847db2', '#6b81a0', '#757c8c', '#ea42a8', '#797b81', '#19b078',
   '#5a72c9', '#4d7660', '#a49f93', '#53a17d', '#91868b', '#3a709f', '#875b99', '#11bc90', '#34688f', '#aeaba8', '#aea299', '#ffffff'];
 test('over a background, glass: text stays 4.5:1 in every dark theme, and a light theme\'s glass is solid', async () => {
-  const root = bgCSS.match(/^:root \{ --glass-mix: (\d+)%; --glass-filter: ([^;]+); \}/m);
+  const root = bgCSS.match(/^:root \{ --glass-mix: (\d+)%; --glass-filter: ([^;]+);[^}]*\}/m);
   assert.ok(root, 'backgrounds.css sets --glass-mix and --glass-filter on :root');
   const alpha = Number(root[1]) / 100;
   const k = Number(root[2].match(/brightness\(([\d.]+)\)/)[1]);
@@ -174,13 +174,21 @@ test('over a background, glass: text stays 4.5:1 in every dark theme, and a ligh
       }
     }
   }
+  // While the background moves there is no filter: the panel is mixed with black at 1 - the brightness, which lets
+  // the same share through (the panel's half, then (1 - alpha) * k of what's behind), so the check above holds it.
+  assert.match(bgCSS, /^:root \{[^}]*--glass-under: transparent; \}/m);
+  const moving = bgCSS.match(/^html\.bg-moving \{ --glass-filter: none; --glass-under: rgb\(0 0 0 \/ ([\d.]+)\); \}/m);
+  assert.ok(moving, 'html.bg-moving drops the filter and dims with black');
+  assert.equal(Number(moving[1]), Number((1 - k).toFixed(2)), 'black at 1 - the brightness');
+  assert.match(bgCSS, /^html\.bg-moving \{ --frost: color-mix\(in srgb, var\(--bg\) var\(--glass-mix\), var\(--glass-under\)\); --frost-filter: none; \}/m,
+    'the frosted bars inside the glass take its fill');
   // Every glass surface in the pages is these variables, filter and colour together.
   for (const file of ['../web/app/app.css', '../patches/shiori/search.css']) {
     const css = readFileSync(new URL(file, import.meta.url), 'utf8');
     const rules = [...css.matchAll(/([^{}]+)\{([^{}]*var\(--glass-mix\)[^{}]*)\}/g)];
     assert.ok(rules.length >= 2, `${file}: glass rules`);
     for (const [, sel, body] of rules) {
-      assert.match(body, /color-mix\(in srgb, var\(--(bg|card)\) var\(--glass-mix\), transparent\)/, `${file} ${sel.trim()}`);
+      assert.match(body, /color-mix\(in srgb, var\(--(bg|card)\) var\(--glass-mix\), var\(--glass-under\)\)/, `${file} ${sel.trim()}`);
       assert.match(body, /-webkit-backdrop-filter: var\(--glass-filter\); backdrop-filter: var\(--glass-filter\);/, `${file} ${sel.trim()}`);
     }
   }

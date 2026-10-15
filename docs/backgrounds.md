@@ -42,3 +42,7 @@ behind them before blurring it under half the panel's own colour, so a panel can
 than its theme. About a twelfth of the scene shows through; the rest shows around the panels. In a light theme, with
 Reduce Transparency, or where the browser can't blur, the panels stay solid. `scripts/theme-contrast.test.mjs` holds
 this against the brightest each scene gets under the blur, and against a white picture of your own.
+
+While the background moves (a scene, the rain or a video), the panels don't blur: the browser would blur the moving
+layers again for every frame, which took more than a whole core in Firefox on Linux. They dim with black instead,
+letting the same twelfth through, sharp; at that brightness it looks the same. A picture of your own keeps the blur.

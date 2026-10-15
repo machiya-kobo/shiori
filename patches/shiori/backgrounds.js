@@ -167,6 +167,11 @@
     }
     const on = shown !== '';
     root.classList.toggle('has-bg', on);
+    // Moving: a scene, the rain or a video, redrawn many times a second. The glass then dims without a backdrop
+    // filter (backgrounds.css): the browser would blur the moving layers again for every frame, the most of what a
+    // background costs (Firefox on Linux, without a GPU, used more than a whole core for it).
+    const video = scene === CUSTOM && !!media() && media().type.startsWith('video/');
+    root.classList.toggle('bg-moving', on && !reduced() && (scene !== CUSTOM || video || !!now.rain));
     if (!on) setWatching(false);
     if (window.annaiBg) window.annaiBg.rain(on && !!now.rain);
     corner();
