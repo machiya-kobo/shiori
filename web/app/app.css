@@ -819,7 +819,7 @@ html.has-bg #preview > .status { margin: 16px; border-radius: 14px; }
   }
 }
 @media (max-width: 759px) {
-  html.bg-moving #tabs { background: color-mix(in srgb, var(--card) var(--glass-mix), var(--glass-under)); -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter); }
+  html.bg-lite.bg-moving #tabs { background: color-mix(in srgb, var(--card) var(--glass-mix), var(--glass-under)); -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter); }
   .bgctl { bottom: calc(80px + env(safe-area-inset-bottom)); }
   body.phone-preview .bgctl { bottom: calc(16px + env(safe-area-inset-bottom)); }
   html.has-bgctl .toast, html.has-bgctl .update-toast { bottom: calc(140px + env(safe-area-inset-bottom)); }

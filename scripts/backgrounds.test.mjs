@@ -267,3 +267,19 @@ test("the preview's text is the system's sans in every browser, not only Safari"
   assert.match(js, /body\{margin:0;padding:18px 22px 40px;font:-apple-system-body;font-family:-apple-system,system-ui,sans-serif;/);
   assert.match(js, /\.meta\{color:\$\{v\('--secondary'\)\};font-size:\.8125em;font:-apple-system-footnote;/);
 });
+
+test("off Apple only: the scene at 15 fps and the glass without a blur while it moves; Apple's browsers keep both", () => {
+  // One test of the platform, the same in both files: an iPad says MacIntel.
+  const apple = /\/Mac\|iPhone\|iPad\|iPod\/\.test\(\(typeof navigator === (?:'object'|"object") && navigator\.platform\) \|\| (?:''|"")\)/;
+  assert.match(BG_JS, new RegExp('const SCENE_MS = ' + apple.source + ' \\? 33 : 66;'));
+  assert.match(BG_JS, /if \(t - last < SCENE_MS\) return;/);
+  assert.match(BG_JS, /function rainLoop\(t\) \{\s+R\.raf = requestAnimationFrame\(rainLoop\);\s+if \(t - R\.last < 33\) return;/, 'the rain keeps 30 fps');
+  assert.match(CONTROLLER, new RegExp('const APPLE = ' + apple.source + ';'));
+  assert.match(CONTROLLER, /root\.classList\.toggle\('bg-lite', on && !APPLE\);/);
+  for (const platform of ['MacIntel', 'iPhone', 'iPad', 'MacPPC']) assert.ok(/Mac|iPhone|iPad|iPod/.test(platform), platform);
+  for (const platform of ['Linux x86_64', 'Win32', 'Linux armv8l', '']) assert.ok(!/Mac|iPhone|iPad|iPod/.test(platform), platform);
+  // Every rule that drops the blur is gated on bg-lite as well as bg-moving.
+  for (const css of [CSS, read('../web/app/app.css'), read('../patches/shiori/search.css')]) {
+    for (const [sel] of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/[^{}]*bg-moving[^{]*\{/g)) assert.match(sel, /html\.bg-lite\.bg-moving/, sel.trim());
+  }
+});

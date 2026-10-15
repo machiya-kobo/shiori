@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.11.2 (2026-10-15)
+
+- Backgrounds: Safari on a Mac, iPhone and iPad keeps the frosted glass
+  over a moving scene, the rain or a video; only other browsers (Firefox
+  and Chrome on Linux and Windows) dim it without the blur. There the
+  scene also moves at 15 frames a second instead of 30, which halves what
+  it costs; the rain stays at 30.
+
 ## 1.11.1 (2026-10-15)
 
 - Search page: in a wide window off the Mac (Firefox on Linux, Windows) the

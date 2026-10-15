@@ -2,7 +2,7 @@
 // on a fixed <canvas id="bg">. The city (sky, three skyline layers, lit windows, neon signs, the wet street and its
 // reflections) is drawn once per width into an offscreen canvas from a seeded random, so it never jumps; a frame only
 // blits it, flickers a few signs, blinks the beacons and moves the scene's extras. The rain is a separate overlay
-// (#rainfx). 30 fps cap, device pixels capped at 1.5, paused while the page is hidden; reduced motion draws one still
+// (#rainfx). 30 fps cap (the scene 15 off Apple), device pixels capped at 1.5, paused while the page is hidden; reduced motion draws one still
 // frame. No network, no libraries. window.annaiBg.start(scene, words), .stop(), .rain(true | false): the API keeps
 // annai's name so the two copies stay easy to compare. `words` are the page's own names for the signs.
 (function () {
@@ -1290,9 +1290,12 @@
     if (on) { ctx.save(); for (const b of beacons) { ctx.fillStyle = "#ff4d5e"; ctx.shadowColor = "#ff4d5e"; ctx.shadowBlur = b.r * 6; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); }
     ctx.fillStyle = "rgba(122,162,247,0.035)"; ctx.fillRect(0, 0, W, H);          // a faint mist over everything
   }
+  // The scene: ~30 fps in Apple's browsers, ~15 elsewhere (Firefox and Chrome on Linux and Windows), where a frame of
+  // the whole window cost the most (an iPad says MacIntel). The rain keeps 30 everywhere.
+  const SCENE_MS = /Mac|iPhone|iPad|iPod/.test((typeof navigator === "object" && navigator.platform) || "") ? 33 : 66;
   function loop(t) {
     raf = requestAnimationFrame(loop);
-    if (t - last < 33) return;                       // ~30 fps
+    if (t - last < SCENE_MS) return;
     last = t; frame(t);
   }
 

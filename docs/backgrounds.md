@@ -43,6 +43,8 @@ than its theme. About a twelfth of the scene shows through; the rest shows aroun
 Reduce Transparency, or where the browser can't blur, the panels stay solid. `scripts/theme-contrast.test.mjs` holds
 this against the brightest each scene gets under the blur, and against a white picture of your own.
 
-While the background moves (a scene, the rain or a video), the panels don't blur: the browser would blur the moving
-layers again for every frame, which took more than a whole core in Firefox on Linux. They dim with black instead,
-letting the same twelfth through, sharp; at that brightness it looks the same. A picture of your own keeps the blur.
+Off Apple's browsers (Firefox and Chrome on Linux and Windows), while the background moves (a scene, the rain or a
+video), the panels don't blur: the browser would blur the moving layers again for every frame, which took more than a
+whole core in Firefox on Linux. They dim with black instead, letting the same twelfth through, sharp; at that
+brightness it looks the same. There the scene also moves at 15 frames a second instead of 30. Safari on a Mac,
+iPhone and iPad keeps the blur and 30 frames, and a picture of your own keeps the blur everywhere.

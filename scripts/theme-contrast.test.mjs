@@ -177,10 +177,10 @@ test('over a background, glass: text stays 4.5:1 in every dark theme, and a ligh
   // While the background moves there is no filter: the panel is mixed with black at 1 - the brightness, which lets
   // the same share through (the panel's half, then (1 - alpha) * k of what's behind), so the check above holds it.
   assert.match(bgCSS, /^:root \{[^}]*--glass-under: transparent; \}/m);
-  const moving = bgCSS.match(/^html\.bg-moving \{ --glass-filter: none; --glass-under: rgb\(0 0 0 \/ ([\d.]+)\); \}/m);
-  assert.ok(moving, 'html.bg-moving drops the filter and dims with black');
+  const moving = bgCSS.match(/^html\.bg-lite\.bg-moving \{ --glass-filter: none; --glass-under: rgb\(0 0 0 \/ ([\d.]+)\); \}/m);
+  assert.ok(moving, 'off Apple, html.bg-lite.bg-moving drops the filter and dims with black');
   assert.equal(Number(moving[1]), Number((1 - k).toFixed(2)), 'black at 1 - the brightness');
-  assert.match(bgCSS, /^html\.bg-moving \{ --frost: color-mix\(in srgb, var\(--bg\) var\(--glass-mix\), var\(--glass-under\)\); --frost-filter: none; \}/m,
+  assert.match(bgCSS, /^html\.bg-lite\.bg-moving \{ --frost: color-mix\(in srgb, var\(--bg\) var\(--glass-mix\), var\(--glass-under\)\); --frost-filter: none; \}/m,
     'the frosted bars inside the glass take its fill');
   // Every glass surface in the pages is these variables, filter and colour together.
   for (const file of ['../web/app/app.css', '../patches/shiori/search.css']) {

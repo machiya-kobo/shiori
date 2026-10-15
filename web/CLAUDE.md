@@ -48,6 +48,6 @@ Loaded when you work in `web/` (and for the search page in `patches/shiori/`). T
   from annai) are this browser's own: never the account, the cookies or
   Safari's set-settings. Over one, a surface with text is glass only through
   `--glass-mix`, `--glass-filter` and `--glass-under` (backgrounds.css), never
-  a translucency of its own (a moving background, `html.bg-moving`, swaps the
+  a translucency of its own (off Apple, a moving background, `html.bg-lite.bg-moving`, swaps the
   filter for black under the panel: a backdrop filter re-blurs every frame): the themes sit at 4.5:1, so what shows through may only darken
   a dark panel (`theme-contrast.test.mjs` holds it). Off loads nothing.

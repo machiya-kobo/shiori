@@ -108,6 +108,9 @@
   let stored;
   let words = () => [];
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Apple's browsers (a Mac, iPhone or iPad; an iPad says MacIntel) keep the frosted glass whatever moves behind it.
+  // Elsewhere (Firefox and Chrome on Linux and Windows) the blur over a moving background cost more than a core.
+  const APPLE = /Mac|iPhone|iPad|iPod/.test((typeof navigator === 'object' && navigator.platform) || '');
   const media = () => (draft && draft.media !== undefined ? draft.media : stored);
 
   // ---- showing it ---------------------------------------------------------------------------------------------
@@ -167,11 +170,12 @@
     }
     const on = shown !== '';
     root.classList.toggle('has-bg', on);
-    // Moving: a scene, the rain or a video, redrawn many times a second. The glass then dims without a backdrop
-    // filter (backgrounds.css): the browser would blur the moving layers again for every frame, the most of what a
-    // background costs (Firefox on Linux, without a GPU, used more than a whole core for it).
+    // Moving: a scene, the rain or a video, redrawn many times a second. Off Apple (bg-lite) the glass then dims
+    // without a backdrop filter (backgrounds.css): the browser would blur the moving layers again for every frame,
+    // the most of what a background costs (Firefox on Linux, without a GPU, used more than a whole core for it).
     const video = scene === CUSTOM && !!media() && media().type.startsWith('video/');
     root.classList.toggle('bg-moving', on && !reduced() && (scene !== CUSTOM || video || !!now.rain));
+    root.classList.toggle('bg-lite', on && !APPLE);
     if (!on) setWatching(false);
     if (window.annaiBg) window.annaiBg.rain(on && !!now.rain);
     corner();
