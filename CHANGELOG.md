@@ -5,6 +5,11 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.10.6 (2026-10-15)
+
+- Search page: a preview's text is the system's sans in Chrome and Firefox
+  too (it fell back to serif outside Safari).
+
 ## 1.10.5 (2026-10-15)
 
 - Search page: a preview's text fits its pane in Safari. With the page's

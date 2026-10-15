@@ -260,3 +260,10 @@ test("the preview's frame stays at zoom 1 and its page takes Text Size's zoom (W
   assert.match(js, /if \(frame\) frame\.style\.zoom = z === 1 \? '' : String\(1 \/ z\);/);
   assert.match(js, /return `:root\{color-scheme:light dark\$\{z === 1 \? '' : `;zoom:\$\{z\}`\}\}/);
 });
+
+test("the preview's text is the system's sans in every browser, not only Safari", () => {
+  const js = read('../patches/shiori/search.js');
+  // -apple-system-body is Safari's alone: Chrome and Firefox drop the shorthand and fell back to serif.
+  assert.match(js, /body\{margin:0;padding:18px 22px 40px;font:-apple-system-body;font-family:-apple-system,system-ui,sans-serif;/);
+  assert.match(js, /\.meta\{color:\$\{v\('--secondary'\)\};font-size:\.8125em;font:-apple-system-footnote;/);
+});

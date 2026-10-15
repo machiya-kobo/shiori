@@ -791,6 +791,8 @@
     }
     // A wide table fits the pane, as in the apps (PreviewWebView): smaller
     // text, addresses and code may break anywhere, words stay whole.
+    // Safari's font keywords mean nothing elsewhere: the family and the
+    // footnote's size around them keep Chrome and Firefox off serif.
     // Text Size zooms the body, and WebKit lays a frame inside it out at the
     // zoomed width but draws it zoomed again (a sixth was cut off on the
     // right at 1.2). So the frame is held at zoom 1 (fitUnits) and its page
@@ -800,9 +802,9 @@
       const v = (name) => css.getPropertyValue(name).trim();
       const z = parseFloat(document.body.style.zoom) || 1;
       return `:root{color-scheme:light dark${z === 1 ? '' : `;zoom:${z}`}}
-        body{margin:0;padding:18px 22px 40px;font:-apple-system-body;line-height:1.55;color:${v('--text')};background:${v('--bg')};overflow-wrap:anywhere}
+        body{margin:0;padding:18px 22px 40px;font:-apple-system-body;font-family:-apple-system,system-ui,sans-serif;line-height:1.55;color:${v('--text')};background:${v('--bg')};overflow-wrap:anywhere}
         h1{font:-apple-system-title2;font-weight:700;margin:0 0 .3em}
-        .meta{color:${v('--secondary')};font:-apple-system-footnote;margin:0 0 1.2em;padding-bottom:.8em;border-bottom:1px solid ${v('--line')}}
+        .meta{color:${v('--secondary')};font-size:.8125em;font:-apple-system-footnote;margin:0 0 1.2em;padding-bottom:.8em;border-bottom:1px solid ${v('--line')}}
         a{color:${v('--accent')}} img{max-width:100%;height:auto;border-radius:6px}
         svg,video,picture,figure,canvas,iframe,object,embed{max-width:100%;height:auto} figure{margin:1em 0}
         pre,code{white-space:pre-wrap}
