@@ -246,6 +246,11 @@ def proxy(var, up, verify, host=None, cookie='""', extra="", hide_set_cookie=Fal
     return out + tls(up, verify) + extra
 
 
+def nginx_value(value):
+    """An address for a quoted nginx `set`, or '' when it holds anything nginx would read as more than text."""
+    return value if value and PUBLIC_RE.match(value) and not re.search(r"[$;\\\"]", value) else ""
+
+
 def routes(s):
     """The routes both sites share, as production's shiori-routes.inc has them (web/README.md)."""
     verify = s["tls_verify"]
@@ -345,6 +350,28 @@ location /_shiori/ {
     add_header Cache-Control $shiori_cache always;
     add_header Content-Security-Policy $shiori_csp always;
 }
+''')
+    # Basic Search: plain HTML for a browser without JavaScript (the pages' <noscript> sends it here). njs renders it
+    # (web/basic.mjs) from this site's own routes, asked again on loopback so their sign-in and cookie rules apply.
+    if login:
+        hister_pub = s["public"]["hister"] or dict(
+            p.strip().partition("=")[::2] for p in s["rooms"].split(",") if "=" in p).get("hister", "").strip()
+        signin = nginx_value(hister_pub.rstrip("/") + "/machiya/signin" if hister_pub.startswith("https://") else "")
+    else:
+        signin = "/auth"
+    kura_pub = s["public"]["kura"]
+    add(f'''# Basic Search, for browsers without JavaScript: no script, no image, never cached.
+location = /basic {{
+    limit_except GET {{ deny all; }}
+    absolute_redirect off;
+    set $basic_kura "{"1" if s["SHIORI_KURA_URL"] else ""}";
+    set $basic_signin "{signin}";
+    set $basic_kura_signin "{nginx_value(kura_pub.rstrip("/") + "/signin" if kura_pub else "")}";
+    add_header Cache-Control "no-store" always;
+    add_header Content-Security-Policy "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" always;
+    add_header Referrer-Policy "no-referrer" always;
+    js_content basic.page;
+}}
 ''')
     # SearXNG (required).
     add("# SearXNG, /searx stripped.\nlocation /searx/ {\n"
@@ -465,6 +492,7 @@ map $request_uri $timing_path {
     ~^/search(?:[?/]|$)                /search;
     ~^/api/search(?:[?/]|$)            /api/search;
     ~^/api/preview(?:[?/]|$)           /api/preview;
+    ~^/basic(?:[?/]|$)                 /basic;
     ~^/shiori/ai/                      /shiori/ai;
     ~^/(jellyfin|plex|koito|movary)/   /media;
     default                            other;
@@ -523,6 +551,7 @@ def sites(s, resolver, root):
 {timing}    listen {site['port']};
     server_name _;
     set $site_origin {site['origin']};
+    set $basic_self {site['url']};
     root {root}/{key};
 {extra}{indented}
 }}

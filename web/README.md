@@ -30,6 +30,7 @@ origin):
 | Path | Goes to |
 |---|---|
 | `/` (with any `?q=…`), `/_shiori/*`, and for the web app `/sw.js` and `/manifest.webmanifest` | the built files (`/` is `index.html`) |
+| `/basic` | Basic Search, for a browser without JavaScript (below). The image's nginx renders it; another host can leave it out, and it then reaches Hister |
 | `/searx/*` | SearXNG, `/searx` removed (the page asks for `search?format=json` and `image_proxy`) |
 | `/konbini/*` | Konbini, `/konbini` removed (only `api/cards`) |
 | `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/api/prefs`, `/kura/feed.xml` | Kura, `/kura` removed: your notes, and (signed in) your theme, appearance and text size. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
@@ -156,7 +157,7 @@ port shows the same (the sign-in mode and which services are on), and `/healthz`
 | `SHIORI_HISTER_HOST` | The `Host` Hister expects, if it isn't the address above | the address above |
 | `SHIORI_HISTER_VERSION` | The Hister release `/_shiori/status.json` names, when it isn't the one the image was built against | the image's |
 | `SHIORI_UPSTREAM_TLS_VERIFY` | `0` to accept an https upstream's certificate unchecked | `1` |
-| `SHIORI_TIMING_LOG` | A file (for example `/tmp/timing.log`) that gets one line per request for a metrics collector: `<epoch.ms> <host> <bucket> <status> <seconds>`. The bucket is one of `/searx/search`, `/searx/autocompleter`, `/search`, `/api/search`, `/api/preview`, `/kura/api/search`, `/kura/api/note`, `/smallweb/api/search`, `/shiori/ai`, `/media` or `other`: never a query string, a search word or a client address. Rotate it with `mv`, then `nginx -c /opt/shiori/nginx.conf -s reopen` | off |
+| `SHIORI_TIMING_LOG` | A file (for example `/tmp/timing.log`) that gets one line per request for a metrics collector: `<epoch.ms> <host> <bucket> <status> <seconds>`. The bucket is one of `/searx/search`, `/searx/autocompleter`, `/search`, `/api/search`, `/api/preview`, `/kura/api/search`, `/kura/api/note`, `/smallweb/api/search`, `/shiori/ai`, `/media`, `/basic` or `other`: never a query string, a search word or a client address. Rotate it with `mv`, then `nginx -c /opt/shiori/nginx.conf -s reopen` | off |
 | `SHIORI_OBSIDIAN_VAULT`, `SHIORI_SOURCE_URL`, `SHIORI_STATUS_URL`, `SHIORI_FRONTENDS` | As in the build configuration (CLAUDE.md) | empty |
 
 **Signing in.** Without `SHIORI_LOGIN_URL` the sign-in is Hister's own: Hister's `/auth` page is proxied on this origin,
@@ -179,6 +180,27 @@ cosign verify ghcr.io/machiya-kobo/shiori-web:<version> \
 
 Build it yourself with `docker build -f docker/shiori-web/Dockerfile -t shiori-web .` from the repository root, and test
 it with `tools/container-test`.
+
+## Basic Search (no JavaScript)
+
+With JavaScript off, the search page's `<noscript>` refreshes to `/basic`,
+and the web app shows a line linking it. `/basic?q=` is plain HTML: All
+(your top five pages and notes, then the web), Pages, Notes and Web, with
+paging; no script, no image but Shiori's mark, never cached. The search
+typed into the search page comes along: the page can't put its address
+into the refresh, so `/basic` reads it from the Referer when that is this
+host's own `/?q=…` (and it isn't when a browser sends no Referer: the
+field is then empty). Notes are the default vault's, as All's on the
+pages. Settings kept in the browser (web results off, a vault) don't
+apply; the house's theme and palette cookies do.
+
+[web/basic.mjs](basic.mjs) renders it. The shiori-web image runs it in
+nginx's njs (`js_engine qjs`, [docker/shiori-web/basic-njs.mjs](../docker/shiori-web/basic-njs.mjs)),
+and its searches go back through nginx on loopback as full requests, so
+each route's sign-in and cookie rules apply as they do for the pages (a
+subrequest would skip `auth_request`). Hister's refusal links its sign-in;
+Kura's links Kura's. `web/dev-server.py` renders it with Node
+(`scripts/basic-dev.mjs`).
 
 ## Add Page and the share target (the web app)
 

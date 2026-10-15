@@ -19,11 +19,15 @@ ENV SHIORI_BUILD_ID=$SHIORI_BUILD_ID SHIORI_HISTER_RELEASE=$SHIORI_HISTER_RELEAS
 # Settings (and the page's own address, and the status link) are filled in when the container starts.
 RUN scripts/build-web.sh /dist/search http://shiori-web.invalid/ @runtime \
  && scripts/build-pwa.sh /dist/app @runtime
+# Basic Search (/basic) for nginx's njs: the renderer, its glue, and search-core.js as a module.
+RUN mkdir -p /basic && cp web/basic.mjs docker/shiori-web/basic-njs.mjs /basic/ \
+ && { cat patches/shiori/search-core.js; printf '\nexport default globalThis.ShioriSearch;\n'; } >/basic/search-core.mjs
 
 FROM public.ecr.aws/nginx/nginx-unprivileged:stable-alpine@sha256:782bb89768cc87b7f95c18b95baa1af250e5d451f26794f59363540161147c01
 USER root
 RUN apk add --no-cache python3 ca-certificates
 COPY --from=build /dist /opt/shiori/dist
+COPY --from=build /basic /opt/shiori/basic
 COPY scripts/stamp-env.py scripts/rooms-stamp.py scripts/status-link.py /opt/shiori/scripts/
 COPY docker/shiori-web/configure.py docker/shiori-web/nginx.conf docker/shiori-web/entrypoint.sh /opt/shiori/
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1

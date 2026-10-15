@@ -41,11 +41,19 @@ class Handler(BaseHTTPRequestHandler):
         if service == "hister":
             if self.path == "/api/profile":                       # Hister with users: a good session, else 403
                 return self.reply(200 if "hister=good" in cookie or "hister=sessionfromhelper" in cookie else 403, echo)
+            if self.path.startswith("/search?") and "format=json" in self.path:   # a search: one page, saying what came
+                return self.reply(200, {**echo, "total": 1, "documents": [{
+                    "url": "https://example.com/page", "title": f"<script>x</script> cookie [{cookie}]",
+                    "text": "about <mark>rust</mark> <img src=x onerror=alert(1)>"}]})
             return self.reply(200, echo, [("Set-Cookie", "hister=fromupstream; Path=/; HttpOnly")])
         if service == "searxng" and self.path.startswith("/search") and "format=json" in self.path:
             if os.environ.get("FAKE_SEARX_JSON") == "403":
                 return self.reply(403, {"error": "forbidden"})
-            return self.reply(200, {**echo, "results": []})
+            return self.reply(200, {**echo, "results": [{"url": "https://web.example/", "title": "A web result",
+                                                         "content": f"cookie [{cookie}]"}]})
+        if service == "kura" and self.path.startswith("/api/search"):
+            return self.reply(200, {**echo, "total": 1, "results": [{"url": "https://kura.example/n/a-note", "title": f"A note, cookie [{cookie}]",
+                                                                     "path": "Notes/a-note.md", "snippet": "a <mark>note</mark>"}]})
         if service == "helper-auth":                              # hister-login's /v1/nginx
             ok = seen.get("x-machiya-session", "").startswith("mhr_")
             return self.reply(200 if ok else 401, echo, [("X-Hister-Cookie", "hister=sessionfromhelper")] if ok else [])

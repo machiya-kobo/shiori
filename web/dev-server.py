@@ -7,6 +7,8 @@
 
 Routes (the same as web/README.md asks of the real host):
   /, /_shiori/*, and (the web app) /sw.js, /manifest.webmanifest: the build
+  /basic               Basic Search, rendered here by web/basic.mjs under Node
+                       (scripts/basic-dev.mjs), as the image's njs renders it
   /searx/*             SearXNG, prefix removed
   /konbini/*           Konbini, prefix removed (only api/cards is used)
   /kura/<path>         Kura, prefix removed, for only the paths Shiori asks
@@ -38,6 +40,7 @@ import importlib.util
 import json
 import os
 import re
+import subprocess
 import time
 import sys
 import urllib.error
@@ -185,9 +188,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             "cached": not body.get("refresh"), "updated": 0,
         })
 
+    def basic(self):
+        req = {"args": self.path.partition("?")[2], "cookie": self.headers.get("Cookie", ""), "referer": self.headers.get("Referer", ""),
+               "host": self.headers.get("Host", ""), "port": PORT, "kura": bool(UPSTREAMS["/kura/"])}
+        run = subprocess.run(["node", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts", "basic-dev.mjs")],
+                             input=json.dumps(req), capture_output=True, text=True, timeout=60)
+        if run.returncode:
+            return self.send_error(500, run.stderr.strip()[-200:])
+        out = json.loads(run.stdout)
+        data = out["body"].encode()
+        self.send_response(out["status"])
+        for key, value in out["headers"].items():
+            self.send_header(key, value)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self):
         if AI_STUB and self.path.startswith("/shiori/ai/"):
             return self.ai_stub()
+        if self.path.split("?", 1)[0] == "/basic":
+            return self.basic()
         target = self.route()
         if target is None:
             if self.path.startswith("/?") or self.path == "/":

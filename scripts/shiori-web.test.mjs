@@ -321,6 +321,57 @@ test("Machiya's sign-in helper takes over when SHIORI_LOGIN_URL is set: the auth
   }
 });
 
+test('Basic Search: /basic on both sites, njs, never cached, no script; its sign-in links from the settings', { skip }, () => {
+  const own = run({ ...BASE, SHIORI_KURA_URL: 'http://kura:8080', SHIORI_KURA_PUBLIC_URL: 'https://kura.example/', SHIORI_SEARCH_PAGE_URL: 'https://search.example' });
+  try {
+    assert.equal(own.r.status, 0, own.r.stderr);
+    const conf = own.sites();
+    const blocks = [...conf.matchAll(/location = \/basic \{([\s\S]*?)\n\s*\}\n/g)].map((m) => m[1]);
+    assert.equal(blocks.length, 2, 'one per site');
+    for (const b of blocks) {
+      assert.match(b, /limit_except GET \{ deny all; \}/);
+      assert.match(b, /js_content basic\.page;/);
+      assert.match(b, /absolute_redirect off;/, "a carried-over search stays on the address the browser used");
+      assert.match(b, /set \$basic_kura "1";/);
+      assert.match(b, /set \$basic_signin "\/auth";/);
+      assert.match(b, /set \$basic_kura_signin "https:\/\/kura\.example\/signin";/);
+      assert.match(b, /Cache-Control "no-store"/);
+      assert.match(b, /Content-Security-Policy "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"/);
+      assert.doesNotMatch(b, /auth_request/, 'its own searches are signed in, each on its own route');
+    }
+    assert.match(conf, /set \$basic_self https:\/\/search\.example\/;/);
+    assert.match(conf, /set \$basic_self http:\/\/localhost:8081\/;/);
+    // The search page's colours alone, which Basic Search links.
+    assert.match(own.read('www/search/_shiori/theme.css'), /--accent/);
+    const nginx = readFileSync(join(repo, 'docker/shiori-web/nginx.conf'), 'utf8');
+    assert.match(nginx, /^load_module \/etc\/nginx\/modules\/ngx_http_js_module\.so;/m);
+    assert.match(nginx, /js_engine qjs;\s+js_path \/opt\/shiori\/basic;\s+js_import basic from basic-njs\.mjs;/);
+    const docker = readFileSync(join(repo, 'docker/shiori-web/Dockerfile'), 'utf8');
+    assert.match(docker, /cp web\/basic\.mjs docker\/shiori-web\/basic-njs\.mjs \/basic\//);
+    assert.match(docker, /COPY --from=build \/basic \/opt\/shiori\/basic/);
+  } finally {
+    own.cleanup();
+  }
+  const helper = run({ ...BASE, SHIORI_LOGIN_URL: 'http://hister-login:8080', SHIORI_ROOMS: 'hister=https://hister.example/,kura=https://kura.example/' });
+  try {
+    assert.equal(helper.r.status, 0, helper.r.stderr);
+    const conf = helper.sites();
+    assert.match(conf, /set \$basic_signin "https:\/\/hister\.example\/machiya\/signin";/);
+    assert.match(conf, /set \$basic_kura "";/);
+    assert.match(conf, /set \$basic_kura_signin "";/);
+  } finally {
+    helper.cleanup();
+  }
+  // An address nginx would read as a variable is left out, never written into the config.
+  const odd = run({ ...BASE, SHIORI_LOGIN_URL: 'http://hister-login:8080', SHIORI_HISTER_PUBLIC_URL: 'https://hister.example/$host' });
+  try {
+    assert.equal(odd.r.status, 0, odd.r.stderr);
+    assert.match(odd.sites(), /set \$basic_signin "";/);
+  } finally {
+    odd.cleanup();
+  }
+});
+
 test("the page's address carries the settings, so a page never runs with another run's settings", { skip }, () => {
   const a = run(BASE);
   const b = run({ ...BASE, SHIORI_FEED_URL: 'http://feed:8080' });

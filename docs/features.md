@@ -13,6 +13,7 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 - **Search your files** in the Files view: the folders Hister watches ([local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)), opened from Hister's copy.
 - **Browse** everything Hister holds, newest first, by label and collection (Hister's `@` aliases, like `@reading`), or by day and month.
 - **Read a page** as Hister's readable copy, scripts off, no referrer. Earlier versions, Show As, full screen, and images large on tap.
+- **Search without JavaScript**: the hosted search page sends a browser with JavaScript off to Basic Search, plain HTML with your pages, your notes and the web, the search carried over. The web app links it.
 - **Remember what you open**: Hister puts it first the next time you search the same words. Your last 5 searches stay on the device (Settings → Results → History).
 
 ## Keeping and sharing

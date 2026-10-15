@@ -16,6 +16,8 @@ and checks:
   - a browser's cookies reach only their own service (Hister's session to Hister; nothing to SearXNG);
   - Hister's own sign-in: the feed and AI routes ask Hister whether the session is good;
   - with hister-login: the auth request, the room cookie, Hister's session swapped in and its Set-Cookie dropped;
+  - Basic Search (/basic, for a browser without JavaScript): plain HTML from njs, escaped, its searches through the
+    routes' own sign-in and cookie rules, and the search page's address carried over;
   - a SearXNG that refuses JSON is said so in the start-up log.
 
 Needs podman or docker. Exit 1 if a check fails.
@@ -97,6 +99,22 @@ def get(port, path, headers=None):
         return r.status, h, json.loads(body)
     except ValueError:
         return r.status, h, body
+
+
+def basic_checks(port, label):
+    """Basic Search on one site: the start page, a search, and the search page's address carried over."""
+    s, h, body = get(port, "/basic")
+    check(s == 200 and h.get("content-type", "").startswith("text/html") and 'action="/basic"' in body,
+          f"{label}: /basic answers its start page", f"{s} {h.get('content-type')}")
+    check(h.get("content-security-policy", "").startswith("default-src 'none';") and "no-store" in h.get("cache-control", ""),
+          f"{label}: with no script allowed, never cached")
+    s, h, body = get(port, "/basic?q=rust", {"Cookie": "hister=goodabcdefgh; machiya_session=roomsession123; a=b"})
+    check(s == 200 and "about <mark>rust</mark>" in body, f"{label}: a search shows your pages, marks kept", body[-400:])
+    check("<script" not in body and "<img src=x" not in body and "onerror" not in body and "&lt;script&gt;x&lt;/script&gt;" in body, f"{label}: and nothing else of theirs as markup")
+    check("cookie [hister=goodabcdefgh]" in body, f"{label}: Hister gets its own session cookie and nothing else", body[-600:])
+    check("A web result" in body and "cookie []" in body, f"{label}: the web is searched, with no cookie")
+    s, h, _ = get(port, "/basic", {"Referer": f"http://127.0.0.1:{port}/?q=rust%20book&cat=hister", "Host": f"127.0.0.1:{port}"})
+    check(s == 303 and h.get("location") == "/basic?q=rust%20book&t=pages", f"{label}: the search page's search comes along", f"{s} {h.get('location')}")
 
 
 def wait(port, path="/healthz", seconds=30):
@@ -198,6 +216,9 @@ def main():
         check(s == 200 and echo.get("service") == "hister" and hd.get("cookie") == "hister=goodabcdefgh", "Hister gets its own session cookie and nothing else", str(hd.get("cookie")))
         check("hister=fromupstream" in h.get("set-cookie", ""), "Hister's own Set-Cookie reaches the browser (its sign-in works here)")
         check("origin" not in hd, "no Origin is added for Hister either")
+        basic_checks(p1, "search page")
+        basic_checks(p2, "web app")
+        check("Notes</a>" not in get(p1, "/basic?q=rust")[2], "no Kura, no Notes tab")
         check(e.run("exec", "shiori-web-min", "sh", "-c", "ls /tmp/*.log 2>/dev/null", check_=False).stdout.strip() == "",
               "no timing log unless SHIORI_TIMING_LOG is set")
         e.rm("shiori-web-min")
@@ -214,6 +235,11 @@ def main():
             s, h, echo = get(p1, path)
             check(s == 200 and echo.get("service") == svc, f"{path} reaches {svc}", str(echo)[:100])
         check(get(p1, "/kura/")[0] == 404 and get(p1, "/kura/signin")[0] == 404, "Kura's own pages are never passed")
+        s, h, body = get(p1, "/basic?q=rust", {"Cookie": "hister=goodabcdefgh; machiya_session=roomsession123"})
+        check("A note, cookie [machiya_session=roomsession123]" in body and "a <mark>note</mark>" in body,
+              "Basic Search: your notes from Kura, with only the rooms' session cookie", body[-600:])
+        s, h, body = get(p1, "/basic?q=rust&t=notes")
+        check(s == 200 and '<span aria-current="page">Notes</span>' in body, "and its Notes tab")
         check(get(p1, "/shiori/ai/status")[0] == 200, "shiori-ai's status needs no sign-in")
         check(get(p1, "/shiori/feed?q=x")[0] == 403, "the feed needs Hister's sign-in: 403 without it")
         s, h, echo = get(p1, "/shiori/feed?q=x", {"Cookie": "hister=goodabcdefgh; x=y"})
@@ -331,6 +357,10 @@ def main():
         check("set-cookie" not in h, "and Hister's Set-Cookie never reaches the browser")
         s, h, echo = get(p1, "/kura/api/search?q=x", {"Cookie": f"__Host-machiya_sso_shiori={room}"})
         check(echo.get("headers", {}).get("cookie") == f"__Host-machiya_sso_kura={room}", "Kura gets this host's session under its own cookie name", str(echo)[:140])
+        s, h, body = get(p1, "/basic?q=rust")
+        check(s == 200 and "Sign in to see your pages." in body, "Basic Search without a room cookie: asks you to sign in", body[-500:])
+        s, h, body = get(p1, "/basic?q=rust", {"Cookie": f"__Host-machiya_sso_shiori={room}"})
+        check("cookie [hister=sessionfromhelper]" in body, "with one, its search is signed in by the helper on its own hop", body[-500:])
         s, h, echo = get(p1, "/machiya/signout")
         check(echo.get("service") == "helper" if isinstance(echo, dict) else False, "the helper's own paths reach it on this origin", str(echo)[:100])
         e.rm("shiori-web-login")

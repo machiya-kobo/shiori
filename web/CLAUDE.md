@@ -38,6 +38,12 @@ Loaded when you work in `web/` (and for the search page in `patches/shiori/`). T
   back. Account contact reads the kept settings, never the preview.
 - The shared settings (theme, text size, hidden rooms) are `machiya_*` cookies
   on the network's domain (`S.houseSettings`).
+- **Basic Search** (`/basic`, web/basic.mjs; web/README.md) is the no-JavaScript
+  fallback. It runs in the image's njs on QuickJS: no URL, URLSearchParams or
+  Intl there, in it or in what it uses of search-core (`basic.test.mjs` runs
+  that in a bare context). Its searches go through this host's routes on
+  loopback, never subrequests, so sign-in still applies. Everything from a
+  server is escaped; snippets keep only `<mark>`; links are http(s) only.
 - **Backgrounds** (docs/backgrounds.md, `patches/shiori/backgrounds.*`, `bg.js`
   from annai) are this browser's own: never the account, the cookies or
   Safari's set-settings. Over one, a surface with text is glass only through

@@ -8,8 +8,15 @@
     <link rel="stylesheet" href="backgrounds.css" />
     <link rel="stylesheet" href="search.css" />
     <link rel="stylesheet" href="palettes.css" />
+    <!-- Without JavaScript: the host's Basic Search (/basic), which takes the
+         search along (it reads it from this page's address, the Referer). -->
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=/basic" />
+      <style>body > :not(noscript) { display: none !important; } .noscript { margin: 48px 16px; text-align: center; } .noscript a { color: var(--accent); }</style>
+    </noscript>
   </head>
   <body class="pending">
+    <noscript><p class="noscript">JavaScript is off. <a href="/basic">Basic Search</a> works without it.</p></noscript>
     <header>
       <!-- The brand row (results only; it stays with the field and tabs):
            the mark and name, then the rooms, time range or sort, and

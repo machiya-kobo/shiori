@@ -26,6 +26,9 @@ cp -- patches/shiori/search.js patches/shiori/search-core.js patches/shiori/sear
 # Backgrounds: the controller, its styles, the scene engine (loaded only once a
 # scene is picked) and the scenes' previews.
 cp -- patches/shiori/backgrounds.js patches/shiori/backgrounds.css patches/shiori/bg.js "$out/_shiori/"
+# The colours alone (search.css's :root blocks), for Basic Search, as build-pwa.sh cuts them for the web app.
+awk '/^\* \{ box-sizing/ { exit } { print }' patches/shiori/search.css >"$out/_shiori/theme.css"
+grep -q -- '--accent' "$out/_shiori/theme.css" || { echo "build-web: no theme tokens found in search.css" >&2; exit 1; }
 mkdir -p -- "$out/_shiori/backgrounds"
 cp -- assets/backgrounds/bg-*.jpg "$out/_shiori/backgrounds/"
 cp -- web/shim.js "$out/_shiori/web-shim.js"

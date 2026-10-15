@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.11.0 (2026-10-15)
+
+- Basic Search: with JavaScript off, the search page goes to `/basic`, a
+  plain HTML page with your pages, your notes and the web, and takes the
+  search with it. The web app says it needs JavaScript and links there.
+- The favicon SVG is valid XML again (a comment in it held `--`, so
+  browsers drew it as a broken image).
+
 ## 1.10.6 (2026-10-15)
 
 - Search page: a preview's text is the system's sans in Chrome and Firefox
