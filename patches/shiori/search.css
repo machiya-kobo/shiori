@@ -797,9 +797,14 @@ body.with-preview #infobox-slot { display: none; }
 body.with-preview > header { grid-column: 1 / -1; grid-row: 1; }
 body.with-preview > main, body.with-preview > footer { grid-column: 1; }
 body.with-preview > dialog { grid-column: auto; }
+/* Level with the results' first section (main's 8px), it stays under the
+   header as they scroll and fits the window: --vh and --header-h are the
+   zoomed page's own units (100vh is zoomed too: on a Mac the pane ran 1.2
+   windows tall). With a background, it ends above the corner (Rain and
+   Watch: 16px, 50px tall, then 16px). */
 #preview-pane {
-  grid-column: 2; grid-row: 2 / span 2; position: sticky; top: 10px;
-  height: calc(100vh - 20px); margin-top: 18px; display: flex; flex-direction: column;
+  grid-column: 2; grid-row: 2 / span 2; position: sticky; top: calc(var(--header-h, 0px) + 8px);
+  height: calc(var(--vh, 100vh) - var(--header-h, 0px) - 16px); margin-top: 8px; display: flex; flex-direction: column;
   background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
 }
 .preview-bar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
@@ -1033,7 +1038,8 @@ html.has-bg #preview-pane {
 }
 /* The layers fill the window whatever Text Size zooms the body by (--z, --vw: search.js keeps them). */
 html.has-bg :is(#bg, #rainfx, .bgimg, .bgvid) { width: var(--vw, 100vw); height: calc(100lvh / var(--z, 1)); }
-/* The last results scroll clear of the corner. */
+/* The last results scroll clear of the corner, and the preview ends above it. */
 html.has-bgctl body:not(.home) { padding-bottom: 88px; }
+html.has-bgctl #preview-pane { height: calc(var(--vh, 100vh) - var(--header-h, 0px) - 90px); }
 /* Settings → Background: Choose… in the accent; Remove keeps the red of a removal. */
 .setting .bg-actions button.link:not(.danger) { color: var(--accent); }

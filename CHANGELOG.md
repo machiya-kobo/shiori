@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.10.4 (2026-10-15)
+
+- Search page: the preview pane lines up with the results, stays under
+  the header as they scroll and fits the window (on a Mac it ran past the
+  bottom). With a background it ends above Rain and Watch, and so does the
+  web app's preview.
+
 ## 1.10.3 (2026-10-15)
 
 - Backgrounds: the Rain and Watch buttons sit in the lower-right corner,

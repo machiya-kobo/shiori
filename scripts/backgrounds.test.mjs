@@ -243,3 +243,14 @@ test("the corner is pinned lower right with the safe-area insets, and the lists 
   assert.match(app, /html\.has-bgctl #list \{ padding-bottom: calc\(140px \+ env\(safe-area-inset-bottom\)\); \}/);
   assert.doesNotMatch(app, /has-bgctl #sidebar/);
 });
+
+test("the preview ends above the corner and fits the window in the zoomed page's own units", () => {
+  const page = read('../patches/shiori/search.css');
+  const pane = page.match(/#preview-pane \{[^}]*\}/)[0];
+  // Level with the results (main's 8px), under the header, and never 100vh: on a Mac the body's zoom made it 1.2 windows tall.
+  assert.match(pane, /top: calc\(var\(--header-h, 0px\) \+ 8px\)/);
+  assert.match(pane, /height: calc\(var\(--vh, 100vh\) - var\(--header-h, 0px\) - 16px\); margin-top: 8px;/);
+  assert.doesNotMatch(pane, /height: calc\(100vh/);
+  assert.match(page, /html\.has-bgctl #preview-pane \{ height: calc\(var\(--vh, 100vh\) - var\(--header-h, 0px\) - 90px\); \}/);
+  assert.match(read('../web/app/app.css'), /html\.has-bgctl #preview \{ padding-bottom: calc\(74px \+ env\(safe-area-inset-bottom\)\); \}/);
+});

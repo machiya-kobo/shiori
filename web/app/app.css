@@ -825,3 +825,5 @@ html.has-bg #preview > .status { margin: 16px; border-radius: 14px; }
   html.has-bgctl #list { padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
 }
 html.has-bg #preview-bar:not(:has(.where)) { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* The preview ends above the corner (16px, 50px tall, then 8px), wherever it shows. */
+html.has-bgctl #preview { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
