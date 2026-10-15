@@ -20,7 +20,7 @@ ENV SHIORI_BUILD_ID=$SHIORI_BUILD_ID SHIORI_HISTER_RELEASE=$SHIORI_HISTER_RELEAS
 RUN scripts/build-web.sh /dist/search http://shiori-web.invalid/ @runtime \
  && scripts/build-pwa.sh /dist/app @runtime
 
-FROM public.ecr.aws/nginx/nginx-unprivileged:stable-alpine@sha256:56b8272e43a0525f67aed68d1e0794a712d10e3e45a563e118e9a77c817e6f86
+FROM public.ecr.aws/nginx/nginx-unprivileged:stable-alpine@sha256:782bb89768cc87b7f95c18b95baa1af250e5d451f26794f59363540161147c01
 USER root
 RUN apk add --no-cache python3 ca-certificates
 COPY --from=build /dist /opt/shiori/dist

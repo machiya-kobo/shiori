@@ -5,6 +5,11 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.10.2 (2026-10-14)
+
+- shiori-web: the nginx base image is updated to the current
+  `nginx-unprivileged:stable-alpine`.
+
 ## 1.10.1 (2026-10-14)
 
 - Web app: the installed app's status bar is see-through again, as before
