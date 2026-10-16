@@ -2,7 +2,8 @@
  * net_talkip.c: net.h for Shiori Lite, on talkip (MacIP over LocalTalk, no MacTCP) through its
  * MacTCP-style shim. talkip's calls finish before they return, so a "begin" keeps the result for
  * NetPoll; a receive waits in NetPoll, which asks _TCPStatus (it runs the stack) and takes what
- * has come. Connecting blocks inside talkip, at most its 30 seconds, while it runs the stack.
+ * has come. Connecting is talkip's asynchronous open (v0.4.1): talkip_idle advances it, and an
+ * abort ends it, so ⌘-. stops a search while it waits for the gateway's address or the server.
  */
 #include <Memory.h>
 #include <string.h>
@@ -109,8 +110,16 @@ OSErr NetCreate(NetConn *c, long bufLen)
 
 OSErr NetBeginOpen(NetConn *c, ip_addr host, tcp_port port, short timeoutSecs)
 {
+	OSErr err;
+
 	(void) timeoutSecs;         /* talkip's own: 20 s for an address, then 30 s to connect */
-	return Finished(c, _TCPActiveOpen(&c->pb, c->stream, host, port, NULL, NULL, NULL, NULL, false));
+	/* talkip keeps &c->pb until the open ends: the connection lives in a Fetch, which never moves */
+	err = _TCPActiveOpen(&c->pb, c->stream, host, port, NULL, NULL, NULL, NULL, true);
+	if (err != noErr)
+		return err;
+	c->opening = true;
+	c->busy = true;
+	return noErr;
 }
 
 OSErr NetBeginSend(NetConn *c, const char *data, unsigned short len)
@@ -165,6 +174,14 @@ OSErr NetPoll(NetConn *c)
 
 	if (!c->busy)
 		return noErr;
+	if (c->opening) {
+		talkip_idle();          /* moves the open along */
+		if (c->pb.ioResult == inProgress)
+			return inProgress;
+		c->opening = false;
+		c->busy = false;
+		return c->pb.ioResult;
+	}
 	if (c->receiving) {
 		err = Receive(c);
 		if (err == inProgress)
@@ -194,7 +211,8 @@ void NetAbort(NetConn *c)
 
 	if (c->stream == 0)
 		return;
-	(void) _TCPAbort(&pb, c->stream, NULL, NULL, false);
+	(void) _TCPAbort(&pb, c->stream, NULL, NULL, false);     /* ends an open under way too */
+	c->opening = false;
 	c->receiving = false;
 	c->busy = false;
 }

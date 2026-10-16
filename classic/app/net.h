@@ -22,6 +22,7 @@ typedef struct NetConn {
 	Boolean busy;           /* an operation was started and hasn't finished */
 #ifdef SHIORI_TALKIP
 	OSErr result;           /* talkip's calls finish at once: the result waits here for NetPoll */
+	Boolean opening;        /* talkip's asynchronous open is under way, in pb */
 	Boolean receiving;      /* a receive waits for data (NetPoll asks talkip for it) */
 	char *rcvInto;
 	unsigned short rcvWant, rcvGot;

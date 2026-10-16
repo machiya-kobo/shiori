@@ -13,7 +13,11 @@
 #define RCV_BUF_LEN 16384L      /* MacTCP's buffer for the stream: room for a window's worth */
 #define CHUNK 8192L             /* one receive's most */
 #endif
+#ifdef SHIORI_TALKIP
+#define CONNECT_SECS 30         /* talkip may first wait for the gateway's address */
+#else
 #define CONNECT_SECS 15
+#endif
 #define SEND_SECS 20
 #define IDLE_SECS 20            /* the longest gap between pieces of the reply */
 #define DRAIN_TICKS 4           /* a pass keeps receiving while data comes, this long at most */
@@ -278,7 +282,14 @@ void FetchProblem(const Fetch *f, const char *who, char *out, long cap)
 		case fetchTooLarge: sprintf(msg, "%s's answer was too large for this Mac.", who); break;
 		case fetchBadReply: sprintf(msg, "%s's answer was cut short or unreadable.", who); break;
 		case fetchRedirected: sprintf(msg, "%s redirected: Shiori never follows a redirect.", who); break;
-		case fetchTimedOut: sprintf(msg, "%s didn't answer in time.", who); break;
+		case fetchTimedOut:
+#ifdef SHIORI_TALKIP
+			if (!NetHasAddress()) {
+				sprintf(msg, "No MacIP address yet: is the LocalTalk gateway on?");
+				break;
+			}
+#endif
+			sprintf(msg, "%s didn't answer in time.", who); break;
 		case fetchCancelled: sprintf(msg, "Stopped."); break;
 		case fetchTooLong: sprintf(msg, "That request is too long for this Mac to send: try fewer words."); break;
 		case memFullErr: sprintf(msg, "Not enough memory for %s's answer.", who); break;

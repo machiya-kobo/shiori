@@ -162,7 +162,7 @@ search, a 48 KB note) and a smaller stack, and has no desk accessory. Its
 About box shows the free memory. The gateway's address on your LAN is the
 one to list in the bridge's `BRIDGE_ALLOW`, and that admits every Mac on
 the LocalTalk network (each still needs its room token). A connection
-waits for the gateway's address first, and ⌘-. can't stop that wait yet.
+waits for the gateway's address first; ⌘-. stops it, as it stops a search.
 
 ## Building and testing
 

@@ -322,6 +322,9 @@ its requests arrive from the gateway's address, which the fake house's
 hand the build over rather than writing its disk. First run (System 6.0.8,
 512K): 91K free at launch, 56K with a page open in the reader; `heavy` in
 under 5 s; `big` refused; ⌘-. stopped `slow`.
+With talkip's asynchronous open (v0.4.1), a Kura address that never
+answers (`http://192.0.2.1:8071/`, TEST-NET) stops at once on ⌘-., and
+left alone ends in "Can't reach Kura (-23016)" after about 30 s.
 
 ### The Mac Plus
 
