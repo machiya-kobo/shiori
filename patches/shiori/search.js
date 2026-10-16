@@ -3333,13 +3333,16 @@
     // Its first box that's drawn (a hidden AI answer has none).
     const top = [...slot.children].find((c) => !c.hidden && c.offsetHeight);
     if (!top || getComputedStyle(main).display !== 'grid') return;
-    // The first box drawn in the results' column: a panel (AI Answer), a
-    // section's heading row, or the first web card. Not the first .card:
+    // The first box drawn in the results' column: Did you mean, a panel (AI
+    // Answer), a section's heading row, or the first web card. Not the first .card:
     // inside a collapsed section cards are clipped, not hidden, and Info
     // lined up with an unseen one, well below the top.
+    // Over a background each of the column's parts is a box of glass: the box is what lines up.
+    const boxes = document.documentElement.classList.contains('has-bg');
     const first = (() => {
       for (const el of main.children) {
-        if (el === slot || el.hidden || el.id === 'skeleton' || el.classList.contains('correction') || !el.offsetHeight) continue;
+        if (el === slot || el.hidden || el.id === 'skeleton' || !el.offsetHeight) continue;
+        if (boxes) return el;
         if (el.id === 'web') return el.querySelector('.panel:not([hidden]), .card') || el;
         return el.matches('.fold:not(.panel)') ? el.querySelector('.fold-head') : el;
       }

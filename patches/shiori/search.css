@@ -1007,9 +1007,9 @@ body.dense .vault-card > .title::before { background: var(--notes); }
 
 /* Over a background (backgrounds.css): the header, what's in the results' column, the footer, the preview and the
    sheet are glass, and the rest is open: the scene shows beside the column, between its sections and in the second
-   column when there's no Info card. Cards keep their own colours on the glass. The start page's column is one pane of
-   glass, a layer of its own behind the body (the body itself can't be glass: a filter there would hold the fixed
-   layers to it). */
+   column when there's no Info card. Cards keep their own colours on the glass. On the start page the scene shows
+   behind the middle too: the field and the recent searches are solid already, and the name, the corner's buttons and
+   the footer's line each sit on a small pane of glass of their own. */
 html.has-bg header,
 html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
 html.has-bg body:not(.home) > footer {
@@ -1020,12 +1020,29 @@ html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more),
 html.has-bg body:not(.home) > footer {
   border-radius: 14px; margin-inline: -8px; padding: 4px 8px;
 }
-html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav):not([hidden]) + :is(section, p, nav) { margin-top: 8px; }
-html.has-bg body.home { position: relative; }
-html.has-bg body.home::before {
-  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+/* The Info column sticks where the column's first box of glass starts (8px under the header, not 12), so the two
+   tops line up. */
+@media (min-width: 1100px) {
+  html.has-bg body.two-col:not(.with-preview) > main > #infobox-slot { top: calc(var(--header-h, 0px) + 8px); }
+}
+/* 8px between boxes of glass: every box after a shown one (~, not +: the AI answer, hidden, and the Info column sit
+   between Did you mean and the first section, which then ran into it). */
+html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav):not([hidden]) ~ :is(section:not(#infobox-slot), p, nav) { margin-top: 8px; }
+/* The start page's header is the whole window (the field in its middle): not glass, or it was a pane again. */
+html.has-bg body.home header { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+html.has-bg body.home :is(.home-brand, .brand-row, footer) {
   background: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under));
   -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+}
+html.has-bg body.home .home-brand { width: fit-content; margin: 0 auto 22px; padding: 6px 20px 6px 14px; border-radius: 18px; }
+html.has-bg body.home .brand-row { padding: 4px 6px; border-radius: 999px; }
+html.has-bg body.home footer {
+  left: 50%; right: auto; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px);
+  padding: 4px 14px; border-radius: 14px;
+}
+/* On a phone the line sits above the corner's Rain and Watch, which covered its end. */
+@media (max-width: 759px) {
+  html.has-bgctl body.home footer { bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 html.has-bg #preview-pane {
   background: color-mix(in srgb, var(--card) var(--glass-mix), var(--glass-under));
