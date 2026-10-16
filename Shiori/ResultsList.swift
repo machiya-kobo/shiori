@@ -382,7 +382,8 @@ struct ElsewhereLinks: View {
 /// One result: favicon, title, where and when, the matching text, label.
 extension EnvironmentValues {
     /// All's rows of your own among the web results: whose this one is
-    /// (`.hister` "Your page", `.notes` "Your note"), said above its title.
+    /// (`.hister` "Your page", `.notes` "Your note", `.media` "Your media",
+    /// MediaItemRow's), said above its title.
     @Entry var mixedIn: SearchScope?
 }
 

@@ -17,5 +17,9 @@ struct MixedResultsTests {
     @Test func pagesAndNotesTakeTurns() {
         #expect(MixedResults.alternate(["p1", "p2", "p3"], ["n1"]) == ["p1", "n1", "p2", "p3"])
         #expect(MixedResults.alternate([String](), ["n1", "n2"]) == ["n1", "n2"])
+        // With media: pages, notes and media take turns in that order; whichever are left carry on.
+        #expect(MixedResults.alternate(["p1", "p2"], ["n1", "n2", "n3"], ["m1"]) == ["p1", "n1", "m1", "p2", "n2", "n3"])
+        #expect(MixedResults.alternate([String](), [], ["m1", "m2"]) == ["m1", "m2"])
+        #expect(MixedResults.alternate(["p1"], [], ["m1", "m2"]) == ["p1", "m1", "m2"])
     }
 }

@@ -2,9 +2,9 @@ import HisterKit
 import SwiftUI
 
 /// Search → All, as on Shiori's search page and in the web app: the web's
-/// results with a page of your pages and notes among them (taking turns,
-/// spread evenly over the web's first page: `MixedResults`), each row saying
-/// whose it is; their totals go on the Pages and Notes pills
+/// results with a page of your pages, notes and media among them (taking
+/// turns, spread evenly over the web's first page: `MixedResults`), each row
+/// saying whose it is; their totals go on the Pages, Notes and Media pills
 /// (`SearchSession.counts`). Web is the pill for the web alone.
 /// Web Results switches the web off here too: then the list is yours.
 struct AllResults: View {
@@ -33,7 +33,8 @@ struct AllResults: View {
     /// How many code documents match, for the Code pill's count (never
     /// listed here: code shows only on its own pill).
     @State private var codeTotal = 0
-    /// Your Media (docs/media.md): its top five above the rest, its count on the Media pill.
+    /// Your Media (docs/media.md): among the web's results with your pages and notes, its count on the Media pill.
+    /// Never to the AI Answer: that reads only the web's results.
     @State private var media: MediaSearchModel
 
     init(query: String, showScope: @escaping (SearchScope) -> Void, search: @escaping (String) -> Void) {
@@ -148,14 +149,18 @@ struct AllResults: View {
         [pages.phase, notes.phase].contains { $0 == .idle || $0 == .loading }
     }
 
-    /// The web is on its way and not yet waited out: nothing of yours shows
-    /// ahead of it.
+    /// The web or your media is on its way and not yet waited out (1.5 s):
+    /// nothing of yours shows ahead of it. Media later than that joins the
+    /// list when it comes.
     private var holdingForWeb: Bool {
-        webOn && !webWaited && (web.phase == .idle || web.phase == .loading)
+        guard !webWaited else { return false }
+        let mediaComing = app.media != nil && (media.phase == .idle || media.phase == .loading)
+        return mediaComing || (webOn && (web.phase == .idle || web.phase == .loading))
     }
 
     private var stillLoading: Bool {
         mineLoading || (webOn && (web.phase == .idle || web.phase == .loading))
+            || (app.media != nil && (media.phase == .idle || media.phase == .loading))
     }
 
     /// Your Pages' five: the pages you opened for this search first (Hister
@@ -208,17 +213,14 @@ struct AllResults: View {
                 if webOn, AIAnswerSection.offered(in: app, results: webResults) {
                     AIAnswerSection(query: web.query, results: webResults)
                 }
-                if !media.items.isEmpty {
-                    MediaAllSection(model: media, showScope: showScope)
-                }
                 // No headings: the web's results, yours among them. No "You
                 // Opened" here either: it only grew, and pushed the rest down.
                 let opened = app.searchPage.showOpened ? Set(pages.opened.map(\.url)) : []
-                let yours = Self.alternate(mine, vault)
+                let yours = Self.alternate(mine, vault, Array(media.items.prefix(Self.count)))
                 if webOn {
                     webSection(webResults, yours: yours, opened: opened)
                 } else {
-                    ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
+                    ForEach(yours) { mixed($0, opened: opened) }
                 }
             }
             .listStyle(.plain)
@@ -226,27 +228,37 @@ struct AllResults: View {
         }
     }
 
-    /// Yours, in the order they go among the web's: a page, then a note, and
-    /// so on (whichever runs out, the other carries on).
-    struct Yours {
-        let page: StoredPage
+    /// Yours, in the order they go among the web's: a page, a note, then
+    /// media, and so on (whichever run out, the others carry on).
+    struct Yours: Identifiable {
+        var page: StoredPage?
+        var media: MediaItem?
         let kind: SearchScope
+        var id: String { page.map { "\(kind.rawValue):\($0.url)" } ?? "media:\(media?.id ?? "")" }
     }
 
-    static func alternate(_ pages: [StoredPage], _ notes: [StoredPage]) -> [Yours] {
-        MixedResults.alternate(pages.map { Yours(page: $0, kind: .hister) }, notes.map { Yours(page: $0, kind: .notes) })
+    static func alternate(_ pages: [StoredPage], _ notes: [StoredPage], _ media: [MediaItem] = []) -> [Yours] {
+        MixedResults.alternate(
+            pages.map { Yours(page: $0, kind: .hister) },
+            notes.map { Yours(page: $0, kind: .notes) },
+            media.map { Yours(media: $0, kind: .media) })
     }
 
-    private func mixed(_ item: Yours, opened: Set<String>) -> some View {
-        DocumentItem(document: item.page, opened: opened.contains(item.page.url))
-            .environment(\.mixedIn, item.kind)
+    @ViewBuilder private func mixed(_ item: Yours, opened: Set<String>) -> some View {
+        if let page = item.page {
+            DocumentItem(document: page, opened: opened.contains(page.url))
+                .environment(\.mixedIn, item.kind)
+        } else if let media = item.media {
+            MediaItemRow(item: media)
+                .environment(\.mixedIn, .media)
+        }
     }
 
     @ViewBuilder private func webSection(_ results: [WebResult], yours: [Yours], opened: Set<String>) -> some View {
         switch web.phase {
         case .idle, .loading:
             // Yours first, while the web is on its way.
-            ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
+            ForEach(yours) { mixed($0, opened: opened) }
             ProgressView()
                 .frame(maxWidth: .infinity)
                 .listRowBackground(palette.background)
@@ -255,7 +267,7 @@ struct AllResults: View {
                 .textStyle(.callout)
                 .foregroundStyle(palette.secondaryText)
                 .listRowBackground(palette.background)
-            ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
+            ForEach(yours) { mixed($0, opened: opened) }
         case .loaded:
             EngineHealthRow(names: web.unanswered)
             if results.isEmpty {
@@ -265,7 +277,7 @@ struct AllResults: View {
                         .foregroundStyle(palette.secondaryText)
                         .listRowBackground(palette.background)
                 }
-                ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
+                ForEach(yours) { mixed($0, opened: opened) }
             }
             if !web.suggestions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -290,11 +302,11 @@ struct AllResults: View {
                         await web.loadMoreIfNeeded(after: result, searx: app.searx, hister: app.client)
                     }
                 if index < slots.count {
-                    ForEach(yours[starts[index]..<starts[index + 1]], id: \.page.url) { mixed($0, opened: opened) }
+                    ForEach(yours[starts[index]..<starts[index + 1]]) { mixed($0, opened: opened) }
                 }
             }
             if slots.isEmpty, !results.isEmpty {
-                ForEach(yours, id: \.page.url) { mixed($0, opened: opened) }
+                ForEach(yours) { mixed($0, opened: opened) }
             }
             if web.isLoadingMore {
                 ProgressView()

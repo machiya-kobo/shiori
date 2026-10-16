@@ -1711,6 +1711,21 @@ async function didYouMean(q, scope) {
 /** Your pages and your notes in All: a page of each (as the Pages list's),
  *  all of them among the web results. */
 const ALL_COUNT = 30;
+// How long All waits for the media services before showing without them (mixed in when they answer).
+const MEDIA_WAIT_MS = 1500;
+
+/** Your pages, notes and media spread evenly among a list's other rows (S.mixCounts); the list is theirs if it has none. */
+function spreadMixed(list, mix) {
+  for (const row of mix) row.remove();
+  const others = [...list.children];
+  const counts = S.mixCounts(others.length, mix.length);
+  let next = 0;
+  others.forEach((row, i) => {
+    row.after(...mix.slice(next, next + counts[i]));
+    next += counts[i];
+  });
+  if (!others.length) list.append(...mix);
+}
 
 async function searchAll(container, q, { web = true } = {}) {
   container.replaceChildren(h('div', { class: 'spinner' }));
@@ -1750,11 +1765,10 @@ async function searchAll(container, q, { web = true } = {}) {
   container.replaceChildren();
   const answer = answerCard(q);
   if (answer) container.append(answer);
-  if (media) container.append(yourMedia(media, q));
-  // Your pages and notes have no sections here, as on the search page:
-  // a page of each goes among the web results, pages and notes taking
-  // turns, spread evenly (S.alternate, S.mixCounts), each row saying whose
-  // it is, and their totals go on the Pages and Notes pills.
+  // Your pages, notes and media have no sections here, as on the search page:
+  // their top rows go among the web results, taking turns, spread evenly
+  // (S.alternate, S.mixCounts), each row saying whose it is, and their
+  // totals go on the Pages, Notes and Media pills.
   // Hister's total counts the pages you opened, and they're shown.
   if (pages) setSegmentCount('hister', Math.max(pages.total || 0, pages.documents.length), q);
   // The Code pill's count (Hister's own index, nothing spent); code is never listed here.
@@ -1768,8 +1782,32 @@ async function searchAll(container, q, { web = true } = {}) {
   });
   const myPages = mine(pages, 'Your page');
   const myNotes = notes && notes.signIn ? [] : mine(notes, 'Your note');
-  const mix = S.alternate(myPages, myNotes);
+  // Your Media, waited for a moment (its services can be slow); a later answer is mixed in when it comes.
+  const mediaRows = (res) => ((res && res.items) || []).slice(0, ALL_COUNT).map((item) => {
+    const row = mediaRow(item);
+    row.classList.add('mixed');
+    row.querySelector('.title').dataset.label = 'Your media';
+    return row;
+  });
+  const LATE = {};
+  const early = media ? await Promise.race([media, new Promise((r) => setTimeout(() => r(LATE), MEDIA_WAIT_MS))]) : null;
+  if (media && early !== LATE) setSegmentCount('media', early ? early.items.length : 0, q);
+  const myMedia = early && early !== LATE ? mediaRows(early) : [];
+  const mix = S.alternate(myPages, myNotes, myMedia);
   const rows = mix;
+  // Media answering after the rest is drawn: its rows join the others, placed afresh.
+  const lateMedia = (list) => {
+    if (!media || early !== LATE) return;
+    media.then((res) => {
+      const { view, params } = route();
+      if (!res || view !== 'search' || params.get('q') !== q || !list.isConnected) return;
+      setSegmentCount('media', res.items.length, q);
+      const more = mediaRows(res);
+      if (!more.length) return;
+      mix.splice(0, mix.length, ...S.alternate(myPages, myNotes, more));
+      spreadMixed(list, mix);
+    });
+  };
   if (notes && notes.signIn) container.append(h('section', { class: 'list-section' }, signInStatus(() => searchAll(container, q, { web }), notes.signIn)));
   // Yours that failed while the rest shows: said, rather than read as "none of yours".
   const failed = [!pages && 'Your Pages', !notes && 'Your Notes'].filter(Boolean);
@@ -1779,7 +1817,11 @@ async function searchAll(container, q, { web = true } = {}) {
   }
   dropStaleSelection(container);
   if (!settings.webResults || !web) {
-    if (rows.length) container.append(h('ul', { class: 'rows' }, rows));
+    if (rows.length) {
+      const list = h('ul', { class: 'rows' }, rows);
+      container.append(list);
+      lateMedia(list);
+    }
     else if (!container.children.length) container.replaceChildren(status('Nothing Found', `Nothing matches “${q}”.`));
     // While typing: yours only; Return adds the web (each web search counts).
     if (settings.webResults && !web) container.append(h('p', { class: 'more web-on-return' }, 'Press Return to add the web.'));
@@ -1787,7 +1829,10 @@ async function searchAll(container, q, { web = true } = {}) {
   }
   const webBox = h('div', {}, h('div', { class: 'spinner' }));
   container.append(webBox);
-  webList(webBox, q, { embedded: true, mix });
+  webList(webBox, q, { embedded: true, mix }).then(() => {
+    const list = webBox.querySelector('ul.rows');
+    if (list) lateMedia(list);
+  });
 }
 
 /**
@@ -1996,21 +2041,6 @@ async function mediaList(container, q, params) {
       : h('ul', { class: 'rows' }, g.items.map(mediaRow)))));
 }
 
-/** All's Your Media: the top five, the count leading to the Media pill. */
-function yourMedia(pending, q) {
-  const section = h('section', { class: 'list-section your-media' });
-  pending.then((res) => {
-    const { view, params } = route();
-    if (!res || view !== 'search' || params.get('q') !== q) return section.remove();
-    setSegmentCount('media', res.items.length, q);
-    if (!res.items.length) return section.remove();
-    const more = h('a', { href: '#', class: 'count', onclick: (e) => (e.preventDefault(), go('search', { q, s: 'media', w: '1' })) },
-      `${res.items.length} ${res.items.length === 1 ? 'result' : 'results'} ›`);
-    section.replaceChildren(h('div', { class: 'section-head tinted', 'data-tint': 'purple' }, 'Your Media', more), h('ul', { class: 'rows' }, res.items.slice(0, 5).map(mediaRow)));
-  });
-  return section;
-}
-
 /** The Media pill before a search: what's playing, what you played and watched, your top lists, your watchlist and
  *  what's new in your libraries. */
 async function mediaShelves(container, params) {
@@ -2116,14 +2146,7 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
       );
     }
     // Yours among them, spread evenly from the first web row to the last.
-    const webRows = [...list.children];
-    const counts = S.mixCounts(webRows.length, mix.length);
-    let next = 0;
-    webRows.forEach((row, i) => {
-      row.after(...mix.slice(next, next + counts[i]));
-      next += counts[i];
-    });
-    if (!webRows.length) list.append(...mix);
+    spreadMixed(list, mix);
     // Not `null` as a child: replaceChildren writes it out as the text "null"
     // (it showed under All's Web heading).
     container.replaceChildren(...[embedded ? null : answerCard(q), health ? h('p', { class: 'engine-health' }, health) : null, list].filter(Boolean));

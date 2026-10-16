@@ -54,6 +54,8 @@
   // The hosted page (served over http(s)), not Safari's own extension page.
   const HOSTED = /^https?:$/.test(location.protocol);
   const MAC_BASE = 1.2;
+  // How long All's results wait for the media services before showing without them (mixed in when they answer).
+  const MEDIA_WAIT_MS = 1500;
 
   // The header as it was last drawn (theme and tabs), kept in localStorage
   // because that can be read before the first paint: switching tabs loads
@@ -2890,20 +2892,24 @@
   }
 
   /**
-   * Your pages and notes among the web results: pages and notes taking
-   * turns, spread evenly from the first web result to the last
+   * Your pages, notes and media among the web results: taking turns
+   * (S.alternate), spread evenly from the first web result to the last
    * (S.mixCounts), each card saying whose it is. With no web results,
-   * the list is theirs.
+   * the list is theirs. Again when media answers late: the cards are
+   * placed afresh.
    */
+  let mixedOnce = false;
   function mixIn() {
-    const mine = S.alternate(myPages, myNotes).filter(Boolean);
+    mixedOnce = true;
+    const mine = S.alternate(myPages, myNotes, myMedia).filter(Boolean);
     if (!mine.length) return;
     const list = $('web-results');
+    for (const card of mine) card.remove();
     const web = [...list.children];
     for (const card of mine) {
       card.classList.add('mixed');
       const title = card.querySelector('.title');
-      if (title) title.dataset.label = card.classList.contains('vault-card') ? 'Your note' : 'Your page';
+      if (title) title.dataset.label = card.classList.contains('vault-card') ? 'Your note' : card.classList.contains('media-card') ? 'Your media' : 'Your page';
     }
     const counts = S.mixCounts(web.length, mine.length);
     let next = 0;
@@ -2927,19 +2933,21 @@
   // sign-in): then the server is in reach, and a slow web doesn't send the
   // page away to DuckDuckGo.
   let answered = false;
-  // Your Media on All (first page): its top five in a section of its own, open until you fold it.
-  if (category === 'general' && page === 1 && mediaOn && q) {
-    S.mediaSearch(mediaServices, q, mediaGet).then((res) => {
-      if (!res.items.length) return;
-      answered = true;
-      setPillCount('media', res.items.length);
-      $('media-results').replaceChildren(...res.items.slice(0, 5).map(mediaCard));
-      $('media-count').textContent = `${res.items.length.toLocaleString()} ${res.items.length === 1 ? 'result' : 'results'}`;
-      $('media-more').href = link({ cat: 'media', p: 1 });
-      fold($('media'), true);
-      $('media').hidden = false;
-    }).catch(() => {});
-  }
+  // Your Media on All (first page): like your pages and notes, no section of its own; its top items go among the
+  // web results (mixIn), and its total on the Media pill. Never in the Back copy, the AI Answer (that sends only the
+  // words) or Remember What You Open (pages and notes only).
+  let myMedia = [];
+  const mediaDone = category === 'general' && page === 1 && mediaOn && q
+    ? S.mediaSearch(mediaServices, q, mediaGet).then((res) => {
+        if (!res.items.length) return;
+        answered = true;
+        setPillCount('media', res.items.length);
+        myMedia = res.items.slice(0, ALL_COUNT).map((item) => mediaCard(item));
+      }).catch(() => {})
+    : Promise.resolve();
+  // The media services can be slow: the results wait for them a moment, then a late answer is mixed in after.
+  const mediaWait = () => Promise.race([mediaDone, new Promise((r) => setTimeout(r, MEDIA_WAIT_MS))]);
+  mediaDone.then(() => { if (mixedOnce && myMedia.length && !myMedia[0].isConnected) mixIn(); });
   // Yours that failed while the rest shows: said under the results, with
   // Try Again, rather than read as "none of yours".
   const yoursFailed = [];
@@ -3021,6 +3029,7 @@
   if (!wq || !settings.webResults) {
     await histerDone;
     await vaultDone;
+    await mediaWait();
     mixIn();
     if (yoursFailed.length) sayYoursFailed();
     else if (!histerDocs.length && !vaultDocs.length) {
@@ -3059,6 +3068,7 @@
       if (err && err.status === 403) {
         await histerDone;
         await vaultDone;
+        await mediaWait();
         reveal();
         $('web').hidden = false;
         $('web-status').replaceChildren(
@@ -3075,6 +3085,7 @@
       if (page === 1 && webLike) {
         await histerDone;
         await vaultDone;
+        await mediaWait();
         // Nothing answered at all (VPN off): plain DuckDuckGo, without a
         // trace here. With your pages or notes on screen, or Hister or Kura
         // answering (nothing found, a sign-in asked), stay and say so: a
@@ -3117,6 +3128,7 @@
   const seconds = ((performance.now() - started) / 1000).toFixed(1);
   await histerDone;
   await vaultDone;
+  await mediaWait();
   sayYoursFailed();
 
   const corrections = (data.corrections || []).filter((c) => typeof c === 'string' && c !== wq);

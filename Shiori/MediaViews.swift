@@ -334,6 +334,8 @@ struct MediaItemRow: View {
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
     @Environment(\.openURL) private var openURL
+    /// On All, among the web's results: said above the title, as your pages and notes are.
+    @Environment(\.mixedIn) private var mixedIn
 
     private var places: (href: String, places: [Media.Place]) { Media.places(item) }
 
@@ -345,6 +347,11 @@ struct MediaItemRow: View {
             HStack(alignment: .top, spacing: 12) {
                 MediaArt(item: item)
                 VStack(alignment: .leading, spacing: 3) {
+                    if mixedIn == .media {
+                        Text("Your media")
+                            .textStyle(.caption, weight: .semibold)
+                            .foregroundStyle(palette.tint(SearchScope.media.tint))
+                    }
                     Text(item.title)
                         .textStyle(.headline)
                         .foregroundStyle(palette.accent)
@@ -459,36 +466,6 @@ struct MediaArt: View {
         let address = item.image
         let image = await Thumbnails.shared.image(address, points: poster ? 60 : 48) { await client.imageData(address) }
         return image.map(Image.init(platformImage:))
-    }
-}
-
-/// All's Your Media: the top five under a heading in the Media pill's
-/// purple, its count leading to the pill.
-struct MediaAllSection: View {
-    let model: MediaSearchModel
-    let showScope: (SearchScope) -> Void
-
-    @Environment(\.palette) private var palette
-
-    var body: some View {
-        Section {
-            Button {
-                showScope(.media)
-            } label: {
-                HStack(spacing: 8) {
-                    Text("Your Media")
-                        .textStyle(.subheadline, weight: .semibold)
-                    Spacer()
-                    Text("\(model.items.count) \(model.items.count == 1 ? "result" : "results") ›")
-                        .textStyle(.footnote)
-                }
-                .foregroundStyle(palette.tint(SearchScope.media.tint))
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .listRowBackground(palette.surface.overlay(palette.tint(SearchScope.media.tint).opacity(0.12)))
-            ForEach(model.items.prefix(5)) { MediaItemRow(item: $0) }
-        }
     }
 }
 

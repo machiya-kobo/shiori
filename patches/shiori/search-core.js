@@ -3421,12 +3421,12 @@
     return Array.from({ length: w }, (_, i) => Math.ceil(((i + 1) * m) / w) - Math.ceil((i * m) / w));
   }
 
-  /** Pages and notes taking turns (a page first), then whichever is left. */
-  function alternate(pages, notes) {
+  /** Lists taking turns in order (pages, notes, media: a page first), then whichever are left. */
+  function alternate(...lists) {
     const out = [];
-    for (let i = 0; i < Math.max(pages.length, notes.length); i++) {
-      if (i < pages.length) out.push(pages[i]);
-      if (i < notes.length) out.push(notes[i]);
+    const longest = Math.max(0, ...lists.map((l) => (l || []).length));
+    for (let i = 0; i < longest; i++) {
+      for (const l of lists) if (l && i < l.length) out.push(l[i]);
     }
     return out;
   }

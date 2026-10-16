@@ -25,7 +25,7 @@ service is optional. With none set up, there's no Media pill.
   artists, albums and tracks for a week, month, year or all time (Sort → Top
   Lists), your watchlist and Recently Added. Group → Day or Month instead puts
   date headings over everything, by when you played it.
-- **On All:** Your Media, the top five, with the count leading to the pill.
+- **On All:** no section of its own: your top media go among the web results with your pages and notes, taking turns with them, each saying "Your media"; the total is on the Media pill. Media never reaches the AI Answer (the hosted pages send it only the words; the apps, only the web's results).
 - **A card opens in its service:** films and TV in Plex first, then Movary,
   then Jellyfin; music in Koito first. Its other places are links: the other
   services, IMDb, TMDB, Letterboxd and MusicBrainz. Those sites are only ever opened as links, never fetched.

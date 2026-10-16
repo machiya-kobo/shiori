@@ -1,4 +1,4 @@
-/// All: your pages and notes among the web results. `S.mixCounts` and
+/// All: your pages, notes and media among the web results. `S.mixCounts` and
 /// `S.alternate` in search-core.js are the twins, with the same tests.
 public enum MixedResults {
     /// How many of yours follow each of `web` web results, `mine` in all,
@@ -11,12 +11,11 @@ public enum MixedResults {
         return (0..<w).map { ceilDiv(($0 + 1) * m) - ceilDiv($0 * m) }
     }
 
-    /// Pages and notes taking turns (a page first), then whichever is left.
-    public static func alternate<T>(_ pages: [T], _ notes: [T]) -> [T] {
+    /// Lists taking turns in order (pages, notes, media: a page first), then whichever are left.
+    public static func alternate<T>(_ lists: [T]...) -> [T] {
         var out: [T] = []
-        for i in 0..<max(pages.count, notes.count) {
-            if i < pages.count { out.append(pages[i]) }
-            if i < notes.count { out.append(notes[i]) }
+        for i in 0..<(lists.map(\.count).max() ?? 0) {
+            for list in lists where i < list.count { out.append(list[i]) }
         }
         return out
     }

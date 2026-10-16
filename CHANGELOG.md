@@ -5,6 +5,19 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.11.3 (2026-10-15)
+
+- Search page: with a background the start page shows it behind the
+  middle too; the name, the corner's buttons and the footer sit on small
+  panes of glass.
+- Search page: Did you mean no longer runs into the first result, and the
+  right column (AI Answer, Related Searches, Info) lines up with the top
+  of the results, Did you mean included.
+- All: your media goes among the web results, as your pages and notes do,
+  each saying "Your media", with the total on the Media pill; no more
+  Your Media section above them. On the search page, in the web app and
+  in the apps.
+
 ## 1.11.2 (2026-10-15)
 
 - Backgrounds: Safari on a Mac, iPhone and iPad keeps the frosted glass
