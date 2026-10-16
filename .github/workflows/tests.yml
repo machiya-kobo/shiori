@@ -24,23 +24,75 @@ jobs:
   # The shiori-web image, built and run against a fake house (docker/shiori-web/test): refuses to start unset, serves
   # both pages, proxies each route to its own service with Origin untouched, signs in as Hister or hister-login does.
   # public.ecr.aws caps anonymous pulls per address, and some runners' addresses are over it ("429 Too Many Requests:
-  # toomanyrequests: Data limit exceeded" pulling a base image). A failure here runs once more on a fresh runner
-  # (container-again); a real failure fails that one too.
+  # toomanyrequests: Data limit exceeded" pulling a base image). Only that failure runs again: up to four attempts, each
+  # on a fresh runner after a longer pause (2, 4, then 6 minutes). Any other failure fails at once; the last attempt
+  # fails on anything.
   container:
     runs-on: ubuntu-latest
-    continue-on-error: true
     outputs:
-      ok: ${{ steps.test.outcome == 'success' }}
+      retry: ${{ steps.test.outputs.retry }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Build the image and test it
         id: test
-        run: python3 tools/container-test --engine docker
-  container-again:
+        run: |
+          set -o pipefail
+          if python3 tools/container-test --engine docker 2>&1 | tee "$RUNNER_TEMP/container-test.log"; then exit 0; fi
+          if grep -q toomanyrequests "$RUNNER_TEMP/container-test.log"; then
+            echo "::warning::public.ecr.aws refused this runner's address (429); trying again on a fresh runner after a pause"
+            echo "retry=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit 1
+  container-2:
     needs: container
-    if: needs.container.outputs.ok != 'true'
+    if: needs.container.outputs.retry == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      retry: ${{ steps.test.outputs.retry }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Pause before another attempt
+        run: sleep 120
+      - name: Build the image and test it
+        id: test
+        run: |
+          set -o pipefail
+          if python3 tools/container-test --engine docker 2>&1 | tee "$RUNNER_TEMP/container-test.log"; then exit 0; fi
+          if grep -q toomanyrequests "$RUNNER_TEMP/container-test.log"; then
+            echo "::warning::public.ecr.aws refused this runner's address (429); trying again on a fresh runner after a pause"
+            echo "retry=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit 1
+  container-3:
+    needs: container-2
+    if: needs.container-2.outputs.retry == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      retry: ${{ steps.test.outputs.retry }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Pause before another attempt
+        run: sleep 240
+      - name: Build the image and test it
+        id: test
+        run: |
+          set -o pipefail
+          if python3 tools/container-test --engine docker 2>&1 | tee "$RUNNER_TEMP/container-test.log"; then exit 0; fi
+          if grep -q toomanyrequests "$RUNNER_TEMP/container-test.log"; then
+            echo "::warning::public.ecr.aws refused this runner's address (429); trying again on a fresh runner after a pause"
+            echo "retry=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit 1
+  container-4:
+    needs: container-3
+    if: needs.container-3.outputs.retry == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Pause before another attempt
+        run: sleep 360
       - name: Build the image and test it
         run: python3 tools/container-test --engine docker

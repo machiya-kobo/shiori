@@ -26,15 +26,15 @@ concurrency:
 jobs:
   image:
     # public.ecr.aws caps anonymous pulls per address, and some GitHub runners' addresses are over it: a base image
-    # pull then fails with "429 Too Many Requests: toomanyrequests: Data limit exceeded". So up to three attempts run
+    # pull then fails with "429 Too Many Requests: toomanyrequests: Data limit exceeded". So up to five attempts run
     # one after another, each on a fresh runner (most likely a new address). An attempt that finds the version
-    # already built and signed does nothing; only the third can fail the run.
+    # already built and signed does nothing; only the fifth can fail the run.
     strategy:
       max-parallel: 1
       fail-fast: false
       matrix:
-        attempt: [1, 2, 3]
-    continue-on-error: ${{ matrix.attempt < 3 }}
+        attempt: [1, 2, 3, 4, 5]
+    continue-on-error: ${{ matrix.attempt < 5 }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -53,6 +53,12 @@ jobs:
             echo "::notice::shiori-web ${TAG#v} is already built and signed"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # A later attempt waits first, longer each time (2, 4, 6, then 8 minutes): ECR's cap is per address and per
+      # period, so a fresh runner after a pause is likelier to get through.
+      - name: Pause before a later attempt
+        if: steps.done.outputs.skip != 'true' && matrix.attempt > 1
+        run: sleep $(( (${{ matrix.attempt }} - 1) * 120 ))
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
         if: steps.done.outputs.skip != 'true'
