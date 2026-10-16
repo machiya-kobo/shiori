@@ -7,7 +7,11 @@
 #ifndef SHIORI_NET_H
 #define SHIORI_NET_H
 
+#ifdef SHIORI_TALKIP
+#include <MacTCP.h>         /* talkip's (Apple's 2.0.6 header): Shiori Lite, net_talkip.c */
+#else
 #include "mactcp.h"
+#endif
 
 typedef struct NetConn {
 	TCPiopb pb;             /* the operation in flight (one at a time) */
@@ -16,6 +20,12 @@ typedef struct NetConn {
 	long rcvBufLen;
 	wdsEntry wds[2];        /* the send's write data structure */
 	Boolean busy;           /* an operation was started and hasn't finished */
+#ifdef SHIORI_TALKIP
+	OSErr result;           /* talkip's calls finish at once: the result waits here for NetPoll */
+	Boolean receiving;      /* a receive waits for data (NetPoll asks talkip for it) */
+	char *rcvInto;
+	unsigned short rcvWant, rcvGot;
+#endif
 } NetConn;
 
 /* Opens the IP driver once. noErr, or MacTCP's error (not installed, no address). */
@@ -42,5 +52,14 @@ unsigned short NetReceived(const NetConn *c);
 void NetAbort(NetConn *c);
 /* Aborts if needed and releases the stream and its buffer. Always safe. */
 void NetRelease(NetConn *c);
+
+#ifdef SHIORI_TALKIP
+/* talkip runs in the app: the event loop calls this on every pass. */
+void NetIdle(void);
+/* Whether the MacIP gateway has given this Mac an address yet. */
+Boolean NetHasAddress(void);
+#else
+#define NetIdle() ((void) 0)
+#endif
 
 #endif

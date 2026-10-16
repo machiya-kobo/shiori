@@ -76,8 +76,8 @@ resource 'DITL' (128, purgeable) {
 	{
 		{ 98, 260, 118, 330 }, Button { enabled, "OK" };
 		{ 10, 20, 90, 330 }, StaticText { disabled,
-			"Shiori for Classic Macintosh\r"
-			"Version @SHIORI_VERSION@\r\r"
+			"@SHIORI_TITLE@\r"
+			"Version @SHIORI_VERSION@@SHIORI_ABOUT_MEMORY@\r\r"
 			"Search your pages in Hister and your notes in Kura." };
 	}
 };
@@ -181,8 +181,8 @@ resource 'SIZE' (-1) {
 	reserved,
 	reserved,
 	reserved,
-	1024 * 1024,
-	640 * 1024
+	@SHIORI_SIZE_PREFERRED@ * 1024,
+	@SHIORI_SIZE_MIN@ * 1024
 };
 
 /* Balloon Help for the menus (System 7): each entry names the STR# strings

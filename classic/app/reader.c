@@ -15,13 +15,23 @@
 #include "reader.h"
 #include "theme.h"
 
+#ifdef SHIORI_TALKIP                   /* Shiori Lite: a 512Ke with talkip in the app */
+#define MAX_READERS 1
+#define MAX_REPLY (48L * 1024L)
+#else
 #define MAX_READERS 3
 #define MAX_REPLY (192L * 1024L)
+#endif
 #define HEAD_H 34                       /* title and place */
 #define STATUS_H 15
 #define MARGIN 10
+#ifdef SHIORI_TALKIP
+#define MAX_RUNS 1000
+#define HREF_CAP (4L * 1024L)
+#else
 #define MAX_RUNS 3000
 #define HREF_CAP (16L * 1024L)
+#endif
 #define FIND_DIALOG 129
 
 enum { kReturnKey = 0x0D, kEnterKey = 0x03, kUp = 0x1E, kDown = 0x1F, kHome = 0x01, kEnd = 0x04,

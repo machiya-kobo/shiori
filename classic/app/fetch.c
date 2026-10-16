@@ -6,8 +6,13 @@
 
 #include "fetch.h"
 
+#ifdef SHIORI_TALKIP
+#define RCV_BUF_LEN 4096L       /* talkip's window is two 546-byte segments */
+#define CHUNK 2048L
+#else
 #define RCV_BUF_LEN 16384L      /* MacTCP's buffer for the stream: room for a window's worth */
 #define CHUNK 8192L             /* one receive's most */
+#endif
 #define CONNECT_SECS 15
 #define SEND_SECS 20
 #define IDLE_SECS 20            /* the longest gap between pieces of the reply */
@@ -278,6 +283,12 @@ void FetchProblem(const Fetch *f, const char *who, char *out, long cap)
 		case fetchTooLong: sprintf(msg, "That request is too long for this Mac to send: try fewer words."); break;
 		case memFullErr: sprintf(msg, "Not enough memory for %s's answer.", who); break;
 		case openFailed: case connectionTerminated: case commandTimeout:
+#ifdef SHIORI_TALKIP
+			if (!NetHasAddress()) {
+				sprintf(msg, "No MacIP address yet (%d): is the LocalTalk gateway on?", f->err);
+				break;
+			}
+#endif
 			sprintf(msg, "Can't reach %s (%d): is it on, and this Mac on the network?", who, f->err); break;
 		default:
 			if (f->err == ipBadAddr)

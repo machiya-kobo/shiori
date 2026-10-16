@@ -148,6 +148,22 @@ the same way (`hister update-user <name> --regen-token` makes one).
   the desk accessory, and the bridge's own cap), and nothing is written to
   disk but Preferences.
 
+## Shiori Lite (a 512K Mac on LocalTalk)
+
+Shiori Lite is the same app for a Macintosh 512Ke with no MacTCP and no
+Ethernet. It speaks TCP/IP through talkip, a small MacIP stack linked into
+the app, over LocalTalk to a MacIP gateway (such as netatalk's macipgw)
+that forwards to your LAN. talkip isn't published yet, so there's no Lite
+release file; build it with `SHIORI_TALKIP=1 TALKIP_DIR=<a talkip
+checkout> classic/scripts/build.sh` (into `classic/build-talkip`).
+
+To fit in 512 KB it keeps one reader window, smaller replies (a 32 KB
+search, a 48 KB note) and a smaller stack, and has no desk accessory. Its
+About box shows the free memory. The gateway's address on your LAN is the
+one to list in the bridge's `BRIDGE_ALLOW`, and that admits every Mac on
+the LocalTalk network (each still needs its room token). A connection
+waits for the gateway's address first, and ⌘-. can't stop that wait yet.
+
 ## Building and testing
 
 `classic/scripts/build.sh` builds the app, the desk accessory and the

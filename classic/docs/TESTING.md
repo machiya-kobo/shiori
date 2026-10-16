@@ -312,6 +312,17 @@ tools/quickstart/seed-hister.py http://127.0.0.1:4440/
   (the origin as `basilisk_session.py` prints it; the display cuts the
   screen's bottom rows).
 
+### Shiori Lite (talkip, a 512Ke in Snow)
+
+`SHIORI_TALKIP=1 TALKIP_DIR=<talkip checkout> classic/scripts/build.sh`,
+with the fake house's addresses in the environment as above. Snow's
+512Ke reaches the LAN over LocalTalk (LToUDP) through a MacIP gateway, and
+its requests arrive from the gateway's address, which the fake house's
+/24 must cover. That emulator and its disk belong to talkip's own testing:
+hand the build over rather than writing its disk. First run (System 6.0.8,
+512K): 91K free at launch, 56K with a page open in the reader; `heavy` in
+under 5 s; `big` refused; ⌘-. stopped `slow`.
+
 ### The Mac Plus
 
 The real Mac Plus reaches the LAN through a BlueSCSI (DaynaPORT over

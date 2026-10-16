@@ -10,13 +10,32 @@ set(SHIORI_DEFAULT_HISTER "" CACHE STRING "the bridge's Hister address, http://h
 set(SHIORI_DEFAULT_KURA "" CACHE STRING "the bridge's Kura address, http://host:8071/")
 set(SHIORI_DEFAULT_TOKEN "" CACHE STRING "the Mac's room token")
 
+# Shiori Lite (SHIORI_TALKIP): the Macintosh 512Ke, MacIP over LocalTalk through talkip
+# (TALKIP_DIR, a checkout of its tag) linked into the app in place of MacTCP. Smaller caps,
+# one note window, no desk accessory. talkip's socket listener runs at interrupt time,
+# so the app is one segment.
+option(SHIORI_TALKIP "build Shiori Lite on talkip" OFF)
+if(SHIORI_TALKIP)
+    if(NOT TALKIP_DIR)
+        message(FATAL_ERROR "SHIORI_TALKIP needs TALKIP_DIR (a talkip checkout)")
+    endif()
+    set(SHIORI_TITLE "Shiori Lite for the Macintosh 512Ke")
+    set(SHIORI_SIZE_PREFERRED 320)
+    set(SHIORI_SIZE_MIN 256)
+    set(SHIORI_ABOUT_MEMORY ", ^0")       # free memory: the 512Ke's heap is the limit
+else()
+    set(SHIORI_TITLE "Shiori for Classic Macintosh")
+    set(SHIORI_SIZE_PREFERRED 1024)
+    set(SHIORI_SIZE_MIN 640)
+    set(SHIORI_ABOUT_MEMORY "")
+endif()
+
 configure_file(resources/shiori.r.in ${CMAKE_CURRENT_BINARY_DIR}/shiori.r @ONLY)
 configure_file(resources/balloons.r ${CMAKE_CURRENT_BINARY_DIR}/balloons.r COPYONLY)
 list(APPEND REZ_INCLUDE_PATH ${CMAKE_CURRENT_BINARY_DIR})
 
 set(SHIORI_SOURCES
     app/main.c
-    app/net.c
     app/fetch.c
     app/draw.c
     app/resultlist.c
@@ -33,6 +52,23 @@ set(SHIORI_SOURCES
     core/roman.c
     core/notetext.c
 )
+
+if(SHIORI_TALKIP)
+    add_subdirectory(${TALKIP_DIR} talkip)
+    add_application(Shiori CREATOR "SHIO" ${SHIORI_SOURCES} app/net_talkip.c ${CMAKE_CURRENT_BINARY_DIR}/shiori.r)
+    target_link_libraries(Shiori talkip)
+    target_compile_definitions(Shiori PRIVATE SHIORI_TALKIP SHIORI_VERSION="${SHIORI_VERSION}")
+    foreach(v SHIORI_DEFAULT_HISTER SHIORI_DEFAULT_KURA SHIORI_DEFAULT_TOKEN)
+        if(${v})
+            target_compile_definitions(Shiori PRIVATE ${v}="${${v}}")
+        endif()
+    endforeach()
+    target_compile_options(Shiori PRIVATE -m68000 -Os -Wall -Wextra -Wno-unused-parameter
+        -ffunction-sections -fdata-sections)
+    set_target_properties(Shiori PROPERTIES LINK_FLAGS "-Wl,-gc-sections -Wl,--mac-single")
+    return()
+endif()
+list(APPEND SHIORI_SOURCES app/net.c)
 
 # The desk accessory: a flat code resource (its DRVR header comes first, in
 # .rsrcheader), then a 'DRVR' resource. It shares the core and the app's

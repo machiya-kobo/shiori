@@ -27,7 +27,11 @@
 #define PAGE_ROWS 10            /* a page of results (the list shows about 8 on a Mac Plus) */
 #define ALL_NOTES 5             /* All's top notes */
 #define MAX_ROWS 120
+#ifdef SHIORI_TALKIP
+#define MAX_REPLY (32L * 1024L)       /* Shiori Lite: a page of results fits */
+#else
 #define MAX_REPLY (256L * 1024L)
+#endif
 #define MAX_TYPED 200
 
 enum { kReturn = 0x0D, kEnter = 0x03, kTab = 0x09, kDownArrow = 0x1F, kUpArrow = 0x1E, kBackspace = 0x08 };

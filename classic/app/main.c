@@ -85,6 +85,13 @@ static void DoMenu(long choice)
 	switch (menu) {
 	case kAppleMenu:
 		if (item == kAboutItem) {
+#ifdef SHIORI_TALKIP
+			Str255 free;
+			NumToString(FreeMem() / 1024L, free);
+			memcpy(free + free[0] + 1, "K free", 6);
+			free[0] += 6;
+			ParamText(free, "\p", "\p", "\p");
+#endif
 			Alert(kAboutAlert, NULL);
 		} else {
 			Str255 name;
@@ -257,6 +264,12 @@ static void Balloons(Point where)
 	(void) HMShowBalloon(&msg, where, &hot, NULL, 0, 0, 0);
 }
 
+#ifdef SHIORI_TALKIP
+#define SHIORI_STACK (24L * 1024L)      /* Shiori Lite: a 512Ke's heap is small */
+#else
+#define SHIORI_STACK (32L * 1024L)
+#endif
+
 static Boolean GetEvent(EventRecord *e, long sleep)
 {
 	if (gHasWNE)
@@ -282,7 +295,7 @@ static void Setup(Prefs *prefs)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"   /* low-memory globals at fixed addresses */
 	{
-		Ptr limit = (Ptr) ((long) LMGetCurStackBase() - 32L * 1024L);
+		Ptr limit = (Ptr) ((long) LMGetCurStackBase() - SHIORI_STACK);
 		if (limit < LMGetApplLimit())
 			SetApplLimit(limit);
 	}
@@ -365,6 +378,7 @@ int main(void)
 		}
 		SearchWindowCursor(e.where);
 		Balloons(e.where);
+		NetIdle();
 		SearchWindowPoll();
 		gReadersBusy = ReaderPollAll();
 	}

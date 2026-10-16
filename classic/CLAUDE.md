@@ -31,6 +31,12 @@ Loaded when you work in `classic/`. The project-wide rules, layout and build/tes
   names (`Scrap.h`, `TEToScrap`…): use the low-memory accessors or local
   constants. Windows are `NewCWindow` where Color QuickDraw is
   (`ThemeNewWindow`).
+- **Shiori Lite** (`SHIORI_TALKIP`, `app/net_talkip.c`): the 512Ke on talkip,
+  whose calls finish before they return and whose stack runs in the app
+  (`NetIdle()` every pass of the event loop; one segment, `--mac-single`,
+  because its listener runs at interrupt time). Its caps sit under
+  `#ifdef SHIORI_TALKIP` beside the normal ones; the heap is the limit
+  (91K free at launch), so check About's free memory after a change.
 - **Release files come from `classic/scripts/package.sh`** with
   `SHIORI_RELEASE=1` (neutral defaults): a normal build bakes in
   `classic/local.env`'s test addresses and token.
