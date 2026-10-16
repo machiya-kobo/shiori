@@ -5,6 +5,21 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.12.0 (2026-10-16)
+
+- Classic: through mac-bridge 0.2.0, a long page or note opens in parts
+  of about 16 KB instead of failing as too large. The status line says
+  "Part 2 of 5", and Previous Part and Next Part links sit at the text's
+  ends. A page's own relative links now show their full address. Shiori
+  Lite on a 512K Mac reads real pages this way.
+- Search page: in a window no wider than the page (a 13-inch Mac with
+  the preview open), the results' glass keeps a margin from the window's
+  edge, as the preview does on the other side.
+- Search page: the AI Answer row, first in the column, is level with the
+  preview beside it; the loading placeholders' right column is level with
+  the left; and the results no longer move up a few pixels when the last
+  request comes in.
+
 ## 1.11.3 (2026-10-15)
 
 - Search page: with a background the start page shows it behind the
