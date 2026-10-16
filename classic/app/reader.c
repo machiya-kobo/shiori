@@ -33,6 +33,7 @@
 #define HREF_CAP (16L * 1024L)
 #endif
 #define FIND_DIALOG 129
+#define NAV_LEN 96                      /* a link to another part */
 
 enum { kReturnKey = 0x0D, kEnterKey = 0x03, kUp = 0x1E, kDown = 0x1F, kHome = 0x01, kEnd = 0x04,
 	kPageUp = 0x0B, kPageDown = 0x0C, kSpace = 0x20 };
@@ -52,6 +53,9 @@ typedef struct Reader {
 	char title[100];        /* Mac Roman */
 	char place[64];
 	char url[256];          /* the note's or page's own address (UTF-8) */
+	char path[160];         /* a note's path and vault, to ask again for another part */
+	char vault[48];
+	int part, parts;        /* mac-bridge's parts (1 of 1 when it gives none) */
 	Handle text;            /* Mac Roman */
 	long textLen;
 	Handle runs;            /* NoteRun[runCount] */
@@ -474,13 +478,23 @@ static void Loaded(Reader *r)
 	r->loading = false;
 	if (r->fetch.state != FETCH_DONE || r->fetch.head.status != 200) {
 		char problem[160];
+		long parts = 0;
 		FetchProblem(&r->fetch, r->fromKura ? "Kura" : "Hister", problem, (long) sizeof(problem));
+		body = FetchBody(&r->fetch, &len);
+		if (r->fetch.head.status == 400 && r->part > 1 && shiori_json_long_member(body, len, "parts", &parts))
+			strcpy(problem, r->kind == LROW_NOTE ? "This note has changed: open it again." : "This page has changed: open it again.");
 		FetchReset(&r->fetch);
 		SetStatus(r, problem);
 		InvalRect(&r->textRect);
 		return;
 	}
 	body = FetchBody(&r->fetch, &len);
+	{
+		long n;
+		r->parts = shiori_json_long_member(body, len, "parts", &n) && n >= 1 && n <= 9999 ? (int) n : 1;
+		if (r->part > r->parts)
+			r->part = r->parts;
+	}
 	if (!shiori_json_member(body, len, r->fromKura ? "html" : "content", &raw, &rawLen)) {
 		FetchReset(&r->fetch);
 		SetStatus(r, r->fromKura ? "Kura's answer had no note." : r->kind == LROW_NOTE ? "Hister has no readable copy of this note."
@@ -521,8 +535,8 @@ static void Loaded(Reader *r)
 			InvalRect(&head);
 		}
 	}
-	/* the HTML on its own, then the reply goes, before the text is made */
-	html = NewHandle(rawLen + 1);
+	/* the HTML on its own, with links to the other parts at its ends (words: System 6's fonts have no arrows), then the reply goes, before the text is made */
+	html = NewHandle(rawLen + 1 + 2 * NAV_LEN);
 	if (html == NULL) {
 		FetchReset(&r->fetch);
 		SetStatus(r, "Not enough memory to read this.");
@@ -531,7 +545,21 @@ static void Loaded(Reader *r)
 	HLock(html);
 	body = FetchBody(&r->fetch, &len);
 	shiori_json_member(body, len, r->fromKura ? "html" : "content", &raw, &rawLen);
-	htmlLen = json_decode(raw, rawLen, *html, rawLen + 1);
+	{
+		char nav[NAV_LEN];
+		long at = 0;
+		if (r->part > 1) {
+			sprintf(nav, "<p><a href=\"shiori:part=%d\">Previous Part (%d of %d)</a></p>", r->part - 1, r->part - 1, r->parts);
+			at = (long) strlen(nav);
+			memcpy(*html, nav, (size_t) at);
+		}
+		htmlLen = at + json_decode(raw, rawLen, *html + at, rawLen + 1);
+		if (r->part < r->parts) {
+			sprintf(nav, "<p><a href=\"shiori:part=%d\">Next Part (%d of %d)</a></p>", r->part + 1, r->part + 1, r->parts);
+			memcpy(*html + htmlLen, nav, strlen(nav) + 1);
+			htmlLen += (long) strlen(nav);
+		}
+	}
 	FetchReset(&r->fetch);
 
 	r->text = NewHandle(htmlLen + 2048);
@@ -559,7 +587,14 @@ static void Loaded(Reader *r)
 	SetPort(r->win);
 	Relayout(r);
 	InvalRect(&r->textRect);
-	SetStatus(r, t.truncated ? "Shown in part: too long for this Mac." : "");
+	if (t.truncated)
+		SetStatus(r, "Shown in part: too long for this Mac.");
+	else if (r->parts > 1) {
+		char s[40];
+		sprintf(s, "Part %d of %d", r->part, r->parts);
+		SetStatus(r, s);
+	} else
+		SetStatus(r, "");
 }
 
 Boolean ReaderPollAll(void)
@@ -595,6 +630,9 @@ static Boolean Start(Reader *r, const char *path, const char *vault, const char 
 		ok = shiori_kura_note_target(path, vault, target, (long) sizeof(target));
 	else
 		ok = shiori_hister_preview_target(url, target, (long) sizeof(target));
+	/* through mac-bridge, a part at a time: a big page fits */
+	if (ok && !gConfig.direct)
+		ok = shiori_part_target(target, (long) sizeof(target), r->part);
 	if (!ok)
 		return false;
 	FetchStart(&r->fetch, &gConfig, r->fromKura ? gConfig.kura : gConfig.hister, target, MAX_REPLY, 0);
@@ -607,6 +645,35 @@ static Boolean Start(Reader *r, const char *path, const char *vault, const char 
 		strcpy(r->status, "Loading\311");
 	}
 	return true;
+}
+
+/* Another of the bridge's parts in the same window: the text goes, the part comes. */
+static void ShowPart(Reader *r, int part)
+{
+	if (part < 1 || part > r->parts)
+		return;
+	if (r->text) {
+		DisposeHandle(r->text);
+		r->text = NULL;
+	}
+	if (r->runs) {
+		DisposeHandle(r->runs);
+		r->runs = NULL;
+	}
+	if (r->hrefs) {
+		DisposeHandle(r->hrefs);
+		r->hrefs = NULL;
+	}
+	r->textLen = 0;
+	r->runCount = 0;
+	r->foundStart = r->foundEnd = 0;
+	r->part = part;
+	SetPort(r->win);
+	if (!Start(r, r->path, r->vault, r->url))
+		strcpy(r->status, "Can't ask for this.");
+	Relayout(r);
+	ScrollTo(r, 0);
+	InvalRect(&r->win->portRect);
 }
 
 Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
@@ -631,6 +698,9 @@ Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
 	strcpy(r->title, row->title);
 	strcpy(r->place, row->place);
 	strncpy(r->url, row->url, sizeof(r->url) - 1);
+	strncpy(r->path, row->path, sizeof(r->path) - 1);
+	strncpy(r->vault, row->vault, sizeof(r->vault) - 1);
+	r->part = r->parts = 1;
 	r->lines = NewHandle(0);
 	SetRect(&bounds, (short) (16 + slot * 14), (short) (48 + slot * 14),
 		(short) (qd.screenBits.bounds.right - 20 + slot * 4), (short) (qd.screenBits.bounds.bottom - 12));
@@ -658,7 +728,7 @@ Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
 	r->active = true;
 	gReaders[slot] = r;
 	Relayout(r);
-	if (!Start(r, row->path, row->vault, row->url))
+	if (!Start(r, r->path, r->vault, r->url))
 		strcpy(r->status, "Can't ask for this.");
 	return true;
 }
@@ -811,6 +881,10 @@ void ReaderClick(WindowPtr w, EventRecord *e)
 			r->link[sizeof(r->link) - 1] = '\0';
 			HUnlock(r->runs);
 			HUnlock(r->hrefs);
+			if (shiori_part_link(r->link) && !r->loading) {
+				ShowPart(r, shiori_part_link(r->link));
+				return;
+			}
 			if (r->kind == LROW_NOTE && shiori_note_link(r->link, r->url, path, (long) sizeof(path), vault,
 					(long) sizeof(vault))) {
 				ListRow row;
@@ -829,7 +903,11 @@ void ReaderClick(WindowPtr w, EventRecord *e)
 				strcpy(row.path, path);
 				strcpy(row.vault, vault);
 				if (!ReaderOpen(&gConfig, &row))
+#ifdef SHIORI_TALKIP
+					SetStatus(r, "Close this note first: Shiori Lite reads one at a time.");
+#else
 					SetStatus(r, "Three readers are open: close one first.");
+#endif
 				return;
 			}
 			sprintf(s, "Link: %.150s (Copy Link copies it)", r->link);

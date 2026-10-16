@@ -76,6 +76,10 @@ file.
   Hister; a page from Hister's readable copy. Headings, bold, italic, code, quotes, lists and links are styled.
   A link to another note in the same Kura opens it there; any other link
   shows its address, and Copy Link copies it (there's no browser).
+  Through mac-bridge a long page or note comes in parts of about 16 KB:
+  the status line says "Part 2 of 5", and Previous Part and Next Part
+  links sit at the text's ends. The bridge sends only what the reader
+  shows (no images, scripts or styles), so a big page fits a small Mac.
   Find (⌘F) and Find Again (⌘G) search the text.
 - **Copy Link** (Edit menu): the selected result's or reader's address.
 
@@ -146,7 +150,8 @@ the same way (`hister update-user <name> --regen-token` makes one).
   event) to open a note from any other.
 - Replies are capped (256 KB for a search, 192 KB for a reader, 64 KB in
   the desk accessory, and the bridge's own cap), and nothing is written to
-  disk but Preferences.
+  disk but Preferences. Through the bridge a reader asks for one part at
+  a time; its links keep only web addresses (no `javascript:` or `data:`).
 
 ## Shiori Lite (a 512K Mac on LocalTalk)
 
@@ -158,7 +163,10 @@ release file; build it with `SHIORI_TALKIP=1 TALKIP_DIR=<a talkip
 checkout> classic/scripts/build.sh` (into `classic/build-talkip`).
 
 To fit in 512 KB it keeps one reader window, smaller replies (a 32 KB
-search, a 48 KB note) and a smaller stack, and has no desk accessory. Its
+search, a 48 KB part of a page or note) and a smaller stack, and has no
+desk accessory. Read pages through mac-bridge 0.2.0 or later: it sends
+them in parts, and a real page's whole readable copy is often more than
+48 KB. Its
 About box shows the free memory. The gateway's address on your LAN is the
 one to list in the bridge's `BRIDGE_ALLOW`, and that admits every Mac on
 the LocalTalk network (each still needs its room token). A connection

@@ -154,6 +154,16 @@ class Hister(Base):
                     content = (f"<h1>{title}</h1><p>{text}</p><p>Saved from <a href=\"{purl}\">{domain}</a>, "
                                f"labelled <strong>{label}</strong>.</p>")
                     return self.reply(200, {"title": title, "content": content, "added": added, "updated": added})
+            if "/heavy/" in page:
+                # A big readable copy, as real pages come (about 70 KB, an inline image among the text): over
+                # Shiori Lite's reader cap, so the bridge's parts are what reach the Mac.
+                image = '<p><img src="data:image/png;base64,' + "iVBORw0KGgo" * 2000 + '" alt="a photo"></p>'
+                body = "".join(f"<h2>Chapter {k}</h2>" + "".join(
+                    f"<p class=\"x\" onclick=\"x()\">Paragraph {k}.{j} of the long page: <em>words</em> and "
+                    f"<a href=\"/elsewhere/{k}\">a link</a> to make it as long as a real saved page.</p>"
+                    for j in range(8)) + (image if k == 3 else "") for k in range(40))
+                return self.reply(200, {"title": "A long page from Hister", "content": "<h1>A long page</h1>" + body,
+                                        "added": 1790000000, "updated": 1790500000, "details": {"x": "y" * 2000}})
             body = "".join(f"<p>Section {k} of the readable copy of {page}: Hister kept this text when the "
                            f"page was saved, so a Mac Plus can read it without a browser.</p>" for k in range(15))
             return self.reply(200, {"title": "A page from Hister", "content": "<h1>A saved page</h1>" + body,

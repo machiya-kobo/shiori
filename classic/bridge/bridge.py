@@ -21,6 +21,13 @@ Set-Cookie). Replies to the Mac are HTTP/1.0 with Content-Length (never chunked)
 BRIDGE_MAX_BYTES is a 413, a redirect is passed back as is, never followed. Nothing is cached but the token check, and
 the log holds the path only: never a query string (search words), a header or a body.
 
+Paging: api/preview (Hister) and api/note (Kura) with part=N go upstream without part, read up to
+BRIDGE_PAGED_MAX_BYTES (8 MiB), and come back as one part of their readable HTML (`content`, `html`): only the tags
+Shiori's reader renders, with href (http(s), or relative resolved on the page's address) and alt alone, cut at a tag
+or a space into parts of about BRIDGE_PART_BYTES (16384), each closing the tags it opened and reopening those it
+continues. The reply is compact JSON: the small members as they came, the part, `part` and `parts`. The same upstream
+reply always gives the same parts; a part past the end is a 400 that says how many there are now.
+
 `/healthz` on either port answers locally, to any source, for the container's healthcheck and the blackbox probe.
 
 Standard library only. Settings (environment):
@@ -35,9 +42,11 @@ Standard library only. Settings (environment):
     BRIDGE_HISTER_TOKEN_FILE  Hister's token (a stack secret on tmpfs)
     BRIDGE_VAULTS       Kura vaults a request may name with vault= (besides none: the default vault)
     BRIDGE_MAX_BYTES    the largest reply passed on (524288); BRIDGE_TIMEOUT the upstream timeout in seconds (20)
+    BRIDGE_PAGED_MAX_BYTES  the largest upstream reply read for paging (8388608); BRIDGE_PART_BYTES a part (16384)
 """
 import collections
 import hashlib
+import html.parser
 import http.client
 import http.server
 import ipaddress
@@ -49,9 +58,9 @@ import ssl
 import sys
 import threading
 import time
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl, urljoin, urlsplit
 
-VERSION = "0.1.2"
+VERSION = "0.2.0"
 
 HISTER_PATHS = frozenset({"/search", "/api/preview", "/api/config"})
 KURA_PATHS = frozenset({"/api/search", "/api/recent", "/api/note", "/api/vaults"})
@@ -68,6 +77,181 @@ CHUNK = 65536
 
 # what goes back to the Mac from the upstream's reply
 REPLY_HEADERS = ("Content-Type", "ETag", "Cache-Control", "Last-Modified", "Location", "Retry-After")
+
+# Paging (part=N): the readable HTML member of each reply, cut into parts the Mac can hold
+PAGED = {"/api/preview": "content", "/api/note": "html"}
+PART_RE = re.compile(r"[1-9][0-9]{0,3}\Z")
+# the tags Shiori's reader renders (classic/core/notetext.c); every other tag goes, its text stays
+KEEP_TAGS = frozenset("h1 h2 h3 h4 h5 h6 p div section article table figure details summary tr dt dd br hr "
+                      "blockquote pre ul ol li strong b em i code kbd samp a img td th".split())
+VOID_TAGS = frozenset({"br", "hr", "img"})
+# elements whose content goes too: nothing in them reads as text
+DROP_TAGS = frozenset("script style template svg math iframe object embed video audio canvas noscript head title "
+                      "select textarea button".split())
+BLOCK_ENDS = frozenset("p div section article table figure details tr li ul ol pre blockquote dd "
+                       "h1 h2 h3 h4 h5 h6".split())
+
+
+def _escape(text, quote=False):
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return text.replace('"', "&quot;") if quote else text
+
+
+class _Simplifier(html.parser.HTMLParser):
+    """The readable HTML down to the reader's tags, href (http(s) or relative) and alt only, as tokens:
+    ("start", name, text), ("end", name, text), ("void", name, text) and ("text", raw, None)."""
+
+    def __init__(self, base):
+        super().__init__(convert_charrefs=True)
+        self.base, self.tokens, self.dropping = base, [], []
+
+    def _start(self, tag, attrs, void):
+        if self.dropping:
+            if tag == self.dropping[-1] and not void:
+                self.dropping.append(tag)
+            return
+        if tag in DROP_TAGS:
+            if not void and tag != "embed":
+                self.dropping.append(tag)
+            return
+        if tag not in KEEP_TAGS:
+            return
+        out = "<" + tag
+        if tag == "a":
+            href = _safe_href(dict(attrs).get("href") or "", self.base)
+            if href:
+                out += ' href="%s"' % _escape(href, True)
+        elif tag == "img":
+            alt = (dict(attrs).get("alt") or "").strip()
+            if not alt:
+                return
+            out += ' alt="%s"' % _escape(alt, True)
+        out += ">"
+        self.tokens.append(("void" if tag in VOID_TAGS else "start", tag, out))
+
+    def handle_starttag(self, tag, attrs):
+        self._start(tag, attrs, False)
+
+    def handle_startendtag(self, tag, attrs):
+        self._start(tag, attrs, True)
+
+    def handle_endtag(self, tag):
+        if self.dropping:
+            if tag == self.dropping[-1]:
+                self.dropping.pop()
+            return
+        if tag in KEEP_TAGS and tag not in VOID_TAGS:
+            self.tokens.append(("end", tag, "</%s>" % tag))
+
+    def handle_data(self, data):
+        if not self.dropping and data:
+            if self.tokens and self.tokens[-1][0] == "text":
+                self.tokens[-1] = ("text", self.tokens[-1][1] + data, None)
+            else:
+                self.tokens.append(("text", data, None))
+
+
+def _safe_href(href, base):
+    """An http(s) address, a relative one resolved on the page's own when it's known; anything else (javascript:,
+    data:, mailto:…) is no link."""
+    href = href.strip()
+    if not href or any(ord(c) < 32 for c in href):
+        return ""
+    scheme = urlsplit(href).scheme.lower()
+    if scheme in ("http", "https"):
+        return href
+    if scheme or href.startswith("//"):
+        return ""
+    if base:
+        joined = urljoin(base, href)
+        return joined if urlsplit(joined).scheme.lower() in ("http", "https") else ""
+    return href
+
+
+def simplify_html(text, base=""):
+    p = _Simplifier(base)
+    p.feed(text)
+    p.close()
+    return p.tokens
+
+
+def _cut_text(raw, room):
+    """The longest head of raw whose escaped form fits room bytes, ending at a space when one is near."""
+    lo, hi = 0, min(len(raw), room)          # each character takes a byte at least
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if len(_escape(raw[:mid]).encode("utf-8")) <= room:
+            lo = mid
+        else:
+            hi = mid - 1
+    head = raw[:lo]
+    space = max(head.rfind(" "), head.rfind("\n"))
+    if space > len(head) // 2:
+        head = head[:space + 1]
+    return head or raw[:1]
+
+
+def split_html(tokens, limit):
+    """Parts of at most about limit bytes, each standing alone: the tags open at a cut are closed at its end and
+    opened again at the next part's start. The same tokens always give the same parts."""
+    parts, stack, body, size = [], [], [], 0
+
+    def opening():
+        return "".join(t for _, t in stack)
+
+    def closing():
+        return "".join("</%s>" % n for n, _ in reversed(stack))
+
+    def cut():
+        nonlocal body, size
+        parts.append(opening_at_start[0] + "".join(body) + closing())
+        body, size = [], 0
+        opening_at_start[0] = opening()
+
+    opening_at_start = [""]
+    for kind, name, text in tokens:
+        frame = len(opening_at_start[0]) + len(closing())
+        if kind == "text":
+            raw = name
+            while raw:
+                room = limit - frame - size
+                piece = _escape(raw)
+                if len(piece.encode("utf-8")) <= room:
+                    body.append(piece)
+                    size += len(piece.encode("utf-8"))
+                    break
+                if size > 0 and room < limit // 4:
+                    cut()
+                    frame = len(opening_at_start[0]) + len(closing())
+                    continue
+                head = _cut_text(raw, max(room, 64))
+                body.append(_escape(head))
+                raw = raw[len(head):]
+                cut()
+                frame = len(opening_at_start[0]) + len(closing())
+            continue
+        n = len(text.encode("utf-8"))
+        if size > 0 and frame + size + n > limit:
+            cut()
+        if kind == "start":
+            stack.append((name, text))
+        elif kind == "end":
+            if not any(s == name for s, _ in stack):
+                continue
+            while stack:
+                top, _ = stack.pop()
+                body.append("</%s>" % top)
+                size += len(top) + 3
+                if top == name:
+                    break
+            if name in BLOCK_ENDS and size >= limit * 3 // 4:
+                cut()
+            continue
+        body.append(text)
+        size += n
+    if body or not parts:
+        parts.append(opening_at_start[0] + "".join(body) + closing())
+    return parts
 
 
 class ConfigError(Exception):
@@ -107,9 +291,15 @@ class Config:
             self.hister_port = int(env.get("BRIDGE_HISTER_PORT") or 8070)
             self.kura_port = int(env.get("BRIDGE_KURA_PORT") or 8071)
             self.max_bytes = int(env.get("BRIDGE_MAX_BYTES") or 524288)
+            self.paged_max_bytes = int(env.get("BRIDGE_PAGED_MAX_BYTES") or 8388608)
+            self.part_bytes = int(env.get("BRIDGE_PART_BYTES") or 16384)
             self.timeout = float(env.get("BRIDGE_TIMEOUT") or 20)
         except ValueError as e:
             raise ConfigError("a number setting is not a number: %s" % e)
+        if self.part_bytes < 2048 or self.part_bytes > self.max_bytes // 2:
+            raise ConfigError("BRIDGE_PART_BYTES: 2048 at least, and at most half of BRIDGE_MAX_BYTES")
+        if self.paged_max_bytes < self.max_bytes:
+            raise ConfigError("BRIDGE_PAGED_MAX_BYTES: at least BRIDGE_MAX_BYTES")
         self.allow = _networks(env.get("BRIDGE_ALLOW"), "BRIDGE_ALLOW")
         self.deny = _networks(env.get("BRIDGE_DENY"), "BRIDGE_DENY") + list(NEVER)
         if not self.allow:
@@ -286,6 +476,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             pairs = parse_qsl(query[1:], keep_blank_values=True, max_num_fields=64) if query else []
         except ValueError:
             return self._error(400, "not a query this bridge reads")
+        paged = None
+        if raw_path in PAGED and any(name == "part" for name, _ in pairs):
+            values = [v for name, v in pairs if name == "part"]
+            if len(values) != 1 or not PART_RE.match(values[0]):
+                return self._error(400, "part is a number from 1")
+            paged = (PAGED[raw_path], int(values[0]), dict(pairs).get("url", ""))
+            # the upstream gets the query as it came, less part=
+            kept = [field for field in query[1:].split("&") if field.split("=", 1)[0] != "part"]
+            target = raw_path + ("?" + "&".join(kept) if kept else "")
 
         forwarded = ("Accept", "If-None-Match", "Origin", "Authorization")
         if any(not HEADER_VALUE_RE.match(v) for name in forwarded for v in self.headers.get_all(name) or []):
@@ -293,7 +492,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         headers = [("Accept", self._one("Accept") or "application/json"), ("Accept-Encoding", "identity"),
                    ("Connection", "close")]
         etag = self._one("If-None-Match")
-        if etag:
+        if etag and not paged:
             headers.append(("If-None-Match", etag))
         if self._one("Origin") == "hister://":
             headers.append(("Origin", "hister://"))
@@ -328,7 +527,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self._error(503, "the bridge has no Hister token")
             headers.append(("X-Access-Token", hister_token))
             upstream = self.config.hister
-        return self._forward(upstream, target, headers)
+        return self._forward(upstream, target, headers, paged)
 
     def _one(self, name):
         values = self.headers.get_all(name) or []
@@ -346,7 +545,32 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     return "that vault isn't offered here"
         return None
 
-    def _forward(self, upstream, target, headers):
+    def _paged_reply(self, status, body, back, paged):
+        """One part of a 200 JSON reply's readable HTML; anything else as it came, held to the Mac's cap."""
+        field, part, base = paged
+        data = None
+        if status == 200:
+            try:
+                data = json.loads(body.decode("utf-8"))
+            except (UnicodeDecodeError, ValueError):
+                data = None
+        if not isinstance(data, dict) or not isinstance(data.get(field), str):
+            if len(body) > self.config.max_bytes:
+                return self._error(413, "too large for this Mac (over %d bytes)" % self.config.max_bytes)
+            return self._reply(status, body, back)
+        parts = split_html(simplify_html(data[field], base if self.service == "hister" else ""),
+                           self.config.part_bytes)
+        if part > len(parts):
+            return self._reply(400, json.dumps({"error": "there's no such part: it may have changed",
+                                                "parts": len(parts)}).encode(), [("Content-Type", "application/json")])
+        # the small members as they came (title, path, dates); lists, objects and long strings stay behind
+        out = {k: v for k, v in data.items()
+               if k != field and (v is None or isinstance(v, (bool, int, float)) or (isinstance(v, str) and len(v) <= 1024))}
+        out.update({field: parts[part - 1], "part": part, "parts": len(parts)})
+        reply = json.dumps(out, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        return self._reply(200, reply, [("Content-Type", "application/json")])
+
+    def _forward(self, upstream, target, headers, paged=None):
         scheme, host, port = upstream
         if scheme == "https":
             ctx = ssl.create_default_context(cafile=self.config.ca_file)
@@ -363,6 +587,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             conn.endheaders()
             r = conn.getresponse()
             chunks, size = [], 0
+            cap = self.config.paged_max_bytes if paged else self.config.max_bytes
             while True:
                 if time.monotonic() > deadline:
                     raise socket.timeout()
@@ -370,11 +595,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 if not chunk:
                     break
                 size += len(chunk)
-                if size > self.config.max_bytes:
-                    return self._error(413, "too large for this Mac (over %d bytes)" % self.config.max_bytes)
+                if size > cap:
+                    return self._error(413, "too large for this Mac (over %d bytes)" % cap)
                 chunks.append(chunk)
             # Only printable ASCII comes back: http.client keeps a folded or control-character value as it came.
             back = [(n, v) for n in REPLY_HEADERS for v in [r.getheader(n)] if v and HEADER_VALUE_RE.match(v)]
+            if paged:
+                return self._paged_reply(r.status, b"".join(chunks), back, paged)
             return self._reply(r.status, b"".join(chunks), back)
         except socket.timeout:
             return self._error(504, "%s didn't answer in time" % ("Hister" if self.service == "hister" else "Kura"))

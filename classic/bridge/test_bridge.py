@@ -5,6 +5,7 @@ import http.server
 import io
 import json
 import os
+import re
 import socket
 import tempfile
 import threading
@@ -112,6 +113,8 @@ class BridgeTest(unittest.TestCase):
             "BRIDGE_HISTER_TOKEN_FILE": self.token_file,
             "BRIDGE_VAULTS": "shared",
             "BRIDGE_MAX_BYTES": "4096",
+            "BRIDGE_PAGED_MAX_BYTES": "65536",
+            "BRIDGE_PART_BYTES": "2048",
             "BRIDGE_TIMEOUT": "2",
         }
         self.log = io.StringIO()
@@ -194,7 +197,8 @@ class BridgeTest(unittest.TestCase):
     def test_settings_are_checked(self):
         bad = [("BRIDGE_HISTER_USERS", "*"), ("BRIDGE_HISTER_USERS", ""), ("BRIDGE_VAULTS", "all"),
                ("BRIDGE_HISTER_URL", "http://h.example/path"), ("BRIDGE_PUBLIC_URL", "bridge"),
-               ("BRIDGE_HISTER_TOKEN_FILE", "")]
+               ("BRIDGE_HISTER_TOKEN_FILE", ""), ("BRIDGE_PART_BYTES", "1000"), ("BRIDGE_PART_BYTES", "4000"),
+               ("BRIDGE_PAGED_MAX_BYTES", "100")]
         for key, value in bad:
             with self.assertRaises(bridge.ConfigError, msg=key):
                 bridge.Config(dict(self.env, **{key: value}))
@@ -423,16 +427,115 @@ class BridgeTest(unittest.TestCase):
         status, *_ = self.get("kura", "/api/recent")
         self.assertEqual(status, 502)
 
+    # -- paging -----------------------------------------------------------------------------------------------------
+
+    def paged_answer(self, field, html_text, extra=None):
+        doc = {"title": "A page", field: html_text, "added": 1, "details": {"big": "x" * 3000}}
+        doc.update(extra or {})
+        body = json.dumps(doc).encode()
+        self.answer = lambda p: (200, [("Content-Type", "application/json"), ("ETag", '"e1"')], body, False, 0)
+
+    def test_a_part_comes_alone_and_part_never_goes_upstream(self):
+        text = "".join("<p>Paragraph %d has some words in it, enough to fill a line or two.</p>" % i for i in range(200))
+        self.paged_answer("content", "<div>" + text + "</div>")
+        status, headers, body, _ = self.get("hister", "/api/preview?url=https%3A%2F%2Fexample.com%2Fa&part=2",
+                                            [("If-None-Match", '"e1"')])
+        self.assertEqual(status, 200)
+        self.assertEqual(self.hister_seen[0]["path"], "/api/preview?url=https%3A%2F%2Fexample.com%2Fa")
+        self.assertNotIn("If-None-Match", self.hister_seen[0]["headers"])
+        self.assertNotIn("etag", headers)
+        doc = json.loads(body)
+        self.assertEqual((doc["part"], doc["title"], doc["added"]), (2, "A page", 1))
+        self.assertGreater(doc["parts"], 3)
+        self.assertNotIn("details", doc)
+        self.assertTrue(doc["content"].startswith("<div>") and doc["content"].endswith("</div>"))
+        self.assertLessEqual(len(body), 2048 + 200)
+
+    def test_parts_put_back_together_are_the_text_and_always_the_same(self):
+        text = "<h2>Top</h2><ul>" + "".join("<li>Item <b>%d</b> &amp; more &lt;words&gt;</li>" % i for i in range(300)) \
+            + "</ul><pre>" + "line of code\n" * 400 + "</pre><p>" + "word " * 2000 + "</p>"
+        parts = bridge.split_html(bridge.simplify_html(text), 2048)
+        self.assertEqual(parts, bridge.split_html(bridge.simplify_html(text), 2048))
+        plain = lambda h: re.sub(r"<[^>]+>", "", h)
+        self.assertEqual("".join(plain(p) for p in parts), plain(text))
+        for p in parts:
+            self.assertLessEqual(len(p.encode()), 2048 + 64)
+            opened = re.findall(r"<([a-z0-9]+)[ >]", p)
+            closed = re.findall(r"</([a-z0-9]+)>", p)
+            self.assertEqual(sorted(opened), sorted(closed), p[:80])
+        self.assertTrue(any(p.startswith("<ul><li>") or p.startswith("<ul>") for p in parts[1:]))
+        self.assertTrue(any(p.startswith("<pre>") for p in parts[1:]))
+
+    def test_only_the_readers_tags_href_and_alt_reach_a_part(self):
+        dirty = ('<div onclick="steal()" style="background:url(data:image/png;base64,AAAA)"><p class=x>Hello '
+                 '<a href="javascript:alert(1)" onmouseover="x()">bad</a> <a href="data:text/html,hi">data</a> '
+                 '<a href="/next">next</a> <a href="https://example.org/ok" target=_blank>ok</a>'
+                 '<img src="data:image/png;base64,AAAA" alt="A cat" onerror="x()"><img src="b.png">'
+                 '<script>evil()</script><style>p{}</style><svg><title>t</title><path d="M0"/></svg>'
+                 '<iframe src="https://example.org/"></iframe><span>kept text</span></p></div>')
+        part = "".join(bridge.split_html(bridge.simplify_html(dirty, "https://example.com/dir/page"), 2048))
+        for bad in ("data:", "javascript:", "script", "evil", "onclick", "onerror", "onmouseover", "style", "class",
+                    "svg", "iframe", "src", "target", "span", "<title"):
+            self.assertNotIn(bad, part, bad)
+        self.assertIn('<a href="https://example.com/next">next</a>', part)
+        self.assertIn('<a href="https://example.org/ok">ok</a>', part)
+        self.assertIn('<img alt="A cat">', part)
+        self.assertIn("kept text", part)
+        self.assertIn("<a>bad</a>", part)
+
+    def test_a_kura_note_is_paged_by_its_html(self):
+        self.paged_answer("html", "<p>" + "note words " * 600 + "</p>", {"path": "a/b.md"})
+        status, _, body, _ = self.get("kura", "/api/note?path=a%2Fb.md&part=1")
+        doc = json.loads(body)
+        self.assertEqual((status, doc["path"], doc["part"]), (200, "a/b.md", 1))
+        self.assertGreater(doc["parts"], 1)
+        self.assertEqual(self.kura_seen[0]["path"], "/api/note?path=a%2Fb.md")
+
+    def test_a_part_past_the_end_or_not_a_number_is_400(self):
+        self.paged_answer("content", "<p>short</p>")
+        status, _, body, _ = self.get("hister", "/api/preview?url=x&part=3")
+        self.assertEqual((status, json.loads(body)["parts"]), (400, 1))
+        for bad in ("part=0", "part=abc", "part=1&part=2", "part=", "part=12345", "part=-1"):
+            status, *_ = self.get("hister", "/api/preview?url=x&" + bad)
+            self.assertEqual(status, 400, bad)
+
+    def test_paging_reads_past_the_macs_cap_but_never_past_its_own(self):
+        self.paged_answer("content", "<p>" + "y" * 20000 + "</p>")
+        status, _, body, _ = self.get("hister", "/api/preview?url=x&part=1")
+        self.assertEqual(status, 200)
+        self.assertLessEqual(len(body), 4096)
+        self.paged_answer("content", "<p>" + "y" * 70000 + "</p>")
+        status, *_ = self.get("hister", "/api/preview?url=x&part=1")
+        self.assertEqual(status, 413)
+        status, *_ = self.get("hister", "/api/preview?url=x")
+        self.assertEqual(status, 413)
+
+    def test_without_part_or_elsewhere_nothing_changes(self):
+        self.paged_answer("content", "<p>as it came</p>")
+        status, _, body, _ = self.get("hister", "/api/preview?url=x")
+        self.assertEqual((status, json.loads(body)["content"]), (200, "<p>as it came</p>"))
+        status, *_ = self.get("hister", "/search?q=a&part=1")
+        self.assertEqual((status, self.hister_seen[-1]["path"]), (200, "/search?q=a&part=1"))
+
+    def test_an_error_or_a_reply_that_isnt_json_passes_as_it_came(self):
+        self.answer = lambda p: (404, [("Content-Type", "application/json")], b'{"error": "not found"}', False, 0)
+        status, _, body, _ = self.get("hister", "/api/preview?url=x&part=1")
+        self.assertEqual((status, body), (404, b'{"error": "not found"}'))
+        self.answer = lambda p: (200, [("Content-Type", "text/html")], b"<p>not json</p>", False, 0)
+        status, _, body, _ = self.get("hister", "/api/preview?url=x&part=1")
+        self.assertEqual((status, body), (200, b"<p>not json</p>"))
+
     # -- the log ----------------------------------------------------------------------------------------------------
 
     def test_the_log_holds_no_query_header_or_token(self):
         self.get("hister", "/search?query=secret+words", [("Authorization", "Bearer " + GOOD)])
         self.get("kura", "/api/search?q=private+words", [("Authorization", "Bearer " + GOOD)])
         self.get("kura", "/api/%2e%2e/secret?q=more+words")
+        self.get("hister", "/api/preview?url=https%3A%2F%2Fsecret.example%2F&part=2")
         log = self.log.getvalue()
         self.assertIn(" hister 127.0.0.1 GET /search 200 ", log)
         self.assertIn(" kura 127.0.0.1 GET /api/search 200 ", log)
-        for word in ("secret", "private", "more", "words", GOOD, HISTER_TOKEN, "query", "%2e"):
+        for word in ("secret", "private", "more", "words", GOOD, HISTER_TOKEN, "query", "%2e", "part="):
             self.assertNotIn(word, log, word)
 
 

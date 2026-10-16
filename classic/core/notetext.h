@@ -49,6 +49,14 @@ const char *note_link_at(const NoteText *t, long offset);
    quotes), for json_decode into a buffer the caller sizes. 0 when absent. */
 int shiori_json_member(const char *buf, long len, const char *key, const char **raw, long *rawLen);
 
+/* A top-level number member (fraction dropped). 0 when absent or not a number. */
+int shiori_json_long_member(const char *buf, long len, const char *key, long *out);
+/* Asks mac-bridge for one part of a page or note: appends &part=N to a target from
+   the two below. 0 when part isn't 1-9999 or it doesn't fit. */
+int shiori_part_target(char *target, long cap, int part);
+/* The reader's own link to another part ("shiori:part=N"): N, else 0. */
+int shiori_part_link(const char *href);
+
 /* Kura's note, relative to the Kura base: api/note?path=…[&vault=…]. */
 int shiori_kura_note_target(const char *path, const char *vault, char *out, long cap);
 /* Hister's readable copy, relative to the Hister base: api/preview?url=…. */

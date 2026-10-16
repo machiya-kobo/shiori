@@ -79,7 +79,10 @@ This runs the real bridge (`classic/bridge/bridge.py`) on ports 8070
 The bridge swaps the Mac's room token for fake Hister's token, as the real
 one does. Search words:
 
-- `heavy` (Hister): 20 rows shaped like a real reply, about 16 KB.
+- `heavy` (Hister): 20 rows shaped like a real reply, about 16 KB. Each
+  opens as a long page (about 75 KB with an inline image, like a real
+  readable copy), which the bridge sends in four parts: the reader shows
+  "Part 1 of 4" and a Next Part link at the end.
 - `many` (Hister 45 pages; Kura 45 notes).
 - `lantern`, `washi`, `kyoto`…: Machiya's invented sample pages and notes
   (`tools/sampledata.py`, the same as the README's other screenshots), for
@@ -322,6 +325,11 @@ its requests arrive from the gateway's address, which the fake house's
 hand the build over rather than writing its disk. First run (System 6.0.8,
 512K): 91K free at launch, 56K with a page open in the reader; `heavy` in
 under 5 s; `big` refused; ⌘-. stopped `slow`.
+Paging (mac-bridge 0.2.0), on System 6 in Snow through the fake house: a
+`heavy` page opened as Part 1 of 4, its Next Part link loaded part 2 at its
+top with Previous Part above, and a relative link on the page showed its
+full address. Real pages of 59–63 KB had failed as too large on the 512Ke
+before.
 With talkip's asynchronous open (v0.4.1), a Kura address that never
 answers (`http://192.0.2.1:8071/`, TEST-NET) stops at once on ⌘-., and
 left alone ends in "Can't reach Kura (-23016)" after about 30 s.

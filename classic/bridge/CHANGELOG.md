@@ -1,5 +1,17 @@
 # mac-bridge changelog
 
+## 0.2.0 (2026-10-16)
+
+- Paging: `api/preview` and `api/note` take `part=N` (from 1), which
+  never goes upstream. The reply is that part of the readable HTML, about
+  `BRIDGE_PART_BYTES` (16384), with only the tags Shiori's reader renders
+  and `href` (http(s) or relative) and `alt` alone, so no script, style,
+  `on…` attribute or `data:` address reaches the Mac. Parts are cut at a
+  tag or a space and stand alone, the same reply always gives the same
+  parts, and the JSON says `part` and `parts`. A part past the end is a
+  400 with the count. The upstream reply may be up to
+  `BRIDGE_PAGED_MAX_BYTES` (8 MiB) for this; the Mac still gets one part.
+
 ## 0.1.2 (2026-10-08)
 
 - A reply header from Hister or Kura whose value isn't printable ASCII (a

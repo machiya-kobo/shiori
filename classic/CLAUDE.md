@@ -15,7 +15,11 @@ Loaded when you work in `classic/`. The project-wide rules, layout and build/tes
   (`classic/bridge/bridge.py`, stdlib, GET only, exact paths: the room token
   `mht_` to both bridge origins, checked by hister-login on both ports before
   any upstream; Hister's token never leaves the bridge, and its log never has
-  a query, a header or a body). docs/classic.md says what plain HTTP exposes;
+  a query, a header or a body). Through the bridge the reader asks
+  `part=N` of `api/preview` / `api/note` (mac-bridge 0.2.0: the readable
+  HTML cut into ~16 KB parts, only the reader's tags, href and alt); the
+  reader's own `shiori:part=N` links move between parts. Direct mode never
+  sends `part`. docs/classic.md says what plain HTTP exposes;
   keep that warning wherever direct mode is offered.
 - Hister's `page_key` holds escaped control characters and a NUL: keep it raw
   (`ShioriPage.next`) and send it back as it came. A note's vault comes from

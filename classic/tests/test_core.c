@@ -679,6 +679,35 @@ static void test_note_text(void)
 		CHECK(!shiori_json_member("{\"error\": \"not found\"}", 22, "html", &raw, &rawLen));
 	}
 
+	/* mac-bridge's parts */
+	{
+		const char *reply = "{\"title\":\"x\",\"content\":\"<p>a</p>\",\"part\":2,\"parts\":7}";
+		long n = 0;
+		char t[40];
+		CHECK(shiori_json_long_member(reply, (long) strlen(reply), "parts", &n) && n == 7);
+		CHECK(shiori_json_long_member(reply, (long) strlen(reply), "part", &n) && n == 2);
+		CHECK(!shiori_json_long_member(reply, (long) strlen(reply), "title", &n));
+		CHECK(!shiori_json_long_member(reply, (long) strlen(reply), "pages", &n));
+		strcpy(t, "api/note?path=a.md");
+		CHECK(shiori_part_target(t, sizeof(t), 12) && strcmp(t, "api/note?path=a.md&part=12") == 0);
+		CHECK(!shiori_part_target(t, sizeof(t), 0) && !shiori_part_target(t, sizeof(t), 10000));
+		CHECK(!shiori_part_target(t, 30, 3));
+		CHECK(shiori_part_link("shiori:part=3") == 3 && shiori_part_link("shiori:part=9999") == 9999);
+		CHECK(!shiori_part_link("shiori:part=0") && !shiori_part_link("shiori:part=3x") && !shiori_part_link("shiori:part=")
+			&& !shiori_part_link("https://a.example/") && !shiori_part_link("shiori:part=10000"));
+	}
+	{
+		/* the reader's part links are links; other shiori: addresses aren't */
+		char text[200], hrefs[100];
+		NoteRun runs[10];
+		NoteText nt;
+		const char *h = "<p><a href=\"shiori:part=2\">Next</a> <a href=\"shiori:open\">x</a></p>";
+		note_text_init(&nt, text, sizeof(text), runs, 10, hrefs, sizeof(hrefs), 0);
+		shiori_note_html_to_text(h, (long) strlen(h), &nt);
+		CHECK(strcmp(note_link_at(&nt, 0), "shiori:part=2") == 0);
+		CHECK(strcmp(note_link_at(&nt, 6), "") == 0);
+	}
+
 	/* the vault is the address's */
 	shiori_url_vault("https://kura.example/n/Projects/x", vault, sizeof(vault));
 	CHECK(vault[0] == '\0');

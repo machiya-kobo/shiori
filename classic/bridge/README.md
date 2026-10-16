@@ -22,6 +22,13 @@ settings.
   `Set-Cookie`, `Tailscale-*` or `X-Forwarded-*`). Replies come back with
   `Content-Length`, never chunked. A reply over `BRIDGE_MAX_BYTES` is a
   413. Redirects are passed back, never followed.
+- **Paging:** `api/preview` and `api/note` with `part=N` come back as one
+  part of the page's or note's readable HTML, about 16 KB, so a big page
+  fits a 512K Mac. The bridge reads the upstream reply up to 8 MB (a 413
+  past that), keeps only the tags Shiori's reader renders with `href`
+  (http(s) or relative) and `alt`, and cuts it at a tag or a space, each
+  part standing alone. The reply says `part` and `parts`. Without `part`,
+  nothing changes.
 - **The log** has the path, status and size only: never a query string,
   a header or a body.
 - **The trust boundary:** the LAN. The room token crosses it in clear,

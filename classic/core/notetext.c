@@ -420,7 +420,7 @@ void shiori_note_html_to_text(const char *html, long len, NoteText *t)
 				} else {
 					/* only web addresses are links; anything else is plain text */
 					attribute(inside, n, "href", value, (long) sizeof(value));
-					if (shiori_is_web_url(value))
+					if (shiori_is_web_url(value) || shiori_part_link(value))
 						push(&b, name, STYLE_LINK, add_href(t, value));
 					else
 						push(&b, name, STYLE_PLAIN, -1);
@@ -487,6 +487,60 @@ int shiori_json_member(const char *buf, long len, const char *key, const char **
 			return 0;
 	}
 	return 0;
+}
+
+int shiori_json_long_member(const char *buf, long len, const char *key, long *out)
+{
+	JsonReader r;
+	int t;
+
+	json_init(&r, buf, len);
+	if (json_next(&r) != JSON_OBJECT)
+		return 0;
+	while ((t = json_next(&r)) == JSON_KEY) {
+		if (json_is(&r, key)) {
+			if (json_next(&r) != JSON_NUMBER)
+				return 0;
+			*out = json_long(&r);
+			return 1;
+		}
+		if (json_skip(&r, JSON_KEY) == JSON_ERROR)
+			return 0;
+	}
+	return 0;
+}
+
+int shiori_part_target(char *target, long cap, int part)
+{
+	char n[12], digits[5];
+	long len = (long) strlen(target);
+	int d = 0, i;
+
+	if (part < 1 || part > 9999)
+		return 0;
+	while (part > 0) {          /* no sprintf: the desk accessory links this file */
+		digits[d++] = (char) ('0' + part % 10);
+		part /= 10;
+	}
+	strcpy(n, "&part=");
+	for (i = 0; i < d; i++)
+		n[6 + i] = digits[d - 1 - i];
+	n[6 + d] = '\0';
+	if (len + (long) strlen(n) + 1 > cap)
+		return 0;
+	strcpy(target + len, n);
+	return 1;
+}
+
+int shiori_part_link(const char *href)
+{
+	long n = 0;
+
+	if (strncmp(href, "shiori:part=", 12) != 0)
+		return 0;
+	for (href += 12; *href >= '0' && *href <= '9' && n < 10000; href++)
+		n = n * 10 + (*href - '0');
+	return *href == '\0' && n >= 1 && n <= 9999 ? (int) n : 0;
 }
 
 static int target(const char *head, const char *name1, const char *value1, const char *name2, const char *value2,
