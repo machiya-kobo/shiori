@@ -27,7 +27,7 @@
 #define MARGIN 10
 #ifdef SHIORI_TALKIP
 #define MAX_RUNS 1000
-#define HREF_CAP (4L * 1024L)
+#define HREF_CAP (16L * 1024L)          /* a part of a list of links: each part's own length bounds it */
 #else
 #define MAX_RUNS 3000
 #define HREF_CAP (16L * 1024L)
@@ -470,7 +470,8 @@ static void ScrollTo(Reader *r, long top)
 
 static void Loaded(Reader *r)
 {
-	long len, rawLen = 0, htmlLen;
+	long len, rawLen = 0, htmlLen, hrefCap;
+	int runCap;
 	const char *body, *raw = NULL;
 	Handle html = NULL;
 	NoteText t;
@@ -562,9 +563,13 @@ static void Loaded(Reader *r)
 	}
 	FetchReset(&r->fetch);
 
+	/* a run starts at a tag (3 bytes at least) and a link's address is in the HTML, so neither needs more than
+	   the HTML's own length allows: a small page takes little, and a part's links all fit */
+	runCap = htmlLen / 3 + 2 < MAX_RUNS ? (int) (htmlLen / 3 + 2) : MAX_RUNS;
+	hrefCap = htmlLen + 1 < HREF_CAP ? htmlLen + 1 : HREF_CAP;
 	r->text = NewHandle(htmlLen + 2048);
-	r->runs = NewHandle((long) MAX_RUNS * (long) sizeof(NoteRun));
-	r->hrefs = NewHandle(HREF_CAP);
+	r->runs = NewHandle((long) runCap * (long) sizeof(NoteRun));
+	r->hrefs = NewHandle(hrefCap);
 	if (r->text == NULL || r->runs == NULL || r->hrefs == NULL) {
 		DisposeHandle(html);
 		SetStatus(r, "Not enough memory to read this.");
@@ -573,7 +578,7 @@ static void Loaded(Reader *r)
 	HLock(r->text);
 	HLock(r->runs);
 	HLock(r->hrefs);
-	note_text_init(&t, *r->text, htmlLen + 2048, (NoteRun *) *r->runs, MAX_RUNS, *r->hrefs, HREF_CAP, 1);
+	note_text_init(&t, *r->text, htmlLen + 2048, (NoteRun *) *r->runs, runCap, *r->hrefs, hrefCap, 1);
 	shiori_note_html_to_text(*html, htmlLen, &t);
 	HUnlock(r->text);
 	HUnlock(r->runs);
@@ -724,7 +729,13 @@ Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
 		return false;
 	}
 	SetPort(r->win);
-	r->bar = NewControl(r->win, &bounds, "\p", true, 0, 0, 0, scrollBarProc, 0);
+	/* hidden and empty until Relayout places it: made visible at the window's own bounds, it drew a scroll bar
+	   the size of the screen (giant arrows) for a moment as the reader opened */
+	{
+		Rect none;
+		SetRect(&none, 0, 0, 0, 0);
+		r->bar = NewControl(r->win, &none, "\p", false, 0, 0, 0, scrollBarProc, 0);
+	}
 	r->active = true;
 	gReaders[slot] = r;
 	Relayout(r);
