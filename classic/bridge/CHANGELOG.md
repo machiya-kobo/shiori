@@ -1,5 +1,11 @@
 # mac-bridge changelog
 
+## 0.2.1 (2026-10-16)
+
+- Paging: an element whose content is dropped (an `svg`, a `button`, a
+  `noscript`…) and whose end tag never comes now ends with the element
+  around it, instead of dropping the rest of the page.
+
 ## 0.2.0 (2026-10-16)
 
 - Paging: `api/preview` and `api/note` take `part=N` (from 1), which

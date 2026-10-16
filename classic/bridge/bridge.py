@@ -60,7 +60,7 @@ import threading
 import time
 from urllib.parse import parse_qsl, urljoin, urlsplit
 
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 
 HISTER_PATHS = frozenset({"/search", "/api/preview", "/api/config"})
 KURA_PATHS = frozenset({"/api/search", "/api/recent", "/api/note", "/api/vaults"})
@@ -88,6 +88,8 @@ VOID_TAGS = frozenset({"br", "hr", "img"})
 # elements whose content goes too: nothing in them reads as text
 DROP_TAGS = frozenset("script style template svg math iframe object embed video audio canvas noscript head title "
                       "select textarea button".split())
+# elements with no end tag, kept off the open-element stack
+HTML_VOID = frozenset("area base br col embed hr img input link meta param source track wbr".split())
 BLOCK_ENDS = frozenset("p div section article table figure details tr li ul ol pre blockquote dd "
                        "h1 h2 h3 h4 h5 h6".split())
 
@@ -103,13 +105,16 @@ class _Simplifier(html.parser.HTMLParser):
 
     def __init__(self, base):
         super().__init__(convert_charrefs=True)
-        self.base, self.tokens, self.dropping = base, [], []
+        # open: every element open outside a drop, so a drop whose end tag never comes ends with its parent
+        self.base, self.tokens, self.dropping, self.open = base, [], [], []
 
     def _start(self, tag, attrs, void):
         if self.dropping:
             if tag == self.dropping[-1] and not void:
                 self.dropping.append(tag)
             return
+        if not void and tag not in HTML_VOID and tag not in DROP_TAGS:
+            self.open.append(tag)
         if tag in DROP_TAGS:
             if not void and tag != "embed":
                 self.dropping.append(tag)
@@ -139,7 +144,13 @@ class _Simplifier(html.parser.HTMLParser):
         if self.dropping:
             if tag == self.dropping[-1]:
                 self.dropping.pop()
-            return
+                return
+            if tag not in self.open:
+                return
+            self.dropping = []          # the element around the drop ends: so does a drop left open inside it
+        if tag in self.open:
+            while self.open.pop() != tag:
+                pass
         if tag in KEEP_TAGS and tag not in VOID_TAGS:
             self.tokens.append(("end", tag, "</%s>" % tag))
 

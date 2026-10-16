@@ -483,6 +483,17 @@ class BridgeTest(unittest.TestCase):
         self.assertIn("kept text", part)
         self.assertIn("<a>bad</a>", part)
 
+    def test_a_dropped_element_left_open_ends_with_its_parent(self):
+        for html_text in ('<div><p>one <button>x<span>y</p><p>two</p></div>',
+                          '<section><svg><path d="M0"><g></section><p>two</p>',
+                          '<p>one<noscript><img src="x"></p><p>two</p>'):
+            text = "".join(bridge.split_html(bridge.simplify_html(html_text), 2048))
+            self.assertIn("two", text, html_text)
+            self.assertNotIn("x", text.replace("text", ""), html_text)
+        # a closed drop still swallows what's in it, nested ones too
+        text = "".join(bridge.split_html(bridge.simplify_html('<p>a<svg><svg>in</svg>still</svg>b</p>'), 2048))
+        self.assertEqual(text, "<p>ab</p>")
+
     def test_a_kura_note_is_paged_by_its_html(self):
         self.paged_answer("html", "<p>" + "note words " * 600 + "</p>", {"path": "a/b.md"})
         status, _, body, _ = self.get("kura", "/api/note?path=a%2Fb.md&part=1")
