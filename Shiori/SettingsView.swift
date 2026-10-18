@@ -945,22 +945,39 @@ struct SettingsField: View {
     var submit: () -> Void = {}
 
     var body: some View {
-        LabeledContent(label) {
-            TextField(spoken ?? label, text: $text, prompt: Text(prompt))
-                .labelsHidden()
-                .accessibilityLabel(spoken ?? label)
-                .lineLimit(1)
-                .frame(minWidth: 0, maxWidth: .infinity)
-                .multilineTextAlignment(.trailing)
-                .autocorrectionDisabled()
-                #if os(iOS)
-                .textInputAutocapitalization(.never)
-                .keyboardType(address ? .URL : .default)
-                #endif
-                .textContentType(address ? .URL : nil)
-                .textStyle(.callout, design: address || monospaced ? .monospaced : .default)
-                .onSubmit(submit)
+        #if os(iOS)
+        // An address on its own line under its label, from the leading edge:
+        // the form wrapped a long one there but kept it trailing, so a
+        // shorter address sat a character or two in from the one below it.
+        if address {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(label)
+                    .accessibilityHidden(true)
+                field(alignment: .leading)
+            }
+        } else {
+            LabeledContent(label) { field(alignment: .trailing) }
         }
+        #else
+        LabeledContent(label) { field(alignment: .trailing) }
+        #endif
+    }
+
+    private func field(alignment: TextAlignment) -> some View {
+        TextField(spoken ?? label, text: $text, prompt: Text(prompt))
+            .labelsHidden()
+            .accessibilityLabel(spoken ?? label)
+            .lineLimit(1)
+            .frame(minWidth: 0, maxWidth: .infinity)
+            .multilineTextAlignment(alignment)
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            .keyboardType(address ? .URL : .default)
+            #endif
+            .textContentType(address ? .URL : nil)
+            .textStyle(.callout, design: address || monospaced ? .monospaced : .default)
+            .onSubmit(submit)
     }
 }
 
