@@ -1,0 +1,53 @@
+{
+  "keys": [
+    { "name": "a video under its mobile host and a start time", "a": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "b": "https://m.youtube.com/watch?v=dQw4w9WgXcQ&t=83s", "same": true },
+    { "name": "a share link", "a": "https://youtu.be/dQw4w9WgXcQ?si=Ab12Cd34", "b": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "same": true },
+    { "name": "a short, and a tracking tag", "a": "https://www.youtube.com/shorts/dQw4w9WgXcQ", "b": "https://youtube.com/watch?v=dQw4w9WgXcQ&pp=ygUEdGVzdA%3D%3D", "same": true },
+    { "name": "in a playlist", "a": "https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL0123456789", "b": "https://www.youtube.com/embed/dQw4w9WgXcQ", "same": true },
+    { "name": "two videos", "a": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "b": "https://www.youtube.com/watch?v=9bZkp7q19f0", "same": false },
+    { "name": "two YouTube searches", "a": "https://www.youtube.com/results?search_query=vhs", "b": "https://m.youtube.com/results?search_query=dvd", "same": false },
+    { "name": "a channel, with and without its slash", "a": "https://www.youtube.com/@example", "b": "https://m.youtube.com/@example/", "same": true },
+    { "name": "Wikipedia's mobile site", "a": "https://en.m.wikipedia.org/wiki/Spider-Man_in_film", "b": "https://en.wikipedia.org/wiki/Spider-Man_in_film", "same": true },
+    { "name": "two languages", "a": "https://en.wikipedia.org/wiki/Kyoto", "b": "https://ja.wikipedia.org/wiki/Kyoto", "same": false },
+    { "name": "a mobile host, a scheme, a slash and a fragment", "a": "https://m.example.com/a/", "b": "http://example.com/a#top", "same": true },
+    { "name": "a mobile. host", "a": "https://mobile.example.com/post/1", "b": "https://www.example.com/post/1", "same": true },
+    { "name": "tracking tags", "a": "https://example.com/a?utm_source=feed&b=1", "b": "https://example.com/a?b=1", "same": true },
+    { "name": "the same tags in another order", "a": "https://example.com/a?b=1&c=2", "b": "https://example.com/a?c=2&b=1", "same": true },
+    { "name": "two pages", "a": "https://example.com/a", "b": "https://example.com/b", "same": false },
+    { "name": "two values", "a": "https://example.com/a?b=1", "b": "https://example.com/a?b=2", "same": false },
+    { "name": "two sites", "a": "https://example.com/a", "b": "https://example.org/a", "same": false },
+    { "name": "a site named m is a site", "a": "https://m.example/a", "b": "https://example/a", "same": false }
+  ],
+  "unique": [
+    {
+      "name": "one video Hister holds under two addresses: the first kept",
+      "urls": ["https://m.youtube.com/watch?v=dQw4w9WgXcQ&t=83s", "https://example.com/", "https://m.youtube.com/watch?v=dQw4w9WgXcQ", "https://example.com/other"],
+      "want": [0, 1, 3]
+    },
+    { "name": "nothing repeated", "urls": ["https://a.example/", "https://b.example/"], "want": [0, 1] }
+  ],
+  "fold": [
+    {
+      "name": "the web's result that's your page takes it, in the web's place",
+      "web": ["https://en.wikipedia.org/wiki/Spider-Man_in_film", "https://example.com/news", "https://example.org/"],
+      "mine": ["https://example.net/kept", "https://en.m.wikipedia.org/wiki/Spider-Man_in_film"],
+      "rows": [[0, 1], [1, -1], [2, -1]],
+      "rest": [0]
+    },
+    {
+      "name": "a second web result for the same item is dropped",
+      "web": ["https://www.youtube.com/watch?v=dQw4w9WgXcQ", "https://m.youtube.com/watch?v=dQw4w9WgXcQ&t=10s", "https://example.com/"],
+      "mine": ["https://youtu.be/dQw4w9WgXcQ"],
+      "rows": [[0, 0], [2, -1]],
+      "rest": []
+    },
+    {
+      "name": "none of yours on the web",
+      "web": ["https://example.com/"],
+      "mine": ["https://example.org/", "https://example.net/"],
+      "rows": [[0, -1]],
+      "rest": [0, 1]
+    },
+    { "name": "no web results", "web": [], "mine": ["https://example.org/"], "rows": [], "rest": [0] }
+  ]
+}

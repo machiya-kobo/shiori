@@ -155,13 +155,13 @@
    * Hister knows about it: `saved` (visited) and its `label` (kept).
    */
   function annotateWeb(webResults, histerDocs, lookupDocs) {
-    const shown = new Set(histerDocs.map((d) => normalizeURL(d.url)));
+    const shown = new Set(histerDocs.map((d) => itemKey(d.url)));
     const known = new Map();
-    for (const d of lookupDocs || []) known.set(normalizeURL(d.url), d.label || '');
+    for (const d of lookupDocs || []) known.set(itemKey(d.url), d.label || '');
     const seen = new Set();
     const out = [];
     for (const r of webResults) {
-      const key = normalizeURL(r.url);
+      const key = itemKey(r.url);
       if (shown.has(key) || seen.has(key)) continue;
       seen.add(key);
       out.push({ ...r, saved: known.has(key), label: known.get(key) || '' });
@@ -3431,6 +3431,76 @@
     return out;
   }
 
+  // --- One item under several addresses ---------------------------------------------
+  // HisterKit's SameItem is the twin, on scripts/same-item-cases.json.
+
+  /** A host's labels that mean "the mobile site": m.example.com, en.m.wikipedia.org. */
+  const MOBILE_LABELS = ['m', 'mobile'];
+
+  /** A YouTube address's video id (watch?v=, youtu.be/, /shorts/, /embed/, /live/), else ''. */
+  function youTubeVideo(u) {
+    const host = u.hostname.toLowerCase();
+    if (!YOUTUBE.includes(host)) return '';
+    const parts = u.pathname.split('/').filter(Boolean);
+    const id = host === 'youtu.be' ? parts[0] : parts[0] === 'watch' ? u.searchParams.get('v') : ['shorts', 'embed', 'live'].includes(parts[0]) ? parts[1] : '';
+    return /^[\w-]{6,20}$/.test(id || '') ? id : '';
+  }
+
+  /**
+   * One key for one item, whatever address it came under: normalizeURL's,
+   * with a site's mobile host taken for the site, and a YouTube video known
+   * by its id alone (a start time, a playlist or a share tag is the same video).
+   */
+  function itemKey(raw) {
+    let u;
+    try {
+      u = new URL(raw);
+    } catch (_) {
+      return normalizeURL(raw);
+    }
+    const video = youTubeVideo(u);
+    if (video) return 'youtube.com/watch?v=' + video;
+    const labels = u.hostname.toLowerCase().split('.');
+    u.hostname = labels.filter((l, i) => !(MOBILE_LABELS.includes(l) && i < labels.length - 2)).join('.');
+    return normalizeURL(u.href);
+  }
+
+  /**
+   * The items once each (itemKey), the first kept: Hister holds one video
+   * under each address it was seen at. `seen` carries over from page to page.
+   */
+  function uniqueItems(items, seen = new Set(), urlOf = (d) => d && d.url) {
+    return (items || []).filter((d) => {
+      const key = itemKey(urlOf(d) || '');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  /**
+   * All's web results and your pages as one list where they're the same
+   * item: each web result kept, in order, with the page of yours it is
+   * (`mine`, an index, or -1), a later web result for an item already
+   * listed dropped; `rest` is your pages that aren't on the web, to mix in.
+   * The entry is drawn as your page, its title opening the website.
+   */
+  function foldMine(webURLs, mineURLs) {
+    const mineKeys = (mineURLs || []).map((u) => itemKey(u || ''));
+    const taken = new Set();
+    const seen = new Set();
+    const rows = [];
+    (webURLs || []).forEach((url, web) => {
+      const key = itemKey(url || '');
+      if (seen.has(key)) return;
+      seen.add(key);
+      const mine = mineKeys.findIndex((k, i) => k === key && !taken.has(i));
+      if (mine >= 0) taken.add(mine);
+      rows.push({ web, mine });
+    });
+    return { rows, rest: mineKeys.map((_, i) => i).filter((i) => !taken.has(i)) };
+  }
+
   // --- Signing in on the hosted pages (docs/signing-in.md) ----------------------------
   // Behind the hosted pages' nginx, Hister answers through the sign-in
   // helper (hister-login, on Hister's host under /machiya/): a 401 (nginx's
@@ -3824,6 +3894,9 @@
     LOOKUP_MAX,
     mixCounts,
     alternate,
+    itemKey,
+    uniqueItems,
+    foldMine,
     PILLS,
     PILL_KEYS,
     pillSetting,

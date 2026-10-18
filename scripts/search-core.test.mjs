@@ -1416,6 +1416,25 @@ test('a page you opened stays in its search, first and once', () => {
   }
 });
 
+const sameItemCases = JSON.parse(readFileSync(fileURLToPath(new URL('./same-item-cases.json', import.meta.url)), 'utf8'));
+
+test('one item under several addresses: one key, listed once, your page in the web\'s place', () => {
+  for (const c of sameItemCases.keys) assert.equal(S.itemKey(c.a) === S.itemKey(c.b), c.same, c.name);
+  for (const c of sameItemCases.unique) {
+    const items = c.urls.map((url, i) => ({ url, i }));
+    assert.deepEqual(Array.from(S.uniqueItems(items), (d) => d.i), c.want, c.name);
+  }
+  // A page's seen keys carry over to the next.
+  const seen = new Set();
+  S.uniqueItems([{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }], seen);
+  assert.equal(S.uniqueItems([{ url: 'https://youtu.be/dQw4w9WgXcQ' }], seen).length, 0);
+  for (const c of sameItemCases.fold) {
+    const got = S.foldMine(c.web, c.mine);
+    assert.deepEqual(Array.from(got.rows, (r) => [r.web, r.mine]), c.rows, c.name);
+    assert.deepEqual(Array.from(got.rest), c.rest, c.name);
+  }
+});
+
 test('layoutScale: off the Mac a wide window widens the two columns, up to the Mac zoom\'s 1.2', () => {
   assert.equal(S.layoutScale(1100), 1, 'no room past the columns');
   assert.equal(S.layoutScale(1344), 1, 'exactly the columns and the margins');

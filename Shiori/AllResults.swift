@@ -171,7 +171,8 @@ struct AllResults: View {
         let all = OpenedFirst.pages(opened: pages.opened, documents: pages.documents) {
             !app.isNotePage($0) && !LocalFiles.isLocalFile($0)
         }
-        return Array(all.filter { !app.deletes.hidden.contains($0.url) }.prefix(Self.count))
+        // One video once, under whichever address Hister holds it (`SameItem`).
+        return Array(SameItem.unique(all.filter { !app.deletes.hidden.contains($0.url) }, url: \.url).prefix(Self.count))
     }
 
     @ViewBuilder private var content: some View {
@@ -216,9 +217,10 @@ struct AllResults: View {
                 // No headings: the web's results, yours among them. No "You
                 // Opened" here either: it only grew, and pushed the rest down.
                 let opened = app.searchPage.showOpened ? Set(pages.opened.map(\.url)) : []
-                let yours = Self.alternate(mine, vault, Array(media.items.prefix(Self.count)))
+                let mediaItems = Array(media.items.prefix(Self.count))
+                let yours = Self.alternate(mine, vault, mediaItems)
                 if webOn {
-                    webSection(webResults, yours: yours, opened: opened)
+                    webSection(webResults, yours: yours, mine: mine, vault: vault, media: mediaItems, opened: opened)
                 } else {
                     ForEach(yours) { mixed($0, opened: opened) }
                 }
@@ -254,7 +256,12 @@ struct AllResults: View {
         }
     }
 
-    @ViewBuilder private func webSection(_ results: [WebResult], yours: [Yours], opened: Set<String>) -> some View {
+    /// `yours` while the web is away; with it, a web result that's one of
+    /// `mine` is drawn as your page in the web's place (`SameItem.fold`: its
+    /// title opens the website), and the rest of yours spread among them.
+    @ViewBuilder private func webSection(
+        _ results: [WebResult], yours: [Yours], mine: [StoredPage], vault: [StoredPage], media: [MediaItem], opened: Set<String>
+    ) -> some View {
         switch web.phase {
         case .idle, .loading:
             // Yours first, while the web is on its way.
@@ -294,19 +301,28 @@ struct AllResults: View {
             }
             // Yours spread evenly over the web's first page (later pages
             // arriving don't move what's been seen).
-            let slots = MixedResults.counts(web: min(results.count, web.firstPageCount), mine: yours.count)
+            let fold = SameItem.fold(web: results.map(\.url), mine: mine.map(\.url))
+            let rest = Self.alternate(fold.rest.map { mine[$0] }, vault, media)
+            let slots = MixedResults.counts(web: fold.rows.filter { $0.web < web.firstPageCount }.count, mine: rest.count)
             let starts = slots.reduce(into: [0]) { $0.append($0.last! + $1) }
-            ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
-                WebItem(result: result, query: web.query, saved: web.saved[result.url])
-                    .task {
-                        await web.loadMoreIfNeeded(after: result, searx: app.searx, hister: app.client)
+            ForEach(Array(fold.rows.enumerated()), id: \.element.web) { index, row in
+                let result = results[row.web]
+                Group {
+                    if let own = row.mine {
+                        mixed(Yours(page: mine[own], kind: .hister), opened: opened)
+                    } else {
+                        WebItem(result: result, query: web.query, saved: web.saved[result.url])
                     }
+                }
+                .task {
+                    await web.loadMoreIfNeeded(after: result, searx: app.searx, hister: app.client)
+                }
                 if index < slots.count {
-                    ForEach(yours[starts[index]..<starts[index + 1]]) { mixed($0, opened: opened) }
+                    ForEach(rest[starts[index]..<starts[index + 1]]) { mixed($0, opened: opened) }
                 }
             }
             if slots.isEmpty, !results.isEmpty {
-                ForEach(yours) { mixed($0, opened: opened) }
+                ForEach(rest) { mixed($0, opened: opened) }
             }
             if web.isLoadingMore {
                 ProgressView()

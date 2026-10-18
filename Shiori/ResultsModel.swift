@@ -272,11 +272,14 @@ final class ResultsModel {
     /// Every URL in `documents`, kept as they're added (not rebuilt from
     /// the whole list for each page).
     private var seen = Set<String>()
+    /// The items listed (`SameItem.key`): Hister holds a video once for
+    /// each address it was seen at, and the list shows it once.
+    private var items = Set<String>()
 
     /// Appends what's new, returning how many were.
     @discardableResult
     private func append(_ page: [StoredPage]) -> Int {
-        let fresh = page.filter { seen.insert($0.url).inserted }
+        let fresh = page.filter { seen.insert($0.url).inserted && items.insert(SameItem.key($0.url)).inserted }
         documents += fresh
         return fresh.count
     }
@@ -326,6 +329,7 @@ final class ResultsModel {
             if let notes { merge.add(notes: notes.documents, next: notes.nextPageKey) } else { merge.endNotes() }
             documents = []
             seen = []
+            items = []
             append(merge.take())
             self.merge = merge
             nextPageKey = nil
@@ -392,8 +396,10 @@ final class ResultsModel {
                 all = await Self.byTitle(all)
                 guard mine == generation else { return }
             }
-            documents = all
             seen = Set(all.map(\.url))
+            all = SameItem.unique(all, url: \.url)
+            documents = all
+            items = Set(all.map { SameItem.key($0.url) })
             total = first.total
             nextPageKey = nil
             capped = all.count >= Self.allLimit
@@ -451,6 +457,7 @@ final class ResultsModel {
         else { return false }
         documents = []
         seen = []
+        items = []
         append(copy.pages)
         total = documents.count
         nextPageKey = nil
@@ -493,6 +500,7 @@ final class ResultsModel {
             guard mine == generation else { return }
             documents = []
             seen = []
+            items = []
             append(openedInline ? OpenedFirst.pages(opened: page.opened, documents: page.documents, keep: keepOpened) : page.documents)
             total = page.total
             nextPageKey = page.nextPageKey

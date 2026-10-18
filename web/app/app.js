@@ -896,6 +896,8 @@ function resultsList(container, options) {
   const list = h('ul', { class: 'rows' });
   const sentinel = h('div', {});
   const seen = new Set();
+  // The items listed (S.itemKey): Hister holds a video once for each address it was seen at.
+  const items = new Set();
   // The newest result on screen (unix seconds), for S.newItemsCount.
   let newestShown = 0;
   let firstTotal = 0;
@@ -955,6 +957,7 @@ function resultsList(container, options) {
       for (const doc of reply.documents) {
         if (seen.has(doc.url)) continue;
         seen.add(doc.url);
+        if (!S.uniqueItems([doc], items).length) continue;
         newestShown = Math.max(newestShown, Number(doc.updated) || 0);
         into(doc).add(doc);
         added++;
@@ -1716,6 +1719,11 @@ const MEDIA_WAIT_MS = 1500;
 
 /** Your pages, notes and media spread evenly among a list's other rows (S.mixCounts); the list is theirs if it has none. */
 function spreadMixed(list, mix) {
+  // A page of yours in a web result's place stays there (webList); the rest
+  // take turns again (pages, notes, media), as the search page and the apps.
+  const left = mix.filter((row) => row && !row.dataset.inWeb);
+  const kind = (row) => (row.dataset.page ? 0 : row.classList.contains('note-row') ? 1 : 2);
+  mix = S.alternate(...[0, 1, 2].map((k) => left.filter((row) => kind(row) === k)));
   for (const row of mix) row.remove();
   const others = [...list.children];
   const counts = S.mixCounts(others.length, mix.length);
@@ -1774,9 +1782,11 @@ async function searchAll(container, q, { web = true } = {}) {
   // The Code pill's count (Hister's own index, nothing spent); code is never listed here.
   if (hasCodeDocs) api.search(S.codeQuery(q), { limit: 1 }).then((r) => setSegmentCount('code', r.total, q)).catch(() => {});
   if (notes && !notes.signIn) setSegmentCount('notes', Math.max(notes.total || 0, (notes.documents || []).length), q);
-  const mine = (reply, label) => ((reply && reply.documents) || []).slice(0, ALL_COUNT).map((d) => {
+  const mine = (reply, label) => S.uniqueItems((reply && reply.documents) || []).slice(0, ALL_COUNT).map((d) => {
     const row = docRow(d);
     row.classList.add('mixed');
+    // A page of yours the web also found is one row, in the web's place (webList).
+    if (label === 'Your page') row.dataset.page = d.url;
     row.querySelector('.title').dataset.label = respelled ? `${label} · for “${respelled}”` : label;
     return row;
   });
@@ -2127,7 +2137,17 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
     if (!results.length) return mix.some(Boolean) ? mineOnly(health ? h('p', { class: 'engine-health' }, health) : null) : container.replaceChildren(status('No Web Results', health));
     const list = h('ul', { class: 'rows' });
     const shown = results.slice(0, embedded ? 10 : 30);
-    for (const r of shown) {
+    // A web result that's one of your pages is one row: yours, in the web's
+    // place, its title opening the website; a repeat of one listed is dropped.
+    const pageRows = mix.filter((row) => row && row.dataset.page);
+    const fold = S.foldMine(shown.map((r) => r.url), pageRows.map((row) => row.dataset.page));
+    for (const { web, mine } of fold.rows) {
+      if (mine >= 0) {
+        pageRows[mine].dataset.inWeb = 'true';
+        list.append(pageRows[mine]);
+        continue;
+      }
+      const r = shown[web];
       const thumb = api.proxiedImage(r.thumbnail || r.thumbnail_src || r.img_src);
       list.append(
         h(

@@ -2706,7 +2706,9 @@
     // Pages is your web pages: Hister sends no notes, but an opened one
     // (Hister's `history` carries no label) is known by its address.
     const pageOf = (d) => d.label !== 'vault' && !S.isNoteURL(d.url, niwaBase, konbiniBase);
+    // One video once, under whichever address Hister holds it (S.uniqueItems).
     let docs = (result.documents || []).filter((d) => vault || pageOf(d));
+    if (!vault) docs = S.uniqueItems(docs);
     if (!docs.length && !(!vault && (result.history || []).some((h) => pageOf(h)))) {
       return showStatus(vault ? 'No notes in the vault match.' : files ? 'None of your files match.' : code ? 'None of your code matches.' : 'None of your pages match.');
     }
@@ -2969,7 +2971,7 @@
         saveState();
       }
       answered = true;
-      histerDocs = (result.documents || []).slice(0, ALL_COUNT);
+      histerDocs = S.uniqueItems(result.documents || []).slice(0, ALL_COUNT);
       if (result.closeMatches) $('hister-title').textContent = `Your Pages · for “${result.closeMatches}”`;
       if (!histerDocs.length && !(result.history || []).length) return;
       const first = withOpened(result, histerDocs, { skipNotes: true });
@@ -3194,11 +3196,31 @@
     more.addEventListener('click', showMore);
     showMore();
     $('images').after(el('p', { class: 'more' }, more));
+  } else if (category === 'general' && page === 1) {
+    // A web result that's one of your pages is one entry: your page, in the
+    // web's place (a "wiki" search's article stays first), its title opening
+    // the website. The rest of yours are mixed in after (mixIn).
+    const fold = S.foldMine(results.map((r) => r.url), myPages.map((card) => card.dataset.preview));
+    const cards = [];
+    for (const row of fold.rows) {
+      if (row.mine >= 0) {
+        const card = myPages[row.mine];
+        card.classList.add('mixed');
+        const title = card.querySelector('.title');
+        if (title) title.dataset.label = 'Your page';
+        $('web-results').append(card);
+        continue;
+      }
+      const r = results[row.web];
+      const card = webCard(r);
+      $('web-results').append(card);
+      cards.push([r, card]);
+    }
+    myPages = fold.rest.map((i) => myPages[i]);
+    markSaved(cards);
   } else {
-    // Web leaves out what Your Pages shows, but not a "wiki" search's
-    // article: it's the one asked for, and Your Pages may be folded.
-    const mine = wiki.article ? histerDocs.filter((d) => S.normalizeURL(d.url) !== S.normalizeURL(wiki.article.url)) : histerDocs;
-    const shown = category === 'general' ? S.annotateWeb(results, mine, []) : results;
+    // Web leaves out what Your Pages showed.
+    const shown = category === 'general' ? S.annotateWeb(results, histerDocs, []) : results;
     const cards = shown.map((r) => {
       const card = webCard(r);
       $('web-results').append(card);

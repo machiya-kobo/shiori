@@ -6,7 +6,7 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 
 - **Search your pages** with Hister's query syntax, completions included. Filter by date, site, visits, language and type.
 - **Search your notes**: your Obsidian vault, through Kura. A note opens in Obsidian, its Kura page and Konbini card a tap away.
-- **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in and the ones you've visited marked.
+- **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in (one the web also found is a single entry) and the ones you've visited marked.
 - **Search Gemini and Gopher** through a small-web gateway.
 - **Search your code** in the Code view: repos, READMEs, docs, issues, pull requests and releases imported into Hister. Filter by kind, forge, open or private; each opens at its forge.
 - **Search your media** on the Media pill: your Jellyfin and Plex libraries and what you played from Koito and Movary, one card per item, saying when you played it ("Never Played", "Played 3× · Last Mar 6, 2014") with your rating. Filter by kind, never played and rating; before a search, what's playing, your top artists and albums, your watchlist and what's new ([media.md](media.md)).
