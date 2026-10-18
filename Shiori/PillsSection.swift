@@ -1,3 +1,4 @@
+import HisterKit
 import SwiftUI
 
 /// Settings → Search → Pills: how the pills sit (Pill Row), and one row

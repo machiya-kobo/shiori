@@ -112,11 +112,8 @@ final class SaveLinksModel {
             }
             candidates = SaveLinks.labelCandidates(tags: found.flatMap(\.tags), labels: app.rules.labels)
             phase = .loaded
-        } catch let error as HisterError {
-            phase = .failed(error == .server(status: 404, message: "") ? "Kura doesn't have that note." : "Kura didn't answer.")
-            return
         } catch {
-            phase = .failed("Kura didn't answer.")
+            phase = .failed(error == .server(status: 404, message: "") ? "Kura doesn't have that note." : "Kura didn't answer.")
             return
         }
         // What Hister holds, in a few searches (url:(a|a/|b|…)).

@@ -113,7 +113,12 @@ struct HisterSignInSection: View {
         await app.checkHisterSignIn()
         guard let server = app.client?.baseURL else { return }
         if let account = app.histerAccount {
-            stillSignedIn = (try? await HisterAccount.username(server: server, hister: account.session)).map { $0 != nil }
+            // nil when Hister can't say (out of reach), false when it says the session is gone.
+            do {
+                stillSignedIn = try await HisterAccount.username(server: server, hister: account.session) != nil
+            } catch {
+                stillSignedIn = nil
+            }
         }
     }
 
