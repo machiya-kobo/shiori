@@ -5,6 +5,20 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.12.1 (2026-10-18)
+
+- One item, one entry: a YouTube video Hister holds under two addresses
+  (its mobile site, a start time) shows once in every list, and a site's
+  mobile address counts as the site.
+- All: a web result that's one of your pages is a single entry, your
+  page, where the web ranked it; its title opens the website and its
+  hister chip your copy. A "wiki" search's article, when it's yours, was
+  listed twice.
+- iPhone and iPad Settings: an address sits under its label from the
+  leading edge (a shorter one looked indented).
+- Apps: Settings → Hister offers Sign In again when Hister has ended this
+  device's session (it still read as signed in).
+
 ## 1.12.0 (2026-10-16)
 
 - Classic: through mac-bridge 0.2.0, a long page or note opens in parts
