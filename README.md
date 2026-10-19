@@ -1,8 +1,8 @@
 # Shiori
 
-[Machiya](https://github.com/machiya-kobo/machiya) is a set of small self-hosted apps for finding what you've read: your pages ([Hister](https://github.com/asciimoo/hister)), the web ([SearXNG](https://github.com/searxng/searxng)), your notes ([Obsidian](https://obsidian.md)) and your code ([Forgejo](https://forgejo.org) or [GitHub](https://github.com)).
+Shiori (栞, bookmark) searches everything you've read: your pages ([Hister](https://github.com/asciimoo/hister)), the web ([SearXNG](https://github.com/searxng/searxng)), your notes ([Obsidian](https://obsidian.md)) and your code ([Forgejo](https://forgejo.org) or [GitHub](https://github.com)), from an iPhone, iPad, Mac, Linux, Haiku, a Classic Macintosh or the web. It's also a Hister extension for Safari on macOS and iOS, built on Hister's own and on Nick Burns's [hister-safari](https://github.com/nburns/hister-safari). Hister's [official extensions](https://hister.org/docs/browser-extension) also work.
 
-Shiori (栞, bookmark) is Machiya's search app. Search Hister and SearXNG from an iPhone, iPad, Mac, Linux, Haiku, a Classic Macintosh or the web. It's also a Hister extension for Safari on macOS and iOS, built on Hister's own and on Nick Burns's [hister-safari](https://github.com/nburns/hister-safari). Hister's [official extensions](https://hister.org/docs/browser-extension) also work.
+Shiori is one of [Machiya](https://github.com/machiya-kobo/machiya)'s small self-hosted apps, which share one vault of notes: [Kura](https://github.com/machiya-kobo/kura) to read them, [Konbini](https://github.com/machiya-kobo/konbini) for your projects and [Niwa](https://github.com/machiya-kobo/niwa) for your digital garden.
 
 Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
@@ -16,7 +16,7 @@ Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-c
   <tr>
     <td align="center" width="33%"><a href="docs/screenshots/shiori-library-light.png"><img src="docs/screenshots/shiori-library-light.png" alt="The Library, light theme: collections and labels, pages newest first, one open in the preview" width="100%"></a><br>Browse your library</td>
     <td align="center" width="33%"><a href="docs/screenshots/shiori-notes-light.png"><img src="docs/screenshots/shiori-notes-light.png" alt="Notes, light theme: notes from Kura by folder, one open in the preview" width="100%"></a><br>Read your notes</td>
-    <td align="center" width="33%"><a href="docs/screenshots/shiori-settings-dark.png"><img src="docs/screenshots/shiori-settings-dark.png" alt="Settings, dark theme: theme, mode, text size and views" width="100%"></a><br>Pick a theme and your views</td>
+    <td align="center" width="33%"><a href="docs/screenshots/shiori-settings-dark.png"><img src="docs/screenshots/shiori-settings-dark.png" alt="Settings, dark theme: Appearance, Search, Results, Data and Account" width="100%"></a><br>Customize with themes and views</td>
   </tr>
 </table>
 
@@ -30,7 +30,7 @@ Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-c
 
 - **Search your pages** with Hister's query syntax and completions. Filter by date, site, visits, language and type. What you open ranks first next time.
 - **Search your notes** in your Obsidian vault, through Kura. A note opens in Obsidian, its Konbini card a tap away.
-- **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in, and Gemini and Gopher through a small-web gateway.
+- **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in, and Gemini and Gopher through a [small-web gateway](https://github.com/machiya-kobo/machiya/tree/main/stack/smallweb).
 - **Search your code**: repos, issues, pull requests and releases from Forgejo and GitHub, imported into Hister.
 - **Search your media**: your Jellyfin and Plex libraries and what you played from Koito and Movary, saying when you last played each and your rating.
 - **Search your files**: the folders Hister watches ([local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)).
@@ -79,14 +79,14 @@ Each extra is its own app with a public image on ghcr.io/machiya-kobo. Run it, t
 |---|---|---|
 | Your Obsidian notes | Kura, on your vault | `SHIORI_KURA_URL` (and Shiori's name for Kura in Kura's `KURA_ALLOWED_HOSTS`) |
 | Your projects | Konbini, on the same vault | `SHIORI_KONBINI_URL` |
-| Your code on Forgejo or GitHub | code-import, which copies your repos into Hister | nothing: the Code tab appears |
+| Your code on Forgejo or GitHub | [code-import](https://github.com/machiya-kobo/machiya/blob/main/docs/services/code-import.md), which copies your repos into Hister | nothing: the Code tab appears |
 | The small web (Gemini, Gopher) | smallweb | `SHIORI_SMALLWEB_URL` |
 
 | To get | Run | Then set on Shiori |
 |---|---|---|
-| Subscribe to a search as RSS | shiori-feed | `SHIORI_FEED_URL` |
-| AI Answer and Summarize | shiori-ai, with an Anthropic API key | `SHIORI_AI_URL` |
-| One sign-in for every app | hister-login | `SHIORI_LOGIN_URL` |
+| Subscribe to a search as RSS | [shiori-feed](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-feed.md) | `SHIORI_FEED_URL` |
+| AI Answer and Summarize | [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md), with an Anthropic API key | `SHIORI_AI_URL` |
+| One sign-in for every app | [hister-login](https://github.com/machiya-kobo/machiya/blob/main/docs/services/hister-login.md) | `SHIORI_LOGIN_URL` |
 
 For Media, point Shiori at your own Jellyfin, Plex, Koito or Movary, each with a token of its own ([docs/media.md](docs/media.md)).
 
