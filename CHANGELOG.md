@@ -5,6 +5,11 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.13.1 (2026-10-18)
+
+- shiori-web: the nginx base image is updated to the current
+  `nginx-unprivileged:stable-alpine`.
+
 ## 1.13.0 (2026-10-18)
 
 - Feeds: Subscribe in RSS Reader opens any reader, not only NewsBlur.
