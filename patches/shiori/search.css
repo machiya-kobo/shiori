@@ -142,14 +142,14 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
      with the results: its right edge is the results column's, its left edge
      the column's too where the name leaves room (else just after the name).
      --col-l / --col-w / --col-r are the page's own grid: the column, 24px,
-     then the Info card's 28rem (with a preview open, 34rem), each times --ls. */
+     then the Info card's 28rem, each times --ls. A preview open keeps the
+     results' column and takes the Info card's place. */
   body:not(.home) {
     --content-w: min(var(--vw) - 24px, var(--body-max) - 24px);
     --col-l: calc((var(--vw) - var(--content-w)) / 2);
     --col-w: var(--content-w);
   }
-  body.two-col:not(.with-preview):not(.home) { --col-w: calc(var(--content-w) - 28rem * var(--ls, 1) - 24px); }
-  body.with-preview:not(.home) { --col-w: calc(34rem * var(--ls, 1)); }
+  body.two-col:not(.home), body.with-preview:not(.home) { --col-w: calc(var(--content-w) - 28rem * var(--ls, 1) - 24px); }
   body:not(.home) header {
     --col-r: calc(var(--col-l) + var(--col-w));
     grid-template-columns:
@@ -782,14 +782,22 @@ html.dialog-open, html.dialog-open body { overflow: hidden; }
 /* The preview pane: beside the results in a wide window, like Hister's
    own page. The page widens to two columns; the pane stays in view. */
 #preview-pane[hidden] { display: none; }
-/* The same overall width as the page with the Info card beside it, so
-   opening a preview doesn't move the page's edges (it pushed the results
-   to the left edge). Inside that, the preview gets the larger share: the
-   cards had room to spare and a page read cut off in 28rem. */
+/* The results stay where they were, as wide (it squeezed them to 34rem):
+   the preview takes the Info card's column and the window's room to its
+   right, up to 64rem. The page keeps its left edge (--col-l) and grows to
+   the right; the header still spans the window. */
 body.with-preview {
-  max-width: calc((48rem + 28rem) * var(--ls, 1) + 24px + 24px);
-  display: grid; grid-template-columns: minmax(0, calc(34rem * var(--ls, 1))) minmax(0, 1fr); column-gap: 24px;
+  display: grid; grid-template-columns: minmax(0, var(--col-w, calc(34rem * var(--ls, 1)))) minmax(0, 1fr); column-gap: 24px;
   align-items: start;
+}
+@media (min-width: 1100px) {
+  body.with-preview:not(.home) {
+    max-width: calc(var(--col-w) + 24px + 64rem * var(--ls, 1) + 24px);
+    margin-left: max(0px, var(--col-l) - 12px); margin-right: auto;
+  }
+  body.with-preview:not(.home) > header {
+    width: var(--vw); margin-left: calc(-1 * var(--col-l)); margin-right: 0; justify-self: start;
+  }
 }
 /* While a preview is open the Info card steps aside (it had moved above
    the results); closing the preview brings it back beside them. */
