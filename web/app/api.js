@@ -120,13 +120,40 @@ export async function profile() {
   }
 }
 
+/** Hister's reply for `sent`, a query as sent. */
+function searchReply(sent, { sort = '', pageKey = '', limit = 30 } = {}) {
+  const q = { text: sent, highlight: 'HTML', limit };
+  if (sort) q.sort = sort;
+  if (pageKey) q.page_key = pageKey;
+  return request(`search?${query({ format: 'json', query: JSON.stringify(q) })}`);
+}
+
 /** One page of results: documents, the next page's key, opened ones, a suggestion. */
 export async function search(text, { sort = '', pageKey = '', limit = 30 } = {}) {
   // The last word a prefix, never the notes (those are Kura's).
-  const q = { text: globalThis.ShioriSearch.histerText(text), highlight: 'HTML', limit };
-  if (sort) q.sort = sort;
-  if (pageKey) q.page_key = pageKey;
-  const reply = await request(`search?${query({ format: 'json', query: JSON.stringify(q) })}`);
+  return searchPage(await searchReply(globalThis.ShioriSearch.histerText(text), { sort, pageKey, limit }), { pageKey, limit });
+}
+
+/**
+ * A first page in Hister's own order (S.rankedPages): the filtered search
+ * and, for plain words, the words alone beside it, since any filter turns
+ * off Hister's phrase and home-page bonuses. The plain one failing leaves
+ * the filtered page as it is.
+ */
+export async function rankedSearch(text, { limit = 30 } = {}) {
+  const S = globalThis.ShioriSearch;
+  const ranked = S.rankedText(text);
+  const [filtered, plain] = await Promise.all([
+    searchReply(S.histerText(text), { limit }),
+    ranked ? searchReply(ranked, { limit }).catch(() => null) : null,
+  ]);
+  const merged = searchPage(S.rankedPages(filtered, plain), { limit });
+  // Paging stays the filtered search's: its own page decides whether there's more.
+  merged.next = ((filtered && filtered.documents) || []).length >= limit ? filtered.page_key || '' : '';
+  return merged;
+}
+
+function searchPage(reply, { pageKey = '', limit = 30 } = {}) {
   const documents = (reply && reply.documents) || [];
   return {
     total: (reply && reply.total) || 0,

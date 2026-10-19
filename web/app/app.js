@@ -1739,9 +1739,9 @@ async function searchAll(container, q, { web = true } = {}) {
   container.replaceChildren(h('div', { class: 'spinner' }));
   // Your Media: asked beside your pages and notes, on a search run on purpose only.
   const media = web && S.mediaConfigured(MEDIA) ? S.mediaSearch(MEDIA, q, api.media).catch(() => null) : null;
-  // Pages from Hister (which sends no notes), notes from Kura or Hister (Notes From).
+  // Pages from Hister (which sends no notes) in its own order, notes from Kura or Hister (Notes From).
   const both = (text) => Promise.all([
-    api.search(text, { limit: ALL_COUNT }).catch(() => null),
+    api.rankedSearch(text, { limit: ALL_COUNT }).catch(() => null),
     // Kura asking who you are (401): a Sign In notice where the notes go.
     notesList(text, { limit: ALL_COUNT }).catch((error) => (error.status === 401 ? { signIn: error, total: 0, documents: [], opened: [] } : null)),
   ]);

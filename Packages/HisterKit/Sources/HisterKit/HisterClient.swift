@@ -120,6 +120,22 @@ public struct HisterClient: Sendable {
         try await search(sentText: SearchText.forHister(text), sort: sort, pageKey: pageKey, limit: limit, options: options)
     }
 
+    /// A first page in Hister's own order (`RankedPages`): the filtered
+    /// search and, for plain words, the words alone beside it, since any
+    /// filter turns off Hister's phrase and home-page bonuses. The plain one
+    /// failing leaves the filtered page as it is. A date range or meaning-based
+    /// search is the filtered search alone (the plain one would ignore it).
+    public func rankedSearch(
+        _ text: String, limit: Int = 30, options: SearchOptions = SearchOptions()
+    ) async throws(HisterError) -> SearchPage {
+        guard let ranked = RankedPages.text(text), options.dateFrom == nil, options.dateTo == nil, !options.semantic else {
+            return try await search(text, limit: limit, options: options)
+        }
+        async let plain = try? search(sentText: ranked, limit: limit)
+        let filtered = try await search(text, limit: limit, options: options)
+        return RankedPages.merge(filtered: filtered, plain: await plain)
+    }
+
     /// A search with its text already as sent (`forHister`, or `forHisterNotes`).
     func search(
         sentText: String, sort: SearchSort = .relevance, pageKey: String? = nil, limit: Int = 30,

@@ -1811,12 +1811,28 @@
     }
   }
 
-  function histerSearch(text, limit, extra = {}) {
-    // The last word a prefix, never the notes (those are Kura's).
-    const query = JSON.stringify({ text: S.histerText(text), limit, ...extra });
+  function histerSearch(text, limit, extra = {}, { plain = false } = {}) {
+    // The last word a prefix, never the notes (those are Kura's); `plain`:
+    // the words as typed (S.rankedText), for Hister's own order.
+    const query = JSON.stringify({ text: plain ? text : S.histerText(text), limit, ...extra });
     return fetchJSON(`${histerBase}search?format=json&query=${encodeURIComponent(query)}`, {
       headers: histerAuth({ Accept: 'application/json' }),
     });
+  }
+
+  /**
+   * A first page in Hister's own order (S.rankedPages): the filtered search
+   * and, for plain words, the words alone beside it, since any filter turns
+   * off Hister's phrase and home-page bonuses. The plain one failing leaves
+   * the filtered page as it is.
+   */
+  async function histerRanked(text, limit, extra = {}) {
+    const ranked = S.rankedText(text);
+    const [filtered, plain] = await Promise.all([
+      histerSearch(text, limit, extra),
+      ranked ? histerSearch(ranked, limit, extra, { plain: true }).catch(() => null) : null,
+    ]);
+    return S.rankedPages(filtered, plain);
   }
 
   /**
@@ -1829,13 +1845,14 @@
    * opened before can fill it, leaving `documents` empty ("hister", limit
    * 3: 13 found, no documents). `closeMatches` is the spelling used.
    */
-  async function histerOrClose(text, limit, extra = {}, wrap = (t) => t, suggest = null) {
-    const result = await histerSearch(wrap(text), limit, extra);
+  async function histerOrClose(text, limit, extra = {}, wrap = (t) => t, suggest = null, { ranked = false } = {}) {
+    const search = ranked ? histerRanked : histerSearch;
+    const result = await search(wrap(text), limit, extra);
     const found = (r) => r.total || (r.documents || []).length || (r.history || []).length;
     if (found(result) || extra.page_key || !suggest) return result;
     const close = S.correctedQuery(text, await suggest().catch(() => []));
     if (!close) return result;
-    const again = await histerSearch(wrap(close), limit, extra);
+    const again = await search(wrap(close), limit, extra);
     return found(again) ? { ...again, closeMatches: close } : result;
   }
 
@@ -2965,8 +2982,8 @@
     try {
       let result = pageState.hister;
       if (!result) {
-        // Hister sends no notes (S.histerText), so five is five.
-        result = await histerOrClose(q, ALL_COUNT, { highlight: 'HTML' }, undefined, suggest);
+        // Hister sends no notes (S.histerText), so five is five; in Hister's own order.
+        result = await histerOrClose(q, ALL_COUNT, { highlight: 'HTML' }, undefined, suggest, { ranked: true });
         pageState.hister = result;
         saveState();
       }

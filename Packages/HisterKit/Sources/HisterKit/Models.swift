@@ -161,6 +161,9 @@ public struct StoredPage: Sendable, Equatable, Hashable, Identifiable {
     public private(set) var snippet: Snippet
     /// A code document's facts (code-import's metadata); nil for any other page.
     public var code: CodeInfo?
+    /// Who stored it (`metadata.source`: "shiori", "vault", "code", an
+    /// importer's name); empty when it says nothing.
+    public var source = ""
 
     public init(
         url: String, title: String, domain: String, label: String, added: Date, updated: Date,
@@ -347,6 +350,7 @@ struct DocumentWire: Decodable {
             faviconKey: favicon_key ?? "",
             snippetHTML: text ?? "")
         page.code = metadata?.code
+        page.source = metadata?.values["source"] ?? ""
         return page
     }
 }

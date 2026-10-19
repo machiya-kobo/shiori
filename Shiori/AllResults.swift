@@ -96,6 +96,8 @@ struct AllResults: View {
 
     private func load() async {
         pages.semantic = app.semanticOn
+        // In Hister's own order: the words alone beside the filtered search.
+        pages.ranked = true
         pages.webSuggestions = { [app] in await app.webSuggestions(for: $0) }
         notes.webSuggestions = { [app] in await app.webSuggestions(for: $0) }
         notes.kura = app.notesKuraInUse

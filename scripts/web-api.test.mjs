@@ -42,7 +42,12 @@ globalThis.fetch = async (url, init = {}) => {
     return new Response(JSON.stringify({ vaults: server.vaults }));
   }
   if (url === '/api/delete') return new Response(JSON.stringify({ matched: 1 }));
-  // Hister's search: `server.search` when set (notes from Hister).
+  // Hister's search: `server.searchFor(text)` or `server.search` when set (notes from Hister).
+  if (server.searchFor && String(url).startsWith('/search?')) {
+    const reply = server.searchFor(JSON.parse(new URL(url, 'https://h.example').searchParams.get('query')).text);
+    if (!reply) return new Response('down', { status: 502 });
+    return new Response(JSON.stringify(reply));
+  }
   if (server.search && String(url).startsWith('/search?')) return new Response(JSON.stringify(server.search));
   return new Response('{}');
 };
@@ -515,7 +520,8 @@ test("Settings opens on Appearance and ends on Account and About; who's signed i
   assert.match(app, /case 'appearance':\n\s+return group\('Appearance', \[/);
   assert.match(app, /case 'account':\n\s+return \[\n\s+accountGroup\(group\),\n\s+\.\.\.group\('About'/);
   assert.match(app, /const account = S\.histerAccount\(status, json\);/);
-  const fn = api.slice(api.indexOf('export async function profile('), api.indexOf('export async function profile(') + 900);
+  const start = api.indexOf('export async function profile(');
+  const fn = api.slice(start, api.indexOf('\n}\n', start));
   assert.doesNotMatch(fn, /request\(/);
   assert.match(fn, /credentials: 'same-origin'/);
   assert.match(read('../patches/shiori/search.js'), /body\.push\(\.\.\.accountGroup\(\)\);\n(\s+\/\/[^\n]*\n)*\s+const source = /);
@@ -710,4 +716,39 @@ test('a refresh applies a waiting service worker without the toast (the toast st
   assert.match(watch, /getEntriesByType\('navigation'\)\[0\][^;]*\.type === 'reload'/);
   assert.match(watch, /if \(reg\.waiting && refreshed\) \{[\s\S]*?postMessage\(\{ type: 'SKIP_WAITING' \}\)/);
   assert.match(watch, /else if \(reg\.waiting && navigator\.serviceWorker\.controller\) toast\(reg\.waiting\)/);
+});
+
+test("All's pages come in Hister's own order: the plain words beside the filtered search", async () => {
+  const doc = (url, extra = {}) => ({ url, title: url, label: '', ...extra });
+  const filtered = { total: 3, page_key: 'k2', documents: [doc('https://org.example/'), doc('https://forum.example/'), doc('https://wiki.example/')] };
+  const plain = { total: 5, documents: [doc('https://wiki.example/'), doc('https://kura.example/n/x', { label: 'vault' }), doc('https://org.example/')] };
+  const sent = [];
+  server.searchFor = (text) => (sent.push(text), text === 'raspberry pi' ? plain : filtered);
+  try {
+    reset(null);
+    const page = await api.rankedSearch('raspberry pi', { limit: 3 });
+    assert.deepEqual(sent.sort(), ['raspberry pi', S.histerText('raspberry pi')].sort());
+    assert.deepEqual([...page.documents.map((d) => d.url)], ['https://wiki.example/', 'https://org.example/', 'https://forum.example/']);
+    assert.equal(page.total, 3);
+    assert.equal(page.next, 'k2');
+    // Hister syntax turns the bonuses off anyway: the filtered search alone.
+    sent.length = 0;
+    await api.rankedSearch('label:retro pi', { limit: 3 });
+    assert.deepEqual(sent, [S.histerText('label:retro pi')]);
+    // The plain search failing leaves the filtered page.
+    server.searchFor = (text) => (text === 'raspberry pi' ? null : filtered);
+    const fallback = await api.rankedSearch('raspberry pi', { limit: 3 });
+    assert.deepEqual([...fallback.documents.map((d) => d.url)], filtered.documents.map((d) => d.url));
+  } finally {
+    server.searchFor = null;
+  }
+});
+
+test("All asks for Hister's own order on the search page and in the web app; the Pages pill keeps its paging", () => {
+  const page = read('../patches/shiori/search.js');
+  const app = read('../web/app/app.js');
+  assert.match(page, /histerOrClose\(q, ALL_COUNT, \{ highlight: 'HTML' \}, undefined, suggest, \{ ranked: true \}\)/);
+  assert.match(page, /S\.rankedPages\(filtered, plain\)/);
+  assert.match(app, /api\.rankedSearch\(text, \{ limit: ALL_COUNT \}\)/);
+  assert.doesNotMatch(page, /histerOrClose\(q, PAGE_SIZE[^\n]*ranked/);
 });

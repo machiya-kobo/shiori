@@ -587,6 +587,50 @@ test('Hister never gets the notes or the files', () => {
   assert.equal(S.typedQuery(S.histerText('raspberry pi')), 'raspberry pi');
 });
 
+// HisterKit's RankedPagesTests, case for case.
+test("All asks for the plain words too, in Hister's own order", () => {
+  const cases = [
+    ['raspberry pi', 'raspberry pi'], ['  hister  ', 'hister'], ['"exact phrase', '"exact phrase"'], ['c++ guide', 'c++ guide'],
+    ['町家 京都', '町家 京都'], ['label:alpha pi', ''], ['pi -zero', ''], ['raspberry (pi|zero)', ''], ['hist*', ''],
+    ['@retro games', ''], ['*', ''], ['', ''],
+  ];
+  for (const [typed, ranked] of cases) assert.equal(S.rankedText(typed), ranked, typed);
+});
+
+test('a page of yours is not a note, a file or code', () => {
+  assert.ok(S.isOwnPage({ url: 'https://a.example/', label: '' }));
+  assert.ok(S.isOwnPage({ url: 'https://a.example/', label: 'retro', metadata: { source: 'shiori' } }));
+  assert.ok(!S.isOwnPage({ url: 'https://kura.example.com/n/x', label: 'vault' }));
+  assert.ok(!S.isOwnPage({ url: 'https://kura.example.com/n/x', label: '', metadata: { source: 'vault' } }));
+  assert.ok(!S.isOwnPage({ url: 'https://forge.example/o/r', label: '', metadata: { source: 'code' } }));
+  assert.ok(!S.isOwnPage({ url: 'file:///home/u/notes.txt', label: '' }));
+  assert.ok(!S.isOwnPage(null));
+});
+
+test("the plain words' pages lead, the filtered page fills in, opened ones from both", () => {
+  const doc = (url, extra = {}) => ({ url, label: '', ...extra });
+  const filtered = {
+    total: 4, page_key: 'k2',
+    documents: [doc('https://org.example/'), doc('https://forum.example/1'), doc('https://wiki.example/'), doc('https://pine.example/')],
+    history: [{ url: 'https://com.example/' }],
+  };
+  const plain = {
+    total: 9,
+    documents: [doc('https://wiki.example/'), doc('https://kura.example.com/n/x', { label: 'vault' }), doc('https://com.example/'),
+      doc('https://forge.example/o/r', { metadata: { source: 'code' } }), doc('https://org.example/'), doc('https://forum.example/1')],
+    history: [{ url: 'https://locator.example/' }, { url: 'https://com.example/' }, { url: 'file:///x.txt' }],
+  };
+  const merged = S.rankedPages(filtered, plain);
+  assert.deepEqual([...merged.documents.map((d) => d.url)],
+    ['https://wiki.example/', 'https://org.example/', 'https://forum.example/1', 'https://pine.example/']);
+  assert.deepEqual([...merged.history.map((h) => h.url)], ['https://com.example/', 'https://locator.example/']);
+  assert.equal(merged.total, 4);
+  assert.equal(merged.page_key, 'k2');
+  // A plain reply that failed (or wasn't asked) leaves the filtered one as it was.
+  assert.equal(S.rankedPages(filtered, null), filtered);
+  assert.equal(S.rankedPages(null, plain), null);
+});
+
 test('the Files tab asks for the files and only them (LocalFiles twins)', () => {
   assert.equal(S.filesQuery('pi setup'), 'type:local pi setup');
   assert.equal(S.filesQuery(''), 'type:local *');

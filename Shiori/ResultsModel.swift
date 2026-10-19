@@ -136,6 +136,11 @@ final class ResultsModel {
     /// `keepOpened` leaves out what this list doesn't show (a note, a file).
     var openedInline = false
     @ObservationIgnored var keepOpened: (String) -> Bool = { _ in true }
+    /// The first page in Hister's own order (`HisterClient.rankedSearch`):
+    /// any filter turns off Hister's phrase and home-page bonuses, and every
+    /// query of Shiori's has some. Best match only; paging stays the
+    /// filtered search's. Set by All's pages.
+    var ranked = false
     /// Whether this list has notes to show at all.
     private var hasNotes: Bool { notesFromHister || kura != nil }
     /// Which of Kura's vaults a notes list searches ("all", or a name);
@@ -293,6 +298,10 @@ final class ResultsModel {
         options: SearchOptions = SearchOptions()
     ) async throws(HisterError) -> SearchPage {
         guard source == .notes else {
+            // A first page to show, not a count (limit 1) or a whole-list load.
+            if ranked, pageKey == nil, sort == .relevance, limit > 1, !loadsAll {
+                return try await client.rankedSearch(text, limit: limit, options: options)
+            }
             return try await client.search(text, sort: sort, pageKey: pageKey, limit: limit, options: options)
         }
         return try await fetchNotes(client, text, sort: sort, pageKey: pageKey, limit: limit, vaults: vaults)

@@ -1094,6 +1094,50 @@
     return shown.endsWith('*') ? shown.slice(0, -1) : shown;
   }
 
+  // --- Hister's own order (HisterKit's RankedPages, same tests) ------------------
+  // Hister ranks a page holding the whole phrase first, and a site's home
+  // page for a one-word search, but not in a query with any filter, an
+  // exclusion such as -label:vault included (v0.20.0 and main), and every
+  // query of Shiori's has those (histerText). So All asks for the words
+  // alone too and puts Hister's order first (rankedPages): the filtered
+  // query still gives the count, the paging and the rest of the page.
+
+  /** The words as Hister ranks them, or '' when they hold syntax (a field, -word, a group, *, an @alias). */
+  function rankedText(text) {
+    const t = closeQuote(String(text || '').trim());
+    if (!t || t === '*') return '';
+    return t.split(/\s+/).every((w) => !/[:()|*]/.test(w) && !/^[-@]/.test(w)) ? t : '';
+  }
+
+  /** A page of yours: not a note, a file or code (what histerText leaves out). */
+  function isOwnPage(doc) {
+    const source = doc && doc.metadata && doc.metadata.source;
+    return !!doc && doc.label !== 'vault' && source !== 'vault' && source !== 'code' && !isLocalFile(doc.url);
+  }
+
+  /**
+   * A filtered first page (`filtered`, Hister's reply to histerText) in
+   * Hister's own order: the plain words' pages of yours first (`plain`, its
+   * reply to rankedText), then the rest of the filtered page. The opened
+   * ones are both replies' (Hister keeps them per exact text, so Shiori's
+   * and Hister's own UI's differ), never repeated below. Total and paging
+   * stay the filtered reply's.
+   */
+  function rankedPages(filtered, plain) {
+    if (!filtered || !plain) return filtered;
+    const history = [...(filtered.history || [])];
+    const opened = new Set(history.map((h) => h.url));
+    for (const h of plain.history || []) {
+      if (opened.has(h.url) || isLocalFile(h.url)) continue;
+      history.push(h);
+      opened.add(h.url);
+    }
+    const first = (plain.documents || []).filter((d) => isOwnPage(d) && !opened.has(d.url));
+    const placed = new Set(first.map((d) => d.url));
+    const rest = (filtered.documents || []).filter((d) => !placed.has(d.url) && !opened.has(d.url));
+    return { ...filtered, documents: [...first, ...rest], history };
+  }
+
   /**
    * What a newest-first list's "↑ N New Items" counts: results not on
    * screen that are newer than the newest one shown (`newestShown`, unix
@@ -3921,6 +3965,9 @@
     localFileURL,
     localFilePath,
     typedQuery,
+    rankedText,
+    isOwnPage,
+    rankedPages,
     newestFirstMerge,
     openedFirst,
     newItemsCount,
