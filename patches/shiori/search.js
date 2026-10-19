@@ -13,10 +13,10 @@
 (async function () {
   const S = globalThis.ShioriSearch;
   const $ = (id) => document.getElementById(id);
-  // How long the web may take. A phone on mobile data through the tailnet
-  // (an exit node especially) adds seconds to SearXNG's one or two: 4 s cut
-  // ordinary searches off. Out of reach fails at once anyway.
-  const WEB_TIMEOUT_MS = 10000;
+  // How long the web may take: SearXNG gives each engine 2.5 s, and a phone
+  // on mobile data through the tailnet (an exit node especially) adds a
+  // second or two. Out of reach fails at once anyway.
+  const WEB_TIMEOUT_MS = 5000;
   const PAGE_CACHE_KEY = 'shioriPageCache';
   const PAGE_CACHE_MS = 30 * 60_000;
   const PAGE_CACHE_MAX = 12;
