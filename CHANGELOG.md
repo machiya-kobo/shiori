@@ -5,6 +5,17 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.13.0 (2026-10-18)
+
+- Feeds: Subscribe in RSS Reader opens any reader, not only NewsBlur.
+  Put %s in Settings → Data → RSS Reader where the feed's address goes
+  (FreshRSS, Miniflux and the like); an address without it gets
+  ?url=<feed> as before. The apps, the web app and the docs say RSS
+  reader instead of NewsBlur.
+- README: it opens with what Shiori searches, links Machiya's other
+  apps and services where each first appears, and has screenshots
+  retaken on 1.12.1.
+
 ## 1.12.1 (2026-10-18)
 
 - One item, one entry: a YouTube video Hister holds under two addresses
