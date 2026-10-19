@@ -5,6 +5,19 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.14.0 (2026-10-19)
+
+- All: your pages come in Hister's own order. Hister ranks a page with
+  the whole phrase first, and a site's home page for one word, but not
+  in a search with any filter, and Shiori's always leave notes, files
+  and code out. All now asks for the words alone too and puts those
+  pages first; the count, the paging and the Pages pill are as before.
+  The pages you opened from Hister's own page for a search are lifted
+  too (the apps, the web app and the search page).
+- Search page: opening a preview keeps the results where they were and
+  as wide. The preview takes the Info card's place and the window's
+  room to its right (it squeezed the results).
+
 ## 1.13.1 (2026-10-18)
 
 - shiori-web: the nginx base image is updated to the current
