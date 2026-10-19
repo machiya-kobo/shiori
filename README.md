@@ -24,7 +24,7 @@ Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-c
 
 ## What it does
 
-[Hister](https://github.com/asciimoo/hister) is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server. Shiori searches it. No Electron.
+[Hister](https://github.com/asciimoo/hister) is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server. Shiori searches it.
 
 > **Unofficial.** Shiori is not affiliated with or endorsed by the Hister project.
 
@@ -41,7 +41,7 @@ Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-c
 - **Pick a theme**: Tokyo Night, Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa, Everforest or Ayu, light and dark.
 - **Take your settings along.** Signed in to Hister, your theme, text size and views follow you to every device.
 
-[Every feature](docs/features.md). Shiori needs only a Hister; Kura, Konbini and SearXNG are optional. It talks only to the servers you set. AI is off until you pick a provider ([docs/ai.md](docs/ai.md)). No analytics.
+[Every feature](docs/features.md). Shiori needs only a Hister; Kura, Konbini and SearXNG are optional. It talks only to the servers you set. AI is off until you pick a provider ([docs/ai.md](docs/ai.md)).
 
 ## Quickstart
 
@@ -69,7 +69,7 @@ mkdir -p data/hister
 docker compose -f shiori.yml up -d
 ```
 
-Then open http://localhost:8080. Save pages to Hister with its [browser extension](https://hister.org/docs/browser-extension), and they show up in Shiori.
+Then open http://localhost:8080 to search, or http://localhost:8081 for the web app. Save pages to Hister with its [browser extension](https://hister.org/docs/browser-extension), and they show up in Shiori.
 
 ### Add more to Shiori
 
