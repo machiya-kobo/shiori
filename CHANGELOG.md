@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.14.1 (2026-10-19)
+
+- Search page: it waits 5 s for the web, not 10, before going to
+  DuckDuckGo (when nothing of yours was found) or saying the web didn't
+  answer. SearXNG now gives each engine 2.5 s.
+
 ## 1.14.0 (2026-10-19)
 
 - All: your pages come in Hister's own order. Hister ranks a page with
