@@ -65,7 +65,7 @@ nonisolated enum SharedSettings {
         static let clickOpens = "clickOpens"
         /// Matching labels and collections at the top of search suggestions.
         static let labelSuggestions = "labelSuggestions"
-        /// The user's NewsBlur, for subscribe links.
+        /// The user's RSS reader, for subscribe links (the key keeps its first name).
         static let newsBlurURL = "newsBlurURL"
         /// Text size for the app and the results page alike: "system" or a
         /// Dynamic Type size name (`TextSize` in the app).

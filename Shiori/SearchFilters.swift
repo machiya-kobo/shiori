@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 /// Above every list: Sort and Group, and the filters in use as chips.
 /// In the toolbar, as plain icons: Filter (date, site, visits, and
 /// language and type when there's a choice, with counts) and Share (the
-/// list's feed, Subscribe in NewsBlur, Export).
+/// list's feed, Subscribe in RSS Reader, Export).
 extension View {
     /// Sort, Group and Filter above a list: plain secondary text, like the
     /// Safari page's "Anytime", so they don't compete with the coloured
@@ -630,7 +630,7 @@ struct OpenedSection: View {
     }
 }
 
-/// Copy a query's feed, or open NewsBlur's subscribe page for it.
+/// Copy a query's feed, or open the RSS reader's subscribe page for it.
 struct FeedButtons: View {
     let feed: URL?
     @Environment(AppState.self) private var app
@@ -639,8 +639,8 @@ struct FeedButtons: View {
     var body: some View {
         if let feed {
             Button("Copy Feed Link", systemImage: "dot.radiowaves.up.forward") { Pasteboard.copy(feed) }
-            if let subscribe = Export.newsBlurSubscribeURL(newsBlur: app.searchPage.newsBlurURL, feed: feed) {
-                Button("Subscribe in NewsBlur", systemImage: "plus.square.on.square") { openURL(subscribe) }
+            if let subscribe = Export.readerSubscribeURL(reader: app.searchPage.newsBlurURL, feed: feed) {
+                Button("Subscribe in RSS Reader", systemImage: "plus.square.on.square") { openURL(subscribe) }
             }
         }
     }

@@ -352,8 +352,12 @@ test('a list\'s feed, as the app builds it', () => {
   assert.equal(S.feedURL(base, { query: 'rust', source: 'notes', kuraBase: 'https://shiori.example/kura/' }), 'https://shiori.example/kura/feed.xml?q=rust');
   assert.equal(S.feedURL(base, { query: '*', source: 'notes', kuraBase: 'https://shiori.example/kura' }), 'https://shiori.example/kura/feed.xml');
   assert.equal(S.feedURL(base, { opened: true }), 'https://shiori.example/api/history?opened=true&format=rss');
-  assert.equal(S.newsBlurSubscribeURL('https://newsblur.example', 'https://f/x?a=1'), 'https://newsblur.example/?url=https%3A%2F%2Ff%2Fx%3Fa%3D1');
-  assert.equal(S.newsBlurSubscribeURL('', 'https://f/'), null);
+  assert.equal(S.readerSubscribeURL('https://newsblur.example', 'https://f/x?a=1'), 'https://newsblur.example/?url=https%3A%2F%2Ff%2Fx%3Fa%3D1');
+  assert.equal(S.readerSubscribeURL('', 'https://f/'), null);
+  // %s marks where the feed goes (the Swift twin's test).
+  assert.equal(S.readerSubscribeURL('https://reader.example/i/?c=feed&a=add&url_rss=%s', 'https://h.example/shiori/feed?q=tech'),
+    'https://reader.example/i/?c=feed&a=add&url_rss=https%3A%2F%2Fh.example%2Fshiori%2Ffeed%3Fq%3Dtech');
+  assert.equal(S.readerSubscribeURL('javascript:%s', 'https://f/'), null);
 });
 
 test('a host with no feed service offers no feed for what only that service makes; Hister\'s and Kura\'s stay', () => {

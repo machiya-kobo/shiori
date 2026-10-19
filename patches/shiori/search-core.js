@@ -2887,10 +2887,15 @@
     return `${b}shiori/feed?${params.toString().replace(/\+/g, '%20')}`;
   }
 
-  /** NewsBlur's "add site" page for a feed; null without a NewsBlur address. */
-  function newsBlurSubscribeURL(newsBlur, feed) {
-    const base = String(newsBlur || '').trim();
+  /**
+   * The user's RSS reader's subscribe page for a feed: its address with the
+   * feed in place of every `%s`, or with `?url=<feed>` added (NewsBlur's
+   * form); null without an address. Twin of `Export.readerSubscribeURL`.
+   */
+  function readerSubscribeURL(reader, feed) {
+    const base = String(reader || '').trim();
     if (!/^https?:\/\/[^/]/.test(base)) return null;
+    if (base.includes('%s')) return base.split('%s').join(encodeURIComponent(feed));
     return `${base.endsWith('/') ? base : base + '/'}?url=${encodeURIComponent(feed)}`;
   }
 
@@ -3920,7 +3925,7 @@
     openedFirst,
     newItemsCount,
     newItemsWait,
-    newsBlurSubscribeURL,
+    readerSubscribeURL,
     labelChipIndex,
     countText,
     savedLabels,

@@ -209,11 +209,15 @@ struct ExportTests {
         #expect(same.absoluteString == "https://h.example/shiori/feed?q=tech")
     }
 
-    @Test func newsBlurSubscribeLinks() {
+    @Test func readerSubscribeLinks() {
         let feed = URL(string: "https://h.example/shiori/feed?q=tech")!
-        let url = Export.newsBlurSubscribeURL(newsBlur: "https://newsblur.example", feed: feed)
+        let url = Export.readerSubscribeURL(reader: "https://newsblur.example", feed: feed)
         #expect(url?.absoluteString == "https://newsblur.example/?url=https://h.example/shiori/feed?q%3Dtech")
-        #expect(Export.newsBlurSubscribeURL(newsBlur: "not a url", feed: feed) == nil)
+        #expect(Export.readerSubscribeURL(reader: "not a url", feed: feed) == nil)
+        // %s marks where the feed goes, as encodeURIComponent writes it (the twin's test).
+        let template = Export.readerSubscribeURL(reader: "https://reader.example/i/?c=feed&a=add&url_rss=%s", feed: feed)
+        #expect(template?.absoluteString == "https://reader.example/i/?c=feed&a=add&url_rss=https%3A%2F%2Fh.example%2Fshiori%2Ffeed%3Fq%3Dtech")
+        #expect(Export.readerSubscribeURL(reader: "javascript:%s", feed: feed) == nil)
     }
 
     @Test func opmlListsEveryFeed() throws {

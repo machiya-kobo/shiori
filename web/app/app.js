@@ -2662,7 +2662,7 @@ const SETTINGS_PAGES = [
   ['results', 'Results', 'list', 'How results look and open, and your history'],
   ['media', 'Media', 'music', 'Your libraries and what you played'],
   ['ai', 'AI', 'sparkles', 'AI Answer'],
-  ['feeds', 'Data', 'feed', 'Feeds, NewsBlur, export'],
+  ['feeds', 'Data', 'feed', 'Feeds, RSS reader, export'],
   ['account', 'Account', 'person', 'Signing in, about'],
 ];
 const MEDIA_NAMES = { jellyfin: 'Jellyfin', plex: 'Plex', koito: 'Koito', movary: 'Movary' };
@@ -3042,7 +3042,7 @@ function machiyaRow() {
 
 /**
  * Settings → Feeds & Export: Export & Feed for the list last on screen (as
- * iOS; File on the Mac), then where NewsBlur is.
+ * iOS; File on the Mac), then where the RSS reader is.
  */
 function feedsGroup(group, text) {
   const list = shownList;
@@ -3073,13 +3073,13 @@ function feedsGroup(group, text) {
   }
   if (list && list.feed) {
     items.push(h('div', { class: 'item' }, h('button', { type: 'button', class: 'link-button', onclick: () => copy(list.feed) }, 'Copy Feed Link')));
-    const subscribe = S.newsBlurSubscribeURL(settings.newsBlurURL, list.feed);
-    if (subscribe) items.push(h('div', { class: 'item' }, h('a', { class: 'link-button', href: subscribe, target: '_blank', rel: 'noopener' }, 'Subscribe in NewsBlur')));
+    const subscribe = S.readerSubscribeURL(settings.newsBlurURL, list.feed);
+    if (subscribe) items.push(h('div', { class: 'item' }, h('a', { class: 'link-button', href: subscribe, target: '_blank', rel: 'noopener' }, 'Subscribe in RSS Reader')));
   }
-  items.push(text('newsBlurURL', 'NewsBlur', 'https://newsblur.example/'));
+  items.push(text('newsBlurURL', 'RSS Reader', 'https://reader.example/?url=%s'));
   return group('Feeds & Export', items, [
     list ? `For ${list.title}, the list you were on. An export holds the whole list (up to 1,000), not only what’s loaded.` : '',
-    'NewsBlur is for Subscribe in NewsBlur, which opens NewsBlur with a list’s feed.',
+    'Subscribe in RSS Reader opens your reader with a list’s feed. In its address, %s marks where the feed goes.',
   ].filter(Boolean).join(' '));
 }
 

@@ -70,7 +70,7 @@ struct SettingsView: View {
             case .media: "Your libraries and what you played"
             case .safari: "The extension, and Shiori's results in Safari"
             case .ai: "Summaries, AI providers and keys; off unless you turn it on"
-            case .feeds: "Feeds, NewsBlur, export"
+            case .feeds: "Feeds, RSS reader, export"
             case .account: "Signing in, waiting pages, about"
             }
         }
@@ -763,11 +763,11 @@ private struct WaitingSection: View {
     }
 }
 
-/// Feeds for NewsBlur: where it is, Hister's feed of new pages, and every
-/// collection and label at once as OPML (NewsBlur → Import).
+/// Feeds for an RSS reader: where it is, Hister's feed of new pages, and
+/// every collection and label at once as OPML (for the reader's import).
 #if os(iOS)
 /// The list last on screen, as File → Export List, Copy Feed Link and
-/// Subscribe in NewsBlur are on the Mac: occasional, so here rather than
+/// Subscribe in RSS Reader are on the Mac: occasional, so here rather than
 /// in the list's toolbar.
 private struct ListActionsSection: View {
     let list: ListExport
@@ -835,14 +835,14 @@ private struct FeedsSection: View {
     var body: some View {
         @Bindable var app = app
         Section {
-            SettingsField(label: "NewsBlur", text: $draft, prompt: "https://newsblur.example/", submit: save)
+            SettingsField(label: "RSS Reader", text: $draft, prompt: "https://reader.example/?url=%s", submit: save)
             FeedButtons(feed: app.feedURL(query: "*", title: "New Pages", source: .all))
             Button("Export Collections as OPML…", systemImage: "list.bullet.rectangle") { opml = makeOPML() }
                 .disabled(app.client == nil || (app.rules.aliases.isEmpty && app.rules.labels.isEmpty))
         } header: {
             Text("Feeds")
         } footer: {
-            Text("Every search, collection and label has a feed. OPML subscribes NewsBlur to all your collections and labels at once.")
+            Text("Every search, collection and label has a feed; OPML adds them all to your RSS reader at once. In the reader's address, %s marks where a feed goes.")
         }
         .onAppear { draft = app.searchPage.newsBlurURL }
         .onDisappear(perform: save)

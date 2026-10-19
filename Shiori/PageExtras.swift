@@ -345,8 +345,8 @@ struct SearchCommands: Commands {
             Divider()
             Button("Copy Feed Link") { if let feed = list?.feed { Pasteboard.copy(feed) } }
                 .disabled(list?.feed == nil)
-            Button("Subscribe in NewsBlur") {
-                if let feed = list?.feed, let url = Export.newsBlurSubscribeURL(newsBlur: app.searchPage.newsBlurURL, feed: feed) {
+            Button("Subscribe in RSS Reader") {
+                if let feed = list?.feed, let url = Export.readerSubscribeURL(reader: app.searchPage.newsBlurURL, feed: feed) {
                     NSWorkspace.shared.open(url)
                 }
             }

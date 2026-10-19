@@ -1185,7 +1185,7 @@ struct SearchPageOptions: Equatable {
     var clickOpens = "auto"
     /// Labels and collections lead the search field's suggestions.
     var labelSuggestions = true
-    /// The user's NewsBlur, for "Subscribe in NewsBlur" (opened in the browser).
+    /// The user's RSS reader, for "Subscribe in RSS Reader" (opened in the browser).
     var newsBlurURL = ""
     /// Obsidian matches vault names exactly. The default is the build's
     /// `SHIORI_OBSIDIAN_VAULT` (local.yml), if a build sets one; empty,

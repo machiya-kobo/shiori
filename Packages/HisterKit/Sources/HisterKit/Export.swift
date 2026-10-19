@@ -2,8 +2,8 @@ import Foundation
 
 /// Results written out as a file: JSON (Hister's own import format, so an
 /// export can go into `hister import`), CSV for spreadsheets, and RSS.
-/// Plus the feed addresses NewsBlur subscribes to, and OPML to subscribe
-/// to many at once.
+/// Plus the feed addresses an RSS reader subscribes to, and OPML to
+/// subscribe to many at once.
 public enum Export {
     public enum Format: String, CaseIterable, Sendable, Identifiable {
         case json, csv, rss
@@ -115,9 +115,18 @@ public enum Export {
         return components.url!
     }
 
-    /// NewsBlur's "add site" page for a feed, on the user's NewsBlur.
-    public static func newsBlurSubscribeURL(newsBlur: String, feed: URL) -> URL? {
-        let base = newsBlur.trimmingCharacters(in: .whitespacesAndNewlines)
+    /// The user's RSS reader's subscribe page for a feed: its address with the
+    /// feed in place of every `%s`, or with `?url=<feed>` added (NewsBlur's
+    /// form). Twin of `S.readerSubscribeURL`.
+    public static func readerSubscribeURL(reader: String, feed: URL) -> URL? {
+        let base = reader.trimmingCharacters(in: .whitespacesAndNewlines)
+        if base.contains("%s") {
+            guard let encoded = feed.absoluteString.addingPercentEncoding(withAllowedCharacters: uriComponent),
+                let url = URL(string: base.replacingOccurrences(of: "%s", with: encoded)),
+                url.scheme == "https" || url.scheme == "http", url.host != nil
+            else { return nil }
+            return url
+        }
         guard var components = URLComponents(string: base.hasSuffix("/") ? base : base + "/"),
             components.scheme == "https" || components.scheme == "http", components.host != nil
         else { return nil }
@@ -126,7 +135,11 @@ public enum Export {
         return components.url
     }
 
-    /// Many feeds in one file, for NewsBlur's Import (Settings → Import/Export).
+    /// What JavaScript's encodeURIComponent leaves as it is.
+    private static let uriComponent = CharacterSet(
+        charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()")
+
+    /// Many feeds in one file, for an RSS reader's import.
     public static func opml(title: String, feeds: [(title: String, url: URL)]) -> Data {
         var out = """
             <?xml version="1.0" encoding="UTF-8"?>

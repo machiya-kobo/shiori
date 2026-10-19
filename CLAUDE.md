@@ -89,7 +89,7 @@ From a fresh clone (`git clone --recurse-submodules`; or `git submodule update -
   (docs/media.md: Jellyfin, Plex, Koito, Movary, GETs to their read endpoints
   only; their art and `image.tmdb.org`'s, with Images in Previews on). With Machiya's identity
   file, Kura's `POST /api/pair` and, from the web app, Kura's `/api/prefs`.
-  NewsBlur, status pages, the Wayback Machine and archive.is copies and the
+  An RSS reader's subscribe page, status pages, the Wayback Machine and archive.is copies and the
   build's privacy front ends (`SHIORI_FRONTENDS`: `Elsewhere`) are only
   opened as links; `gemini://` and `gopher://` links are handed to the
   system, never fetched. The classic Mac reaches Hister and Kura only
