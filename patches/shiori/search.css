@@ -358,6 +358,8 @@ body[data-pill-row="scroll"] #categories { flex-wrap: nowrap; overflow-x: auto; 
 .tools-row:not(:has(label:not([hidden]), .list-controls > :not([hidden]))) { display: none; }
 .tools-row .list-controls { margin: 0; gap: 4px 14px; }
 .tools-row select, .tools-row .list-controls select {
+  /* The size and face where -apple-system-footnote is unknown (off Apple), the same for every select here. */
+  font-family: inherit; font-size: 0.8125rem; font-weight: 400; line-height: normal;
   font: -apple-system-footnote; color: var(--secondary); background: transparent;
   border: 0; padding: 2px 0; cursor: pointer;
   /* As wide as the choice shown, not the longest one ("Past month"). */
@@ -373,6 +375,8 @@ h2 { font: -apple-system-subheadline; font-weight: 600; color: var(--secondary);
 ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .card {
   background: var(--card); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow);
+  /* Clear, so a plain card's text sits where a tinted card's does inside its 1px outline. */
+  border: 1px solid transparent;
   display: grid; grid-template-columns: 1fr auto; column-gap: 12px; overflow-wrap: anywhere;
 }
 .card > * { grid-column: 1; }
@@ -595,7 +599,8 @@ main > #correction[hidden] + #answer { margin-top: 0; }
   font: -apple-system-caption1; font-weight: 600; letter-spacing: 0.02em;
 }
 /* Their totals on the Pages and Notes pills ("Pages 31"). */
-#categories .pill-count { margin-left: 5px; font-weight: 400; font-variant-numeric: tabular-nums; }
+/* line-height 1: in Safari its own line box made every pill, and so the header, 1px taller on a tab with a count. */
+#categories .pill-count { margin-left: 5px; font-weight: 400; font-variant-numeric: tabular-nums; line-height: 1; }
 .infobox .figure {
   float: right; width: 38%; max-width: 160px; aspect-ratio: 1; object-fit: contain;
   margin: 0 0 8px 12px; border-radius: 10px; background: #fff;
@@ -657,7 +662,8 @@ body.pending footer { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   @view-transition { navigation: none; }
 }
-@keyframes shiori-in { from { opacity: 0; transform: translateY(4px); } }
+/* A fade only: a slide moved the results under the eye as a tab came in. */
+@keyframes shiori-in { from { opacity: 0; } }
 @keyframes shiori-loading {
   0% { opacity: 0.6; background-position: -60% 0; }
   100% { opacity: 0.6; background-position: 160% 0; }
@@ -943,16 +949,30 @@ body > main > * { transition: opacity 120ms ease-out; }
    Info card's alignment with the first result) stays as it will be. */
 body > main { position: relative; }
 #skeleton { display: none; }
-body.settling #skeleton { display: block; position: absolute; inset: 0 0 auto 0; pointer-events: none; }
+body.settling #skeleton { display: var(--sk-display, block); position: absolute; inset: 0 0 auto 0; pointer-events: none; }
+/* Any other load (another tab, the next page): the same placeholders once it has waited 300 ms, until its first
+   results are drawn, so switching tabs doesn't leave the column empty, and a quick load never shows them. Not on
+   Images, whose tiles they don't look like. */
+body.pending:not(.home, .settling, [data-cat="images"]) > main:not(:has(.results > li, .image-grid > *)) > #skeleton {
+  display: var(--sk-display, block); position: absolute; inset: 0 0 auto 0; pointer-events: none;
+  animation: sk-wait 300ms step-end both;
+}
+@keyframes sk-wait { from { opacity: 0; } to { opacity: 1; } }
 .sk-card, .sk-info {
   border-radius: 14px; background: var(--card); padding: 18px; margin-top: 12px;
   border-left: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .sk-info { display: none; border-left: 0; min-height: 260px; }
+/* The first placeholder where the first result lands: main's 8px padding, then the list's 6px (over a background,
+   the glass panel's 4px too); Info where its card lands, level with it, or over a background 8px under the header. */
+#skeleton > div > .sk-card:first-child, .sk-info { margin-top: 14px; }
+html.has-bg #skeleton > div > .sk-card:first-child { margin-top: 18px; }
+html.has-bg .sk-info { margin-top: 8px; }
 /* Beside the results only where the Info card goes beside them (the
    phone drew the result placeholders in a sliver). */
 @media (min-width: 1100px) {
-  body.two-col.settling:not(.with-preview) #skeleton { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, calc(28rem * var(--ls, 1))); column-gap: 24px; align-items: start; }
+  body.two-col:not(.with-preview) { --sk-display: grid; }
+  body.two-col:not(.with-preview) #skeleton { grid-template-columns: minmax(0, 1fr) minmax(0, calc(28rem * var(--ls, 1))); column-gap: 24px; align-items: start; }
   /* Level with the first card beside it (no heading above the results, so none above the placeholders). */
   body.two-col:is([data-cat="general"], [data-cat="web"]) .sk-info { display: block; }
 }
