@@ -831,15 +831,28 @@ body.with-preview .card[data-preview]:hover { border-color: var(--line); }
 #preview-image[hidden] { display: none; }
 #preview-image { flex: 1; min-height: 0; display: flex; }
 .image-grid > a.previewing { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* An image's pane floats over the grid's right side (previewPane), where a
+   page's preview would sit, so the tiles and the search field don't move.
+   z-index 1: over the sticky headings before it, under the header's menus. */
+body.image-preview #preview-pane {
+  position: fixed; z-index: 1; margin: 0;
+  top: calc(var(--header-h, 0px) + 8px); left: calc(var(--col-l) + var(--col-w) + 24px);
+  width: min(64rem * var(--ls, 1), var(--vw) - var(--col-l) - var(--col-w) - 24px - 16px);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.35);
+}
 .image-view { flex: 1; min-height: 0; margin: 0; display: flex; flex-direction: column; }
 .image-frame { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .image-frame img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
 .image-view figcaption { padding: 10px 16px 14px; border-top: 1px solid var(--line); }
 .image-title { margin: 0 0 2px; font: -apple-system-subheadline; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
 .image-facts { margin: 0 0 8px; font: -apple-system-footnote; color: var(--secondary); }
-.image-links { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font: -apple-system-footnote; font-weight: 600; }
+.image-links { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font: -apple-system-footnote; font-weight: 600; }
 .image-links a { color: var(--accent); text-decoration: none; }
 .image-links a:hover { text-decoration: underline; }
+.image-step { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; font-weight: 400; color: var(--secondary); }
+.image-step .icon-button { width: 32px; height: 32px; font-size: 20px; line-height: 1; color: var(--text); }
+.image-step .icon-button:disabled { opacity: 0.35; cursor: default; background: transparent; }
+.image-count { min-width: 4.5em; text-align: center; font-variant-numeric: tabular-nums; }
 #image-viewer {
   width: min(92vw, 64rem); height: min(88vh, 52rem); max-width: none; max-height: none; padding: 0;
   border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--text); overflow: hidden;

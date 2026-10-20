@@ -781,9 +781,13 @@
     const wide = matchMedia('(min-width: 1100px)');
     let current = null;
     const on = () => settings.previewPane !== false && wide.matches;
+    // An image floats over the grid's right side rather than splitting the
+    // page: the tiles and the search field stay where they are.
+    const isImage = () => typeof current === 'string' && current.startsWith('image:');
     function update() {
       const shown = on() && current !== null;
-      document.body.classList.toggle('with-preview', shown);
+      document.body.classList.toggle('with-preview', shown && !isImage());
+      document.body.classList.toggle('image-preview', shown && isImage());
       $('preview-pane').hidden = !shown;
       placeSide(); // the right column goes while the pane shows
     }
@@ -904,7 +908,7 @@
     );
     $('preview-close').addEventListener('click', clear);
     update();
-    return { update, clear, show, showImage, on, isOpen: () => current !== null };
+    return { update, clear, show, showImage, on, isOpen: () => current !== null, showingImage: () => on() && isImage() };
   })();
 
   // A card opens from anywhere on it, as its title does (the preview pane,
@@ -2487,9 +2491,10 @@
 
   // A click on an image shows it large, with links to the picture and its
   // page below: in the preview pane when it's on, else over the page. The
-  // tile's own link (to the page) still works with a modifier key.
-  /** The picture large (the thumbnail until the full one arrives), what it is, and its two links. */
-  function imageView(r) {
+  // tile's own link (to the page) still works with a modifier key. ‹ ›,
+  // ← → and a swipe step through the tiles.
+  /** The picture large (the thumbnail until the full one arrives), what it is, its two links and ‹ n of N ›. */
+  function imageView(r, at, of) {
     const thumb = firstImage(r.thumbnail_src, r.thumbnail, r.img_src);
     const full = imageURL(r.img_src);
     const name = r.title || S.breadcrumb(r.url).origin;
@@ -2521,21 +2526,40 @@
           { class: 'image-links' },
           original ? el('a', { href: original }, 'Open Image ›') : null,
           page ? el('a', { href: page }, 'Visit Page ›') : null,
+          el(
+            'span',
+            { class: 'image-step' },
+            stepButton('‹', 'Previous image', -1, at <= 1),
+            el('span', { class: 'image-count' }, `${at} of ${of}`),
+            stepButton('›', 'Next image', 1, at >= of),
+          ),
         ),
       ),
     );
   }
+  function stepButton(text, label, step, disabled) {
+    const b = el('button', { type: 'button', class: 'icon-button', 'aria-label': label, title: label, disabled }, text);
+    b.addEventListener('click', () => stepImage(step));
+    return b;
+  }
+  let shownTile = null;
+  const imageTiles = () => [...$('images').children].filter((t) => imageResults.has(t));
+  const moreImages = () => $('images').parentElement.querySelector('.show-more:not([hidden])');
   function showImage(tile) {
     const r = imageResults.get(tile);
     if (!r) return false;
+    shownTile = tile;
+    const tiles = imageTiles();
+    // Counted against every image, the ones Show More hasn't added yet too.
+    const view = imageView(r, tiles.indexOf(tile) + 1, Math.max(tiles.length, Number($('images').dataset.total) || 0));
     document.querySelectorAll('.image-grid > a.previewing').forEach((t) => t.classList.remove('previewing'));
     if (previewPane.on()) {
       tile.classList.add('previewing');
-      previewPane.showImage(imageView(r), r.img_src || r.url);
+      previewPane.showImage(view, r.img_src || r.url);
       return true;
     }
     const dialog = $('image-viewer');
-    $('image-viewer-body').replaceChildren(imageView(r));
+    $('image-viewer-body').replaceChildren(view);
     if (!dialog.open) {
       dialog.showModal();
       document.documentElement.classList.add('dialog-open');
@@ -2548,6 +2572,49 @@
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const tile = event.target.closest('.image-grid > a');
     if (tile && showImage(tile)) event.preventDefault();
+  });
+  /** The next or previous tile's picture; past the last one shown, the next 60 first. */
+  function stepImage(step) {
+    let tiles = imageTiles();
+    const at = tiles.indexOf(shownTile);
+    if (at < 0) return;
+    if (at + step >= tiles.length && moreImages()) {
+      moreImages().click();
+      tiles = imageTiles();
+    }
+    const next = tiles[at + step];
+    if (!next) return;
+    showImage(next);
+    next.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  const imageShown = () => $('image-viewer').open || previewPane.showingImage();
+  // ← and → while a picture is shown (the vi keys' h and l stay the tabs).
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || !imageShown()) return;
+      const t = event.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      event.preventDefault();
+      event.stopPropagation();
+      stepImage(event.key === 'ArrowRight' ? 1 : -1);
+    },
+    true,
+  );
+  // A sideways swipe on a phone.
+  let swipeFrom = null;
+  $('image-viewer-body').addEventListener('touchstart', (event) => {
+    const t = event.touches[0];
+    swipeFrom = event.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null;
+  }, { passive: true });
+  $('image-viewer-body').addEventListener('touchend', (event) => {
+    const t = event.changedTouches[0];
+    if (!swipeFrom || !t) return;
+    const dx = t.clientX - swipeFrom.x;
+    const dy = t.clientY - swipeFrom.y;
+    swipeFrom = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > 2 * Math.abs(dy)) stepImage(dx < 0 ? 1 : -1);
   });
   $('image-viewer-close').addEventListener('click', () => $('image-viewer').close());
   // A click on the dimmed page around it closes it too.
@@ -3296,6 +3363,7 @@
     // 60 tiles at a time; the rest on request.
     $('images').hidden = false;
     const tiles = results.map(imageTile).filter(Boolean);
+    $('images').dataset.total = String(tiles.length);
     let shown = 0;
     const more = el('button', { type: 'button', class: 'page-button show-more' }, 'Show more images');
     const showMore = () => {
