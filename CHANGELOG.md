@@ -5,6 +5,37 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.19.0 (2026-10-20)
+
+- Search page: Images, Videos and News have their own row of choices
+  under the pills, as Kagi's. Images: order (Largest), size, shape and
+  format. Videos: order (Newest, Shortest, Longest), length and source.
+  News: order (Newest) and source. Each sorts or narrows the results
+  already fetched, in place, without another web search, and is kept in
+  the address. A choice shows only when the results differ in it.
+- Search page: Code's filters (kind, host, Open Only, Private) sit in that
+  row beside Best Match, and Media's sort, group and filters too. Media's
+  row no longer disappears, so every tab's header is the same height and
+  its results start in the same place.
+- Search page: the row's menus start at its edge, level with the pills and
+  the cards, in every browser (Safari had set their text 10px in), with one
+  chevron each, and Best Match and the time ranges are in Title Case.
+  Lines of text among the results ("Did you mean", a tab with nothing
+  found, More ›) line up with the text in the cards.
+- Search page: over a background, the footer sits on the window's bottom
+  edge and holds the corner's buttons; on a short tab it floated above them.
+- Search page: the image viewer on a phone. The close button sits above
+  the picture, so a large one no longer covers it; close, previous and next
+  are 44 points; a tap that misses them no longer zooms the page; and
+  closing it no longer flashes the picture over the header.
+- Search page: the browser's bar above the page (Safari's, behind a
+  phone's status bar) takes the page's colour, so it meets the header
+  without a lighter band.
+- Web app: every list keeps the Sort · Group · Filter row, empty or not,
+  so switching between All, Pages, Web and the rest no longer moves the
+  results. Code's filters are one menu in that row. The web's results,
+  headings and notes line up with the text in the cards.
+
 ## 1.18.0 (2026-10-20)
 
 - Search page: tabs switch in place. Pick another tab, the next page or a
