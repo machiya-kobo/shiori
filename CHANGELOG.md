@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.16.0 (2026-10-20)
+
+- Search page: step through the images with ‹ › under the picture, the
+  ← → keys, or a swipe on a phone. In a wide window the image's pane
+  floats over the grid, so the tiles and the search field no longer
+  move when it opens.
+
 ## 1.15.0 (2026-10-20)
 
 - Search page: a click on an image shows it large, with Open Image and
