@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.17.0 (2026-10-20)
+
+- Backgrounds: Frosted Header and Frosted Results (the web app:
+  Frosted Sidebar and Frosted List) in Settings → Background. On, that
+  part of the page is frosted the way the header is without a
+  background, so more of the scene shows through; text is a little less
+  crisp over its brightest parts. Off by default.
+
 ## 1.16.0 (2026-10-20)
 
 - Search page: step through the images with ‹ › under the picture, the
