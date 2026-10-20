@@ -601,6 +601,16 @@ function codeList(container, q, { sort = '' } = {}) {
   draw();
 }
 
+/** The web's time range from the address (`t`): day, week, month, year, or '' for any time. */
+const webTime = (params) => (['day', 'week', 'month', 'year'].includes(params.get('t')) ? params.get('t') : '');
+const WEB_TIMES = [['', 'Anytime'], ['day', 'Past Day'], ['week', 'Past Week'], ['month', 'Past Month'], ['year', 'Past Year']];
+
+/** The web's row: its time range, a quiet menu as Sort · Group · Filter's are, in the accent while one is set. */
+function timeControls(time, pick) {
+  const button = h('button', { type: 'button', class: `quiet${time ? ' active' : ''}`, 'aria-haspopup': 'menu' }, icon('clock'), (WEB_TIMES.find(([v]) => v === time) || WEB_TIMES[0])[1]);
+  return h('div', { class: 'controls' }, dropMenu(button, () => WEB_TIMES.map(([v, text]) => ({ text, checked: v === time, pick: () => pick(v) }))));
+}
+
 /** Sort · Group · Filter's row with nothing in it, unseen: every list's first result starts in one place. */
 function controlsSpacer() {
   return h('div', { class: 'controls spacer', 'aria-hidden': 'true' }, h('div', { class: 'menu spacer-slot' }, h('button', { type: 'button', class: 'quiet', tabindex: '-1' }, icon('sort'), '\u00a0')));
@@ -1676,13 +1686,22 @@ function viewSearch(params) {
   // The web only for a search run on purpose (w=1, searchTo); a tap on
   // the Web pill is one too.
   const web = params.get('w') === '1';
-  const keep = (next) => ({ q, ...(web ? { w: '1' } : {}), ...next });
+  const time = webTime(params);
+  const keep = (next) => ({ q, ...(web ? { w: '1' } : {}), ...(time ? { t: time } : {}), ...next });
   const listed = scope === 'hister' || scope === 'notes';
   const list = freshList();
   fill($('list-top'), 
     // A tap on Media searches it on purpose too (m=1), without making the web's search one (w stays as it was).
     segments(scopes(), scope, (s) => go('search', { ...keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), ...(s === 'media' ? { m: '1' } : {}) }, { replace: true })),
-    listed ? controls('search', params, { search: true, notes: scope === 'notes' }) : scope === 'media' ? mediaControls('search', params, { search: true, items: mediaLast.q === q ? mediaLast.res.items : [] }) : controlsSpacer(),
+    listed ? controls('search', params, { search: true, notes: scope === 'notes' })
+      : scope === 'media' ? mediaControls('search', params, { search: true, items: mediaLast.q === q ? mediaLast.res.items : [] })
+      // The web's: its time range, as the search page's web tabs have (a change searches the web again, on purpose).
+      : (scope === 'web' || scope === 'all') && settings.webResults ? timeControls(time, (t) => {
+          const next = keep({ s: scope, w: '1', t });
+          if (!t) delete next.t;
+          go('search', next, { replace: true });
+        })
+      : controlsSpacer(),
   );
   if (segmentTotals.query === q) for (const [value, n] of Object.entries(segmentTotals.counts)) setSegmentCount(value, n);
   if (scope !== 'opened') didYouMean(q, scope);
@@ -2156,7 +2175,7 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
   const mineOnly = (...rest) => container.replaceChildren(...[...rest, mix.some(Boolean) ? h('ul', { class: 'rows' }, mix.filter(Boolean)) : null].filter(Boolean));
   if (!wq) return mineOnly(status('Hister Only', 'That query is Hister syntax only, so the web isn’t searched.'));
   try {
-    const data = await api.web(wq);
+    const data = await api.web(wq, 1, webTime(route().params));
     const results = (await wikipediaFirst(data.results || [], wq)).filter((r) => typeof r.url === 'string' && /^https?:/.test(r.url));
     // The engines that didn't answer, as the search page says it.
     const health = S.engineHealthLine(S.unansweredEngines(data));

@@ -594,7 +594,7 @@ test('the search page and the web app read notes from the source Notes From pick
   assert.match(read('../web/shim.js'), /kuraConfigured: !!merged\.niwaURL/);
 });
 
-test('identical reads in flight are sent once, each caller gets its own copy, and nothing is kept after', async () => {
+test('identical reads in flight are sent once, each caller gets its own copy; only the web\'s replies are kept', async () => {
   reset(vaults(false));
   const webCalls = () => server.calls.filter((c) => String(c.url).startsWith('/searx/search?')).length;
   // The web search: two draws asking at once (each search counts).
@@ -602,16 +602,20 @@ test('identical reads in flight are sent once, each caller gets its own copy, an
   assert.equal(webCalls(), 1);
   a.mutated = true;
   assert.equal(b.mutated, undefined, 'each caller has its own copy');
-  // Once answered, the next one asks again: nothing is reused.
-  await api.web('lantern');
-  assert.equal(webCalls(), 2);
-  // Another search is its own request.
-  await Promise.all([api.web('lantern'), api.web('washi')]);
-  assert.equal(webCalls(), 4);
-  // Hister's searches too.
+  // Once answered it's kept a while (each web search counts): a redraw or a move between All and Web asks nothing.
+  const c = await api.web('lantern');
+  assert.equal(webCalls(), 1);
+  assert.equal(c.mutated, undefined, 'a kept reply is a copy too');
+  // Another search, or another time range, is its own request.
+  await Promise.all([api.web('lantern'), api.web('washi'), api.web('lantern', 1, 'week')]);
+  assert.equal(webCalls(), 3);
+  assert.ok(server.calls.some((call) => String(call.url).includes('time_range=week')));
+  // Hister's searches are shared in flight, never kept after.
   server.calls = [];
   await Promise.all([api.search('lantern'), api.search('lantern')]);
   assert.equal(server.calls.filter((c) => String(c.url).startsWith('/search?')).length, 1);
+  await api.search('lantern');
+  assert.equal(server.calls.filter((c) => String(c.url).startsWith('/search?')).length, 2);
   // A write is never shared.
   server.calls = [];
   await Promise.all([api.recordOpened('https://a.example/', 'A', 'a'), api.recordOpened('https://a.example/', 'A', 'a')]);

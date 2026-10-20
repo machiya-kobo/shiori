@@ -258,15 +258,26 @@ export async function opened(cursor = null, filter = '') {
 export const faviconURL = (key) => (key ? `${ROOT}api/favicon?${query({ key })}` : '');
 export const histerPageURL = (url) => `${ROOT}preview?${query({ id: url })}`;
 
-/** Web results from SearXNG (through /searx/). */
-export function web(q, page = 1) {
-  const url = `${ROOT}searx/search?${query({ q, format: 'json', pageno: String(page), categories: 'general' })}`;
+// The web's replies, kept 5 minutes: each web search counts against a paid API, and a redraw (the rules or vaults
+// arriving after a quick reply) or a move between All and Web asked the same search again. The search page keeps
+// its own for 30 minutes.
+const WEB_KEEP_MS = 5 * 60_000;
+const webKept = new Map();
+
+/** Web results from SearXNG (through /searx/), within `time` (day, week, month, year) when given. */
+export function web(q, page = 1, time = '') {
+  const url = `${ROOT}searx/search?${query({ q, format: 'json', pageno: String(page), categories: 'general', ...(time ? { time_range: time } : {}) })}`;
+  const kept = webKept.get(url);
+  if (kept && Date.now() - kept.at < WEB_KEEP_MS) return Promise.resolve(structuredClone(kept.reply));
   return shared('web ' + url, async () => {
     const response = await fetch(url, { credentials: 'same-origin' }).catch(() => null);
     // A stock SearXNG answers 403 to format=json.
     if (response && response.status === 403) throw new HisterError("SearXNG doesn't allow JSON results: turn on formats: json under search: in its settings.yml.");
     if (!response || !response.ok) throw new HisterError("The web search didn't answer.");
-    return response.json();
+    const reply = await response.json();
+    webKept.set(url, { at: Date.now(), reply });
+    for (const key of [...webKept.keys()].slice(0, Math.max(0, webKept.size - 20))) webKept.delete(key);
+    return reply;
   });
 }
 
