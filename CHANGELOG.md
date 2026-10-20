@@ -5,6 +5,19 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.18.0 (2026-10-20)
+
+- Search page: tabs switch in place. Pick another tab, the next page or a
+  sort, and the results on screen stay until the new ones are ready, then
+  swap at once: no blank page, no flash. They dim if the new tab takes a
+  moment, and after 3 seconds its placeholder cards show instead. Back and
+  Forward switch the same way, from the copy already fetched.
+- Search page and web app: the search field has a magnifier that runs the
+  search at every width, beside the X, as other search engines' fields do.
+  It was on phones only.
+- Search page: the loading line shows only on Images. Every other tab has
+  its placeholder cards, and the line sat above them.
+
 ## 1.17.4 (2026-10-20)
 
 - Search page: every tab lines up. In Safari the header was 1px taller
