@@ -28,6 +28,7 @@ struct ShioriApp: App {
                 // than opening another (a plain WindowGroup's default).
                 .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 #endif
+                .modifier(SpotlightOpening())
                 .onOpenURL { url in
                     if url.scheme?.lowercased() == "shiori", url.host()?.lowercased() == "settings" { app.settingsRequests += 1 }
                     if let target = SaveLinksTarget(url: url) { app.saveLinksRequest = target }
@@ -136,6 +137,8 @@ struct ShioriApp: App {
         Task { await app.syncAccountPrefs() }
         // Which vaults Kura shares, read again after a while away.
         Task { await app.loadVaultsIfNeeded() }
+        // Your newest pages in Spotlight, every few hours (Hister only; nothing spent).
+        Task { await SpotlightIndex.refresh() }
         app.labeller.start(app: app)
         Task {
             await app.checkHisterSignIn()

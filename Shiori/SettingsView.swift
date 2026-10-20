@@ -18,6 +18,8 @@ struct SettingsView: View {
     // the page: the Machiya token goes to them, never to a half-typed host.
     @State private var kuraDraft = ""
     @State private var konbiniDraft = ""
+    /// Your pages in Spotlight (this device's own switch).
+    @AppStorage(SpotlightIndex.settingKey) private var spotlightPages = true
     #if os(macOS)
     /// The Mac's page, kept between openings.
     @AppStorage("settingsPage") private var macPage: Page = .appearance
@@ -327,6 +329,18 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.surface)
             .onAppear { app.reloadRecentSearches() }
+
+            Section {
+                Toggle("Show Pages in Spotlight", isOn: $spotlightPages)
+                    .onChange(of: spotlightPages) { _, on in
+                        Task { on ? await SpotlightIndex.refresh(force: true) : await SpotlightIndex.clear() }
+                    }
+            } header: {
+                Text("Spotlight")
+            } footer: {
+                Text("Your newest \(SpotlightIndex.limit) pages in this device's search, and any of them for Siri and Shortcuts. Never notes, files or code.")
+            }
+            .listRowBackground(palette.surface)
 
             case .media:
             MediaSettingsPage()

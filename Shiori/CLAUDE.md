@@ -89,6 +89,13 @@ Loaded when you work in `Shiori/`. The project-wide rules, layout and build/test
 - **Pull to refresh is Shiori's own (`.pullToRefresh`), not `.refreshable`**
   (with the `topBar` bars the system's spinner was out of sight and its
   haptic late). Web and Small Web have none.
+- **Spotlight** (`Spotlight.swift`): your pages as an `IndexedEntity` (`PageEntity`),
+  the newest 300 indexed every 6 hours from the foreground (Hister only, never the
+  web), found by Siri and Shortcuts through `PageQuery` (a Hister search), opened by
+  `OpenPageIntent` (the page itself, `OpenURLIntent`). Never a note, a file or code
+  (`SpotlightIndex.indexable`); emptied with the offline copy on an account change,
+  a page leaves on delete. A switch in Settings → Search (device-only `UserDefaults`).
+  `mdfind` can't see app items: check in Spotlight itself.
 - **Offline reading** (`OfflineStore`, apps only): the Library's first pages
   and the last 50 previews, in Caches per server and Kura, shown only when
   Hister or Kura is unreachable ("Offline · as of <time>"). Never a private

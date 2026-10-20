@@ -20,6 +20,7 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 
 - **Label, share or delete** a page. A delete checks that exactly one page matches, and waits for Undo.
 - **Save pages** from the share sheet on iPhone, iPad and Mac, by address (Add Page, ⇧⌘A on the Mac), or with Shortcuts and Siri ("Search Hister", "Save URL to Hister"), with an optional label. A page Hister can't take yet waits on the device; Settings → Account → Waiting to Send lists what waits, and any page given up on, with why.
+- **Spotlight, Siri and Shortcuts find your pages**: your newest 300 pages are in the device's search (title, site, snippet), and "Open … in Shiori" or the Open Page action finds any of them in Hister. A tap opens the page. Never notes, files or code; Settings → Search → Spotlight turns it off and empties it.
 - **Offline support.** Saves wait on the device, out of your backups, and go when Hister answers. After 14 days they're dropped.
 - **Export** any list as JSON, CSV or RSS.
 - **Subscribe** to any search, collection or label as RSS (all collections at once as OPML, for your RSS reader), or open a list's feed in your reader with Subscribe in RSS Reader. It needs Machiya's [shiori-feed](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-feed.md) on the Hister host (the reference compose's `shiori` profile): `GET /shiori/feed?q=<query>[&title=…][&exclude_label=…]`, answering RSS 2.0 with the 50 newest matches.

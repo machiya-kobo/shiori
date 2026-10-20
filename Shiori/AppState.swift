@@ -268,6 +268,7 @@ final class AppState {
     /// cache came through the old credential: they go with it.
     private func forgetAccountCopies() {
         OfflineStore.clear()
+        Task { await SpotlightIndex.clear() }
         SummaryCache.clear()
         HisterClient.clearCache()
     }
@@ -966,6 +967,7 @@ final class AppState {
         try await client.delete(url: document.url)
         OfflineStore.forget(url: document.url)
         SummaryCache.remove(url: document.url)
+        Task { await SpotlightIndex.forget(url: document.url) }
     }
 
     // MARK: Delete with Undo (`deletes`)

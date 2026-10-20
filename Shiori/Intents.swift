@@ -79,5 +79,13 @@ struct ShioriShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Save URL",
             systemImageName: "bookmark")
+        AppShortcut(
+            intent: OpenPageIntent(),
+            phrases: [
+                "Open \(\.$target) in \(.applicationName)",
+                "Open a page with \(.applicationName)",
+            ],
+            shortTitle: "Open Page",
+            systemImageName: "globe")
     }
 }
