@@ -5,6 +5,17 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.17.2 (2026-10-20)
+
+- Search page: Frosted Header is clear now, the blurred scene alone, so
+  the background and the results scrolling under it show through. Its
+  name, pills, time range and buttons each sit on the page's colour, so
+  they stay easy to read.
+- Search page: a tab's results have no heading ("Your Pages", "Images"…);
+  the chosen pill already says which tab you're on. A respelled search
+  still says what it found ("Your Pages · for “raspberry pi”").
+- Search page: no empty strip of glass under one page of results.
+
 ## 1.17.1 (2026-10-20)
 
 - Search page: a tab's heading (Images, News…) is rounded like the rest
