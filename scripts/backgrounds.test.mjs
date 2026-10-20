@@ -257,7 +257,7 @@ test("the corner is pinned lower right with the safe-area insets, and the lists 
   const page = read('../patches/shiori/search.css');
   assert.match(page, /html\.has-bgctl body:not\(\.home\) \{ padding-bottom: 0; \}/);
   assert.match(page, /html\.has-bgctl body:not\(\.home\) > footer \{[^}]*min-height: 82px;[^}]*padding: 8px 120px;/);
-  assert.match(page, /html\.has-bgctl body:not\(\.home\) > footer \{ justify-content: flex-start; padding: 8px 8px 82px; \}/);
+  assert.match(page, /html\.has-bgctl body:not\(\.home\) > footer \{ justify-content: flex-start; padding: 8px 8px 66px; \}/);
   const app = read('../web/app/app.css');
   assert.match(app, /html\.has-bgctl #list \{ padding-bottom: calc\(88px \+ env\(safe-area-inset-bottom\)\); \}/);
   assert.match(app, /html\.has-bgctl #list \{ padding-bottom: calc\(140px \+ env\(safe-area-inset-bottom\)\); \}/);

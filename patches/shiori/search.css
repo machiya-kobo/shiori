@@ -170,6 +170,32 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
   body:not(.home) #q { font-size: calc(15 * var(--u)); }
 }
 
+/* Under 1100px the results have no name row (a phone's screen is short): the field is the header's top, and the house
+   and gear sit in the corner, lower right, where a background's Rain and Watch were (Settings → Background has the
+   rain). search.js moves them out of the header for it. The footer holds the corner, as it does a background's. */
+@media (max-width: 1099px) {
+  body:not(.home) .brand-row { display: none; }
+  body:not(.home) header > #search { padding-top: calc(10 * var(--u)); }
+  body:not(.home) > .filters {
+    /* Close to the bottom: Safari's page already ends above its floating toolbar, so 16px more left a wide gap. */
+    position: fixed; z-index: 20; right: calc(12px + env(safe-area-inset-right)); bottom: calc(6px + env(safe-area-inset-bottom));
+    display: flex; gap: 6px; padding: 6px; border-radius: 999px;
+    background: color-mix(in srgb, var(--card) 90%, transparent); border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 18px rgb(0 0 0 / 0.35);
+  }
+  body:not(.home) > .filters .icon-button { width: 36px; height: 36px; border-radius: 50%; background: var(--raised); border: 1px solid var(--line); }
+  body:not(.home) > .filters :is(#settings-open::before, .rooms-open svg) { width: 18px; height: 18px; }
+  body:not(.home) > .filters .rooms-menu { top: auto; bottom: calc(100% + 12px); }
+  body:not(.home) > .bgctl { display: none; }
+  /* The start page's Rain and Watch, as low. */
+  .bgctl { right: calc(12px + env(safe-area-inset-right)); bottom: calc(6px + env(safe-area-inset-bottom)); }
+  body:not(.home) { padding-bottom: 0; }
+  body:not(.home) > footer {
+    box-sizing: border-box; min-height: 82px; display: flex; flex-direction: column; justify-content: flex-start;
+    margin-bottom: 0; padding: 8px 8px 66px;
+  }
+}
+
 /* Recent searches, under the field while it has focus. */
 .recent {
   position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20;
@@ -236,6 +262,22 @@ span.suggest-icon.dot.collection { border-radius: 3px; }
 }
 .field-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #clear { right: 44px; }
+/* On a phone the field is iOS's own search field: a filled grey capsule with no outline, the magnifier leading (it
+   still runs the search, as Return does) and the clear button a filled circle at the end, 17px text (iOS's body;
+   16px or more keeps Safari from zooming in). The rest of the page is the theme's; this one control looks native. */
+@media (max-width: 759px) {
+  body #q, body.home #q, body:not(.home) #q {
+    height: 44px; padding: 0 40px 0 38px; border: 0; border-radius: 999px; box-shadow: none;
+    background: color-mix(in srgb, var(--secondary) 20%, var(--bg)); font-size: 17px; line-height: normal;
+  }
+  body:not(.home) header > #search { padding-bottom: calc(10 * var(--u)); }
+  body #go, body:not(.home) #go { left: 8px; right: auto; width: 28px; height: 28px; }
+  body #go svg, body:not(.home) #go svg { width: 19px; height: 19px; stroke-width: 2.2; }
+  body #clear, body:not(.home) #clear {
+    right: 10px; width: 20px; height: 20px; border-radius: 50%; background: var(--secondary); color: var(--bg);
+  }
+  body #clear svg, body:not(.home) #clear svg { width: 11px; height: 11px; stroke-width: 3; }
+}
 /* Small to look at, 44 points to tap (Apple's minimum). */
 .field-button::after, .icon-button::after {
   content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px;
@@ -359,6 +401,11 @@ body[data-pill-row="scroll"] #categories { flex-wrap: nowrap; overflow-x: auto; 
 .tools-row label, .tools-row .list-controls, .tools-row .code-filters { display: inline-flex; align-items: center; }
 .tools-row .list-controls, .tools-row .code-filters { flex-wrap: wrap; margin: 0; gap: 4px 14px; }
 @media (max-width: 759px) {
+  /* Scrolling clips at its box: over a background the first choice's backing (8px past its text) was cut off at the
+     left. The box reaches 8px further each way; the text stays in line with the pills. */
+  html.has-bg.frost-header body:not(.home) header > #tools-row {
+    padding-inline: 8px; margin-inline: -8px; width: calc(min(calc(var(--vw) - 24px), calc(var(--body-max) - 24px)) + 16px);
+  }
   .tools-row, .tools-row .list-controls, .tools-row .code-filters { flex-wrap: nowrap; }
   .tools-row { overflow-x: auto; scrollbar-width: none; }
   .tools-row::-webkit-scrollbar { display: none; }
@@ -602,7 +649,7 @@ main > #correction[hidden] + #answer { margin-top: 0; }
   min-height: 0; padding: 7px 2px; gap: 6px; font: -apple-system-footnote; font-weight: 600;
 }
 :is(#answer, .infobox, #suggestions) > .fold-head .chevron { width: 6px; height: 6px; }
-#suggestions { border: 1px solid var(--line2); }
+#suggestions { border: 1px solid var(--line2, var(--line)); }
 
 /* All: your top pages, notes and media among the web results, each card's
    title led by whose it is, in its pill's colour. */
@@ -1124,7 +1171,7 @@ body.dense .vault-card > .title::before { background: var(--notes); }
    behind the middle too: the field and the recent searches are solid already, and the name, the corner's buttons and
    the footer's line each sit on a small pane of glass of their own. */
 html.has-bg header,
-html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
+html.has-bg body:not(.home) main > :is(section:not(#infobox-slot, #answer, #suggestions), p:not(.more), p.more:has(> a:not([hidden])), nav),
 html.has-bg body:not(.home) > footer {
   background: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under));
   -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
@@ -1147,17 +1194,16 @@ html.has-bg.frost-header body:not(.home) header .tools-row :is(select, button) {
 html.has-bg.frost-header body:not(.home) header .tools-row select { padding-right: 21px; }
 /* Room between those backings (each reaches 8px past its text): 4px of the scene between two, not one long pill. */
 html.has-bg.frost-header body:not(.home) header :is(.tools-row, .tools-row .list-controls, .tools-row .code-filters) { column-gap: 20px; }
-html.frost-results body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
+html.frost-results body:not(.home) main > :is(section:not(#infobox-slot, #answer, #suggestions), p:not(.more), p.more:has(> a:not([hidden])), nav),
 html.frost-results body:not(.home) > footer {
   --glass-mix: var(--glass-mix-frosted); --glass-filter: var(--glass-filter-frosted); --glass-under: var(--glass-under-frosted);
 }
-/* The glass reaches 8px past the column where the window has room beside the page, and less as that room runs
-   out: in a window no wider than the page it keeps to the column, the body's 12px in from the edge, as the
-   preview is on the other side. */
-html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
+/* The glass reaches 8px past the column at every width (a phone's too, inside the body's 12px), so the cards in it
+   are as wide as AI Answer, Info and Related Searches beside them and as the pills and the row above. */
+html.has-bg body:not(.home) main > :is(section:not(#infobox-slot, #answer, #suggestions), p:not(.more), p.more:has(> a:not([hidden])), nav),
 html.has-bg body:not(.home) > footer {
   border-radius: 14px; padding: 4px 8px;
-  margin-inline: calc(-1 * clamp(0px, (var(--vw) - var(--body-max)) / 2, 8px));
+  margin-inline: -8px;
 }
 /* The Info column sticks where the column's first box of glass starts (8px under the header, not 12), so the two
    tops line up. */
@@ -1166,7 +1212,9 @@ html.has-bg body:not(.home) > footer {
 }
 /* 8px between boxes of glass: every box after a shown one (~, not +: the AI answer, hidden, and the Info column sit
    between Did you mean and the first section, which then ran into it). */
-html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav):not([hidden]) ~ :is(section:not(#infobox-slot), p, nav) { margin-top: 8px; }
+html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav):not([hidden]) ~ :is(section:not(#infobox-slot, #answer, #suggestions), p, nav) { margin-top: 8px; }
+/* AI Answer, Info and Related Searches are solid panels of their own (no glass box round them, which gave AI Answer
+   its own padding and corners): the three rows alike, with or without a background. */
 /* The start page's header is the whole window (the field in its middle): not glass, or it was a pane again. */
 html.has-bg body.home header { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 html.has-bg body.home :is(.home-brand, .brand-row, footer) {
@@ -1205,7 +1253,7 @@ html.has-bgctl body:not(.home) > footer {
   margin-bottom: 0; padding: 8px 120px; border-bottom-left-radius: 0; border-bottom-right-radius: 0;
 }
 @media (max-width: 760px) {
-  html.has-bgctl body:not(.home) > footer { justify-content: flex-start; padding: 8px 8px 82px; }
+  html.has-bgctl body:not(.home) > footer { justify-content: flex-start; padding: 8px 8px 66px; }
 }
 html.has-bgctl #preview-pane { height: calc(var(--vh, 100vh) - var(--header-h, 0px) - 90px); }
 /* Settings → Background: Choose… in the accent; Remove keeps the red of a removal. */

@@ -1639,6 +1639,20 @@
     return;
   }
 
+  // Under 1100px the results have no name row: the field is the header's top and the house and gear are the corner's,
+  // lower right (search.css). Out of the header for that, whose glass would hold a fixed box inside it; back when the
+  // window widens.
+  {
+    const corner = document.querySelector('#brand-row .filters');
+    const narrow = matchMedia('(max-width: 1099px)');
+    const place = () => {
+      if (narrow.matches && corner.parentElement !== document.body) document.body.append(corner);
+      else if (!narrow.matches && corner.parentElement === document.body) $('brand-row').append(corner);
+    };
+    narrow.addEventListener('change', place);
+    place();
+  }
+
   /** Theme, tabs and filters: from the copy before the first paint, then from settings. */
   // The header's height, for the section headings that stick under it
   // (search.css, --header-h).
@@ -3755,7 +3769,8 @@
     if (side && $('answer').parentElement !== slot) slot.prepend($('answer'), $('suggestions'));
     if (!side && $('answer').parentElement === slot) {
       slot.parentElement.insertBefore($('answer'), slot);
-      $('web').insertBefore($('suggestions'), $('web-status'));
+      // After Info, so the three compact rows sit together, alike (not inside the web's panel, which inset it).
+      slot.after($('suggestions'));
     }
     slot.classList.toggle('side', side);
     alignInfo();

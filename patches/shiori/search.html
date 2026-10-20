@@ -99,6 +99,13 @@
         <div class="fold-body"><div id="answer-body" class="answer" aria-live="polite"></div></div>
       </section>
       <section id="infobox-slot"></section>
+      <!-- Related Searches: a compact row beside AI Answer and Info (the side column in a wide window). -->
+      <section id="suggestions" class="fold panel" data-fold="related" hidden>
+        <button class="fold-head" type="button" aria-expanded="false">
+          <span class="chevron" aria-hidden="true"></span><span>Related Searches</span>
+        </button>
+        <div class="fold-body"><div><ul id="suggestion-list"></ul></div></div>
+      </section>
       <section id="hister" class="fold" data-fold="hister" hidden>
         <button class="fold-head" type="button" aria-expanded="true">
           <span class="chevron" aria-hidden="true"></span><span id="hister-title">Your Pages</span>
@@ -125,12 +132,6 @@
         <!-- The pill says which tab this is, so the list has no heading: only
              a respelled search names what it found ("Your Pages · for …"). -->
         <h2 id="web-title" hidden>Web</h2>
-        <section id="suggestions" class="fold panel" data-fold="related" hidden>
-          <button class="fold-head" type="button" aria-expanded="false">
-            <span class="chevron" aria-hidden="true"></span><span>Related Searches</span>
-          </button>
-          <div class="fold-body"><div><ul id="suggestion-list"></ul></div></div>
-        </section>
         <p id="web-status" class="status" role="status"></p>
         <ol id="web-results" class="results"></ol>
         <div id="images" class="image-grid" hidden></div>
