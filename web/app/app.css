@@ -133,10 +133,13 @@ button { font: inherit; color: inherit; }
 .answer-sources { margin: 4px 0 8px; padding-left: 1.6em; font-size: 0.875rem; }
 .answer-sources .domain { color: var(--secondary); }
 .answer .summary-head { margin: 0; }
+/* Two edges, as the search page's: what's in the bar (the field, the pills, Sort · Group · Filter, Did you mean)
+   starts 12px in, at a card's edge; a line of text among the results (a heading, an engine's note, a web result,
+   More) starts where a card's text does, 29px in (its 12px margin, 1px edge and 16px padding). */
 /* "Did you mean …?" under the pills. */
-#list-top .correction { margin: 0 14px 8px; color: var(--secondary); }
+#list-top .correction { margin: 0 12px 8px; color: var(--secondary); }
 /* Web engines (or Small Web's) that didn't answer, above their results. */
-.engine-health { margin: 4px 12px 6px; color: var(--secondary); font-size: var(--fs-foot); }
+.engine-health { margin: 4px 29px 6px; color: var(--secondary); font-size: var(--fs-foot); }
 /* All's Your Pages and Your Notes: a row in the pill's colour (a faint
    tint, the text and an outline), with the full count, as the search page. */
 .section-head.tinted {
@@ -341,7 +344,7 @@ input:placeholder-shown ~ .field-clear { display: none; }
   position: sticky; top: 0; z-index: 1;
 }
 #list .section-head:not(.tinted) {
-  margin: 0; padding: 10px 16px 6px;
+  margin: 0; padding: 10px 29px 6px;
   background: var(--frost); -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
 }
 #list .section-head.tinted { top: 6px; }
@@ -380,13 +383,9 @@ input:placeholder-shown ~ .field-clear { display: none; }
 /* Which forge a code row is on: a small outlined badge. */
 .code-host { display: inline-block; font-size: var(--fs-caption); font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); }
 .code-state.open { color: var(--kept); }
-/* The Code pill's filters, above the list. */
-.code-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 16px; }
-.code-filters select, .code-filters button {
-  font: inherit; font-size: 0.875rem; color: var(--text); background: transparent;
-  border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer;
-}
-.code-filters button[aria-pressed="true"] { border-color: var(--tab-videos); color: var(--tab-videos); }
+/* A list with none of these keeps the row's height (an unseen control), so its first result starts where every
+   other list's does. */
+.controls.spacer { visibility: hidden; }
 /* Settings → Result Style: a plain card with a hairline (Solid), a bar down
    the leading edge, or plain rows. */
 body[data-result-style="solid"] .doc-row { background: var(--card); border-color: var(--line); }
@@ -431,7 +430,11 @@ mark { background: var(--highlight); color: inherit; border-radius: 2px; }
 button.chip.link-chip { cursor: pointer; font-family: inherit; }
 button.chip.link-chip:hover, button.chip.link-chip:focus-visible { background: color-mix(in srgb, var(--chip) 14%, transparent); }
 .web-row .thumb { width: 64px; height: 48px; object-fit: cover; border-radius: 6px; float: right; margin-left: 8px; }
-.more-row { display: block; padding: 12px 16px; color: var(--accent); text-decoration: none; cursor: pointer; }
+/* The web's plain rows keep their lines edge to edge; what's in them starts and ends where a card's content does. */
+.web-row:not(.doc-row) { padding-inline: 29px; }
+/* And the first one's text where a card's is: a card sits 6px further down (its 5px margin and 1px edge). */
+.rows:has(> .web-row:not(.doc-row):first-child) { padding-top: 6px; }
+.more-row { display: block; padding: 12px 29px; color: var(--accent); text-decoration: none; cursor: pointer; }
 .status { padding: 32px 24px; text-align: center; color: var(--secondary); }
 .status h2 { color: var(--text); font-size: var(--fs-title3); font-weight: 600; margin: 0 0 6px; }
 .status button, .button {

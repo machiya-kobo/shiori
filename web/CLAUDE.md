@@ -34,7 +34,14 @@ Loaded when you work in `web/` (and for the search page in `patches/shiori/`). T
   the run's values; `$` there is the run's own main, and a run left behind must
   touch nothing outside it (guard with `live()`). `<main>` is replaced on each
   switch: a listener on something inside it is delegated from the document.
-  Rules on `body > main` reach the held copy too (exclude `.tab-snapshot`). Thumbnails load only from the SearXNG
+  Rules on `body > main` reach the held copy too (exclude `.tab-snapshot`).
+- **Everything lines up, on every tab and list** (measured with Playwright in Chrome
+  and WebKit): the header (search page) or the bars (web app) are one height on all
+  of them, so the row of choices under the pills is always there, empty or not;
+  a tab's own choices go in it (`toolGroup`, the web app's `.controls`), never a
+  bar inside the results. Two left edges: a box's (the pills, the row, a card) and
+  a card's text (a line among the results: its padding and edge in). The row's
+  selects draw no browser chrome (Safari indents it 10px); a label draws the chevron. Thumbnails load only from the SearXNG
   host's `/image_proxy`: anything else is dropped.
 - **Menus close on the way out**: a link or form inside a menu or sheet shuts
   it first, and `pageshow`, `popstate` and `pagehide` shut what's open.

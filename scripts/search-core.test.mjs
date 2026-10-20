@@ -1502,3 +1502,54 @@ test('layoutScale: off the Mac a wide window widens the two columns, up to the M
   assert.equal(S.layoutScale(1920, 20), 1.18, 'a larger root font needs more room');
   assert.equal(S.layoutScale(NaN), 1);
 });
+
+test("Images, Videos and News narrow and reorder what SearXNG sent, in place", () => {
+  const img = (n, resolution, img_format = '', img_src = '') => ({ url: `https://i${n}.example/`, resolution, img_format, img_src });
+  assert.deepEqual({ ...S.imageSize({ resolution: '1920 x 1080' }) }, { w: 1920, h: 1080 });
+  assert.deepEqual({ ...S.imageSize({ img_format: 'JPEG 800×600' }) }, { w: 800, h: 600 });
+  assert.equal(S.imageSize({}), null);
+  assert.equal(S.webValue('size', img(1, '1920 x 1080')), 'large');
+  assert.equal(S.webValue('size', img(1, '800 x 600')), 'medium');
+  assert.equal(S.webValue('size', img(1, '300 x 200')), 'small');
+  assert.equal(S.webValue('shape', img(1, '1080 x 1920')), 'tall');
+  assert.equal(S.webValue('shape', img(1, '500 x 500')), 'square');
+  assert.equal(S.webValue('format', img(1, '', 'png')), 'png');
+  assert.equal(S.webValue('format', img(1, '', '', 'https://x.example/a.JPG?s=1')), 'jpeg');
+  assert.equal(S.webValue('size', img(1, '')), '', 'unknown stays unknown');
+  assert.equal(S.lengthSeconds('3:45'), 225);
+  assert.equal(S.lengthSeconds('1:02:10'), 3730);
+  assert.equal(S.lengthSeconds(90), 90);
+  assert.equal(S.lengthSeconds('None'), null);
+  assert.equal(S.webValue('length', { length: '3:59' }), 'short');
+  assert.equal(S.webValue('length', { length: '12:00' }), 'medium');
+  assert.equal(S.webValue('length', { length: '1:00:00' }), 'long');
+  assert.equal(S.webValue('source', { url: 'https://www.youtube.com/watch?v=1' }), 'youtube.com');
+
+  const images = [img(1, '300 x 300', 'png'), img(2, '4000 x 3000', 'jpeg'), img(3, '', 'jpeg'), img(4, '1920 x 1080', 'png')];
+  const none = S.webChoices('images', new URLSearchParams(''));
+  assert.equal(none.order, '');
+  assert.deepEqual(S.webNarrow('images', images, none).map((r) => r.url), images.map((r) => r.url), 'no choice: SearXNG\'s order');
+  const largest = S.webNarrow('images', images, { ...none, order: 'largest' }).map((r) => r.url);
+  assert.deepEqual(largest, ['https://i2.example/', 'https://i4.example/', 'https://i1.example/', 'https://i3.example/'], 'unknown size last');
+  const large = S.webChoices('images', new URLSearchParams('ws=large&wo=bogus'));
+  assert.equal(large.order, '', 'an order the tab lacks is ignored');
+  assert.deepEqual(S.webNarrow('images', images, large).map((r) => r.url), ['https://i2.example/', 'https://i4.example/']);
+  assert.equal(S.webChoiceKey('order'), 'wo');
+  assert.equal(S.webChoiceKey('size'), 'ws');
+
+  const row = S.webChoiceRow('images', images, large);
+  assert.deepEqual([...row.map((s) => s.key)], ['order', 'size', 'format'], 'shape: every known one is the same');
+  const size = row.find((s) => s.key === 'size');
+  assert.deepEqual([...size.choices.map(([v]) => v)], ['', 'large', 'small']);
+  assert.equal(size.choices[1][1], 'Large · 2');
+  // Format's counts follow the size chosen: both large ones.
+  assert.deepEqual([...row.find((s) => s.key === 'format').choices.map(([, l]) => l)], ['Any Format', 'JPEG · 1', 'PNG · 1']);
+
+  const videos = [{ url: 'https://youtube.com/1', length: '0:45', publishedDate: '2026-01-01' }, { url: 'https://vimeo.com/2', length: '30:00', publishedDate: '2026-03-01' }, { url: 'https://youtube.com/3' }];
+  const vrow = S.webChoiceRow('videos', videos, S.webChoices('videos', new URLSearchParams('')));
+  assert.deepEqual([...vrow.find((s) => s.key === 'order').choices.map(([v]) => v)], ['', 'newest', 'shortest', 'longest']);
+  assert.deepEqual([...vrow.find((s) => s.key === 'source').choices.map(([, l]) => l)], ['All Sources', 'youtube.com · 2', 'vimeo.com · 1']);
+  assert.deepEqual(S.webNarrow('videos', videos, { order: 'newest' }).map((r) => r.url), ['https://vimeo.com/2', 'https://youtube.com/1', 'https://youtube.com/3']);
+  assert.deepEqual(S.webNarrow('videos', videos, { order: 'longest' }).map((r) => r.url), ['https://vimeo.com/2', 'https://youtube.com/1', 'https://youtube.com/3']);
+  assert.deepEqual([...S.webChoiceRow('general', videos, {})], [], 'All and Web have no row of their own');
+});

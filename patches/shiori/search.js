@@ -1709,11 +1709,31 @@
     // The rooms' themes (palettes.css); Tokyo Night is search.css's own.
     if (Object.hasOwn(S.PALETTES, palette) && palette !== 'tokyo-night') document.documentElement.dataset.palette = palette;
     else delete document.documentElement.dataset.palette;
+    syncBarColor();
     const zoom = pageZoom(textSize);
     document.body.style.zoom = Math.abs(zoom - 1) < 0.01 ? '' : String(zoom);
     // The Settings sheet sizes itself to the window, whose units the zoom scales (search.css).
     document.documentElement.style.setProperty('--page-zoom', String(Math.abs(zoom - 1) < 0.01 ? 1 : zoom));
     fitUnits();
+  }
+
+  /**
+   * The browser's bar above the page (Safari's band behind the status bar on a phone) in the page's own colour, the
+   * header's when nothing is under it: left to itself Safari guessed from the see-through header, a shade lighter,
+   * and the header ended in a hard line. Again when the system's appearance flips (theme System).
+   */
+  function syncBarColor() {
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = Object.assign(document.createElement('meta'), { name: 'theme-color' });
+      document.head.append(meta);
+    }
+    if (color && meta.content !== color) meta.content = color;
+    if (!syncBarColor.watching) {
+      syncBarColor.watching = true;
+      matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncBarColor);
+    }
   }
 
   /** --z (the body's zoom), --vw and --vh (the visible size in the zoomed page's pixels): 100vw and 100vh are zoomed too. */
@@ -2305,7 +2325,7 @@
       const sel = el('select', { 'aria-label': label }, ...choices.map(([v, name]) => el('option', { value: v }, name)));
       sel.value = value || '';
       sel.addEventListener('change', () => set(key, sel.value));
-      return sel;
+      return picker(sel);
     };
     return el('div', { class: 'code-filters media-filters', role: 'group', 'aria-label': 'Sort, group and filter' },
       select('mo', S.MEDIA_ORDERS.map(([k, name]) => [k === 'best' ? '' : k, name]), 'Sort', f.order === 'best' ? '' : f.order),
@@ -2348,6 +2368,11 @@
     );
   }
 
+  /** A menu in the quiet row, in a label that draws its chevron (search.css): the same in every browser. */
+  function picker(select) {
+    return el('label', { class: 'picker' }, select);
+  }
+
   function codeFilterBar() {
     const f = codeFiltersFromAddress();
     const go = (key, value) => {
@@ -2356,7 +2381,7 @@
       else next.delete(key);
       next.delete('page');
       next.delete('hk');
-      location.search = next.toString();
+      goTo('?' + next.toString());
     };
     const kind = el('select', { 'aria-label': 'Kind' }, el('option', { value: '' }, 'Everything'),
       ...S.CODE_KINDS.map(([value, name]) => el('option', { value }, name)));
@@ -2372,7 +2397,7 @@
       b.addEventListener('click', () => go(key, on ? '' : '1'));
       return b;
     };
-    return el('div', { class: 'code-filters', role: 'group', 'aria-label': 'Filters' }, kind, host, toggle('co', f.open, 'Open Only'), toggle('cp', f.private, 'Private'));
+    return el('div', { class: 'code-filters', role: 'group', 'aria-label': 'Filters' }, picker(kind), picker(host), toggle('co', f.open, 'Open Only'), toggle('cp', f.private, 'Private'));
   }
 
   /**
@@ -2594,7 +2619,9 @@
     $('image-viewer-body').replaceChildren(view);
     if (!dialog.open) {
       dialog.showModal();
-      document.documentElement.classList.add('dialog-open');
+      // A phone needs no scroll lock: the viewer takes every touch (search.css, touch-action), and toggling the
+      // lock made Safari drop the sticky header for a frame on closing. A mouse's wheel still needs one.
+      if (!matchMedia('(pointer: coarse)').matches) document.documentElement.classList.add('dialog-open');
       // The picture, not ×: a ring on × looked like a pressed button.
       $('image-viewer-body').focus();
     }
@@ -2766,6 +2793,41 @@
       window.scrollTo(0, y);
       if (run.initial) window.addEventListener('load', () => window.scrollTo(0, y), { once: true });
     }
+    /** A group of this tab's own choices in the quiet row under the pills (the startRun of the next tab takes it away). */
+    function toolGroup(label) {
+      const group = el('div', { class: 'list-controls', role: 'group', 'aria-label': label });
+      $('tools-row').append(group);
+      return group;
+    }
+    /**
+     * Images, Videos and News: their order and filters (S.webChoiceRow) in the
+     * row, drawn from the results already here; a choice is kept in the address
+     * and draws them again in place, the web never asked again. Elsewhere `draw`
+     * just draws them all.
+     */
+    function webChoiceBar(list, draw) {
+      if (!['images', 'videos', 'news'].includes(category)) return draw(list);
+      const group = toolGroup('Order and filter');
+      const redraw = () => {
+        const choices = S.webChoices(category, new URLSearchParams(location.search));
+        draw(S.webNarrow(category, list, choices));
+        group.replaceChildren(...S.webChoiceRow(category, list, choices).map(({ key, name, choices: options }) => {
+          const select = el('select', { 'aria-label': name }, ...options.map(([value, label]) => el('option', { value }, label)));
+          select.value = choices[key] || '';
+          select.addEventListener('change', () => {
+            const next = new URLSearchParams(location.search);
+            if (select.value) next.set(S.webChoiceKey(key), select.value);
+            else next.delete(S.webChoiceKey(key));
+            history.replaceState(history.state, '', '?' + next.toString());
+            run.search = location.search;
+            redraw();
+          });
+          return picker(select);
+        }));
+        fadeEdges($('tools-row'));
+      };
+      redraw();
+    }
 
     async function didYouMeanLine(related) {
       const wq = S.webQuery(q);
@@ -2872,9 +2934,11 @@
         $('web-results').replaceChildren(...groups.flatMap((g) => [g.title ? el('li', { class: 'media-group' }, g.title) : null, ...g.items.map(mediaCard)]).filter(Boolean));
         $('web-status').replaceChildren(items.length ? '' : 'Nothing matches these filters.');
         // Its counts follow the other choices.
-        run.main.querySelector('.media-filters')?.replaceWith(mediaFilterBar(draw, res.items));
+        group.replaceChildren(mediaFilterBar(draw, res.items));
+        fadeEdges($('tools-row'));
       };
-      $('web-results').before(mediaFilterBar(draw, res.items));
+      // In the quiet row under the pills, where the other tabs have theirs.
+      const group = toolGroup('Sort, group and filter');
       draw();
       return restoreScroll();
     }
@@ -2890,12 +2954,13 @@
       const code = category === 'code';
       $('web').hidden = false;
       $('web-title').textContent = vault ? 'Your Notes' : files ? 'Your Files' : code ? 'Your Code' : 'Your Pages';
-      // The list's own choices (Best match or Newest, the vault) in the quiet
+      // The list's own choices (Best Match or Newest, the vault) in the quiet
       // row under the pills, where the web's tabs have their time range.
       const controls = el('div', { class: 'list-controls', role: 'group', 'aria-label': 'Sort and vault' });
       $('tools-row').append(controls);
       controls.append($('sort-label'));
-      if (code) $('web-results').before(codeFilterBar());
+      if (code) controls.append(codeFilterBar());
+      fadeEdges($('tools-row'));
       if (vault && !notesBase) return showStatus(notesFromHister ? 'No Hister server is set up.' : 'No Kura address is set up (Settings → Search → Notes).');
       if (!vault && !histerBase) return showStatus('No Hister server is set up.');
       let result = pageState[category];
@@ -2912,7 +2977,7 @@
           );
           select.value = kuraVaults.some((v) => v.name === vaultParam) ? vaultParam : 'all';
           select.addEventListener('change', () => goTo(link({ v: select.value, p: 1 })));
-          controls.prepend(select);
+          controls.prepend(picker(select));
         }
       }
       if (!result && vault && notesFromHister) {
@@ -3435,10 +3500,10 @@
     if (!results.length) {
       showStatus('No web results.');
     } else if (category === 'images') {
-      // 60 tiles at a time; the rest on request.
+      // 60 tiles at a time; the rest on request. Drawn again for each choice in the row (size, shape…).
       $('images').hidden = false;
-      const tiles = results.map(imageTile).filter(Boolean);
-      $('images').dataset.total = String(tiles.length);
+      const tileOf = new Map(results.map((r) => [r, imageTile(r)]));
+      let tiles = [];
       let shown = 0;
       const more = el('button', { type: 'button', class: 'page-button show-more' }, 'Show more images');
       const showMore = () => {
@@ -3447,8 +3512,15 @@
         more.hidden = shown >= tiles.length;
       };
       more.addEventListener('click', showMore);
-      showMore();
       $('images').after(el('p', { class: 'more' }, more));
+      webChoiceBar(results, (kept) => {
+        tiles = kept.map((r) => tileOf.get(r)).filter(Boolean);
+        $('images').replaceChildren();
+        $('images').dataset.total = String(tiles.length);
+        shown = 0;
+        showMore();
+        $('web-status').replaceChildren(tiles.length ? '' : 'Nothing matches these filters.');
+      });
     } else if (category === 'general' && page === 1) {
       // A web result that's one of your pages is one entry: your page, in the
       // web's place (a "wiki" search's article stays first), its title opening
@@ -3474,12 +3546,14 @@
     } else {
       // Web leaves out what Your Pages showed.
       const shown = category === 'general' ? S.annotateWeb(results, histerDocs, []) : results;
-      const cards = shown.map((r) => {
-        const card = webCard(r);
-        $('web-results').append(card);
-        return [r, card];
-      });
+      const cards = shown.map((r) => [r, webCard(r)]);
       markSaved(cards);
+      // Videos and News: drawn again for each choice in the row (order, length, source).
+      const cardOf = new Map(cards);
+      webChoiceBar(shown, (kept) => {
+        $('web-results').replaceChildren(...kept.map((r) => cardOf.get(r)));
+        $('web-status').replaceChildren(kept.length ? '' : 'Nothing matches these filters.');
+      });
     }
     if (category === 'general' && page === 1) mixIn();
 
@@ -3563,11 +3637,8 @@
     ({ cached, pageState } = currentRun);
     watchMain(main);
     // The header is the new tab's at once: its pill, its time range or sort.
-    const controls = $('tools-row').querySelector('.list-controls');
-    if (controls) {
-      $('tools-row').append($('sort-label'));
-      controls.remove();
-    }
+    $('time-label').after($('sort-label'));
+    for (const group of $('tools-row').querySelectorAll('.list-controls')) group.remove();
     drawHeader(nextHeader);
     $('timing').textContent = '';
     $('engines').textContent = '';

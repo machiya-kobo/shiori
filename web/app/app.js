@@ -557,26 +557,53 @@ function codeList(container, q, { sort = '' } = {}) {
   shownList = { title: q || 'Code' };
   const box = h('div', {});
   const draw = () => resultsList(box, { query: S.codeQuery(q, codeFilters), sort, group: '', source: 'pages', empty: q ? `No code matches “${q}”.` : 'Your repos show up here once code-import has indexed them.', opened: false });
-  const kind = h('select', { 'aria-label': 'Kind' },
-    h('option', { value: '' }, 'Everything'),
-    ...S.CODE_KINDS.map(([value, name]) => h('option', { value, selected: codeFilters.kind === value }, name)));
-  kind.addEventListener('change', () => ((codeFilters = { ...codeFilters, kind: kind.value || undefined }), draw()));
-  // Which forge: All Hosts, Forgejo or GitHub.
-  const host = h('select', { 'aria-label': 'Host' },
-    h('option', { value: '' }, 'All Hosts'),
-    ...S.CODE_HOSTS.map(([value, name]) => h('option', { value, selected: codeFilters.host === value }, name)));
-  host.addEventListener('change', () => ((codeFilters = { ...codeFilters, host: host.value || undefined }), draw()));
-  const toggle = (key, text) => {
-    const b = h('button', { type: 'button', 'aria-pressed': codeFilters[key] ? 'true' : 'false' }, text);
-    b.addEventListener('click', () => {
-      codeFilters = { ...codeFilters, [key]: !codeFilters[key] };
-      b.setAttribute('aria-pressed', codeFilters[key] ? 'true' : 'false');
-      draw();
-    });
-    return b;
+  // One quiet menu in Sort · Group · Filter's row (the spacer's place when a search has none): the kind, the forge,
+  // Open Only and Private, so the row stays one line in the list's column. Named after what's chosen.
+  const name = () => {
+    const parts = [
+      (S.CODE_KINDS.find(([v]) => v === codeFilters.kind) || [])[1],
+      (S.CODE_HOSTS.find(([v]) => v === codeFilters.host) || [])[1],
+      codeFilters.open ? 'Open' : '',
+      codeFilters.private ? 'Private' : '',
+    ].filter(Boolean);
+    return parts.length ? parts.join(' · ') : 'Code';
   };
-  container.replaceChildren(h('div', { class: 'code-filters', role: 'group', 'aria-label': 'Filters' }, kind, host, toggle('open', 'Open Only'), toggle('private', 'Private')), box);
+  const button = h('button', { type: 'button', class: 'quiet', 'aria-haspopup': 'menu', title: 'Kind, Host, Open Only, Private' });
+  const label = () => {
+    const on = !!(codeFilters.kind || codeFilters.host || codeFilters.open || codeFilters.private);
+    button.classList.toggle('active', on);
+    button.replaceChildren(icon('filter'), name());
+  };
+  const set = (change) => {
+    codeFilters = { ...codeFilters, ...change };
+    label();
+    draw();
+  };
+  const filters = dropMenu(button, () => [
+    { text: 'Everything', checked: !codeFilters.kind, pick: () => set({ kind: undefined }) },
+    ...S.CODE_KINDS.map(([value, text]) => ({ text, checked: codeFilters.kind === value, pick: () => set({ kind: value }) })),
+    '-',
+    { text: 'All Hosts', checked: !codeFilters.host, pick: () => set({ host: undefined }) },
+    ...S.CODE_HOSTS.map(([value, text]) => ({ text, checked: codeFilters.host === value, pick: () => set({ host: value }) })),
+    '-',
+    { text: 'Open Only', checked: !!codeFilters.open, pick: () => set({ open: !codeFilters.open }) },
+    { text: 'Private', checked: !!codeFilters.private, pick: () => set({ private: !codeFilters.private }) },
+  ]);
+  label();
+  const row = $('list-top').querySelector('.controls');
+  if (row) {
+    row.classList.remove('spacer');
+    row.removeAttribute('aria-hidden');
+    row.querySelector('.spacer-slot')?.remove();
+    row.append(filters);
+  } else container.before(h('div', { class: 'controls' }, filters));
+  container.replaceChildren(box);
   draw();
+}
+
+/** Sort · Group · Filter's row with nothing in it, unseen: every list's first result starts in one place. */
+function controlsSpacer() {
+  return h('div', { class: 'controls spacer', 'aria-hidden': 'true' }, h('div', { class: 'menu spacer-slot' }, h('button', { type: 'button', class: 'quiet', tabindex: '-1' }, icon('sort'), '\u00a0')));
 }
 
 /** A code row: its kind's glyph, the title, the repo, its state, a lock when private, the date. */
@@ -1441,7 +1468,7 @@ function viewLibrary(params) {
   searchInput.placeholder = PROMPTS[filter];
   fill($('list-top'), 
     segments(scopes(), filter, (s) => go('library', { s }, { replace: true })),
-    filter === 'opened' || filter === 'web' ? null : filter === 'media' ? mediaControls('library', params, { search: false }) : controls('library', params, { notes: filter === 'notes' }),
+    filter === 'opened' || filter === 'web' ? controlsSpacer() : filter === 'media' ? mediaControls('library', params, { search: false }) : controls('library', params, { notes: filter === 'notes' }),
   );
   const list = freshList();
   if (filter === 'opened') {
@@ -1655,8 +1682,7 @@ function viewSearch(params) {
   fill($('list-top'), 
     // A tap on Media searches it on purpose too (m=1), without making the web's search one (w stays as it was).
     segments(scopes(), scope, (s) => go('search', { ...keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), ...(s === 'media' ? { m: '1' } : {}) }, { replace: true })),
-    listed ? controls('search', params, { search: true, notes: scope === 'notes' }) : null,
-    scope === 'media' ? mediaControls('search', params, { search: true, items: mediaLast.q === q ? mediaLast.res.items : [] }) : null,
+    listed ? controls('search', params, { search: true, notes: scope === 'notes' }) : scope === 'media' ? mediaControls('search', params, { search: true, items: mediaLast.q === q ? mediaLast.res.items : [] }) : controlsSpacer(),
   );
   if (segmentTotals.query === q) for (const [value, n] of Object.entries(segmentTotals.counts)) setSegmentCount(value, n);
   if (scope !== 'opened') didYouMean(q, scope);

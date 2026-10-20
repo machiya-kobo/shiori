@@ -225,7 +225,7 @@ test('over a background, glass: text stays 4.5:1 in every dark theme, and a ligh
   const searchCSS = readFileSync(new URL('../patches/shiori/search.css', import.meta.url), 'utf8');
   const backing = searchCSS.match(/^html\.has-bg\.frost-header body:not\(\.home\) header :is\(([^{]+)\) \{\s*background: var\(--glass-backing-bar\);\s*\}/m);
   assert.ok(backing, 'the clear bar\'s text carries the panel\'s colour');
-  for (const item of ['.brand', '#categories a', '.tools-row select', '.icon-button']) assert.ok(backing[1].includes(item), item);
+  for (const item of ['.brand', '#categories a', '.tools-row :is(select, button)', '.icon-button']) assert.ok(backing[1].includes(item), item);
   assert.match(searchCSS, /^#q \{[^}]*background: var\(--card\);/m, 'the field is solid');
   // A page makes a surface frosted only by pointing the three variables at the frosted ones (the search page's
   // header at the bar's).

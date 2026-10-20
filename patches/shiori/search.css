@@ -347,25 +347,56 @@ body[data-pill-row="scroll"] #categories { flex-wrap: nowrap; overflow-x: auto; 
 .room-icon { width: 24px; height: 24px; flex: none; background: center / cover no-repeat; }
 .room.neighbour .room-icon { background-size: 20px 20px; background-position: center; }
 /* What narrows this tab, quiet under the pills (as the apps' Sort ·
-   Group · Filter bar): the time range on All and the web's tabs, the sort
-   and Notes' vault on your lists'. Plain secondary text, left-aligned,
-   the chosen range in the accent; gone when there's nothing in it. */
+   Group · Filter bar, and Kagi's row): the time range on the web's tabs
+   (with Images', Videos' and News' order and filters), the sort on your
+   lists' (Notes' vault, Code's filters), Media's sort, group and filters.
+   Plain secondary text, left-aligned, a choice made in the accent. Every
+   tab keeps the row, empty or not, so the header is one height and what's
+   under it starts in one place. A phone scrolls it sideways (search.js
+   fades its ends, as the pills'). */
 .tools-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 4px; min-height: 24px; }
-.tools-row:not(:has(label:not([hidden]), .list-controls > :not([hidden]))) { display: none; }
-.tools-row .list-controls { margin: 0; gap: 4px 14px; }
+/* A select inside its label sits as a bare one does (in a line box it rode a fraction of a pixel lower). */
+.tools-row label, .tools-row .list-controls, .tools-row .code-filters { display: inline-flex; align-items: center; }
+.tools-row .list-controls, .tools-row .code-filters { flex-wrap: wrap; margin: 0; gap: 4px 14px; }
+@media (max-width: 759px) {
+  .tools-row, .tools-row .list-controls, .tools-row .code-filters { flex-wrap: nowrap; }
+  .tools-row { overflow-x: auto; scrollbar-width: none; }
+  .tools-row::-webkit-scrollbar { display: none; }
+  .tools-row > * { flex: none; }
+}
+.tools-row button {
+  font-family: inherit; font-size: 0.8125rem; font-weight: 400; line-height: normal;
+  font: -apple-system-footnote; color: var(--secondary); background: transparent;
+  border: 0; padding: 2px 0; cursor: pointer; white-space: nowrap;
+  /* As tall as the selects beside it (a select is a pixel or two taller), its text centred the same. */
+  align-self: stretch;
+}
+.tools-row button[aria-pressed="true"] { color: var(--accent); }
 .tools-row select, .tools-row .list-controls select {
   /* The size and face where -apple-system-footnote is unknown (off Apple), the same for every select here. */
   font-family: inherit; font-size: 0.8125rem; font-weight: 400; line-height: normal;
-  font: -apple-system-footnote; color: var(--secondary); background: transparent;
-  border: 0; padding: 2px 0; cursor: pointer;
-  /* As wide as the choice shown, not the longest one ("Past month"). */
+  font: -apple-system-footnote; color: inherit; background: transparent;
+  /* No menu chrome of the browser's: Safari set the text 10px in, Chrome 5px, so the row never lined up with the
+     pills and cards above and below it. The text starts at the edge; the label draws one chevron after it. */
+  -webkit-appearance: none; appearance: none; border: 0; border-radius: 0; padding: 2px 13px 2px 0; cursor: pointer;
+  /* As wide as the choice shown, not the longest one ("Past Month"). */
   field-sizing: content;
 }
-#time-label:has(option:checked:not([value=""])) select { color: var(--accent); }
+.tools-row label { position: relative; color: var(--secondary); }
+.tools-row label::after {
+  content: ""; position: absolute; right: 0; top: 50%; width: 9px; height: 9px; margin-top: -4px; pointer-events: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 3.5l3 3 3-3' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 3.5l3 3 3-3' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+/* A choice made reads in the accent, chevron and all; "Any …", "All Vaults" and the first order stay quiet. */
+.tools-row label:has(option:checked:not([value=""], [value="all"])) { color: var(--accent); }
 main { padding-top: 8px; }
-h2 { font: -apple-system-subheadline; font-weight: 600; color: var(--secondary); margin: 18px 4px 8px; }
-.correction { margin: 10px 4px 0; color: var(--secondary); }
-.status { color: var(--secondary); font: -apple-system-footnote; margin: 6px 4px; }
+/* Text lines among the cards (a heading, Did you mean, a status, a group's name, More ›) start where a card's text
+   does: its 14px padding and 1px edge in, so they line up with what's in the cards rather than 4px off their edge. */
+h2 { font: -apple-system-subheadline; font-weight: 600; color: var(--secondary); margin: 18px 15px 8px; }
+.correction { margin: 10px 15px 0; color: var(--secondary); }
+.status { color: var(--secondary); font: -apple-system-footnote; margin: 6px 15px; }
 
 /* Result cards */
 ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
@@ -405,27 +436,12 @@ ol.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; 
 .media-card .media-stars { color: var(--hit); letter-spacing: 1px; }
 .media-card .media-outside { color: var(--secondary); }
 .chip.media-place { color: var(--tab-news); }
-.media-filters button[aria-pressed="true"] { border-color: var(--tab-news); color: var(--tab-news); }
 /* Group → Kind or Month: each group's name above its cards. */
-.media-group { list-style: none; margin: 8px 4px 0; font-weight: 600; color: var(--secondary); }
+.media-group { list-style: none; margin: 8px 15px 0; font-weight: 600; color: var(--secondary); }
 .code-glyph { color: var(--tab-videos); font-weight: 700; }
 .code-state { font-weight: 600; }
 .code-host { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--secondary); }
 .code-state.open { color: var(--kept); }
-.code-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 12px; }
-/* Pages, Notes, Files and Code: the vault and the sort in a row above the
-   list, not the header (it crowded a phone's). Nothing shown, no row. */
-.list-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 12px; }
-.list-controls:not(:has(> :not([hidden]))) { display: none; }
-.list-controls select {
-  font: inherit; font-size: 0.875rem; color: var(--text); background: transparent;
-  border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer;
-}
-.code-filters select, .code-filters button {
-  font: inherit; font-size: 0.875rem; color: var(--text); background: transparent;
-  border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer;
-}
-.code-filters button[aria-pressed="true"] { border-color: var(--tab-videos); color: var(--tab-videos); }
 /* Settings → Result Style: a plain card with a hairline (Solid), a bar down
    the leading edge, or plain. */
 body[data-result-style="solid"] :is(.hister-card, .vault-card, .smallweb-card, .media-card) { background: var(--card); border-color: var(--line); }
@@ -481,7 +497,7 @@ mark { background: var(--highlight); color: var(--text); border-radius: 3px; pad
 .chip.konbini { color: var(--konbini); }
 a.link-chip { text-decoration: none; cursor: pointer; }
 a.link-chip:hover, a.link-chip:focus-visible { background: color-mix(in srgb, currentColor 14%, transparent); }
-.more { margin: 8px 4px 0; text-align: right; font: -apple-system-footnote; }
+.more { margin: 8px 15px 0; text-align: right; font: -apple-system-footnote; }
 .more a { text-decoration: none; }
 
 /* Video results */
@@ -852,6 +868,8 @@ body.image-preview #preview-pane {
 }
 .image-view { flex: 1; min-height: 0; margin: 0; display: flex; flex-direction: column; }
 .image-frame { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 16px; }
+/* In the viewer the picture starts under the close button, so a large one never covers it. */
+#image-viewer .image-frame { padding-top: 52px; }
 .image-frame img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
 .image-view figcaption { padding: 10px 16px 14px; border-top: 1px solid var(--line); }
 .image-title { margin: 0 0 2px; font: -apple-system-subheadline; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
@@ -870,13 +888,25 @@ body.image-preview #preview-pane {
 #image-viewer[open] { display: flex; flex-direction: column; }
 #image-viewer::backdrop { background: rgb(0 0 0 / 0.6); }
 #image-viewer-body { flex: 1; min-height: 0; display: flex; outline: none; }
-#image-viewer-close { position: absolute; top: 6px; right: 8px; z-index: 1; font-size: 22px; line-height: 1; color: var(--secondary); }
+#image-viewer-close {
+  position: absolute; top: 8px; right: 8px; z-index: 1; display: grid; place-items: center;
+  font-size: 22px; line-height: 1; color: var(--text); border-radius: 50%; background: var(--raised);
+}
 @media (max-width: 760px) {
   #image-viewer {
     width: calc(100vw / var(--page-zoom, 1)); height: calc(100dvh / var(--page-zoom, 1));
     margin: 0; inset: 0; border: 0; border-radius: 0;
+    /* A tap that misses a button never zooms the page (iOS's double tap), and a swipe never scrolls the page
+       under it: the viewer takes every touch, so the page needs no scroll lock (toggling one made Safari drop the
+       sticky header for a frame on closing). Swipes still step through the images (search.js). */
+    touch-action: none;
   }
-  #image-viewer-close { top: calc(6px + env(safe-area-inset-top)); }
+  #image-viewer .image-frame { padding-top: calc(64px + env(safe-area-inset-top)); }
+  /* 44 points, Apple's smallest to tap: the close and the steps. */
+  #image-viewer-close { top: calc(10px + env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; font-size: 26px; }
+  #image-viewer .image-step { gap: 4px; }
+  #image-viewer .image-step .icon-button { width: 44px; height: 44px; font-size: 28px; border-radius: 50%; background: var(--raised); }
+  #image-viewer .image-step .icon-button:disabled { background: var(--raised); }
   #image-viewer .image-view figcaption { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 
@@ -1108,11 +1138,15 @@ html.frost-header header {
    chosen, the time range and sort, and the buttons. Each keeps its place: the padding is given back as margin. A
    hover keeps its own fill. Off Apple while the background moves the bar is the plain glass, and they go clear again
    (--glass-backing-bar, backgrounds.css). */
-html.has-bg.frost-header body:not(.home) header :is(.brand, #categories a:not([aria-current="page"], :hover), .tools-row select, .icon-button:not(:hover, :focus-visible)) {
+html.has-bg.frost-header body:not(.home) header :is(.brand, #categories a:not([aria-current="page"], :hover), .tools-row :is(select, button), .icon-button:not(:hover, :focus-visible)) {
   background: var(--glass-backing-bar);
 }
 html.has-bg.frost-header body:not(.home) header .brand { padding: 3px 12px 3px 4px; margin: -3px -12px -3px -4px; border-radius: 999px; }
-html.has-bg.frost-header body:not(.home) header .tools-row select { padding: 2px 8px; margin-inline: -8px; border-radius: 999px; }
+html.has-bg.frost-header body:not(.home) header .tools-row :is(select, button) { padding: 2px 8px; margin-inline: -8px; border-radius: 999px; }
+/* The chevron inside its backing: room for it before the backing's end. */
+html.has-bg.frost-header body:not(.home) header .tools-row select { padding-right: 21px; }
+/* Room between those backings (each reaches 8px past its text): 4px of the scene between two, not one long pill. */
+html.has-bg.frost-header body:not(.home) header :is(.tools-row, .tools-row .list-controls, .tools-row .code-filters) { column-gap: 20px; }
 html.frost-results body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
 html.frost-results body:not(.home) > footer {
   --glass-mix: var(--glass-mix-frosted); --glass-filter: var(--glass-filter-frosted); --glass-under: var(--glass-under-frosted);
@@ -1161,8 +1195,18 @@ html.has-bg #preview-pane {
 }
 /* The layers fill the window whatever Text Size zooms the body by (--z, --vw: search.js keeps them). */
 html.has-bg :is(#bg, #rainfx, .bgimg, .bgvid) { width: var(--vw, 100vw); height: calc(100lvh / var(--z, 1)); }
-/* The last results scroll clear of the corner, and the preview ends above it. */
-html.has-bgctl body:not(.home) { padding-bottom: 88px; }
+/* The footer sits on the window's bottom edge, as it does without a background, and holds the corner's buttons
+   (16px in, 50px tall): at least as tall as them, its text clear of them, centred between equal margins (under
+   them on a phone, where the text needs the width). So the last results scroll clear of the corner too. The
+   preview ends above it. */
+html.has-bgctl body:not(.home) { padding-bottom: 0; }
+html.has-bgctl body:not(.home) > footer {
+  box-sizing: border-box; min-height: 82px; display: flex; flex-direction: column; justify-content: center;
+  margin-bottom: 0; padding: 8px 120px; border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+}
+@media (max-width: 760px) {
+  html.has-bgctl body:not(.home) > footer { justify-content: flex-start; padding: 8px 8px 82px; }
+}
 html.has-bgctl #preview-pane { height: calc(var(--vh, 100vh) - var(--header-h, 0px) - 90px); }
 /* Settings → Background: Choose… in the accent; Remove keeps the red of a removal. */
 .setting .bg-actions button.link:not(.danger) { color: var(--accent); }

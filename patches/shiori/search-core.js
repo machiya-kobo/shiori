@@ -235,6 +235,141 @@
     return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
   }
 
+  // --- Images, Videos and News: their own row of choices (as Kagi's) -------------
+  // Drawn from the results SearXNG already sent: a choice narrows or reorders
+  // them in place, and the web is never asked again for it (each search
+  // counts). Kept in the address (w<key>, wo the order) so Back and a reload
+  // keep them. A choice shows only when the results differ in it.
+  const WEB_ORDERS = {
+    images: [['', 'Best Match'], ['largest', 'Largest']],
+    videos: [['', 'Best Match'], ['newest', 'Newest'], ['shortest', 'Shortest'], ['longest', 'Longest']],
+    news: [['', 'Best Match'], ['newest', 'Newest']],
+  };
+  // [key, the select's name, its "any" choice, the choices (null: the results' own values)]
+  const WEB_FILTERS = {
+    images: [
+      ['size', 'Size', 'Any Size', [['large', 'Large'], ['medium', 'Medium'], ['small', 'Small']]],
+      ['shape', 'Shape', 'Any Shape', [['wide', 'Wide'], ['square', 'Square'], ['tall', 'Tall']]],
+      ['format', 'Format', 'Any Format', [['jpeg', 'JPEG'], ['png', 'PNG'], ['gif', 'GIF'], ['webp', 'WebP'], ['svg', 'SVG'], ['avif', 'AVIF']]],
+    ],
+    videos: [
+      ['length', 'Length', 'Any Length', [['short', 'Under 4 Min'], ['medium', '4–20 Min'], ['long', 'Over 20 Min']]],
+      ['source', 'Source', 'All Sources', null],
+    ],
+    news: [['source', 'Source', 'All Sources', null]],
+  };
+  const WEB_KEYS = { size: 'ws', shape: 'wa', format: 'wf', length: 'wl', source: 'we' };
+
+  /** An image's size, {w, h}, from SearXNG's `resolution` ("1920 x 1080") or its format line; null when unknown. */
+  function imageSize(r) {
+    for (const v of [r && r.resolution, r && r.img_format]) {
+      const m = /(\d{2,5})\s*[x×]\s*(\d{2,5})/i.exec(String(v || ''));
+      if (m) return { w: Number(m[1]), h: Number(m[2]) };
+    }
+    return null;
+  }
+
+  /** A video's length in seconds (SearXNG sends "3:45", "1:02:10" or seconds), or null. */
+  function lengthSeconds(value) {
+    if (value == null || value === '' || value === 'None') return null;
+    if (typeof value === 'string' && value.includes(':')) {
+      const parts = value.trim().split(':').map(Number);
+      if (parts.some((n) => !isFinite(n))) return null;
+      return parts.reduce((total, n) => total * 60 + n, 0);
+    }
+    const n = Math.round(Number(value));
+    return isFinite(n) && n > 0 ? n : null;
+  }
+
+  /** What `r` is under one of the tab's choices (an image's size, a video's length…), or '' when unknown. */
+  function webValue(key, r) {
+    if (key === 'size' || key === 'shape') {
+      const size = imageSize(r);
+      if (!size || !size.w || !size.h) return '';
+      if (key === 'size') {
+        const side = Math.max(size.w, size.h);
+        return side >= 1200 ? 'large' : side >= 500 ? 'medium' : 'small';
+      }
+      const ratio = size.w / size.h;
+      return ratio >= 1.2 ? 'wide' : ratio <= 0.83 ? 'tall' : 'square';
+    }
+    if (key === 'format') {
+      const m = /\b(jpe?g|png|gif|webp|svg|avif)\b/i.exec(`${(r && r.img_format) || ''} ${String((r && r.img_src) || '').split(/[?#]/)[0]}`);
+      return m ? m[1].toLowerCase().replace('jpg', 'jpeg') : '';
+    }
+    if (key === 'length') {
+      const sec = lengthSeconds(r && r.length);
+      return sec == null ? '' : sec < 240 ? 'short' : sec <= 1200 ? 'medium' : 'long';
+    }
+    if (key === 'source') {
+      try {
+        return new URL(r.url).hostname.replace(/^(www|m)\./, '');
+      } catch (_) {
+        return '';
+      }
+    }
+    return '';
+  }
+
+  /** The tab's choices from the address: {order, size, …}, each '' for any. */
+  function webChoices(cat, params) {
+    const out = { order: '' };
+    const order = params.get('wo') || '';
+    if ((WEB_ORDERS[cat] || []).some(([v]) => v === order)) out.order = order;
+    for (const [key] of WEB_FILTERS[cat] || []) out[key] = params.get(WEB_KEYS[key]) || '';
+    return out;
+  }
+
+  /** The address's key for one of the choices ('order' is wo). */
+  const webChoiceKey = (key) => (key === 'order' ? 'wo' : WEB_KEYS[key]);
+
+  /**
+   * The results under the tab's choices, in its order (unknown values last;
+   * otherwise SearXNG's own order).
+   */
+  function webNarrow(cat, results, choices) {
+    const keep = (results || []).filter((r) => r && (WEB_FILTERS[cat] || []).every(([key]) => !choices[key] || webValue(key, r) === choices[key]));
+    const order = choices.order;
+    const by = order === 'largest'
+      ? (r) => { const s = imageSize(r); return s ? -(s.w * s.h) : null; }
+      : order === 'newest'
+        ? (r) => { const t = Date.parse((r && r.publishedDate) || ''); return isFinite(t) ? -t : null; }
+        : order === 'shortest' || order === 'longest'
+          ? (r) => { const sec = lengthSeconds(r && r.length); return sec == null ? null : order === 'longest' ? -sec : sec; }
+          : null;
+    if (!by) return keep;
+    return keep.map((r, i) => ({ r, i, k: by(r) })).sort((a, b) => (a.k == null) - (b.k == null) || (a.k ?? 0) - (b.k ?? 0) || a.i - b.i).map((x) => x.r);
+  }
+
+  /**
+   * The row's selects for the tab: [{key, name, choices: [[value, label]]}],
+   * the order first, then each filter whose results differ in it (or one
+   * chosen), every choice counted against the other choices made.
+   */
+  function webChoiceRow(cat, results, choices) {
+    const row = [];
+    if (!WEB_ORDERS[cat]) return row;
+    const orders = WEB_ORDERS[cat].filter(([v]) => {
+      if (!v || v === choices.order) return true;
+      const key = v === 'largest' ? 'size' : v === 'newest' ? 'date' : 'length';
+      return (results || []).some((r) => (key === 'date' ? isFinite(Date.parse((r && r.publishedDate) || '')) : webValue(key, r)));
+    });
+    if (orders.length > 1) row.push({ key: 'order', name: 'Order', choices: orders });
+    for (const [key, name, any, fixed] of WEB_FILTERS[cat] || []) {
+      const others = { ...choices, [key]: '', order: '' };
+      const counts = new Map();
+      for (const r of webNarrow(cat, results, others)) {
+        const v = webValue(key, r);
+        if (v) counts.set(v, (counts.get(v) || 0) + 1);
+      }
+      const values = fixed ? fixed.filter(([v]) => counts.has(v) || v === choices[key]) : [...counts.keys()].sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b)).map((v) => [v, v]);
+      if (!fixed && choices[key] && !counts.has(choices[key])) values.push([choices[key], choices[key]]);
+      if (values.length < 2 && !choices[key]) continue;
+      row.push({ key, name, choices: [['', any], ...values.map(([v, label]) => [v, `${label} · ${counts.get(v) || 0}`])] });
+    }
+    return row;
+  }
+
   // --- pull to refresh in an installed app (the rooms' ui/machiya.js pullStep) ---
   //   idle --start(ok)--> armed --move past the slop, mostly downward--> pulling
   //   --end with d >= threshold--> reload; armed --sideways or upward--> off
@@ -4004,6 +4139,13 @@
     splitHighlights,
     shortDate,
     duration,
+    imageSize,
+    lengthSeconds,
+    webValue,
+    webChoices,
+    webChoiceKey,
+    webNarrow,
+    webChoiceRow,
     cachedURL,
     archiveURL,
     safeHref,
