@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.17.1 (2026-10-20)
+
+- Search page: a tab's heading (Images, News…) is rounded like the rest
+  of the page, and Images' results start level with every other tab's
+  (they sat 7px lower).
+
 ## 1.17.0 (2026-10-20)
 
 - Backgrounds: Frosted Header and Frosted Results (the web app:
