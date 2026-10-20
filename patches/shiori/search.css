@@ -614,6 +614,8 @@ main > #correction[hidden] + #answer { margin-top: 0; }
 
 /* Paging and footer */
 .pages { display: flex; justify-content: space-between; gap: 10px; margin: 18px 0 0; }
+/* Neither page to go to (one page of results): no row, or over a background it was an empty strip of glass. */
+.pages:not(:has(> :not([hidden]))) { display: none; }
 .page-button {
   padding: 10px 18px; border-radius: 12px; background: var(--card); color: var(--accent);
   text-decoration: none; font-weight: 600; box-shadow: var(--shadow);
@@ -1074,9 +1076,20 @@ html.has-bg body:not(.home) > footer {
   background: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under));
   -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
 }
-/* Frosted (Settings → Background): the header, or the results' panels and the footer, take the frosted glass, which
-   lets more of the scene through (backgrounds.css). The sticky headings inside follow their panel. */
-html.frost-header header,
+/* Frosted (Settings → Background): the results' panels and the footer take the frosted glass, which lets more of the
+   scene through, and the header the clear bar (backgrounds.css). The sticky headings inside follow their panel. */
+html.frost-header header {
+  --glass-mix: var(--glass-mix-bar); --glass-filter: var(--glass-filter-bar); --glass-under: var(--glass-under-bar);
+}
+/* On the clear bar, what has text carries the panel's colour (the field is solid already): the name, the pills not
+   chosen, the time range and sort, and the buttons. Each keeps its place: the padding is given back as margin. A
+   hover keeps its own fill. Off Apple while the background moves the bar is the plain glass, and they go clear again
+   (--glass-backing-bar, backgrounds.css). */
+html.has-bg.frost-header body:not(.home) header :is(.brand, #categories a:not([aria-current="page"], :hover), .tools-row select, .icon-button:not(:hover, :focus-visible)) {
+  background: var(--glass-backing-bar);
+}
+html.has-bg.frost-header body:not(.home) header .brand { padding: 3px 12px 3px 4px; margin: -3px -12px -3px -4px; border-radius: 999px; }
+html.has-bg.frost-header body:not(.home) header .tools-row select { padding: 2px 8px; margin-inline: -8px; border-radius: 999px; }
 html.frost-results body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
 html.frost-results body:not(.home) > footer {
   --glass-mix: var(--glass-mix-frosted); --glass-filter: var(--glass-filter-frosted); --glass-under: var(--glass-under-frosted);

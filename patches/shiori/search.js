@@ -2889,7 +2889,11 @@
     if (!docs.length && !(!vault && (result.history || []).some((h) => pageOf(h)))) {
       return showStatus(vault ? 'No notes in the vault match.' : files ? 'None of your files match.' : code ? 'None of your code matches.' : 'None of your pages match.');
     }
-    if (result.closeMatches) $('web-title').textContent += ` · for “${result.closeMatches}”`;
+    // The heading shows only here, to say the list is for another spelling.
+    if (result.closeMatches) {
+      $('web-title').textContent += ` · for “${result.closeMatches}”`;
+      $('web-title').hidden = false;
+    }
     const cards = vault ? await konbiniCards() : [];
     let lifted = 0;
     if (!vault && !files && !code && page === 1) {
@@ -3351,9 +3355,6 @@
   placeSide(); // lined up again with the results drawn
   $('web-title').textContent = webLike ? 'Web' : CATEGORIES.find(([c]) => c === category)[1];
   const count = data.number_of_results > 0 ? `${data.number_of_results.toLocaleString()} results · ` : '';
-  // On All and Web the web's results need no heading: they're the list
-  // (on All, your pages and notes among them).
-  if (webLike) $('web-title').hidden = true;
   $('timing').textContent = cached ? count.replace(/ · $/, '') : `${count}${seconds} s`;
   $('engines').textContent = S.engineHealthLine(S.unansweredEngines(data));
 

@@ -210,14 +210,33 @@ test('over a background, glass: text stays 4.5:1 in every dark theme, and a ligh
   }
   assert.match(bgCSS, /^html\.bg-lite\.bg-moving \{ --glass-mix-frosted: var\(--glass-mix\); --glass-filter-frosted: none; --glass-under-frosted: var\(--glass-under\); \}/m,
     'off Apple, moving, frosted is the plain glass');
-  // A page makes a surface frosted only by pointing the three variables at the frosted ones.
+  // Frosted Header on the search page is the clear bar: the blurred scene alone, with no text on it (the name, the
+  // pills, the selects and the buttons carry the panel's colour), solid where the rest is, plain glass off Apple moving.
+  const bar = bgCSS.match(/^:root \{ --glass-mix-bar: (\d+)%; --glass-filter-bar: ([^;]+); --glass-under-bar: transparent; --glass-backing-bar: var\(--bg\); \}/m);
+  assert.ok(bar, 'backgrounds.css sets the clear bar on :root');
+  assert.ok(Number(bar[1]) < Number(frosted[1]) && !/brightness/.test(bar[2]), 'the bar lets more through than Frosted');
+  for (const light of [':root:not([data-theme="night"]) {', ':root[data-theme="day"] {', ':root:root {']) {
+    for (let i = bgCSS.indexOf(light); i >= 0; i = bgCSS.indexOf(light, i + 1)) {
+      assert.match(bgCSS.slice(i, bgCSS.indexOf('}', i)), /--glass-mix-bar: 100%; --glass-filter-bar: none;/, light);
+    }
+  }
+  assert.match(bgCSS, /^html\.bg-lite\.bg-moving \{ --glass-mix-bar: var\(--glass-mix\); --glass-filter-bar: none; --glass-under-bar: var\(--glass-under\); --glass-backing-bar: transparent; \}/m,
+    'off Apple, moving, the bar is the plain glass');
+  const searchCSS = readFileSync(new URL('../patches/shiori/search.css', import.meta.url), 'utf8');
+  const backing = searchCSS.match(/^html\.has-bg\.frost-header body:not\(\.home\) header :is\(([^{]+)\) \{\s*background: var\(--glass-backing-bar\);\s*\}/m);
+  assert.ok(backing, 'the clear bar\'s text carries the panel\'s colour');
+  for (const item of ['.brand', '#categories a', '.tools-row select', '.icon-button']) assert.ok(backing[1].includes(item), item);
+  assert.match(searchCSS, /^#q \{[^}]*background: var\(--card\);/m, 'the field is solid');
+  // A page makes a surface frosted only by pointing the three variables at the frosted ones (the search page's
+  // header at the bar's).
   for (const file of ['../web/app/app.css', '../patches/shiori/search.css']) {
     const css = readFileSync(new URL(file, import.meta.url), 'utf8');
     const rules = [...css.matchAll(/([^{}]+)\{([^{}]*--glass-mix:[^{}]*)\}/g)];
     assert.ok(rules.length >= 1, `${file}: frosted rules`);
     for (const [, sel, body] of rules) {
       assert.match(sel, /html\.frost-(header|results)/, `${file} ${sel.trim()}`);
-      assert.equal(body.trim(), '--glass-mix: var(--glass-mix-frosted); --glass-filter: var(--glass-filter-frosted); --glass-under: var(--glass-under-frosted);', `${file} ${sel.trim()}`);
+      const kind = file.includes('search.css') && sel.trim().endsWith('html.frost-header header') ? 'bar' : 'frosted';
+      assert.equal(body.trim(), `--glass-mix: var(--glass-mix-${kind}); --glass-filter: var(--glass-filter-${kind}); --glass-under: var(--glass-under-${kind});`, `${file} ${sel.trim()}`);
     }
   }
   // Every glass surface in the pages is these variables, filter and colour together.

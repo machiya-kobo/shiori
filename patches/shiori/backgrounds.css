@@ -21,23 +21,29 @@
    page's own frost over that margin: the panel's colour at 70% over the blurred scene, undimmed, as the header is
    without a background. Over the brightest a scene gets under the blur, text stays at 3:1 in Tokyo Night and 2.5:1 in
    every theme; a white picture of your own isn't held. Where the plain glass is solid, so is this, and off Apple while
-   the background moves it's the plain glass: unblurred, a moving scene behind text is only noise. */
+   the background moves it's the plain glass: unblurred, a moving scene behind text is only noise.
+
+   Frosted Header is clearer still: the bar is the blurred scene alone (--glass-*-bar), since nothing on it is text on
+   the glass: the field is solid, and the name, the pills, the time range and the buttons each carry the panel's own
+   colour (search.css). Solid where the rest is, and the plain glass off Apple while the background moves. */
 :root { --glass-mix: 50%; --glass-filter: blur(20px) saturate(180%) brightness(0.16); --glass-under: transparent; }
 :root { --glass-mix-frosted: 70%; --glass-filter-frosted: blur(20px) saturate(180%); --glass-under-frosted: transparent; }
+:root { --glass-mix-bar: 0%; --glass-filter-bar: blur(20px) saturate(180%); --glass-under-bar: transparent; --glass-backing-bar: var(--bg); }
 html.bg-lite.bg-moving { --glass-filter: none; --glass-under: rgb(0 0 0 / 0.84); }
 html.bg-lite.bg-moving { --glass-mix-frosted: var(--glass-mix); --glass-filter-frosted: none; --glass-under-frosted: var(--glass-under); }
+html.bg-lite.bg-moving { --glass-mix-bar: var(--glass-mix); --glass-filter-bar: none; --glass-under-bar: var(--glass-under); --glass-backing-bar: transparent; }
 /* The frosted bars inside the glass (headings, the web app's list bars) saw only their panel while it had a filter;
    with none they would see the moving layers, so they take the panel's own fill. */
 html.bg-lite.bg-moving { --frost: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under)); --frost-filter: none; }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="night"]) { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; }
+  :root:not([data-theme="night"]) { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; --glass-mix-bar: 100%; --glass-filter-bar: none; }
 }
-:root[data-theme="day"] { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; }
+:root[data-theme="day"] { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; --glass-mix-bar: 100%; --glass-filter-bar: none; }
 @media (prefers-reduced-transparency: reduce) {
-  :root:root { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; }
+  :root:root { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; --glass-mix-bar: 100%; --glass-filter-bar: none; }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root:root { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; }
+  :root:root { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; --glass-mix-bar: 100%; --glass-filter-bar: none; }
 }
 
 /* The layers: the scene (or your picture or video), then the rain, under everything. 100lvh: the tallest the window

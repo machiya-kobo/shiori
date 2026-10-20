@@ -123,7 +123,9 @@
       <!-- The web's results (on All with your top pages and notes among
            them, and no heading), and every other tab's list. -->
       <section id="web" aria-labelledby="web-title" hidden>
-        <h2 id="web-title">Web</h2>
+        <!-- The pill says which tab this is, so the list has no heading: only
+             a respelled search names what it found ("Your Pages · for …"). -->
+        <h2 id="web-title" hidden>Web</h2>
         <section id="suggestions" class="fold panel" data-fold="related" hidden>
           <button class="fold-head" type="button" aria-expanded="false">
             <span class="chevron" aria-hidden="true"></span><span>Related Searches</span>
