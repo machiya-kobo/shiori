@@ -5,6 +5,16 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.17.4 (2026-10-20)
+
+- Search page: every tab lines up. In Safari the header was 1px taller
+  on a tab whose pill showed a count, and a plain card's text sat 1px
+  higher than a Pages card's; off Apple the sort and time menus had
+  different fonts.
+- Search page: switching tabs is calmer. A tab that takes a moment shows
+  placeholder cards where its results will land (a quick one never
+  shows them), and results fade in without sliding.
+
 ## 1.17.3 (2026-10-20)
 
 - Search page: while results load, only the placeholder cards show. The
