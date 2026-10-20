@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.19.1 (2026-10-20)
+
+- Web app: Web and All have the time range (Anytime, Past Day…) in the
+  row under the pills, as the search page's web tabs do, where 1.19.0 left
+  an empty gap. A change searches the web again, on purpose.
+- Web app: a web search's reply is kept for 5 minutes. Opening a web
+  search could ask SearXNG twice, and every move between All and Web asked
+  again; each counts against the search quota.
+
 ## 1.19.0 (2026-10-20)
 
 - Search page: Images, Videos and News have their own row of choices
