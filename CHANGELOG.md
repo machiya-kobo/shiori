@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.17.3 (2026-10-20)
+
+- Search page: while results load, only the placeholder cards show. The
+  heading's placeholder above them is gone (tabs have no heading now),
+  and so is the loading line while the cards are there; it still shows
+  for other loads, such as the next page.
+
 ## 1.17.2 (2026-10-20)
 
 - Search page: Frosted Header is clear now, the blurred scene alone, so
