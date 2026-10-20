@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.15.0 (2026-10-20)
+
+- Search page: a click on an image shows it large, with Open Image and
+  Visit Page below it: in the preview pane in a wide window, else over
+  the page. ⌘-click still opens the page.
+
 ## 1.14.1 (2026-10-19)
 
 - Search page: it waits 5 s for the web, not 10, before going to
