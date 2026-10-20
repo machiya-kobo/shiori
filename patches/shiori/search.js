@@ -823,8 +823,10 @@
         const title = card.querySelector('.title')?.textContent || '';
         setTimeout(() => current === url && recordOpened(url, title), 2000);
       }
-      document.querySelectorAll('.card.previewing').forEach((c) => c.classList.remove('previewing'));
+      document.querySelectorAll('.card.previewing, .image-grid > a.previewing').forEach((c) => c.classList.remove('previewing'));
       if (card) card.classList.add('previewing');
+      $('preview-image').hidden = true;
+      $('preview-image').replaceChildren();
       const opens = S.safeHref(url);
       if (opens) $('preview-open').href = opens;
       else $('preview-open').removeAttribute('href');
@@ -862,9 +864,23 @@
         frame.srcdoc = `<!doctype html><meta charset="utf-8"><style>${pageCSS()}</style><p class="meta">Hister couldn't show a preview of this page.</p>`;
       }
     }
+    /** An image result: the picture and its links in place of a page (its tile is already marked). */
+    function showImage(view, key) {
+      current = `image:${key}`;
+      update();
+      document.querySelectorAll('.card.previewing').forEach((c) => c.classList.remove('previewing'));
+      $('preview-open').hidden = true;
+      $('preview-empty').hidden = true;
+      $('preview-frame').hidden = true;
+      $('preview-frame').srcdoc = '';
+      $('preview-image').replaceChildren(view);
+      $('preview-image').hidden = false;
+    }
     function clear() {
       current = null;
-      document.querySelectorAll('.card.previewing').forEach((c) => c.classList.remove('previewing'));
+      document.querySelectorAll('.card.previewing, .image-grid > a.previewing').forEach((c) => c.classList.remove('previewing'));
+      $('preview-image').hidden = true;
+      $('preview-image').replaceChildren();
       $('preview-frame').hidden = true;
       $('preview-open').hidden = true;
       $('preview-empty').hidden = false;
@@ -888,7 +904,7 @@
     );
     $('preview-close').addEventListener('click', clear);
     update();
-    return { update, clear, show, on, isOpen: () => current !== null };
+    return { update, clear, show, showImage, on, isOpen: () => current !== null };
   })();
 
   // A card opens from anywhere on it, as its title does (the preview pane,
@@ -2047,6 +2063,7 @@
     (event) => {
       const img = event.target;
       if (!(img instanceof HTMLImageElement)) return;
+      if (img.closest('.image-view')) return img.replaceWith(el('p', { class: 'status' }, "The picture didn't load."));
       const tile = img.closest('.image-grid > a');
       (tile || img.closest('.video') || img).remove();
     },
@@ -2452,17 +2469,93 @@
     return li;
   }
 
+  /** Each image tile's result, for the viewer. */
+  const imageResults = new WeakMap();
   function imageTile(r) {
     const src = firstImage(r.thumbnail_src, r.thumbnail, r.img_src);
     if (!src) return null;
-    return el(
+    const tile = el(
       'a',
       { href: isHTTP(r.url) ? r.url : r.img_src, title: r.title || '' },
       // The picture is the result: never an empty alt (the site, at least).
       lazyImage({ src, alt: r.title || S.breadcrumb(r.url).origin }),
       el('span', {}, r.title || S.breadcrumb(r.url).origin),
     );
+    imageResults.set(tile, r);
+    return tile;
   }
+
+  // A click on an image shows it large, with links to the picture and its
+  // page below: in the preview pane when it's on, else over the page. The
+  // tile's own link (to the page) still works with a modifier key.
+  /** The picture large (the thumbnail until the full one arrives), what it is, and its two links. */
+  function imageView(r) {
+    const thumb = firstImage(r.thumbnail_src, r.thumbnail, r.img_src);
+    const full = imageURL(r.img_src);
+    const name = r.title || S.breadcrumb(r.url).origin;
+    const img = el('img', { src: thumb || full, alt: name, referrerpolicy: 'no-referrer' });
+    if (full && full !== img.getAttribute('src')) {
+      const big = new Image();
+      big.onload = () => img.isConnected && (img.src = full);
+      big.src = full;
+    }
+    let site = r.source || '';
+    try {
+      site = site || new URL(r.url).host.replace(/^www\./, '');
+    } catch (_) {}
+    const format = String(r.img_format || '').replace(/^image\//i, '').toUpperCase();
+    const facts = [site, r.resolution && String(r.resolution).replace(/\s*[x×]\s*/, ' × '), format].filter(Boolean).join(' · ');
+    const original = S.originalImage(r.img_src);
+    const page = isHTTP(r.url) ? r.url : '';
+    return el(
+      'figure',
+      { class: 'image-view' },
+      el('div', { class: 'image-frame' }, img),
+      el(
+        'figcaption',
+        {},
+        r.title ? el('p', { class: 'image-title' }, S.decodeEntities(r.title)) : null,
+        facts ? el('p', { class: 'image-facts' }, facts) : null,
+        el(
+          'p',
+          { class: 'image-links' },
+          original ? el('a', { href: original }, 'Open Image ›') : null,
+          page ? el('a', { href: page }, 'Visit Page ›') : null,
+        ),
+      ),
+    );
+  }
+  function showImage(tile) {
+    const r = imageResults.get(tile);
+    if (!r) return false;
+    document.querySelectorAll('.image-grid > a.previewing').forEach((t) => t.classList.remove('previewing'));
+    if (previewPane.on()) {
+      tile.classList.add('previewing');
+      previewPane.showImage(imageView(r), r.img_src || r.url);
+      return true;
+    }
+    const dialog = $('image-viewer');
+    $('image-viewer-body').replaceChildren(imageView(r));
+    if (!dialog.open) {
+      dialog.showModal();
+      document.documentElement.classList.add('dialog-open');
+      // The picture, not ×: a ring on × looked like a pressed button.
+      $('image-viewer-body').focus();
+    }
+    return true;
+  }
+  $('images').addEventListener('click', (event) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const tile = event.target.closest('.image-grid > a');
+    if (tile && showImage(tile)) event.preventDefault();
+  });
+  $('image-viewer-close').addEventListener('click', () => $('image-viewer').close());
+  // A click on the dimmed page around it closes it too.
+  $('image-viewer').addEventListener('click', (event) => event.target === $('image-viewer') && $('image-viewer').close());
+  $('image-viewer').addEventListener('close', () => {
+    document.documentElement.classList.remove('dialog-open');
+    $('image-viewer-body').replaceChildren();
+  });
 
   function infobox(ib) {
     const img =

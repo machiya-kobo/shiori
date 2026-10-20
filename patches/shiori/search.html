@@ -162,7 +162,13 @@
       </div>
       <p id="preview-empty" class="status">Select one of your pages or notes to preview it here.</p>
       <iframe id="preview-frame" title="Preview" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" hidden></iframe>
+      <div id="preview-image" hidden></div>
     </aside>
+    <!-- An image result shown large when there's no preview pane (a phone, or Preview Pane off). -->
+    <dialog id="image-viewer" aria-label="Image">
+      <button id="image-viewer-close" class="icon-button" type="button" aria-label="Close" title="Close">×</button>
+      <div id="image-viewer-body" tabindex="-1"></div>
+    </dialog>
     <footer>
       <p><a id="ddg" href="#">Search DuckDuckGo instead</a></p>
       <p id="timing" class="status"></p>

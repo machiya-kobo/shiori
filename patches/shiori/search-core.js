@@ -288,6 +288,19 @@
     return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : '';
   }
 
+  /**
+   * An image result's own address, for its Open Image link: SearXNG's
+   * image_proxy carries it as `url`; any other http(s) address is its own.
+   * '' when there's none to link.
+   */
+  function originalImage(src) {
+    const href = safeHref(src);
+    if (!href) return '';
+    const u = new URL(href);
+    if (!/\/image_proxy$/.test(u.pathname)) return href;
+    return safeHref(u.searchParams.get('url') || '');
+  }
+
   // The schemes Shiori itself builds links in, besides the web's.
   const LINK_SCHEMES = ['http:', 'https:', 'gemini:', 'gopher:', 'obsidian:'];
 
@@ -3994,6 +4007,7 @@
     cachedURL,
     archiveURL,
     safeHref,
+    originalImage,
     linkHref,
     PULL,
     PULL_IDLE,

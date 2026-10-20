@@ -1303,6 +1303,16 @@ test('a web page elsewhere: archives, and the front ends the build names (Elsewh
   ]);
 });
 
+test("an image result's Open Image link is the picture's own address, out of SearXNG's proxy", () => {
+  const proxied = 'https://searx.example/image_proxy?url=' + encodeURIComponent('https://img.example/a/pi.jpg?hash=1') + '&h=abc';
+  assert.equal(S.originalImage(proxied), 'https://img.example/a/pi.jpg?hash=1');
+  assert.equal(S.originalImage('https://img.example/b.png'), 'https://img.example/b.png');
+  for (const bad of ['https://searx.example/image_proxy?h=abc', 'https://searx.example/image_proxy?url=javascript:alert(1)',
+    'data:image/png;base64,AAAA', '', null]) {
+    assert.equal(S.originalImage(bad), '', String(bad));
+  }
+});
+
 // The same cases as SafeHrefTests.swift.
 test('a stored address becomes a link only when it is the web (SafeHref twins)', () => {
   assert.equal(S.safeHref('https://a.example/x?y=1'), 'https://a.example/x?y=1');
