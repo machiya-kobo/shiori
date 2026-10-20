@@ -803,6 +803,10 @@ html.has-bg #sidebar {
   background: color-mix(in srgb, var(--card) var(--glass-mix), var(--glass-under));
   -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
 }
+/* Frosted (Settings → Background): the sidebar, or the list's column, take the frosted glass (backgrounds.css). */
+html.frost-header #sidebar, html.frost-results #list-column {
+  --glass-mix: var(--glass-mix-frosted); --glass-filter: var(--glass-filter-frosted); --glass-under: var(--glass-under-frosted);
+}
 html.has-bg #preview-column { border-left: 0; }
 html.has-bg #preview > .status { margin: 16px; border-radius: 14px; }
 @media (min-width: 760px) {

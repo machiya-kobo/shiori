@@ -2,7 +2,7 @@
 // own picture or video, with the page's surfaces as glass over it. Shared by the search page (and Safari's page) and
 // the web app, which each put its rows in their own Settings sheet.
 //
-// These are this browser's own: localStorage (shioriBackground: {scene, rain}) and IndexedDB (shiori-background,
+// These are this browser's own: localStorage (shioriBackground: {scene, rain, frostHeader, frostResults}) and IndexedDB (shiori-background,
 // your picture or video as {type, buf}), never the account, Safari's app settings or any server. Off draws nothing:
 // no canvas, no timers, and bg.js isn't even loaded until a scene is picked.
 //
@@ -39,15 +39,15 @@
   function read() {
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || 'null') || {};
-      return { scene: valid(v.scene), rain: v.rain === true };
+      return { scene: valid(v.scene), rain: v.rain === true, frostHeader: v.frostHeader === true, frostResults: v.frostResults === true };
     } catch (_) {
-      return { scene: OFF, rain: false };
+      return { scene: OFF, rain: false, frostHeader: false, frostResults: false };
     }
   }
   function write(v) {
     try {
-      if (v.scene === OFF && !v.rain) localStorage.removeItem(KEY);
-      else localStorage.setItem(KEY, JSON.stringify({ scene: v.scene, rain: !!v.rain }));
+      if (v.scene === OFF && !v.rain && !v.frostHeader && !v.frostResults) localStorage.removeItem(KEY);
+      else localStorage.setItem(KEY, JSON.stringify({ scene: v.scene, rain: !!v.rain, frostHeader: !!v.frostHeader, frostResults: !!v.frostResults }));
     } catch (_) {}
   }
 
@@ -176,6 +176,9 @@
     const video = scene === CUSTOM && !!media() && media().type.startsWith('video/');
     root.classList.toggle('bg-moving', on && !reduced() && (scene !== CUSTOM || video || !!now.rain));
     root.classList.toggle('bg-lite', on && !APPLE);
+    // Frosted: those panels let more of the background through (backgrounds.css, --glass-*-frosted).
+    root.classList.toggle('frost-header', on && !!now.frostHeader);
+    root.classList.toggle('frost-results', on && !!now.frostResults);
     if (!on) setWatching(false);
     if (window.annaiBg) window.annaiBg.rain(on && !!now.rain);
     corner();
@@ -426,9 +429,10 @@
 
   /**
    * The Settings rows, in the page's own markup: `row(label, control, id)` makes one (the page's class and layout),
-   * `redraw()` draws the sheet again (a row shows or hides), and `buttonClass` is the page's plain button.
+   * `redraw()` draws the sheet again (a row shows or hides), `buttonClass` is the page's plain button, and `frost`
+   * names the page's two Frosted switches ([header's label, results' label]).
    */
-  function rows({ row, redraw, buttonClass = '' }) {
+  function rows({ row, redraw, buttonClass = '', frost = ['Frosted Header', 'Frosted Results'] }) {
     // The stored picture: asked once, then the rows know whether there's one to remove.
     if (stored === undefined) void store.get().then((rec) => {
       stored = rec;
@@ -498,6 +502,16 @@
       rain.checked = !!now.rain;
       rain.addEventListener('change', () => void change({ rain: rain.checked }));
       out.push(row('Rain', rain, 'setting-background-rain'));
+      for (const [key, label] of [['frostHeader', frost[0]], ['frostResults', frost[1]]]) {
+        const sw = document.createElement('input');
+        sw.type = 'checkbox';
+        sw.id = `setting-background-${key}`;
+        sw.className = 'switch';
+        sw.setAttribute('role', 'switch');
+        sw.checked = !!now[key];
+        sw.addEventListener('change', () => void change({ [key]: sw.checked }));
+        out.push(row(label, sw, sw.id));
+      }
     }
     const pick = document.createElement('button');
     pick.type = 'button';

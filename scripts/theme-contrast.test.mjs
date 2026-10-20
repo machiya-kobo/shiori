@@ -182,6 +182,44 @@ test('over a background, glass: text stays 4.5:1 in every dark theme, and a ligh
   assert.equal(Number(moving[1]), Number((1 - k).toFixed(2)), 'black at 1 - the brightness');
   assert.match(bgCSS, /^html\.bg-lite\.bg-moving \{ --frost: color-mix\(in srgb, var\(--bg\) var\(--glass-mix\), var\(--glass-under\)\); --frost-filter: none; \}/m,
     'the frosted bars inside the glass take its fill');
+  // Frosted (the reader's switch, per surface) is the page's own frost, undimmed: text stays 3:1 in Tokyo Night and
+  // 2.5:1 in every theme over the brightest a scene gets under the blur (your own white picture isn't held), solid
+  // where the plain glass is solid, and the plain glass off Apple while the background moves.
+  const frosted = bgCSS.match(/^:root \{ --glass-mix-frosted: (\d+)%; --glass-filter-frosted: ([^;]+); --glass-under-frosted: transparent; \}/m);
+  assert.ok(frosted, 'backgrounds.css sets the frosted glass on :root');
+  const fAlpha = Number(frosted[1]) / 100;
+  const fk = Number((frosted[2].match(/brightness\(([\d.]+)\)/) || [0, 1])[1]);
+  assert.match(frosted[2], /^blur\(20px\) saturate\(180%\)/, 'measured under the same blur and saturation');
+  assert.ok((1 - fAlpha) * fk > (1 - alpha) * k, 'frosted lets more through than the plain glass');
+  for (const [name, v] of darks) {
+    for (const surface of ['bg', 'card']) {
+      for (const behind of BRIGHTEST_UNDER_GLASS.filter((c) => c !== '#ffffff')) {
+        const glass = mix(v[surface], dim(behind, fk), fAlpha);
+        for (const fg of TEXT.filter((t) => v[t])) {
+          const r = ratio(v[fg], glass);
+          const floor = name.includes('Tokyo Night') ? 3 : 2.5;
+          assert.ok(r >= floor, `${name}: --${fg} on --${surface} frosted glass over ${behind} is ${r.toFixed(2)}:1`);
+        }
+      }
+    }
+  }
+  for (const light of [':root:not([data-theme="night"]) {', ':root[data-theme="day"] {', ':root:root {']) {
+    for (let i = bgCSS.indexOf(light); i >= 0; i = bgCSS.indexOf(light, i + 1)) {
+      assert.match(bgCSS.slice(i, bgCSS.indexOf('}', i)), /--glass-mix-frosted: 100%; --glass-filter-frosted: none;/, light);
+    }
+  }
+  assert.match(bgCSS, /^html\.bg-lite\.bg-moving \{ --glass-mix-frosted: var\(--glass-mix\); --glass-filter-frosted: none; --glass-under-frosted: var\(--glass-under\); \}/m,
+    'off Apple, moving, frosted is the plain glass');
+  // A page makes a surface frosted only by pointing the three variables at the frosted ones.
+  for (const file of ['../web/app/app.css', '../patches/shiori/search.css']) {
+    const css = readFileSync(new URL(file, import.meta.url), 'utf8');
+    const rules = [...css.matchAll(/([^{}]+)\{([^{}]*--glass-mix:[^{}]*)\}/g)];
+    assert.ok(rules.length >= 1, `${file}: frosted rules`);
+    for (const [, sel, body] of rules) {
+      assert.match(sel, /html\.frost-(header|results)/, `${file} ${sel.trim()}`);
+      assert.equal(body.trim(), '--glass-mix: var(--glass-mix-frosted); --glass-filter: var(--glass-filter-frosted); --glass-under: var(--glass-under-frosted);', `${file} ${sel.trim()}`);
+    }
+  }
   // Every glass surface in the pages is these variables, filter and colour together.
   for (const file of ['../web/app/app.css', '../patches/shiori/search.css']) {
     const css = readFileSync(new URL(file, import.meta.url), 'utf8');

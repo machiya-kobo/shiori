@@ -9,6 +9,8 @@ Pick one in Settings: the web app's **Appearance** page, or the search page's sh
   Taipei, Singapore, Bangkok. Americas: San Francisco, Los Angeles, Chicago, Las Vegas. Films and Games: Los Angeles,
   2019, Neo-Tokyo, Walled City (with a Cat). Or **Your Picture or Video**.
 - **Rain**: rain over the background, splashing on a scene's street.
+- **Frosted Header** and **Frosted Results** (the web app: **Frosted Sidebar** and **Frosted List**): that part of the
+  page takes the page's own frost instead of the dimmed glass, so more of the scene shows through (below).
 - **Your Picture or Video**: Choose… picks a file (a picture is scaled to 2,400 pixels; a GIF or a video, up to
   100 MB, plays silently on a loop). Remove takes it away.
 
@@ -42,6 +44,11 @@ behind them before blurring it under half the panel's own colour, so a panel can
 than its theme. About a twelfth of the scene shows through; the rest shows around the panels. In a light theme, with
 Reduce Transparency, or where the browser can't blur, the panels stay solid. `scripts/theme-contrast.test.mjs` holds
 this against the brightest each scene gets under the blur, and against a white picture of your own.
+
+**Frosted** trades some of that contrast for the look: the panel's colour at 70% over the blurred scene, not dimmed,
+the frost the header has without a background. About a third of the scene shows through. Over the scenes' brightest
+parts text stays at 3:1 in Tokyo Night (2.5:1 in every theme); over a bright picture of your own it can go lower.
+Off Apple's browsers, while the background moves, Frosted keeps the plain glass.
 
 Off Apple's browsers (Firefox and Chrome on Linux and Windows), while the background moves (a scene, the rain or a
 video), the panels don't blur: the browser would blur the moving layers again for every frame, which took more than a

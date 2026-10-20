@@ -2941,13 +2941,14 @@ function backgroundGroup(group) {
   if (!BG) return [];
   const rows = BG.rows({
     buttonClass: 'link-button',
+    frost: ['Frosted Sidebar', 'Frosted List'],
     redraw: () => settingsDraft && settingsPageKey === 'appearance' && drawSettings(),
     row: (label, control, id, extra) =>
       h('div', { class: `item${extra ? ` ${extra}` : ''}` }, id ? h('label', { for: id }, label) : h('span', {}, label), control),
   });
   const items = rows.filter((r) => r.classList.contains('item'));
   return [
-    ...group('Background', items, 'This browser’s own. Your picture or video stays here, never uploaded.'),
+    ...group('Background', items, 'This browser’s own; your picture or video is never uploaded. Frosted shows more of it, with text a little less crisp.'),
     ...rows.filter((r) => !r.classList.contains('item')),
   ];
 }

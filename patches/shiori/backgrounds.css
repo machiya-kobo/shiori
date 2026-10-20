@@ -15,21 +15,29 @@
    every frame (more than a core in Firefox on Linux). Safari on a Mac, iPhone and iPad keeps the frost. Its panel is mixed with
    black at 1 − the brightness instead of with nothing, which lets exactly the same share through, undimmed:
    half the panel's colour, then 0.92 black over 0.08 of what's behind, the filter's 0.5 × 0.16. Unblurred, so the
-   test holds it against white behind it, as for your own picture. */
+   test holds it against white behind it, as for your own picture.
+
+   Frosted (Settings → Background, per surface: html.frost-header, html.frost-results) is the reader's choice of the
+   page's own frost over that margin: the panel's colour at 70% over the blurred scene, undimmed, as the header is
+   without a background. Over the brightest a scene gets under the blur, text stays at 3:1 in Tokyo Night and 2.5:1 in
+   every theme; a white picture of your own isn't held. Where the plain glass is solid, so is this, and off Apple while
+   the background moves it's the plain glass: unblurred, a moving scene behind text is only noise. */
 :root { --glass-mix: 50%; --glass-filter: blur(20px) saturate(180%) brightness(0.16); --glass-under: transparent; }
+:root { --glass-mix-frosted: 70%; --glass-filter-frosted: blur(20px) saturate(180%); --glass-under-frosted: transparent; }
 html.bg-lite.bg-moving { --glass-filter: none; --glass-under: rgb(0 0 0 / 0.84); }
+html.bg-lite.bg-moving { --glass-mix-frosted: var(--glass-mix); --glass-filter-frosted: none; --glass-under-frosted: var(--glass-under); }
 /* The frosted bars inside the glass (headings, the web app's list bars) saw only their panel while it had a filter;
    with none they would see the moving layers, so they take the panel's own fill. */
 html.bg-lite.bg-moving { --frost: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under)); --frost-filter: none; }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="night"]) { --glass-mix: 100%; --glass-filter: none; }
+  :root:not([data-theme="night"]) { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; }
 }
-:root[data-theme="day"] { --glass-mix: 100%; --glass-filter: none; }
+:root[data-theme="day"] { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; }
 @media (prefers-reduced-transparency: reduce) {
-  :root:root { --glass-mix: 100%; --glass-filter: none; }
+  :root:root { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root:root { --glass-mix: 100%; --glass-filter: none; }
+  :root:root { --glass-mix: 100%; --glass-filter: none; --glass-mix-frosted: 100%; --glass-filter-frosted: none; }
 }
 
 /* The layers: the scene (or your picture or video), then the rain, under everything. 100lvh: the tallest the window

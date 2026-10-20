@@ -1070,6 +1070,13 @@ html.has-bg body:not(.home) > footer {
   background: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under));
   -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
 }
+/* Frosted (Settings → Background): the header, or the results' panels and the footer, take the frosted glass, which
+   lets more of the scene through (backgrounds.css). The sticky headings inside follow their panel. */
+html.frost-header header,
+html.frost-results body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav),
+html.frost-results body:not(.home) > footer {
+  --glass-mix: var(--glass-mix-frosted); --glass-filter: var(--glass-filter-frosted); --glass-under: var(--glass-under-frosted);
+}
 /* The glass reaches 8px past the column where the window has room beside the page, and less as that room runs
    out: in a window no wider than the page it keeps to the column, the body's 12px in from the edge, as the
    preview is on the other side. */

@@ -159,21 +159,37 @@ test('a scene loads bg.js once, beside the controller with its build stamp, and 
 test('in the sheet a change previews and only Save keeps it; Cancel puts it back', async () => {
   const { B, local, window } = page({ stored: { scene: 'city', rain: false } });
   window.annaiBg = { start() {}, stop() {}, rain() {} };
+  const plainOff = { frostHeader: false, frostResults: false };
   B.init();
   B.begin();
   await B.change({ scene: 'hk', rain: true });
-  assert.deepEqual(plain(B.state()), { scene: 'hk', rain: true });
+  assert.deepEqual(plain(B.state()), { scene: 'hk', rain: true, ...plainOff });
   assert.deepEqual(JSON.parse(local.get('shioriBackground')), { scene: 'city', rain: false });
   await B.cancel();
-  assert.deepEqual(plain(B.state()), { scene: 'city', rain: false });
+  assert.deepEqual(plain(B.state()), { scene: 'city', rain: false, ...plainOff });
   B.begin();
   await B.change({ scene: 'off' });
   await B.save();
   assert.equal(local.get('shioriBackground'), undefined, 'Off keeps nothing');
-  assert.deepEqual(plain(B.kept()), { scene: 'off', rain: false });
+  assert.deepEqual(plain(B.kept()), { scene: 'off', rain: false, ...plainOff });
   // Outside the sheet (the corner's Rain) a change is kept at once.
   await B.change({ scene: 'lv' });
-  assert.deepEqual(JSON.parse(local.get('shioriBackground')), { scene: 'lv', rain: false });
+  assert.deepEqual(JSON.parse(local.get('shioriBackground')), { scene: 'lv', rain: false, ...plainOff });
+});
+
+test('Frosted Header and Frosted Results are kept with the background and mark the page only while one shows', async () => {
+  const { B, local, window, doc } = page({ stored: { scene: 'city', rain: false, frostResults: true } });
+  window.annaiBg = { start() {}, stop() {}, rain() {} };
+  B.init();
+  await B.apply();
+  const root = doc.documentElement.classList;
+  assert.ok(root.contains('frost-results') && !root.contains('frost-header'));
+  await B.change({ frostHeader: true });
+  assert.ok(root.contains('frost-header'));
+  assert.deepEqual(JSON.parse(local.get('shioriBackground')), { scene: 'city', rain: false, frostHeader: true, frostResults: true });
+  await B.change({ scene: 'off' });
+  assert.ok(!root.contains('frost-header') && !root.contains('frost-results'), 'no background, no frost');
+  assert.match(CONTROLLER, /frost = \['Frosted Header', 'Frosted Results'\]/);
 });
 
 test("the signs say Shiori's words, not annai's: only these names, each as kanji and in Hangul", () => {

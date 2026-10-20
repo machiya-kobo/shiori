@@ -1215,7 +1215,7 @@
       el('h3', { class: 'group-title' }, 'Background'),
       el('div', { class: 'group' }, ...rows.filter((r) => r.classList.contains('setting'))),
       ...rows.filter((r) => !r.classList.contains('setting')),
-      el('p', { class: 'group-foot' }, 'This browser’s own. Your picture or video stays here, never uploaded.'),
+      el('p', { class: 'group-foot' }, 'This browser’s own; your picture or video is never uploaded. Frosted shows more of it, with text a little less crisp.'),
     ];
   }
 
