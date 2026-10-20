@@ -1265,8 +1265,8 @@
   /**
    * A search field's buttons, as the rooms' (vaultkit's form.search.bar)
    * and Kagi's: an X that clears the field (shown once there's text: CSS,
-   * `:placeholder-shown`), and a magnifier that submits, as Return does
-   * (CSS shows it on phones). Placed after the input, its siblings.
+   * `:placeholder-shown`), and a magnifier that submits, as Return does.
+   * Placed after the input, its siblings.
    */
   function fieldButtons(input, submit) {
     const button = (cls, label, glyph) => {

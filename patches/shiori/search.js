@@ -33,15 +33,23 @@
   window.addEventListener('pagehide', () => (pageLeft = true));
   window.addEventListener('pageshow', () => ((pageLeft = false), (unloadingAt = 0)));
 
-  const params = new URLSearchParams(location.search);
+  // The results as the page arrives, before anything is drawn: a tab
+  // switched in place (switchTo, below) starts from a fresh copy.
+  const pristineMain = document.querySelector('main').cloneNode(true);
+  // What the address says. The search (q) is the page's own; the rest
+  // follow the tab, its page and its sort when a tab switches in place.
+  let params = new URLSearchParams(location.search);
   const q = (params.get('q') || '').trim();
-  const time = ['day', 'week', 'month', 'year'].includes(params.get('time')) ? params.get('time') : '';
-  const page = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
-  const histerKey = params.get('hk') || '';
-  const histerSort = params.get('hs') === 'new' ? 'new' : '';
+  const timeOf = (p) => (['day', 'week', 'month', 'year'].includes(p.get('time')) ? p.get('time') : '');
+  const pageOf = (p) => Math.max(1, parseInt(p.get('page') || '1', 10) || 1);
+  const sortOf = (p) => (p.get('hs') === 'new' ? 'new' : '');
+  let time = timeOf(params);
+  let page = pageOf(params);
+  let histerKey = params.get('hk') || '';
+  let histerSort = sortOf(params);
   // The Notes tab's vaults (Kura's work vaults included: they're
   // searchable in Notes wherever Shiori runs): 'all', or one's name.
-  const vaultParam = params.get('vault') || 'all';
+  let vaultParam = params.get('vault') || 'all';
   const terms = S.highlightTerms(q);
   // Your pages, notes or files: the full search of one, sorted rather than filtered by time.
   const isNoteTab = (cat) => cat === 'hister' || cat === 'vault' || cat === 'files' || cat === 'code';
@@ -58,9 +66,10 @@
   const MEDIA_WAIT_MS = 1500;
 
   // The header as it was last drawn (theme and tabs), kept in localStorage
-  // because that can be read before the first paint: switching tabs loads
-  // a new page, and it should arrive with its header already in place
-  // rather than blank for the half second the settings can take.
+  // because that can be read before the first paint: a new search (or a
+  // tab opened in a new window) loads a new page, and it should arrive with
+  // its header already in place rather than blank for the half second the
+  // settings can take.
   const HEADER_KEY = 'shioriHeader';
   // Whether Hister had files (the folders it watches) last time: the Files
   // tab is drawn from it at once, and asked again once the page is up.
@@ -358,9 +367,11 @@
     // Your libraries and what you played (the hosted page only).
     ...(mediaOn ? [['media', 'Media']] : []),
   ]);
-  const category = CATEGORIES.some(([c]) => c === params.get('cat')) ? params.get('cat') : 'general';
+  // The tabs as drawn (Files and Code can join after the load: nextHeader).
+  const categoryOf = (p, cats = CATEGORIES) => (cats.some(([c]) => c === p.get('cat')) ? p.get('cat') : 'general');
+  let category = categoryOf(params);
   // All and Web are SearXNG's general results; Web without yours mixed in.
-  const webLike = category === 'general' || category === 'web';
+  let webLike = category === 'general' || category === 'web';
   const nextHeader = {
     theme: settings.theme || '',
     palette: settings.palette || '',
@@ -423,56 +434,73 @@
   // --- what this page fetched, and where it was left ------------------------------
 
   const nav = performance.getEntriesByType('navigation')[0];
-  const cacheId = location.search;
   const allCached = stored[PAGE_CACHE_KEY] || {};
-  const cached =
-    nav && nav.type === 'reload' ? null : fresh(allCached[cacheId]) ? allCached[cacheId] : null;
-  const pageState = {
-    hister: cached && cached.hister,
-    vault: cached && cached.vault,
-    web: cached && cached.web,
-    answer: cached && cached.answer,
-    y: 0,
-    folds: {},
-  };
-  // Your pages were fetched with a count; a copy made under another count
-  // (the setting changed since) is fetched again. Everything else in the
-  // settings only affects how the page is drawn, so the copy still serves.
-  if (cached && category === 'general' && cached.histerCount !== ALL_COUNT) pageState.hister = null;
-  if (cached && category === 'general' && cached.vaultCount !== ALL_COUNT) pageState.vault = null;
-  if (cached) Object.assign(pageState.folds, cached.folds || {});
+  /**
+   * One showing of a tab: its address, its main, what it fetched (pageState)
+   * and the copy it was drawn from (cached). The page's first comes from the
+   * load; each tab switched in place makes another (switchTo).
+   */
+  function newRun(search, main, all, reload) {
+    const cached = reload ? null : fresh(all[search]) ? all[search] : null;
+    const pageState = {
+      hister: cached && cached.hister,
+      vault: cached && cached.vault,
+      web: cached && cached.web,
+      answer: cached && cached.answer,
+      y: 0,
+      folds: {},
+    };
+    // Your pages were fetched with a count; a copy made under another count
+    // (the setting changed since) is fetched again. Everything else in the
+    // settings only affects how the page is drawn, so the copy still serves.
+    if (cached && category === 'general' && cached.histerCount !== ALL_COUNT) pageState.hister = null;
+    if (cached && category === 'general' && cached.vaultCount !== ALL_COUNT) pageState.vault = null;
+    if (cached) Object.assign(pageState.folds, cached.folds || {});
+    return { search, main, cached, pageState, category, webLike, page, histerKey, histerSort, vaultParam, time, landed: false, revealed: false, saveTimer: 0 };
+  }
+  // What's been saved for Back, as this page last wrote it (persist).
+  let knownCache = allCached;
+  let currentRun = newRun(location.search, document.querySelector('main'), allCached, nav && nav.type === 'reload');
+  currentRun.landed = true;
+  // The run on screen's: fold() and the header read them.
+  let { cached, pageState } = currentRun;
 
   function fresh(entry) {
     return entry && Date.now() - entry.at < PAGE_CACHE_MS;
   }
 
-  let saveTimer = null;
-  function saveState() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(persist, 250);
+  function saveState(run = currentRun) {
+    clearTimeout(run.saveTimer);
+    run.saveTimer = setTimeout(() => persist(run), 250);
   }
-  async function persist() {
+  async function persist(run = currentRun) {
+    // Where it was left: only while it's the one on screen (read before the
+    // wait, which a tab switching in place may outlast).
+    const y = run === currentRun && run.landed ? Math.round(window.scrollY) : null;
     const all = (await chrome.storage.local.get([PAGE_CACHE_KEY]))[PAGE_CACHE_KEY] || {};
+    const state = run.pageState;
     // Never a work vault's note on the device: its results
     // leave the Back copy.
-    const vault = pageState.vault && (pageState.vault.documents || []).some((d) => S.isPrivateNote(d.url)) ? undefined : pageState.vault;
-    all[cacheId] = {
-      at: (all[cacheId] && all[cacheId].at) || Date.now(),
-      hister: pageState.hister,
+    const vault = state.vault && (state.vault.documents || []).some((d) => S.isPrivateNote(d.url)) ? undefined : state.vault;
+    const before = all[run.search];
+    all[run.search] = {
+      at: (before && before.at) || Date.now(),
+      hister: state.hister,
       histerCount: ALL_COUNT,
       vault,
       vaultCount: ALL_COUNT,
-      web: pageState.web,
-      answer: pageState.answer,
-      y: Math.round(window.scrollY),
-      folds: pageState.folds,
+      web: state.web,
+      answer: state.answer,
+      y: y ?? ((before && before.y) || 0),
+      folds: state.folds,
     };
     const entries = Object.entries(all).filter(([, e]) => fresh(e));
     entries.sort(([, a], [, b]) => b.at - a.at);
-    await chrome.storage.local.set({ [PAGE_CACHE_KEY]: Object.fromEntries(entries.slice(0, PAGE_CACHE_MAX)) });
+    knownCache = Object.fromEntries(entries.slice(0, PAGE_CACHE_MAX));
+    await chrome.storage.local.set({ [PAGE_CACHE_KEY]: knownCache });
   }
-  window.addEventListener('scroll', saveState, { passive: true });
-  window.addEventListener('pagehide', persist);
+  window.addEventListener('scroll', () => saveState(), { passive: true });
+  window.addEventListener('pagehide', () => persist());
   document.addEventListener('visibilitychange', () => document.hidden && persist());
   // Leaving through a link: record the position first. Leaving for a
   // result (not a tab, page or filter link on this page) is also told to
@@ -970,7 +998,7 @@
     let help = null;
     const inField = (t) => !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
     const cards = () =>
-      [...document.querySelectorAll('main .card')].filter((c) => c.offsetParent !== null && !c.closest('#skeleton'));
+      [...document.querySelectorAll('main:not(.tab-snapshot) .card')].filter((c) => c.offsetParent !== null && !c.closest('#skeleton'));
     function mark(card) {
       if (current) current.classList.remove('kbd-current');
       current = card || null;
@@ -989,7 +1017,7 @@
       const tabs = [...document.querySelectorAll('#categories a')];
       const at = tabs.findIndex((a) => a.getAttribute('aria-current') === 'page');
       const next = tabs[at + step];
-      if (at >= 0 && next) location.href = next.href;
+      if (at >= 0 && next) goTo(next.href);
     }
     const urlOf = (card) => card.dataset.preview || card.querySelector('a.title')?.href || '';
     function open(card) {
@@ -1081,7 +1109,10 @@
   // Its sections too: a late change inside them (the web font arriving)
   // moves the first result without changing main's size.
   const aligner = new ResizeObserver(() => alignInfo());
-  for (const el of [document.querySelector('main'), $('hister'), $('vault'), $('web'), $('infobox-slot')]) aligner.observe(el);
+  const watched = (main) => [main, ...['hister', 'vault', 'web', 'infobox-slot'].map((id) => main.querySelector(`#${id}`))];
+  const watchMain = (main) => watched(main).forEach((el) => aligner.observe(el));
+  const unwatchMain = (main) => watched(main).forEach((el) => aligner.unobserve(el));
+  watchMain(currentRun.main);
   document.fonts?.ready.then(() => { alignInfo(); alignField(); });
   addEventListener('resize', () => { alignInfo(); alignField(); });
   // The field follows the column it's over: the layout classes (two-col,
@@ -1591,8 +1622,8 @@
       suggestItems[suggestActive].pick();
     }
   });
-  $('time').addEventListener('change', () => (location.href = link({ t: $('time').value, p: 1 })));
-  $('sort').addEventListener('change', () => (location.href = link({ hs: $('sort').value, p: 1 })));
+  $('time').addEventListener('change', () => goTo(link({ t: $('time').value, p: 1 })));
+  $('sort').addEventListener('change', () => goTo(link({ hs: $('sort').value, p: 1 })));
   if (!q) {
     // The start page: centred, the recent searches as chips (not the list
     // under the field, which would say the same twice).
@@ -1603,7 +1634,7 @@
       ...chips.map((s) => el('a', { href: link({ q: s, cat: 'general', p: 1 }), class: 'home-chip' }, s)),
     );
     $('home-recent').hidden = !chips.length;
-    reveal();
+    revealPage();
     $('q').focus();
     return;
   }
@@ -1721,7 +1752,7 @@
   }
 
   /** The results are drawn: the footer (held back so it doesn't sit under the header meanwhile) can show. */
-  function reveal() {
+  function revealPage() {
     document.body.classList.remove('pending');
   }
 
@@ -2267,6 +2298,7 @@
       if (value) next.set(key, value);
       else next.delete(key);
       history.replaceState(history.state, '', '?' + next.toString());
+      currentRun.search = location.search;
       draw();
     };
     const select = (key, choices, label, value) => {
@@ -2568,9 +2600,10 @@
     }
     return true;
   }
-  $('images').addEventListener('click', (event) => {
+  // On the document: each tab switched in place brings a fresh grid.
+  document.addEventListener('click', (event) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    const tile = event.target.closest('.image-grid > a');
+    const tile = event.target.closest('#images > a');
     if (tile && showImage(tile)) event.preventDefault();
   });
   /** The next or previous tile's picture; past the last one shown, the next 60 first. */
@@ -2669,7 +2702,7 @@
   }
 
   function showStatus(...parts) {
-    reveal();
+    revealPage();
     $('web').hidden = false;
     $('web-status').replaceChildren(...parts.filter((p) => p != null));
   }
@@ -2693,732 +2726,902 @@
     return webAutocomplete.reply;
   }
 
-  async function didYouMeanLine(related) {
-    const wq = S.webQuery(q);
-    if (page !== 1 || !searxBase || !settings.webResults || !wq || S.hasBang(q)) return;
-    const auto = await webAutocomplete();
-    const fix = S.didYouMean(wq, [...auto, ...(await related)]);
-    const line = $('correction');
-    if (!fix || !line.hidden) return;
-    line.replaceChildren('Did you mean ', el('a', { href: link({ q: fix, p: 1 }) }, fix), '?');
-    line.hidden = false;
-  }
-
-  // --- the Small Web tab: Gemini and Gopher (docs/smallweb.md) --------------
-  // Through the small-web gateway, only for a submitted search (this
-  // page runs one per load). A result opens where Settings says: the
-  // gateway's page, or the gemini:// / gopher:// link for an app such as
-  // Lagrange (then the gateway is asked to save it to Hister, since it
-  // never passes through); the other is the chip beside it.
-
-  if (category === 'smallweb') {
-    $('web').hidden = false;
-    $('web-title').textContent = 'Small Web';
-    const direct = settings.smallWebOpen === 'direct';
-    let reply;
-    try {
-      const url = S.smallwebSearchURL(smallwebBase, q, page);
-      reply = S.smallwebResults(await fetchJSON(url, { timeout: 25000 }));
-    } catch (_) {
-      return showStatus("The Small Web didn't answer.");
-    }
-    // Nothing found because the engines didn't answer: say so, with Try Again
-    // (a reload runs the search afresh).
-    if (!reply.results.length && reply.failures.length) {
-      const again = el('button', { type: 'button', class: 'page-button' }, 'Try Again');
-      again.addEventListener('click', () => location.reload());
-      return showStatus(`The Small Web didn't answer. ${reply.failures.join(' · ')} `, again);
-    }
-    if (!reply.results.length) return showStatus('Nothing on the Small Web matches.');
-    // Safari's own page (not the hosted one) can't ask the gateway to save a
-    // direct open: its origin isn't one the gateway accepts.
-    const unsaved = direct && !settings.smallwebAPIURL ? ["Pages opened in a Gemini app from here aren't saved to Hister."] : [];
-    if (reply.failures.length || unsaved.length) $('timing').textContent = [...reply.failures, ...unsaved].join(' · ');
-    const opened = (r, isDirect) => {
-      recordOpened(r.url, r.title);
-      if (!isDirect) return;
-      fetch(`${smallwebBase}api/save`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: r.url }), keepalive: true,
-      }).catch(() => {});
+  // --- One tab's results ----------------------------------------------------------
+  // Drawn by show(run) into the run's own main: on the page's load, and for
+  // each tab switched in place (switchTo, below). A run left behind (another
+  // tab chosen before it was done) carries on into its main, now off the
+  // page, and touches nothing else: what's outside its main is a stand-in
+  // for it ($), and it never reveals, settles, scrolls or leaves the page.
+  async function show(run) {
+    const live = () => run === currentRun;
+    const away = new Map();
+    const $ = (id) => {
+      const inMain = run.main.querySelector(`#${id}`);
+      if (inMain || live()) return inMain || document.getElementById(id);
+      if (!away.has(id)) away.set(id, document.createElement('div'));
+      return away.get(id);
     };
-    const anchor = (r, isDirect, attrs, ...children) => {
-      const a = el('a', { href: isDirect ? r.url : r.proxy_url, ...attrs }, ...children);
-      a.addEventListener('click', () => opened(r, isDirect));
-      return a;
+    const { category, webLike, page, histerKey, histerSort, vaultParam, time, cached, pageState } = run;
+    /** The tab's results are drawn: in place of the last tab's, then shown. */
+    const reveal = () => {
+      if (!live()) return;
+      land(run);
+      run.revealed = true;
+      revealPage();
     };
-    for (const r of reply.results) {
-      const snippet = el('p', { class: 'snippet' });
-      for (const run of S.markRuns(r.snippet, r.marks)) snippet.append(run.marked ? el('mark', {}, run.text) : run.text);
-      $('web-results').append(
-        el(
-          'li',
-          { class: 'card smallweb-card' },
-          anchor(r, direct, { class: 'title' }, r.title),
-          el('div', { class: 'url' }, el('span', { class: 'origin' }, r.scheme === 'gopher' ? 'Gopher' : 'Gemini'), el('span', { class: 'crumbs' }, ' ' + r.place)),
-          r.snippet ? snippet : null,
-          // The other way to open it, then the engines that found it.
-          places(
-            anchor(r, !direct, { class: `chip link-chip ${direct ? 'gateway' : 'gemini'}`, title: direct ? 'Open Through the Gateway' : 'Open in a Gemini App' }, direct ? 'gateway' : r.scheme),
-            el('span', { class: 'engines' }, r.engines),
-          ),
-        ),
-      );
+    function showStatus(...parts) {
+      reveal();
+      $('web').hidden = false;
+      $('web-status').replaceChildren(...parts.filter((p) => p != null));
     }
-    $('pages').hidden = false;
-    if (reply.more) $('next').href = link({ p: page + 1 });
-    else $('next').hidden = true;
-    if (page > 1) {
-      $('prev').hidden = false;
-      $('prev').addEventListener('click', (e) => (e.preventDefault(), history.back()));
+    /** Back to where this page was left, once now and again when images settle. */
+    function restoreScroll() {
+      if (!live()) return;
+      settle(); // everything's drawn: show it
+      reveal();
+      alignInfo(); // once more, as finally drawn
+      alignField();
+      if (!cached || !cached.y) return;
+      const y = cached.y;
+      window.scrollTo(0, y);
+      if (run.initial) window.addEventListener('load', () => window.scrollTo(0, y), { once: true });
     }
-    return restoreScroll();
-  }
 
-  // --- the Media tab (docs/media.md) -----------------------------------------------
-  // Your libraries and what you played, one card per item; Kind, Never Played
-  // and Rating filter it in place. Private: never in the Back copy, never
-  // recorded as opened, never previewed.
-
-  if (category === 'media') {
-    $('web').hidden = false;
-    $('web-title').textContent = 'Your Media';
-    let res;
-    try {
-      res = await S.mediaSearch(mediaServices, q, mediaGet);
-    } catch (_) {
-      return showStatus("Your media didn't answer.");
+    async function didYouMeanLine(related) {
+      const wq = S.webQuery(q);
+      if (page !== 1 || !searxBase || !settings.webResults || !wq || S.hasBang(q)) return;
+      const auto = await webAutocomplete();
+      const fix = S.didYouMean(wq, [...auto, ...(await related)]);
+      const line = $('correction');
+      if (!fix || !line.hidden) return;
+      line.replaceChildren('Did you mean ', el('a', { href: link({ q: fix, p: 1 }) }, fix), '?');
+      line.hidden = false;
     }
-    if (res.failures.length) $('timing').textContent = res.failures.join(' · ');
-    if (!res.items.length) return showStatus('Nothing in your media matches.');
-    setPillCount('media', res.items.length);
-    const draw = () => {
-      const f = mediaFiltersFromAddress();
-      const items = S.mediaSort(S.mediaFilter(res.items, f, Math.floor(Date.now() / 1000)), f.order);
-      const groups = S.mediaGroups(items, f.grouping, -new Date().getTimezoneOffset());
-      $('web-results').replaceChildren(...groups.flatMap((g) => [g.title ? el('li', { class: 'media-group' }, g.title) : null, ...g.items.map(mediaCard)]).filter(Boolean));
-      $('web-status').replaceChildren(items.length ? '' : 'Nothing matches these filters.');
-      // Its counts follow the other choices.
-      document.querySelector('.media-filters')?.replaceWith(mediaFilterBar(draw, res.items));
-    };
-    $('web-results').before(mediaFilterBar(draw, res.items));
-    draw();
-    return restoreScroll();
-  }
 
-  // --- the Hister and Vault tabs: the full search of your pages or notes --------
+    // --- the Small Web tab: Gemini and Gopher (docs/smallweb.md) --------------
+    // Through the small-web gateway, only for a submitted search (this
+    // page runs one per load). A result opens where Settings says: the
+    // gateway's page, or the gemini:// / gopher:// link for an app such as
+    // Lagrange (then the gateway is asked to save it to Hister, since it
+    // never passes through); the other is the chip beside it.
 
-  if (isNoteTab(category)) {
-    didYouMeanLine([]);
-    const vault = category === 'vault';
-    // Files: Hister's watched folders, the same search asking for them alone.
-    const files = category === 'files';
-    // Code: your repos, with their filters.
-    const code = category === 'code';
-    $('web').hidden = false;
-    $('web-title').textContent = vault ? 'Your Notes' : files ? 'Your Files' : code ? 'Your Code' : 'Your Pages';
-    // The list's own choices (Best match or Newest, the vault) in the quiet
-    // row under the pills, where the web's tabs have their time range.
-    const controls = el('div', { class: 'list-controls', role: 'group', 'aria-label': 'Sort and vault' });
-    $('tools-row').append(controls);
-    controls.append($('sort-label'));
-    if (code) $('web-results').before(codeFilterBar());
-    if (vault && !notesBase) return showStatus(notesFromHister ? 'No Hister server is set up.' : 'No Kura address is set up (Settings → Search → Notes).');
-    if (!vault && !histerBase) return showStatus('No Hister server is set up.');
-    let result = pageState[category];
-    // From Hister: the default vault's notes alone, so no vault menu.
-    if (vault && !notesFromHister) {
-      await vaultsReady();
-      // Which vaults: All, or one (work vaults are searchable in Notes).
-      if (kuraVaults.length > 1) {
-        const select = el(
-          'select',
-          { id: 'vault-select', 'aria-label': 'Vault' },
-          el('option', { value: 'all' }, 'All Vaults'),
-          ...kuraVaults.map((v) => el('option', { value: v.name }, v.title || v.name)),
-        );
-        select.value = kuraVaults.some((v) => v.name === vaultParam) ? vaultParam : 'all';
-        select.addEventListener('change', () => (location.href = link({ v: select.value, p: 1 })));
-        controls.prepend(select);
-      }
-    }
-    if (!result && vault && notesFromHister) {
-      // Hister pages by its page key, as for your pages.
+    if (category === 'smallweb') {
+      $('web').hidden = false;
+      $('web-title').textContent = 'Small Web';
+      const direct = settings.smallWebOpen === 'direct';
+      let reply;
       try {
-        result = await histerNotes(q, { limit: PAGE_SIZE, page_key: histerKey, sort: histerSort === 'new' ? 'date' : '' });
-        pageState[category] = result;
-        saveState();
+        const url = S.smallwebSearchURL(smallwebBase, q, page);
+        reply = S.smallwebResults(await fetchJSON(url, { timeout: 25000 }));
       } catch (_) {
-        return showStatus('Hister could not be reached.');
+        return showStatus("The Small Web didn't answer.");
       }
-    }
-    if (!result && vault) {
-      // Kura pages by offset; a marker page key keeps the Next link below.
-      try {
-        const offset = (page - 1) * PAGE_SIZE;
-        result = await kuraNotes(q, { limit: PAGE_SIZE, offset, sort: histerSort === 'new' ? 'date' : 'relevance', vault: vaultParam });
-        result.page_key = offset + result.documents.length < result.total ? 'kura' : '';
-        pageState[category] = result;
-        saveState();
-      } catch (error) {
-        if (error && error.status === 401) return showStatus(...signInNote('Kura', error));
-        return showStatus('Kura could not be reached.');
+      // Nothing found because the engines didn't answer: say so, with Try Again
+      // (a reload runs the search afresh).
+      if (!reply.results.length && reply.failures.length) {
+        const again = el('button', { type: 'button', class: 'page-button' }, 'Try Again');
+        again.addEventListener('click', () => location.reload());
+        return showStatus(`The Small Web didn't answer. ${reply.failures.join(' · ')} `, again);
       }
-    }
-    if (!result) {
-      try {
-        const extra = { highlight: 'HTML' };
-        if (histerKey) extra.page_key = histerKey;
-        if (histerSort === 'new') extra.sort = 'date';
-        result = files
-          ? await histerSearch(S.filesQuery(q), PAGE_SIZE, extra)
-          : code
-            ? await histerSearch(S.codeQuery(q, codeFiltersFromAddress()), PAGE_SIZE, extra)
-            : await histerOrClose(q, PAGE_SIZE, extra, undefined, () => webSuggestions(q));
-        pageState[category] = result;
-        saveState();
-      } catch (_) {
-        return showStatus('Hister could not be reached.');
-      }
-    }
-    // Pages is your web pages: Hister sends no notes, but an opened one
-    // (Hister's `history` carries no label) is known by its address.
-    const pageOf = (d) => d.label !== 'vault' && !S.isNoteURL(d.url, niwaBase, konbiniBase);
-    // One video once, under whichever address Hister holds it (S.uniqueItems).
-    let docs = (result.documents || []).filter((d) => vault || pageOf(d));
-    if (!vault) docs = S.uniqueItems(docs);
-    if (!docs.length && !(!vault && (result.history || []).some((h) => pageOf(h)))) {
-      return showStatus(vault ? 'No notes in the vault match.' : files ? 'None of your files match.' : code ? 'None of your code matches.' : 'None of your pages match.');
-    }
-    // The heading shows only here, to say the list is for another spelling.
-    if (result.closeMatches) {
-      $('web-title').textContent += ` · for “${result.closeMatches}”`;
-      $('web-title').hidden = false;
-    }
-    const cards = vault ? await konbiniCards() : [];
-    let lifted = 0;
-    if (!vault && !files && !code && page === 1) {
-      const first = withOpened(result, docs, { skipNotes: true });
-      for (const card of first.cards) $('web-results').append(card);
-      lifted = first.cards.length;
-      docs = first.docs;
-    }
-    appendFolded($('web-results'), docs, (d) => (vault ? vaultCard(d, cards) : files ? fileCard(d) : code ? codeCard(d) : histerCard(d)));
-    const from = (page - 1) * PAGE_SIZE + 1;
-    const noun = vault ? 'notes' : files ? 'files' : code ? 'results' : 'pages';
-    // Hister's total is your pages alone (notes are Kura's), so both can say "of".
-    $('timing').textContent = `${from}–${from + lifted + docs.length - 1} of ${(result.total || docs.length).toLocaleString()} ${noun}`;
-    // Hister's own search page: the rooms' Hister address on a hosted page
-    // (this host's `/` is this page), the extension's server otherwise.
-    const histerUI = S.histerUIBase('__SHIORI_ROOMS__', histerBase, /^https?:$/.test(location.protocol) ? location.origin : '');
-    $('hister-more-tab').href = `${histerUI}?q=${encodeURIComponent(files ? S.filesQuery(q) : code ? S.codeQuery(q, codeFiltersFromAddress()) : q)}`;
-    // "Open in Hister" is for Hister's own results, not Kura's.
-    $('hister-more-tab').hidden = vault || !histerUI;
-    $('pages').hidden = false;
-    // A close-match page key belongs to the other spelling: no next page.
-    if (result.page_key && docs.length >= PAGE_SIZE && !result.closeMatches) $('next').href = link({ p: page + 1, hk: result.page_key });
-    else $('next').hidden = true;
-    if (page > 1) {
-      $('prev').hidden = false;
-      $('prev').addEventListener('click', (e) => (e.preventDefault(), history.back()));
-    }
-    return restoreScroll();
-  }
-
-  // --- The AI answer (All, first page) ------------------------------------------------
-  // The AI endpoint answers the search from the web results' snippets
-  // (/shiori/ai/answer; it runs the search on SearXNG itself and fetches
-  // no pages). Only when opened: a collapsed section costs nothing, and a
-  // page reopened on Back redraws its answer from the page's own copy.
-  (async () => {
-    const section = $('answer');
-    const text = S.webQuery(q);
-    if (!aiBase || !webLike || page !== 1 || !settings.webResults || settings.aiAnswer === false || !text || S.hasBang(q)) return;
-    const status = await aiStatus;
-    if (!status || !status.enabled || !status.answer) return;
-    const body = $('answer-body');
-    const head = section.querySelector('.fold-head');
-    const button = (label, title, onclick) => {
-      const b = el('button', { type: 'button', class: 'summary-button', title, 'aria-label': title }, label);
-      b.addEventListener('click', onclick);
-      return b;
-    };
-    function draw(state) {
-      if (state.working) {
-        return body.replaceChildren(el('p', { class: 'summary-working' }, el('span', { class: 'summary-spinner', 'aria-hidden': 'true' }), 'Answering…'));
-      }
-      if (state.error) {
-        return body.replaceChildren(el('p', {}, state.error), button('Try Again', 'Answer again', () => load(false)));
-      }
-      const reply = state.reply;
-      const sources = S.citedSources(reply.answer, reply.sources);
-      const byNumber = new Map(sources.map((src) => [Number(src.n), src]));
-      const paragraph = (line) => {
-        const node = el('span');
-        for (const run of S.answerRuns(line)) {
-          const src = run.cite && byNumber.get(run.cite);
-          if (run.text) node.append(run.text);
-          else if (src) node.append(el('sup', { class: 'cite' }, el('a', { href: src.url, title: src.title || src.url }, String(run.cite))));
-        }
-        return node;
+      if (!reply.results.length) return showStatus('Nothing on the Small Web matches.');
+      // Safari's own page (not the hosted one) can't ask the gateway to save a
+      // direct open: its origin isn't one the gateway accepts.
+      const unsaved = direct && !settings.smallwebAPIURL ? ["Pages opened in a Gemini app from here aren't saved to Hister."] : [];
+      if (reply.failures.length || unsaved.length) $('timing').textContent = [...reply.failures, ...unsaved].join(' · ');
+      const opened = (r, isDirect) => {
+        recordOpened(r.url, r.title);
+        if (!isDirect) return;
+        fetch(`${smallwebBase}api/save`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: r.url }), keepalive: true,
+        }).catch(() => {});
       };
-      const parts = S.summaryParts(reply.answer);
-      body.replaceChildren(
-        parts.opening ? el('p', {}, paragraph(parts.opening)) : null,
-        parts.points.length ? el('ul', {}, ...parts.points.map((p) => el('li', {}, paragraph(p)))) : null,
-        sources.length
-          ? el('ol', { class: 'answer-sources' }, ...sources.map((src) => el('li', { value: String(src.n) }, el('a', { href: src.url }, S.decodeEntities(src.title) || src.url), ' ', el('span', { class: 'origin' }, S.breadcrumb(src.url).origin))))
-          : null,
-        el(
-          'p',
-          { class: 'summary-byline' },
-          S.summaryByline(reply) + ' · from the web results\u2019 snippets ',
-          button('Copy', 'Copy the answer', () => navigator.clipboard.writeText(reply.answer).catch(() => {})),
-          ' ',
-          button('Regenerate', 'Answer again', () => load(true)),
-        ),
-      );
+      const anchor = (r, isDirect, attrs, ...children) => {
+        const a = el('a', { href: isDirect ? r.url : r.proxy_url, ...attrs }, ...children);
+        a.addEventListener('click', () => opened(r, isDirect));
+        return a;
+      };
+      for (const r of reply.results) {
+        const snippet = el('p', { class: 'snippet' });
+        for (const run of S.markRuns(r.snippet, r.marks)) snippet.append(run.marked ? el('mark', {}, run.text) : run.text);
+        $('web-results').append(
+          el(
+            'li',
+            { class: 'card smallweb-card' },
+            anchor(r, direct, { class: 'title' }, r.title),
+            el('div', { class: 'url' }, el('span', { class: 'origin' }, r.scheme === 'gopher' ? 'Gopher' : 'Gemini'), el('span', { class: 'crumbs' }, ' ' + r.place)),
+            r.snippet ? snippet : null,
+            // The other way to open it, then the engines that found it.
+            places(
+              anchor(r, !direct, { class: `chip link-chip ${direct ? 'gateway' : 'gemini'}`, title: direct ? 'Open Through the Gateway' : 'Open in a Gemini App' }, direct ? 'gateway' : r.scheme),
+              el('span', { class: 'engines' }, r.engines),
+            ),
+          ),
+        );
+      }
+      $('pages').hidden = false;
+      if (reply.more) $('next').href = link({ p: page + 1 });
+      else $('next').hidden = true;
+      if (page > 1) {
+        $('prev').hidden = false;
+        $('prev').addEventListener('click', (e) => (e.preventDefault(), history.back()));
+      }
+      return restoreScroll();
     }
-    let loading = false;
-    async function load(refresh) {
-      if (loading) return;
-      if (!refresh && pageState.answer) return draw({ reply: pageState.answer });
-      loading = true;
-      draw({ working: true });
+
+    // --- the Media tab (docs/media.md) -----------------------------------------------
+    // Your libraries and what you played, one card per item; Kind, Never Played
+    // and Rating filter it in place. Private: never in the Back copy, never
+    // recorded as opened, never previewed.
+
+    if (category === 'media') {
+      $('web').hidden = false;
+      $('web-title').textContent = 'Your Media';
+      let res;
       try {
-        pageState.answer = await aiPost('answer', { q: text, refresh: !!refresh }, (b) => typeof b.answer === 'string');
-        saveState();
-        draw({ reply: pageState.answer });
-      } catch (error) {
-        draw({ error: error.message });
-      } finally {
-        loading = false;
+        res = await S.mediaSearch(mediaServices, q, mediaGet);
+      } catch (_) {
+        return showStatus("Your media didn't answer.");
       }
+      if (res.failures.length) $('timing').textContent = res.failures.join(' · ');
+      if (!res.items.length) return showStatus('Nothing in your media matches.');
+      setPillCount('media', res.items.length);
+      const draw = () => {
+        const f = mediaFiltersFromAddress();
+        const items = S.mediaSort(S.mediaFilter(res.items, f, Math.floor(Date.now() / 1000)), f.order);
+        const groups = S.mediaGroups(items, f.grouping, -new Date().getTimezoneOffset());
+        $('web-results').replaceChildren(...groups.flatMap((g) => [g.title ? el('li', { class: 'media-group' }, g.title) : null, ...g.items.map(mediaCard)]).filter(Boolean));
+        $('web-status').replaceChildren(items.length ? '' : 'Nothing matches these filters.');
+        // Its counts follow the other choices.
+        run.main.querySelector('.media-filters')?.replaceWith(mediaFilterBar(draw, res.items));
+      };
+      $('web-results').before(mediaFilterBar(draw, res.items));
+      draw();
+      return restoreScroll();
     }
-    fold(section, false);
-    head.addEventListener('click', () => {
-      if (head.getAttribute('aria-expanded') === 'true') load(false);
-    });
-    section.hidden = false;
-    if (head.getAttribute('aria-expanded') === 'true') load(false);
-  })();
 
-  // --- Hold the page until the web is in (All, first page) -------------------------
-  // The Info card comes with the web results, a second after your pages:
-  // drawing those first made the page jump when it arrived. So the results
-  // wait, unseen under the shimmering placeholders, until the web is in or
-  // has failed (restoreScroll() settles every path). Not a fixed time: on
-  // All your pages and notes are drawn among the web's results, so a page
-  // shown before the web was in was empty but for the AI answer.
-  const holding = webLike && page === 1 && settings.webResults && settings.showInfobox !== false && !!searxBase;
-  // var: restoreScroll() calls settle() on paths that return before here.
-  var settled = false;
-  function settle() {
-    if (settled) return;
-    settled = true;
-    document.body.classList.remove('settling');
-  }
-  if (holding) {
-    document.body.classList.add('settling');
-    // Only a stop for a path that never settles (an error): the web gives
-    // up after WEB_TIMEOUT_MS, and the Wikipedia lookup waits 3 s more.
-    setTimeout(settle, WEB_TIMEOUT_MS + 5000);
-  }
+    // --- the Hister and Vault tabs: the full search of your pages or notes --------
 
-  // The right column (a wide window) takes the AI answer and Related
-  // Searches from the start: two-col is settled by now. Waiting for the
-  // web's results drew the answer in the left column, then moved it.
-  placeSide.ready = true;
-  placeSide();
-
-  // --- Hister in General (first page) -----------------------------------------------
-
-  // The web's reply, once it's in (null without one): a search of yours
-  // that found nothing borrows a respelling from its related searches.
-  let webArrived;
-  const webReply = new Promise((resolve) => (webArrived = resolve));
-  const suggest = () => webReply.then((d) => (d && d.suggestions) || []);
-  if (webLike) didYouMeanLine(suggest());
-
-  let histerDocs = [];
-  // On All your pages and notes have no sections: a page of each goes
-  // among the web results (mixIn, below), each card saying whose it is,
-  // and their totals go on the Pages and Notes pills.
-  let myPages = [];
-  let myNotes = [];
-  const showHister = category === 'general' && settings.histerInGeneral && page === 1 && !!histerBase;
-  // The Code pill's count (Hister's own index, nothing spent); code is never listed on All.
-  if (category === 'general' && page === 1 && hasCode && histerBase && q) {
-    histerSearch(S.codeQuery(q), 1).then((r) => setPillCount('code', (r && r.total) || 0)).catch(() => {});
-  }
-  const showVault = category === 'general' && settings.vaultInGeneral && page === 1 && !!notesBase;
-  // Your notes, from Kura or Hister (Hister's page searches leave them out).
-  const vaultResult = !showVault
-    ? Promise.resolve(null)
-    : pageState.vault
-      ? Promise.resolve(pageState.vault)
-      : (notesFromHister ? histerNotes(q, { limit: ALL_COUNT }) : kuraNotes(q, { limit: ALL_COUNT })).then((r) => {
-          pageState.vault = r;
-          saveState();
-          return r;
-        });
-  /** A count on a pill (Pages, Notes), kept for the header's redraws. */
-  function setPillCount(cat, n) {
-    if (!n) return;
-    pillCounts[cat] = n.toLocaleString();
-    try {
-      sessionStorage.setItem(PILL_COUNTS_KEY, JSON.stringify({ for: pillCountsFor, counts: pillCounts }));
-    } catch (_) {}
-    const pill = document.querySelector(`#categories a[data-cat="${cat}"]`);
-    if (!pill) return;
-    pill.querySelector('.pill-count')?.remove();
-    pill.append(el('span', { class: 'pill-count' }, pillCounts[cat]));
-  }
-
-  /**
-   * Your pages, notes and media among the web results: taking turns
-   * (S.alternate), spread evenly from the first web result to the last
-   * (S.mixCounts), each card saying whose it is. With no web results,
-   * the list is theirs. Again when media answers late: the cards are
-   * placed afresh.
-   */
-  let mixedOnce = false;
-  function mixIn() {
-    mixedOnce = true;
-    const mine = S.alternate(myPages, myNotes, myMedia).filter(Boolean);
-    if (!mine.length) return;
-    const list = $('web-results');
-    for (const card of mine) card.remove();
-    const web = [...list.children];
-    for (const card of mine) {
-      card.classList.add('mixed');
-      const title = card.querySelector('.title');
-      if (title) title.dataset.label = card.classList.contains('vault-card') ? 'Your note' : card.classList.contains('media-card') ? 'Your media' : 'Your page';
-    }
-    const counts = S.mixCounts(web.length, mine.length);
-    let next = 0;
-    if (!web.length) list.append(...mine);
-    web.forEach((card, i) => {
-      card.after(...mine.slice(next, next + counts[i]));
-      next += counts[i];
-    });
-    $('web').hidden = false;
-  }
-
-  /** A section with nothing to show: its heading, faded, and why. */
-  function emptySection(section, count, why) {
-    section.classList.add('empty');
-    count.textContent = why;
-    section.querySelector('.fold-head')?.setAttribute('aria-expanded', 'false');
-    section.hidden = false;
-  }
-
-  // Whether Hister or Kura answered at all (found nothing, or asked for the
-  // sign-in): then the server is in reach, and a slow web doesn't send the
-  // page away to DuckDuckGo.
-  let answered = false;
-  // Your Media on All (first page): like your pages and notes, no section of its own; its top items go among the
-  // web results (mixIn), and its total on the Media pill. Never in the Back copy, the AI Answer (that sends only the
-  // words) or Remember What You Open (pages and notes only).
-  let myMedia = [];
-  const mediaDone = category === 'general' && page === 1 && mediaOn && q
-    ? S.mediaSearch(mediaServices, q, mediaGet).then((res) => {
-        if (!res.items.length) return;
-        answered = true;
-        setPillCount('media', res.items.length);
-        myMedia = res.items.slice(0, ALL_COUNT).map((item) => mediaCard(item));
-      }).catch(() => {})
-    : Promise.resolve();
-  // The media services can be slow: the results wait for them a moment, then a late answer is mixed in after.
-  const mediaWait = () => Promise.race([mediaDone, new Promise((r) => setTimeout(r, MEDIA_WAIT_MS))]);
-  mediaDone.then(() => { if (mixedOnce && myMedia.length && !myMedia[0].isConnected) mixIn(); });
-  // Yours that failed while the rest shows: said under the results, with
-  // Try Again, rather than read as "none of yours".
-  const yoursFailed = [];
-  const sayYoursFailed = () => {
-    if (!yoursFailed.length) return;
-    const again = el('a', { href: location.href }, 'Try Again');
-    again.addEventListener('click', (e) => (e.preventDefault(), location.reload()));
-    $('web').hidden = false;
-    $('web-status').append(`${yoursFailed.join(' and ')} didn't load. `, again);
-  };
-  const histerDone = (async () => {
-    if (!showHister) return;
-    try {
-      let result = pageState.hister;
+    if (isNoteTab(category)) {
+      didYouMeanLine([]);
+      const vault = category === 'vault';
+      // Files: Hister's watched folders, the same search asking for them alone.
+      const files = category === 'files';
+      // Code: your repos, with their filters.
+      const code = category === 'code';
+      $('web').hidden = false;
+      $('web-title').textContent = vault ? 'Your Notes' : files ? 'Your Files' : code ? 'Your Code' : 'Your Pages';
+      // The list's own choices (Best match or Newest, the vault) in the quiet
+      // row under the pills, where the web's tabs have their time range.
+      const controls = el('div', { class: 'list-controls', role: 'group', 'aria-label': 'Sort and vault' });
+      $('tools-row').append(controls);
+      controls.append($('sort-label'));
+      if (code) $('web-results').before(codeFilterBar());
+      if (vault && !notesBase) return showStatus(notesFromHister ? 'No Hister server is set up.' : 'No Kura address is set up (Settings → Search → Notes).');
+      if (!vault && !histerBase) return showStatus('No Hister server is set up.');
+      let result = pageState[category];
+      // From Hister: the default vault's notes alone, so no vault menu.
+      if (vault && !notesFromHister) {
+        await vaultsReady();
+        // Which vaults: All, or one (work vaults are searchable in Notes).
+        if (kuraVaults.length > 1) {
+          const select = el(
+            'select',
+            { id: 'vault-select', 'aria-label': 'Vault' },
+            el('option', { value: 'all' }, 'All Vaults'),
+            ...kuraVaults.map((v) => el('option', { value: v.name }, v.title || v.name)),
+          );
+          select.value = kuraVaults.some((v) => v.name === vaultParam) ? vaultParam : 'all';
+          select.addEventListener('change', () => goTo(link({ v: select.value, p: 1 })));
+          controls.prepend(select);
+        }
+      }
+      if (!result && vault && notesFromHister) {
+        // Hister pages by its page key, as for your pages.
+        try {
+          result = await histerNotes(q, { limit: PAGE_SIZE, page_key: histerKey, sort: histerSort === 'new' ? 'date' : '' });
+          pageState[category] = result;
+          saveState(run);
+        } catch (_) {
+          return showStatus('Hister could not be reached.');
+        }
+      }
+      if (!result && vault) {
+        // Kura pages by offset; a marker page key keeps the Next link below.
+        try {
+          const offset = (page - 1) * PAGE_SIZE;
+          result = await kuraNotes(q, { limit: PAGE_SIZE, offset, sort: histerSort === 'new' ? 'date' : 'relevance', vault: vaultParam });
+          result.page_key = offset + result.documents.length < result.total ? 'kura' : '';
+          pageState[category] = result;
+          saveState(run);
+        } catch (error) {
+          if (error && error.status === 401) return showStatus(...signInNote('Kura', error));
+          return showStatus('Kura could not be reached.');
+        }
+      }
       if (!result) {
-        // Hister sends no notes (S.histerText), so five is five; in Hister's own order.
-        result = await histerOrClose(q, ALL_COUNT, { highlight: 'HTML' }, undefined, suggest, { ranked: true });
-        pageState.hister = result;
-        saveState();
+        try {
+          const extra = { highlight: 'HTML' };
+          if (histerKey) extra.page_key = histerKey;
+          if (histerSort === 'new') extra.sort = 'date';
+          result = files
+            ? await histerSearch(S.filesQuery(q), PAGE_SIZE, extra)
+            : code
+              ? await histerSearch(S.codeQuery(q, codeFiltersFromAddress()), PAGE_SIZE, extra)
+              : await histerOrClose(q, PAGE_SIZE, extra, undefined, () => webSuggestions(q));
+          pageState[category] = result;
+          saveState(run);
+        } catch (_) {
+          return showStatus('Hister could not be reached.');
+        }
       }
-      answered = true;
-      histerDocs = S.uniqueItems(result.documents || []).slice(0, ALL_COUNT);
-      if (result.closeMatches) $('hister-title').textContent = `Your Pages · for “${result.closeMatches}”`;
-      if (!histerDocs.length && !(result.history || []).length) return;
-      const first = withOpened(result, histerDocs, { skipNotes: true });
-      // At most "How Many": the pages you opened (lifted to the top) count
-      // toward it (it showed 6 with 5 chosen).
-      first.cards = first.cards.slice(0, ALL_COUNT);
-      first.docs = first.docs.slice(0, Math.max(0, ALL_COUNT - first.cards.length));
-      if (!first.cards.length && !first.docs.length) return;
-      // The pages you opened (lifted to the top) first, then the rest.
-      myPages = [...first.cards, ...first.docs.map(histerCard)];
-      const shown = first.cards.length + first.docs.length;
-      // Hister counts the pages you opened in its total, and they're shown.
-      setPillCount('hister', Math.max(result.total || 0, shown));
-    } catch (error) {
-      // Hister unreachable: the web block (or the fallback) carries on.
-      if (error && error.status) answered = true;
-      yoursFailed.push('Your Pages');
+      // Pages is your web pages: Hister sends no notes, but an opened one
+      // (Hister's `history` carries no label) is known by its address.
+      const pageOf = (d) => d.label !== 'vault' && !S.isNoteURL(d.url, niwaBase, konbiniBase);
+      // One video once, under whichever address Hister holds it (S.uniqueItems).
+      let docs = (result.documents || []).filter((d) => vault || pageOf(d));
+      if (!vault) docs = S.uniqueItems(docs);
+      if (!docs.length && !(!vault && (result.history || []).some((h) => pageOf(h)))) {
+        return showStatus(vault ? 'No notes in the vault match.' : files ? 'None of your files match.' : code ? 'None of your code matches.' : 'None of your pages match.');
+      }
+      // The heading shows only here, to say the list is for another spelling.
+      if (result.closeMatches) {
+        $('web-title').textContent += ` · for “${result.closeMatches}”`;
+        $('web-title').hidden = false;
+      }
+      const cards = vault ? await konbiniCards() : [];
+      let lifted = 0;
+      if (!vault && !files && !code && page === 1) {
+        const first = withOpened(result, docs, { skipNotes: true });
+        for (const card of first.cards) $('web-results').append(card);
+        lifted = first.cards.length;
+        docs = first.docs;
+      }
+      appendFolded($('web-results'), docs, (d) => (vault ? vaultCard(d, cards) : files ? fileCard(d) : code ? codeCard(d) : histerCard(d)));
+      const from = (page - 1) * PAGE_SIZE + 1;
+      const noun = vault ? 'notes' : files ? 'files' : code ? 'results' : 'pages';
+      // Hister's total is your pages alone (notes are Kura's), so both can say "of".
+      $('timing').textContent = `${from}–${from + lifted + docs.length - 1} of ${(result.total || docs.length).toLocaleString()} ${noun}`;
+      // Hister's own search page: the rooms' Hister address on a hosted page
+      // (this host's `/` is this page), the extension's server otherwise.
+      const histerUI = S.histerUIBase('__SHIORI_ROOMS__', histerBase, /^https?:$/.test(location.protocol) ? location.origin : '');
+      $('hister-more-tab').href = `${histerUI}?q=${encodeURIComponent(files ? S.filesQuery(q) : code ? S.codeQuery(q, codeFiltersFromAddress()) : q)}`;
+      // "Open in Hister" is for Hister's own results, not Kura's.
+      $('hister-more-tab').hidden = vault || !histerUI;
+      $('pages').hidden = false;
+      // A close-match page key belongs to the other spelling: no next page.
+      if (result.page_key && docs.length >= PAGE_SIZE && !result.closeMatches) $('next').href = link({ p: page + 1, hk: result.page_key });
+      else $('next').hidden = true;
+      if (page > 1) {
+        $('prev').hidden = false;
+        $('prev').addEventListener('click', (e) => (e.preventDefault(), history.back()));
+      }
+      return restoreScroll();
     }
-  })();
 
-  // --- the vault in General (first page) ----------------------------------------------
+    // --- The AI answer (All, first page) ------------------------------------------------
+    // The AI endpoint answers the search from the web results' snippets
+    // (/shiori/ai/answer; it runs the search on SearXNG itself and fetches
+    // no pages). Only when opened: a collapsed section costs nothing, and a
+    // page reopened on Back redraws its answer from the page's own copy.
+    (async () => {
+      const section = $('answer');
+      const text = S.webQuery(q);
+      if (!aiBase || !webLike || page !== 1 || !settings.webResults || settings.aiAnswer === false || !text || S.hasBang(q)) return;
+      const status = await aiStatus;
+      if (!status || !status.enabled || !status.answer) return;
+      const body = $('answer-body');
+      const head = section.querySelector('.fold-head');
+      const button = (label, title, onclick) => {
+        const b = el('button', { type: 'button', class: 'summary-button', title, 'aria-label': title }, label);
+        b.addEventListener('click', onclick);
+        return b;
+      };
+      function draw(state) {
+        if (state.working) {
+          return body.replaceChildren(el('p', { class: 'summary-working' }, el('span', { class: 'summary-spinner', 'aria-hidden': 'true' }), 'Answering…'));
+        }
+        if (state.error) {
+          return body.replaceChildren(el('p', {}, state.error), button('Try Again', 'Answer again', () => load(false)));
+        }
+        const reply = state.reply;
+        const sources = S.citedSources(reply.answer, reply.sources);
+        const byNumber = new Map(sources.map((src) => [Number(src.n), src]));
+        const paragraph = (line) => {
+          const node = el('span');
+          for (const run of S.answerRuns(line)) {
+            const src = run.cite && byNumber.get(run.cite);
+            if (run.text) node.append(run.text);
+            else if (src) node.append(el('sup', { class: 'cite' }, el('a', { href: src.url, title: src.title || src.url }, String(run.cite))));
+          }
+          return node;
+        };
+        const parts = S.summaryParts(reply.answer);
+        body.replaceChildren(
+          parts.opening ? el('p', {}, paragraph(parts.opening)) : null,
+          parts.points.length ? el('ul', {}, ...parts.points.map((p) => el('li', {}, paragraph(p)))) : null,
+          sources.length
+            ? el('ol', { class: 'answer-sources' }, ...sources.map((src) => el('li', { value: String(src.n) }, el('a', { href: src.url }, S.decodeEntities(src.title) || src.url), ' ', el('span', { class: 'origin' }, S.breadcrumb(src.url).origin))))
+            : null,
+          el(
+            'p',
+            { class: 'summary-byline' },
+            S.summaryByline(reply) + ' · from the web results\u2019 snippets ',
+            button('Copy', 'Copy the answer', () => navigator.clipboard.writeText(reply.answer).catch(() => {})),
+            ' ',
+            button('Regenerate', 'Answer again', () => load(true)),
+          ),
+        );
+      }
+      let loading = false;
+      async function load(refresh) {
+        if (loading) return;
+        if (!refresh && pageState.answer) return draw({ reply: pageState.answer });
+        loading = true;
+        draw({ working: true });
+        try {
+          pageState.answer = await aiPost('answer', { q: text, refresh: !!refresh }, (b) => typeof b.answer === 'string');
+          saveState(run);
+          draw({ reply: pageState.answer });
+        } catch (error) {
+          draw({ error: error.message });
+        } finally {
+          loading = false;
+        }
+      }
+      fold(section, false);
+      head.addEventListener('click', () => {
+        if (head.getAttribute('aria-expanded') === 'true') load(false);
+      });
+      section.hidden = false;
+      if (head.getAttribute('aria-expanded') === 'true') load(false);
+    })();
 
-  let vaultDocs = [];
-  const vaultDone = (async () => {
-    if (!showVault) return;
-    try {
-      const result = await vaultResult;
-      if (!result) return;
-      answered = true;
-      vaultDocs = result.documents || [];
-      if (result.closeMatches) $('vault-title').textContent = `Your Notes · for “${result.closeMatches}”`;
-      if (!vaultDocs.length) return;
-      const cards = await konbiniCards();
-      myNotes = vaultDocs.slice(0, ALL_COUNT).map((d) => vaultCard(d, cards));
-      setPillCount('vault', Math.max(result.total || 0, vaultDocs.length));
-    } catch (error) {
-      if (error && error.status) answered = true;
-      if (!(error && error.status === 401)) yoursFailed.push('Your Notes');
-      // Kura wants the sign-in: said where the notes would be. Not inside
-      // the heading's button, whose link Safari would never follow: the
-      // heading becomes a plain row (nothing to fold).
-      if (error && error.status === 401) {
-        const head = $('vault').querySelector('.fold-head');
-        const row = el('div', { class: 'fold-head' }, ...head.childNodes);
-        head.replaceWith(row);
-        emptySection($('vault'), $('vault-count'), '');
-        $('vault').classList.add('signin');
-        $('vault-count').replaceChildren(...signInNote('Kura', error));
+    // --- Hold the page until the web is in (All, first page) -------------------------
+    // The Info card comes with the web results, a second after your pages:
+    // drawing those first made the page jump when it arrived. So the results
+    // wait, unseen under the shimmering placeholders, until the web is in or
+    // has failed (restoreScroll() settles every path). Not a fixed time: on
+    // All your pages and notes are drawn among the web's results, so a page
+    // shown before the web was in was empty but for the AI answer.
+    const holding = webLike && page === 1 && settings.webResults && settings.showInfobox !== false && !!searxBase;
+    // var: restoreScroll() calls settle() on paths that return before here.
+    var settled = false;
+    function settle() {
+      if (settled || !live()) return;
+      settled = true;
+      document.body.classList.remove('settling');
+    }
+    if (holding) {
+      document.body.classList.add('settling');
+      // Only a stop for a path that never settles (an error): the web gives
+      // up after WEB_TIMEOUT_MS, and the Wikipedia lookup waits 3 s more.
+      setTimeout(settle, WEB_TIMEOUT_MS + 5000);
+    }
+
+    // The right column (a wide window) takes the AI answer and Related
+    // Searches from the start: two-col is settled by now. Waiting for the
+    // web's results drew the answer in the left column, then moved it.
+    placeSide.ready = true;
+    placeSide();
+
+    // --- Hister in General (first page) -----------------------------------------------
+
+    // The web's reply, once it's in (null without one): a search of yours
+    // that found nothing borrows a respelling from its related searches.
+    let webArrived;
+    const webReply = new Promise((resolve) => (webArrived = resolve));
+    const suggest = () => webReply.then((d) => (d && d.suggestions) || []);
+    if (webLike) didYouMeanLine(suggest());
+
+    let histerDocs = [];
+    // On All your pages and notes have no sections: a page of each goes
+    // among the web results (mixIn, below), each card saying whose it is,
+    // and their totals go on the Pages and Notes pills.
+    let myPages = [];
+    let myNotes = [];
+    const showHister = category === 'general' && settings.histerInGeneral && page === 1 && !!histerBase;
+    // The Code pill's count (Hister's own index, nothing spent); code is never listed on All.
+    if (category === 'general' && page === 1 && hasCode && histerBase && q) {
+      histerSearch(S.codeQuery(q), 1).then((r) => setPillCount('code', (r && r.total) || 0)).catch(() => {});
+    }
+    const showVault = category === 'general' && settings.vaultInGeneral && page === 1 && !!notesBase;
+    // Your notes, from Kura or Hister (Hister's page searches leave them out).
+    const vaultResult = !showVault
+      ? Promise.resolve(null)
+      : pageState.vault
+        ? Promise.resolve(pageState.vault)
+        : (notesFromHister ? histerNotes(q, { limit: ALL_COUNT }) : kuraNotes(q, { limit: ALL_COUNT })).then((r) => {
+            pageState.vault = r;
+            saveState(run);
+            return r;
+          });
+    /** A count on a pill (Pages, Notes), kept for the header's redraws. */
+    function setPillCount(cat, n) {
+      if (!n) return;
+      pillCounts[cat] = n.toLocaleString();
+      try {
+        sessionStorage.setItem(PILL_COUNTS_KEY, JSON.stringify({ for: pillCountsFor, counts: pillCounts }));
+      } catch (_) {}
+      const pill = document.querySelector(`#categories a[data-cat="${cat}"]`);
+      if (!pill) return;
+      pill.querySelector('.pill-count')?.remove();
+      pill.append(el('span', { class: 'pill-count' }, pillCounts[cat]));
+    }
+
+    /**
+     * Your pages, notes and media among the web results: taking turns
+     * (S.alternate), spread evenly from the first web result to the last
+     * (S.mixCounts), each card saying whose it is. With no web results,
+     * the list is theirs. Again when media answers late: the cards are
+     * placed afresh.
+     */
+    let mixedOnce = false;
+    function mixIn() {
+      mixedOnce = true;
+      const mine = S.alternate(myPages, myNotes, myMedia).filter(Boolean);
+      if (!mine.length) return;
+      const list = $('web-results');
+      for (const card of mine) card.remove();
+      const web = [...list.children];
+      for (const card of mine) {
+        card.classList.add('mixed');
+        const title = card.querySelector('.title');
+        if (title) title.dataset.label = card.classList.contains('vault-card') ? 'Your note' : card.classList.contains('media-card') ? 'Your media' : 'Your page';
+      }
+      const counts = S.mixCounts(web.length, mine.length);
+      let next = 0;
+      if (!web.length) list.append(...mine);
+      web.forEach((card, i) => {
+        card.after(...mine.slice(next, next + counts[i]));
+        next += counts[i];
+      });
+      $('web').hidden = false;
+    }
+
+    /** A section with nothing to show: its heading, faded, and why. */
+    function emptySection(section, count, why) {
+      section.classList.add('empty');
+      count.textContent = why;
+      section.querySelector('.fold-head')?.setAttribute('aria-expanded', 'false');
+      section.hidden = false;
+    }
+
+    // Whether Hister or Kura answered at all (found nothing, or asked for the
+    // sign-in): then the server is in reach, and a slow web doesn't send the
+    // page away to DuckDuckGo.
+    let answered = false;
+    // Your Media on All (first page): like your pages and notes, no section of its own; its top items go among the
+    // web results (mixIn), and its total on the Media pill. Never in the Back copy, the AI Answer (that sends only the
+    // words) or Remember What You Open (pages and notes only).
+    let myMedia = [];
+    const mediaDone = category === 'general' && page === 1 && mediaOn && q
+      ? S.mediaSearch(mediaServices, q, mediaGet).then((res) => {
+          if (!res.items.length) return;
+          answered = true;
+          setPillCount('media', res.items.length);
+          myMedia = res.items.slice(0, ALL_COUNT).map((item) => mediaCard(item));
+        }).catch(() => {})
+      : Promise.resolve();
+    // The media services can be slow: the results wait for them a moment, then a late answer is mixed in after.
+    const mediaWait = () => Promise.race([mediaDone, new Promise((r) => setTimeout(r, MEDIA_WAIT_MS))]);
+    mediaDone.then(() => { if (mixedOnce && myMedia.length && !myMedia[0].isConnected) mixIn(); });
+    // Yours that failed while the rest shows: said under the results, with
+    // Try Again, rather than read as "none of yours".
+    const yoursFailed = [];
+    const sayYoursFailed = () => {
+      if (!yoursFailed.length) return;
+      const again = el('a', { href: location.href }, 'Try Again');
+      again.addEventListener('click', (e) => (e.preventDefault(), location.reload()));
+      $('web').hidden = false;
+      $('web-status').append(`${yoursFailed.join(' and ')} didn't load. `, again);
+    };
+    const histerDone = (async () => {
+      if (!showHister) return;
+      try {
+        let result = pageState.hister;
+        if (!result) {
+          // Hister sends no notes (S.histerText), so five is five; in Hister's own order.
+          result = await histerOrClose(q, ALL_COUNT, { highlight: 'HTML' }, undefined, suggest, { ranked: true });
+          pageState.hister = result;
+          saveState(run);
+        }
+        answered = true;
+        histerDocs = S.uniqueItems(result.documents || []).slice(0, ALL_COUNT);
+        if (result.closeMatches) $('hister-title').textContent = `Your Pages · for “${result.closeMatches}”`;
+        if (!histerDocs.length && !(result.history || []).length) return;
+        const first = withOpened(result, histerDocs, { skipNotes: true });
+        // At most "How Many": the pages you opened (lifted to the top) count
+        // toward it (it showed 6 with 5 chosen).
+        first.cards = first.cards.slice(0, ALL_COUNT);
+        first.docs = first.docs.slice(0, Math.max(0, ALL_COUNT - first.cards.length));
+        if (!first.cards.length && !first.docs.length) return;
+        // The pages you opened (lifted to the top) first, then the rest.
+        myPages = [...first.cards, ...first.docs.map(histerCard)];
+        const shown = first.cards.length + first.docs.length;
+        // Hister counts the pages you opened in its total, and they're shown.
+        setPillCount('hister', Math.max(result.total || 0, shown));
+      } catch (error) {
+        // Hister unreachable: the web block (or the fallback) carries on.
+        if (error && error.status) answered = true;
+        yoursFailed.push('Your Pages');
+      }
+    })();
+
+    // --- the vault in General (first page) ----------------------------------------------
+
+    let vaultDocs = [];
+    const vaultDone = (async () => {
+      if (!showVault) return;
+      try {
+        const result = await vaultResult;
+        if (!result) return;
+        answered = true;
+        vaultDocs = result.documents || [];
+        if (result.closeMatches) $('vault-title').textContent = `Your Notes · for “${result.closeMatches}”`;
+        if (!vaultDocs.length) return;
+        const cards = await konbiniCards();
+        myNotes = vaultDocs.slice(0, ALL_COUNT).map((d) => vaultCard(d, cards));
+        setPillCount('vault', Math.max(result.total || 0, vaultDocs.length));
+      } catch (error) {
+        if (error && error.status) answered = true;
+        if (!(error && error.status === 401)) yoursFailed.push('Your Notes');
+        // Kura wants the sign-in: said where the notes would be. Not inside
+        // the heading's button, whose link Safari would never follow: the
+        // heading becomes a plain row (nothing to fold).
+        if (error && error.status === 401) {
+          const head = $('vault').querySelector('.fold-head');
+          const row = el('div', { class: 'fold-head' }, ...head.childNodes);
+          head.replaceWith(row);
+          emptySection($('vault'), $('vault-count'), '');
+          $('vault').classList.add('signin');
+          $('vault-count').replaceChildren(...signInNote('Kura', error));
+        }
+      }
+    })();
+
+    // --- web block -------------------------------------------------------------------
+
+    const wq = S.webQuery(q);
+    if (!wq || !settings.webResults || !searxBase) webArrived(null);
+    if (!wq || !settings.webResults) {
+      await histerDone;
+      await vaultDone;
+      await mediaWait();
+      mixIn();
+      if (yoursFailed.length) sayYoursFailed();
+      else if (!histerDocs.length && !vaultDocs.length) {
+        showStatus(settings.webResults ? 'No pages in Hister match.' : 'Nothing in your pages or notes matches.');
+      }
+      return restoreScroll();
+    }
+    if (!searxBase) {
+      await histerDone;
+      $('web').hidden = false;
+      $('web-status').replaceChildren('No web search is set up. ', el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'));
+      return restoreScroll();
+    }
+
+    const started = performance.now();
+    let data = pageState.web;
+    // "wiki" as a word: Wikipedia's article first, with its Info card. The
+    // search without the word runs only if the typed one finds no article in
+    // the reader's language (every web search counts: frugal, as AI is).
+    const wikiWords = page === 1 && webLike ? S.wikiQuery(wq) : null;
+    const wikiAlt = wikiWords && !(data && data.shioriWiki) ? () => searx(wikiWords).catch(() => null) : () => Promise.resolve(null);
+    if (!data) {
+      const url = new URL(`${searxBase}search`);
+      url.search = new URLSearchParams({ q: wq, format: 'json', pageno: String(page), categories: webLike ? 'general' : category }).toString();
+      if (time) url.searchParams.set('time_range', time);
+      try {
+        data = await fetchJSON(url.href, { timeout: page === 1 && webLike ? WEB_TIMEOUT_MS : 10000 });
+        pageState.web = data;
+        saveState(run);
+      } catch (err) {
+        webArrived(null);
+        // Cancelled (the page being left, or an abort other than our wait):
+        // not the web failing. Nothing to say, and nowhere to go.
+        if (leaving() || (err && err.name === 'AbortError' && !err.timedOut)) return;
+        // A stock SearXNG answers 403 to format=json: say so, rather than empty results or a jump to DuckDuckGo.
+        if (err && err.status === 403) {
+          await histerDone;
+          await vaultDone;
+          await mediaWait();
+          reveal();
+          $('web').hidden = false;
+          $('web-status').replaceChildren(
+            "SearXNG doesn't allow JSON results: turn on formats: json under search: in its settings.yml. ",
+            el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'),
+          );
+          if (yoursFailed.length) {
+            $('web-status').append(el('br'));
+            sayYoursFailed();
+          }
+          mixIn();
+          return restoreScroll();
+        }
+        if (page === 1 && webLike) {
+          await histerDone;
+          await vaultDone;
+          await mediaWait();
+          // Nothing answered at all (VPN off): plain DuckDuckGo, without a
+          // trace here. With your pages or notes on screen, or Hister or Kura
+          // answering (nothing found, a sign-in asked), stay and say so: a
+          // slow web alone sent the page away (the jump away was jarring).
+          if (leaving() || !live()) return;
+          if (!histerDocs.length && !vaultDocs.length && !answered) {
+            location.replace(S.fallbackURL(q));
+            return;
+          }
+          reveal();
+          $('web').hidden = false;
+          // Try Again asks afresh (Reload never redraws from the saved copy).
+          const again = el('a', { href: location.href }, 'Try Again');
+          again.addEventListener('click', (e) => (e.preventDefault(), location.reload()));
+          $('web-status').replaceChildren(
+            "Web results didn't answer. ",
+            again,
+            ' · ',
+            el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'),
+          );
+          if (yoursFailed.length) {
+            $('web-status').append(el('br'));
+            sayYoursFailed();
+          }
+          mixIn();
+          return restoreScroll();
+        }
+        await histerDone;
+        showStatus('SearXNG could not be reached.');
+        return;
       }
     }
-  })();
-
-  // --- web block -------------------------------------------------------------------
-
-  const wq = S.webQuery(q);
-  if (!wq || !settings.webResults || !searxBase) webArrived(null);
-  if (!wq || !settings.webResults) {
+    if (wikiWords && !data.shioriWiki) {
+      data.shioriWiki = (await Promise.race([findWikipedia(data, wikiAlt), new Promise((r) => setTimeout(r, 3000))])) || {};
+      pageState.web = data;
+      saveState(run);
+    }
+    const wiki = data.shioriWiki || {};
+    webArrived(data);
+    const seconds = ((performance.now() - started) / 1000).toFixed(1);
     await histerDone;
     await vaultDone;
     await mediaWait();
-    mixIn();
-    if (yoursFailed.length) sayYoursFailed();
-    else if (!histerDocs.length && !vaultDocs.length) {
-      showStatus(settings.webResults ? 'No pages in Hister match.' : 'Nothing in your pages or notes matches.');
+    sayYoursFailed();
+
+    const corrections = (data.corrections || []).filter((c) => typeof c === 'string' && c !== wq);
+    if (corrections.length) {
+      $('correction').replaceChildren(
+        'Did you mean ',
+        el('a', { href: link({ q: corrections[0], p: 1 }) }, corrections[0]),
+        '?',
+      );
+      $('correction').hidden = false;
     }
-    return restoreScroll();
-  }
-  if (!searxBase) {
-    await histerDone;
+    const box = wiki.infobox || (data.infoboxes && data.infoboxes[0]);
+    if (settings.showInfobox && webLike && page === 1 && box) {
+      $('infobox-slot').querySelector('.infobox')?.remove();
+      $('infobox-slot').append(infobox(box)); // last, under the AI answer and Related Searches
+    }
+    const suggestions = (data.suggestions || []).filter((s) => typeof s === 'string' && s !== wq).slice(0, 8);
+    function drawRelated(list) {
+      for (const s of list) {
+        $('suggestion-list').append(el('li', {}, el('a', { href: link({ q: s, p: 1 }) }, s)));
+      }
+      // A compact row, shut until opened (then remembered, as fold() does).
+      fold($('suggestions'));
+      $('suggestions').hidden = false;
+    }
+    if (settings.showRelated && page === 1 && webLike) {
+      if (suggestions.length) drawRelated(suggestions);
+      // The engines that send related searches drop out now and then (a
+      // CAPTCHA, a rate limit): the autocomplete's completions stand in.
+      else {
+        webAutocomplete().then((auto) => {
+          const typed = wq.toLowerCase();
+          const list = auto.filter((s) => s.toLowerCase() !== typed).slice(0, 8);
+          if (list.length && $('suggestions').hidden) drawRelated(list);
+        });
+      }
+    }
+
+    const results = S.wikiFirst(data.results, wiki.article, wiki.found).filter((r) => r && isHTTP(r.url));
     $('web').hidden = false;
-    $('web-status').replaceChildren('No web search is set up. ', el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'));
-    return restoreScroll();
-  }
+    placeSide(); // lined up again with the results drawn
+    $('web-title').textContent = webLike ? 'Web' : CATEGORIES.find(([c]) => c === category)[1];
+    const count = data.number_of_results > 0 ? `${data.number_of_results.toLocaleString()} results · ` : '';
+    $('timing').textContent = cached ? count.replace(/ · $/, '') : `${count}${seconds} s`;
+    $('engines').textContent = S.engineHealthLine(S.unansweredEngines(data));
 
-  const started = performance.now();
-  let data = pageState.web;
-  // "wiki" as a word: Wikipedia's article first, with its Info card. The
-  // search without the word runs only if the typed one finds no article in
-  // the reader's language (every web search counts: frugal, as AI is).
-  const wikiWords = page === 1 && webLike ? S.wikiQuery(wq) : null;
-  const wikiAlt = wikiWords && !(data && data.shioriWiki) ? () => searx(wikiWords).catch(() => null) : () => Promise.resolve(null);
-  if (!data) {
-    const url = new URL(`${searxBase}search`);
-    url.search = new URLSearchParams({ q: wq, format: 'json', pageno: String(page), categories: webLike ? 'general' : category }).toString();
-    if (time) url.searchParams.set('time_range', time);
-    try {
-      data = await fetchJSON(url.href, { timeout: page === 1 && webLike ? WEB_TIMEOUT_MS : 10000 });
-      pageState.web = data;
-      saveState();
-    } catch (err) {
-      webArrived(null);
-      // Cancelled (the page being left, or an abort other than our wait):
-      // not the web failing. Nothing to say, and nowhere to go.
-      if (leaving() || (err && err.name === 'AbortError' && !err.timedOut)) return;
-      // A stock SearXNG answers 403 to format=json: say so, rather than empty results or a jump to DuckDuckGo.
-      if (err && err.status === 403) {
-        await histerDone;
-        await vaultDone;
-        await mediaWait();
-        reveal();
-        $('web').hidden = false;
-        $('web-status').replaceChildren(
-          "SearXNG doesn't allow JSON results: turn on formats: json under search: in its settings.yml. ",
-          el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'),
-        );
-        if (yoursFailed.length) {
-          $('web-status').append(el('br'));
-          sayYoursFailed();
+    if (!results.length) {
+      showStatus('No web results.');
+    } else if (category === 'images') {
+      // 60 tiles at a time; the rest on request.
+      $('images').hidden = false;
+      const tiles = results.map(imageTile).filter(Boolean);
+      $('images').dataset.total = String(tiles.length);
+      let shown = 0;
+      const more = el('button', { type: 'button', class: 'page-button show-more' }, 'Show more images');
+      const showMore = () => {
+        for (const tile of tiles.slice(shown, shown + 60)) $('images').append(tile);
+        shown += 60;
+        more.hidden = shown >= tiles.length;
+      };
+      more.addEventListener('click', showMore);
+      showMore();
+      $('images').after(el('p', { class: 'more' }, more));
+    } else if (category === 'general' && page === 1) {
+      // A web result that's one of your pages is one entry: your page, in the
+      // web's place (a "wiki" search's article stays first), its title opening
+      // the website. The rest of yours are mixed in after (mixIn).
+      const fold = S.foldMine(results.map((r) => r.url), myPages.map((card) => card.dataset.preview));
+      const cards = [];
+      for (const row of fold.rows) {
+        if (row.mine >= 0) {
+          const card = myPages[row.mine];
+          card.classList.add('mixed');
+          const title = card.querySelector('.title');
+          if (title) title.dataset.label = 'Your page';
+          $('web-results').append(card);
+          continue;
         }
-        mixIn();
-        return restoreScroll();
-      }
-      if (page === 1 && webLike) {
-        await histerDone;
-        await vaultDone;
-        await mediaWait();
-        // Nothing answered at all (VPN off): plain DuckDuckGo, without a
-        // trace here. With your pages or notes on screen, or Hister or Kura
-        // answering (nothing found, a sign-in asked), stay and say so: a
-        // slow web alone sent the page away (the jump away was jarring).
-        if (leaving()) return;
-        if (!histerDocs.length && !vaultDocs.length && !answered) {
-          location.replace(S.fallbackURL(q));
-          return;
-        }
-        reveal();
-        $('web').hidden = false;
-        // Try Again asks afresh (Reload never redraws from the saved copy).
-        const again = el('a', { href: location.href }, 'Try Again');
-        again.addEventListener('click', (e) => (e.preventDefault(), location.reload()));
-        $('web-status').replaceChildren(
-          "Web results didn't answer. ",
-          again,
-          ' · ',
-          el('a', { href: S.fallbackURL(q) }, 'Search DuckDuckGo'),
-        );
-        if (yoursFailed.length) {
-          $('web-status').append(el('br'));
-          sayYoursFailed();
-        }
-        mixIn();
-        return restoreScroll();
-      }
-      await histerDone;
-      showStatus('SearXNG could not be reached.');
-      return;
-    }
-  }
-  if (wikiWords && !data.shioriWiki) {
-    data.shioriWiki = (await Promise.race([findWikipedia(data, wikiAlt), new Promise((r) => setTimeout(r, 3000))])) || {};
-    pageState.web = data;
-    saveState();
-  }
-  const wiki = data.shioriWiki || {};
-  webArrived(data);
-  const seconds = ((performance.now() - started) / 1000).toFixed(1);
-  await histerDone;
-  await vaultDone;
-  await mediaWait();
-  sayYoursFailed();
-
-  const corrections = (data.corrections || []).filter((c) => typeof c === 'string' && c !== wq);
-  if (corrections.length) {
-    $('correction').replaceChildren(
-      'Did you mean ',
-      el('a', { href: link({ q: corrections[0], p: 1 }) }, corrections[0]),
-      '?',
-    );
-    $('correction').hidden = false;
-  }
-  const box = wiki.infobox || (data.infoboxes && data.infoboxes[0]);
-  if (settings.showInfobox && webLike && page === 1 && box) {
-    $('infobox-slot').querySelector('.infobox')?.remove();
-    $('infobox-slot').append(infobox(box)); // last, under the AI answer and Related Searches
-  }
-  const suggestions = (data.suggestions || []).filter((s) => typeof s === 'string' && s !== wq).slice(0, 8);
-  function drawRelated(list) {
-    for (const s of list) {
-      $('suggestion-list').append(el('li', {}, el('a', { href: link({ q: s, p: 1 }) }, s)));
-    }
-    // A compact row, shut until opened (then remembered, as fold() does).
-    fold($('suggestions'));
-    $('suggestions').hidden = false;
-  }
-  if (settings.showRelated && page === 1 && webLike) {
-    if (suggestions.length) drawRelated(suggestions);
-    // The engines that send related searches drop out now and then (a
-    // CAPTCHA, a rate limit): the autocomplete's completions stand in.
-    else {
-      webAutocomplete().then((auto) => {
-        const typed = wq.toLowerCase();
-        const list = auto.filter((s) => s.toLowerCase() !== typed).slice(0, 8);
-        if (list.length && $('suggestions').hidden) drawRelated(list);
-      });
-    }
-  }
-
-  const results = S.wikiFirst(data.results, wiki.article, wiki.found).filter((r) => r && isHTTP(r.url));
-  $('web').hidden = false;
-  placeSide(); // lined up again with the results drawn
-  $('web-title').textContent = webLike ? 'Web' : CATEGORIES.find(([c]) => c === category)[1];
-  const count = data.number_of_results > 0 ? `${data.number_of_results.toLocaleString()} results · ` : '';
-  $('timing').textContent = cached ? count.replace(/ · $/, '') : `${count}${seconds} s`;
-  $('engines').textContent = S.engineHealthLine(S.unansweredEngines(data));
-
-  if (!results.length) {
-    showStatus('No web results.');
-  } else if (category === 'images') {
-    // 60 tiles at a time; the rest on request.
-    $('images').hidden = false;
-    const tiles = results.map(imageTile).filter(Boolean);
-    $('images').dataset.total = String(tiles.length);
-    let shown = 0;
-    const more = el('button', { type: 'button', class: 'page-button show-more' }, 'Show more images');
-    const showMore = () => {
-      for (const tile of tiles.slice(shown, shown + 60)) $('images').append(tile);
-      shown += 60;
-      more.hidden = shown >= tiles.length;
-    };
-    more.addEventListener('click', showMore);
-    showMore();
-    $('images').after(el('p', { class: 'more' }, more));
-  } else if (category === 'general' && page === 1) {
-    // A web result that's one of your pages is one entry: your page, in the
-    // web's place (a "wiki" search's article stays first), its title opening
-    // the website. The rest of yours are mixed in after (mixIn).
-    const fold = S.foldMine(results.map((r) => r.url), myPages.map((card) => card.dataset.preview));
-    const cards = [];
-    for (const row of fold.rows) {
-      if (row.mine >= 0) {
-        const card = myPages[row.mine];
-        card.classList.add('mixed');
-        const title = card.querySelector('.title');
-        if (title) title.dataset.label = 'Your page';
+        const r = results[row.web];
+        const card = webCard(r);
         $('web-results').append(card);
-        continue;
+        cards.push([r, card]);
       }
-      const r = results[row.web];
-      const card = webCard(r);
-      $('web-results').append(card);
-      cards.push([r, card]);
+      myPages = fold.rest.map((i) => myPages[i]);
+      markSaved(cards);
+    } else {
+      // Web leaves out what Your Pages showed.
+      const shown = category === 'general' ? S.annotateWeb(results, histerDocs, []) : results;
+      const cards = shown.map((r) => {
+        const card = webCard(r);
+        $('web-results').append(card);
+        return [r, card];
+      });
+      markSaved(cards);
     }
-    myPages = fold.rest.map((i) => myPages[i]);
-    markSaved(cards);
-  } else {
-    // Web leaves out what Your Pages showed.
-    const shown = category === 'general' ? S.annotateWeb(results, histerDocs, []) : results;
-    const cards = shown.map((r) => {
-      const card = webCard(r);
-      $('web-results').append(card);
-      return [r, card];
-    });
-    markSaved(cards);
-  }
-  if (category === 'general' && page === 1) mixIn();
+    if (category === 'general' && page === 1) mixIn();
 
-  // Paging, as SearXNG does it.
-  if (results.length) {
-    $('pages').hidden = false;
-    $('next').href = link({ p: page + 1 });
-    if (page > 1) {
-      $('prev').hidden = false;
-      $('prev').href = link({ p: page - 1 });
+    // Paging, as SearXNG does it.
+    if (results.length) {
+      $('pages').hidden = false;
+      $('next').href = link({ p: page + 1 });
+      if (page > 1) {
+        $('prev').hidden = false;
+        $('prev').href = link({ p: page - 1 });
+      }
     }
+    restoreScroll();
   }
-  restoreScroll();
+  currentRun.initial = true;
+  show(currentRun);
+
+  // --- Tabs switch in place --------------------------------------------------------
+  // Another tab, page, sort or time range of the same search is drawn into a
+  // fresh main beside the one on screen, which stays where it was until the
+  // new results are in (dimmed if they take a moment), then gives way at
+  // once: no blank page between them, no flash. The address follows, and
+  // Back and Forward switch the same way. A new search loads a new page.
+  const SLOW_SWITCH_MS = 3000;
+  /** Goes to `href`: in place when it's this search's, else as a link would. */
+  function goTo(href) {
+    if (!switchTo(href)) location.href = href;
+  }
+  function switchTo(href, push = true) {
+    let url;
+    try {
+      url = new URL(href, location.href);
+    } catch (_) {
+      return false;
+    }
+    if (url.origin !== location.origin || url.pathname !== location.pathname || url.hash) return false;
+    const next = new URLSearchParams(url.search);
+    if ((next.get('q') || '').trim() !== q || next.has('layout')) return false;
+    // The tab already showing (or coming in): nothing to do.
+    if (push && url.search === location.search) return true;
+    if (push) {
+      // The page puts each tab back where it was left (persist's y) itself.
+      history.scrollRestoration = 'manual';
+      history.pushState(null, '', url.search);
+    }
+    startRun(url.search);
+    return true;
+  }
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const a = event.target.closest && event.target.closest('a[href]');
+    if (!a || a.target || a.hasAttribute('download')) return;
+    if (switchTo(a.getAttribute('href'))) event.preventDefault();
+  });
+  addEventListener('popstate', () => {
+    if (location.search === currentRun.search) return;
+    if ((new URLSearchParams(location.search).get('q') || '').trim() !== q) return location.reload();
+    startRun(location.search);
+  });
+
+  function startRun(search) {
+    const prev = currentRun;
+    persist(prev);
+    params = new URLSearchParams(search);
+    time = timeOf(params);
+    page = pageOf(params);
+    histerKey = params.get('hk') || '';
+    histerSort = sortOf(params);
+    vaultParam = params.get('vault') || 'all';
+    category = categoryOf(params, nextHeader.categories);
+    webLike = category === 'general' || category === 'web';
+    // The last tab's results stay up while this one's come in (or the ones
+    // before it, when it hadn't shown any yet); one that never showed any goes.
+    if (prev.revealed) holdOld(prev.main);
+    const held = document.querySelector('main.tab-snapshot');
+    const main = pristineMain.cloneNode(true);
+    main.classList.add('switched');
+    (held || prev.main).before(main);
+    if (prev.main !== held) dropMain(prev.main);
+    currentRun = newRun(search, main, knownCache, false);
+    ({ cached, pageState } = currentRun);
+    watchMain(main);
+    // The header is the new tab's at once: its pill, its time range or sort.
+    const controls = $('tools-row').querySelector('.list-controls');
+    if (controls) {
+      $('tools-row').append($('sort-label'));
+      controls.remove();
+    }
+    drawHeader(nextHeader);
+    $('timing').textContent = '';
+    $('engines').textContent = '';
+    hideSuggest();
+    $('recent').hidden = true;
+    document.body.classList.add('pending');
+    document.body.classList.remove('settling');
+    if (held) {
+      main.classList.add('tab-incoming');
+      // As tall as what it replaces meanwhile, so nothing beside it or under it moves (the preview pane, the page's height).
+      main.style.minHeight = `${held.getBoundingClientRect().height / (parseFloat(document.body.style.zoom) || 1)}px`;
+      // Taking long (the Small Web can): its placeholders rather than the last tab's results.
+      currentRun.slowTimer = setTimeout(() => land(currentRun), SLOW_SWITCH_MS);
+    } else {
+      land(currentRun);
+    }
+    show(currentRun);
+  }
+
+  /** A tab's main, done with: off the page, and no longer watched. */
+  function dropMain(main) {
+    unwatchMain(main);
+    for (const img of main.querySelectorAll('img[data-src]')) nearScreen.unobserve(img);
+    main.remove();
+  }
+
+  /** The tab on screen stays, laid over where it was, out of the way of the one coming in. */
+  function holdOld(old) {
+    const z = parseFloat(document.body.style.zoom) || 1;
+    const box = old.getBoundingClientRect();
+    const body = document.body.getBoundingClientRect();
+    old.querySelector('#skeleton')?.remove();
+    old.classList.add('tab-snapshot');
+    old.inert = true;
+    old.setAttribute('aria-hidden', 'true');
+    Object.assign(old.style, { top: `${(box.top - body.top) / z}px`, left: `${(box.left - body.left) / z}px`, width: `${box.width / z}px` });
+    document.body.classList.add('switching');
+  }
+
+  /** The new tab takes the old one's place: shown, laid out as its tab, at the top. */
+  function land(run) {
+    if (run.landed || run !== currentRun) return;
+    run.landed = true;
+    clearTimeout(run.slowTimer);
+    document.querySelectorAll('main.tab-snapshot').forEach(dropMain);
+    document.body.classList.remove('switching');
+    run.main.classList.remove('tab-incoming');
+    run.main.style.minHeight = '';
+    document.body.dataset.cat = params.get('cat') || 'general';
+    document.body.classList.toggle('two-col', wideCat(category) && !!searxBase && twoColumns(nextHeader));
+    if (previewPane.isOpen()) previewPane.clear();
+    window.scrollTo(0, 0);
+    placeSide();
+  }
 
   /** SearXNG's first page of general results for `text`. */
   function searx(text, params = {}) {
@@ -3459,7 +3662,6 @@
     return { article, found, infobox: box };
   }
 
-  /** Back to where this page was left, once now and again when images settle. */
   // The Info card beside the results (wide windows, see search.css): its
   // top level with the first result's box, whatever heading is above it.
   // A wide window's right column holds the AI answer, Related Searches and
@@ -3580,16 +3782,6 @@
     for (const el of pinned) Object.assign(el.style, { position: '', top: '' });
   }
 
-  function restoreScroll() {
-    settle(); // everything's drawn: show it
-    reveal();
-    alignInfo(); // once more, as finally drawn
-    alignField();
-    if (!cached || !cached.y) return;
-    const y = cached.y;
-    window.scrollTo(0, y);
-    window.addEventListener('load', () => window.scrollTo(0, y), { once: true });
-  }
 
   /** A few Hister searches (S.urlLookupQueries) mark the web results already saved (visited) or kept. */
   async function markSaved(cards) {

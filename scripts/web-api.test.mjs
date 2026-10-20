@@ -250,7 +250,8 @@ test("leaving the search page never turns into a jump to DuckDuckGo", () => {
   // Only the page's own wait counts as the web not answering; a cancel is ignored.
   assert.match(page, /setTimeout\(\(\) => \(\(timedOut = true\), controller\.abort\(\)\), timeout\)/);
   assert.match(page, /if \(leaving\(\) \|\| \(err && err\.name === 'AbortError' && !err\.timedOut\)\) return;/);
-  assert.match(page, /if \(leaving\(\)\) return;\s*if \(!histerDocs\.length && !vaultDocs\.length && !answered\)/);
+  // Nor does a tab left behind for another one switched in place.
+  assert.match(page, /if \(leaving\(\) \|\| !live\(\)\) return;\s*if \(!histerDocs\.length && !vaultDocs\.length && !answered\)/);
 });
 
 test("the web app marks web results you already have, with the search page's lookup", () => {
@@ -461,7 +462,7 @@ test("the web app's tab bar is the rooms' shared one: edge to edge, its tabs sha
   assert.match(css, /#tabs button > span \{[^}]*text-overflow: ellipsis/);
 });
 
-test("every phone search field has the rooms' X and submit magnifier", () => {
+test("every search field has the rooms' X and a submit magnifier, at every width", () => {
   const app = read('../web/app/app.js');
   const appCSS = read('../web/app/app.css');
   const html = read('../patches/shiori/search.html');
@@ -470,11 +471,14 @@ test("every phone search field has the rooms' X and submit magnifier", () => {
   assert.match(app, /h\('div', \{ class: 'searchfield' \}, searchInput, ghost, \.\.\.searchButtons\)/);
   assert.match(app, /h\('div', \{ class: 'searchfield' \}, field, \.\.\.fieldButtons\)/);
   assert.match(appCSS, /input:placeholder-shown ~ \.field-clear \{ display: none; \}/);
-  assert.match(appCSS, /@media \(max-width: 759px\) \{\n  \.field-go \{ display: grid; \}/);
-  // The search page: its X (line glyph) and a submit magnifier, phones only.
+  assert.doesNotMatch(appCSS, /\.field-go \{ display: none; \}/);
+  assert.match(appCSS, /\.field-clear \{ right: 44px; \}\n\.searchfield input\[type="search"\] \{ padding-right: 84px; \}/);
+  // The search page: its X (line glyph) and a submit magnifier, beside it.
   assert.match(html, /<button id="go" class="field-button" type="submit"/);
   assert.doesNotMatch(html, /title="Clear search">×</);
-  assert.match(pageCSS, /#go \{ display: none; \}\n@media \(max-width: 759px\) \{\n  #go \{ display: grid; \}/);
+  assert.doesNotMatch(pageCSS, /#go \{ display: none; \}/);
+  assert.match(pageCSS, /\n#clear \{ right: 44px; \}/);
+  assert.match(pageCSS, /body:not\(\.home\) #clear \{ right: calc\(44 \* var\(--u\)\); \}/);
 });
 
 test('installed on an iPhone, the web app starts 12px under the status bar, as the rooms do', () => {
@@ -645,7 +649,7 @@ test('the search field has one focus ring, drawn inside it, at every width (sear
 
 test('the field is a set 38px tall, its text 15px from 1100px and 16px or more below it (search page and web app)', () => {
   const css = read('../patches/shiori/search.css');
-  assert.match(css, /body:not\(\.home\) #q \{\s*height: calc\(38 \* var\(--u\)\); padding: 0 calc\(44 \* var\(--u\)\) 0 calc\(16 \* var\(--u\)\); line-height: normal;/);
+  assert.match(css, /body:not\(\.home\) #q \{\s*height: calc\(38 \* var\(--u\)\); padding: 0 calc\(84 \* var\(--u\)\) 0 calc\(16 \* var\(--u\)\); line-height: normal;/);
   assert.match(css, /body:not\(\.home\) #q \{ font-size: calc\(16 \* var\(--u\)\); \}/);
   const wide = css.slice(css.indexOf('@media (min-width: 1100px) {'));
   assert.match(wide, /body:not\(\.home\) #q \{ font-size: calc\(15 \* var\(--u\)\); \}/);

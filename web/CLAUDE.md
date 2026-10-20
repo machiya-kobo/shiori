@@ -25,7 +25,16 @@ Loaded when you work in `web/` (and for the search page in `patches/shiori/`). T
 - Collapsible sections are a button and a grid-rows body, not `<details>`
   (which re-decoded images and flashed). Every tab keeps All's width.
 - The search page caches each results page for Back (`shioriPageCache`), never
-  one holding a private vault's note. Thumbnails load only from the SearXNG
+  one holding a private vault's note.
+- **Tabs switch in place** on the search page (`switchTo` in search.js): the same
+  search's other tab, page, sort or time range is drawn by `show(run)` into a
+  fresh copy of the page's `<main>`, unseen, while the old one is held over it
+  (`main.tab-snapshot`), then they swap; the address follows by `pushState`, and
+  `popstate` switches back. So: anything per tab goes inside `show(run)` and reads
+  the run's values; `$` there is the run's own main, and a run left behind must
+  touch nothing outside it (guard with `live()`). `<main>` is replaced on each
+  switch: a listener on something inside it is delegated from the document.
+  Rules on `body > main` reach the held copy too (exclude `.tab-snapshot`). Thumbnails load only from the SearXNG
   host's `/image_proxy`: anything else is dropped.
 - **Menus close on the way out**: a link or form inside a menu or sheet shuts
   it first, and `pageshow`, `popstate` and `pagehide` shut what's open.
