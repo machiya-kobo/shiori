@@ -5,6 +5,23 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.20.0 (2026-10-20)
+
+- Search page, on a phone and in windows under 1100px: no name row. The
+  search field is the top of the page, and Home and Settings sit in the
+  floating corner, low in the lower right, where a background's Rain and
+  Watch were (the rain is in Settings → Background).
+- Search page, on a phone: the search field looks like iOS's own, a
+  filled capsule with the magnifier leading (it still searches) and a round
+  clear button.
+- Search page: AI Answer, Info and Related Searches are the same size, side
+  by side in a column (Related Searches had sat inside the web's panel, and
+  over a background AI Answer took the panel's padding). Over a background
+  the results' glass reaches past the cards, so they're as wide as those
+  rows.
+- Search page, on a phone: the time range's backing is no longer cut off
+  at the left edge.
+
 ## 1.19.1 (2026-10-20)
 
 - Web app: Web and All have the time range (Anytime, Past Day…) in the
