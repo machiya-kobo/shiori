@@ -5,6 +5,17 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.21.0 (2026-10-20)
+
+- iPhone, iPad and Mac: your pages are in Spotlight. The newest 300 are
+  in the device's search (title, site and snippet), refreshed every few
+  hours from Hister (no web search), and a tap opens the page.
+- Siri and Shortcuts find any of your pages: "Open … in Shiori", or the
+  Open Page action, which searches Hister.
+- Never notes, files or code. Settings → Search → Spotlight turns it off
+  and empties it; signing out of Hister, or another account, empties it
+  too, and a deleted page leaves it.
+
 ## 1.20.0 (2026-10-20)
 
 - Search page, on a phone and in windows under 1100px: no name row. The
