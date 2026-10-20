@@ -542,8 +542,10 @@ a.link-chip:hover, a.link-chip:focus-visible { background: color-mix(in srgb, cu
   position: sticky; top: calc(var(--header-h, 0px) + 6px); z-index: 1;
 }
 #web-title {
-  position: sticky; top: var(--header-h, 0px); z-index: 1; margin: 18px 0 8px; padding: 8px 4px 6px;
+  position: sticky; top: var(--header-h, 0px); z-index: 1; margin: 18px 0 8px; padding: 8px 16px 6px;
   background: var(--frost); -webkit-backdrop-filter: var(--frost-filter); backdrop-filter: var(--frost-filter);
+  /* Rounded as the cards and panels are (over a background its band shows), its text in line with the cards'. */
+  border-radius: 10px;
 }
 /* The heading wears its tab's colour, as the pill does, so it reads apart from the results under it. */
 body[data-cat="general"] #web-title, body[data-cat="web"] #web-title { color: var(--web); }
@@ -762,8 +764,10 @@ html.dialog-open, html.dialog-open body { overflow: hidden; }
     column-gap: 24px; align-items: start;
   }
   body.two-col:not(.with-preview) > main > * { grid-column: 1; }
-  /* Images' grid of tiles uses the whole width. */
+  /* Images' grid of tiles uses the whole width, and there's no right column: its slot (Info, AI Answer, Related
+     Searches) goes, since a tall slot beside the tiles pushed them below it (7px lower than every other tab's). */
   body.two-col[data-cat="images"]:not(.with-preview) > main > * { grid-column: 1 / -1; }
+  body.two-col[data-cat="images"]:not(.with-preview) > main > #infobox-slot { display: none; }
   body.two-col:not(.with-preview) > main > #infobox-slot {
     grid-column: 2; grid-row: 1 / span 99; align-self: start;
     position: sticky; top: calc(var(--header-h, 0px) + 12px); max-height: calc(100vh - var(--header-h, 0px) - 24px); overflow-y: auto;

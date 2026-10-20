@@ -3466,7 +3466,8 @@
   // go back to their places on a narrow window or beside the preview pane,
   // which hide the column.
   function sideColumn() {
-    return document.body.classList.contains('two-col')
+    // Images' tiles take both columns: anything for the side stays in the results' column.
+    return document.body.classList.contains('two-col') && document.body.dataset.cat !== 'images'
       && !document.body.classList.contains('with-preview') && matchMedia('(min-width: 1100px)').matches;
   }
   function placeSide() {
