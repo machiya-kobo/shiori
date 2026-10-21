@@ -3072,7 +3072,8 @@
       // Hister's total is your pages alone (notes are Kura's), so both can say "of".
       const count = () => ($('timing').textContent = `${from}–${from + shown - 1} of ${Math.max(result.total || 0, from + shown - 1).toLocaleString()} ${noun}`);
       count();
-      $('pages').hidden = false;
+      // The paging row only for an older link's Previous page; Show More sits in the list's own panel.
+      $('pages').hidden = page <= 1;
       $('next').hidden = true;
       // The rest of the list, 30 more at a time, added in place until the end (Next page wanted a full page, so a
       // duplicate dropped from one hid it). A close-match page key belongs to the other spelling: no more then.
@@ -3092,6 +3093,7 @@
       let n = page;
       if (key) {
         const more = el('button', { type: 'button', class: 'page-button primary' }, 'Show More');
+        const row = el('p', { class: 'list-more' }, more);
         more.addEventListener('click', async () => {
           more.disabled = true;
           more.textContent = 'Loading…';
@@ -3105,7 +3107,7 @@
             shown += batch.length;
             count();
             key = next.page_key || '';
-            if (!key || !(next.documents || []).length) more.remove();
+            if (!key || !(next.documents || []).length) row.remove();
             else {
               more.disabled = false;
               more.textContent = 'Show More';
@@ -3115,7 +3117,8 @@
             more.textContent = 'Try Again';
           }
         });
-        $('pages').append(more);
+        // Centred under the last result, inside the results' panel (beside the paging row it sat on a long strip of glass).
+        $('web').append(row);
       }
       if (page > 1) {
         $('prev').hidden = false;

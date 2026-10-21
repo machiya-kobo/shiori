@@ -711,6 +711,10 @@ main > #correction[hidden] + #answer { margin-top: 0; }
   text-decoration: none; font-weight: 600; box-shadow: var(--shadow);
 }
 .page-button.primary { margin-left: auto; background: var(--accent); color: var(--bg); }
+/* Show More on your lists: centred under the last result, inside the list's panel. */
+.list-more { margin: 14px 0 8px; text-align: center; }
+.list-more .page-button { margin: 0; border: 0; font: inherit; font-weight: 600; cursor: pointer; }
+.list-more .page-button:disabled { opacity: 0.6; cursor: default; }
 footer { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 8px; text-align: center; }
 /* The footer sits at the bottom of the window when the page is shorter than
    it, and right after the content otherwise: the results' box takes what's
