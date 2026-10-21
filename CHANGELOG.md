@@ -5,6 +5,17 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.22.1 (2026-10-21)
+
+- Search page, on a wide screen: laid out as on a phone. No Shiori name
+  row: the search field is the header's top, over the results' column, and
+  Home and Settings float in the lower-right corner (Rain and Watch are in
+  Settings → Background there).
+- Search page: Next page is centred under the results, with no strip of
+  glass behind it, as Show More is.
+- Search page: the right column (AI Answer, Related Searches, Info)
+  scrolls with the page; it had a scrollbar of its own.
+
 ## 1.22.0 (2026-10-20)
 
 - iPhone, iPad, Mac and the web app: Images, Videos and News pills after
