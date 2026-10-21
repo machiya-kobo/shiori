@@ -23,7 +23,7 @@ RUN scripts/build-web.sh /dist/search http://shiori-web.invalid/ @runtime \
 RUN mkdir -p /basic && cp web/basic.mjs docker/shiori-web/basic-njs.mjs /basic/ \
  && { cat patches/shiori/search-core.js; printf '\nexport default globalThis.ShioriSearch;\n'; } >/basic/search-core.mjs
 
-FROM public.ecr.aws/nginx/nginx-unprivileged:stable-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
+FROM public.ecr.aws/nginx/nginx-unprivileged:stable-alpine@sha256:517607ae849a46afbd400616a783e4ead0290f52d20ccc0618ccea1a49362474
 USER root
 RUN apk add --no-cache python3 ca-certificates
 COPY --from=build /dist /opt/shiori/dist
