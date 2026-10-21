@@ -5,6 +5,11 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.21.4 (2026-10-20)
+
+- Search page: Show More is centred under the last result, inside the
+  results' panel, rather than at the end of a long strip of glass.
+
 ## 1.21.3 (2026-10-20)
 
 - Search page: Pages, Notes, Files and Code show every result: Show More
