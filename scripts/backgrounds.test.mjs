@@ -252,12 +252,12 @@ test("the corner is pinned lower right with the safe-area insets, and the lists 
   const corner = CSS.match(/\.bgctl \{[^}]*\}/)[0];
   assert.match(corner, /right: calc\(16px \+ env\(safe-area-inset-right\)\); bottom: calc\(16px \+ env\(safe-area-inset-bottom\)\)/);
   assert.doesNotMatch(corner, /\bleft:/);
-  // The search page's footer sits on the window's edge and holds the corner (as tall, its text clear of it); the web
-  // app pads its list, on a phone past the tab bar too.
+  // The search page leaves open room under the footer for the corner; the web app pads its list, on a phone past
+  // the tab bar too.
   const page = read('../patches/shiori/search.css');
-  assert.match(page, /html\.has-bgctl body:not\(\.home\) \{ padding-bottom: 0; \}/);
-  assert.match(page, /html\.has-bgctl body:not\(\.home\) > footer \{[^}]*min-height: 82px;[^}]*padding: 8px 120px;/);
-  assert.match(page, /html\.has-bgctl body:not\(\.home\) > footer \{ justify-content: flex-start; padding: 8px 8px 66px; \}/);
+  assert.match(page, /html\.has-bgctl body:not\(\.home\) \{ padding-bottom: 74px; \}/);
+  // The footer's glass fits its lines: it no longer stretches to hold the corner.
+  assert.doesNotMatch(page, /> footer \{[^}]*min-height: 82px/);
   const app = read('../web/app/app.css');
   assert.match(app, /html\.has-bgctl #list \{ padding-bottom: calc\(88px \+ env\(safe-area-inset-bottom\)\); \}/);
   assert.match(app, /html\.has-bgctl #list \{ padding-bottom: calc\(140px \+ env\(safe-area-inset-bottom\)\); \}/);

@@ -197,11 +197,8 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
   body:not(.home) > .bgctl { display: none; }
   /* The start page's Rain and Watch, as low. */
   .bgctl { right: calc(12px + env(safe-area-inset-right)); bottom: env(safe-area-inset-bottom); padding: 3px; gap: 4px; }
-  body:not(.home) { padding-bottom: 0; }
-  body:not(.home) > footer {
-    box-sizing: border-box; min-height: 82px; display: flex; flex-direction: column; justify-content: flex-start;
-    margin-bottom: 0; padding: 8px 8px 66px;
-  }
+  /* Room under the footer for the corner (48px tall, on the bottom), so the last of the page scrolls clear of it. */
+  body:not(.home) { padding-bottom: 60px; }
 }
 
 /* Recent searches, under the field while it has focus. */
@@ -1279,18 +1276,9 @@ html.has-bg #preview-pane {
 }
 /* The layers fill the window whatever Text Size zooms the body by (--z, --vw: search.js keeps them). */
 html.has-bg :is(#bg, #rainfx, .bgimg, .bgvid) { width: var(--vw, 100vw); height: calc(100lvh / var(--z, 1)); }
-/* The footer sits on the window's bottom edge, as it does without a background, and holds the corner's buttons
-   (16px in, 50px tall): at least as tall as them, its text clear of them, centred between equal margins (under
-   them on a phone, where the text needs the width). So the last results scroll clear of the corner too. The
-   preview ends above it. */
-html.has-bgctl body:not(.home) { padding-bottom: 0; }
-html.has-bgctl body:not(.home) > footer {
-  box-sizing: border-box; min-height: 82px; display: flex; flex-direction: column; justify-content: center;
-  margin-bottom: 0; padding: 8px 120px; border-bottom-left-radius: 0; border-bottom-right-radius: 0;
-}
-@media (max-width: 760px) {
-  html.has-bgctl body:not(.home) > footer { justify-content: flex-start; padding: 8px 8px 66px; }
-}
+/* The footer's glass fits its lines; under it, open space as tall as the corner's buttons (16px in, 50px tall),
+   so the last of the page scrolls clear of them. The preview ends above them. */
+html.has-bgctl body:not(.home) { padding-bottom: 74px; }
 html.has-bgctl #preview-pane { height: calc(var(--vh, 100vh) - var(--header-h, 0px) - 90px); }
 /* Settings → Background: Choose… in the accent; Remove keeps the red of a removal. */
 .setting .bg-actions button.link:not(.danger) { color: var(--accent); }
