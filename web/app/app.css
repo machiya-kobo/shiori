@@ -251,6 +251,7 @@ body[data-pill-row="scroll"] .segments { flex-wrap: nowrap; overflow-x: auto; }
 .segments button[data-tint="teal"] { --tab: var(--smallweb); --tab-hover-bg: var(--smallweb-hover-bg); --tab-hover: var(--smallweb-hover); }
 .segments button[data-tint="green"] { --tab: var(--kept); --tab-hover-bg: var(--kept-hover-bg); --tab-hover: var(--kept-hover); }
 .segments button[data-tint="red"] { --tab: var(--tab-videos); --tab-hover-bg: var(--tab-videos-hover-bg); --tab-hover: var(--tab-videos-hover); }
+.segments button[data-tint="images"] { --tab: var(--tab-images); --tab-hover-bg: var(--tab-images-hover-bg); --tab-hover: var(--tab-images-hover); }
 /* Their totals on the Pages and Notes pills ("Pages 31"), as the search page. */
 .segments .pill-count { margin-left: 5px; font-weight: 400; font-variant-numeric: tabular-nums; }
 /* All: your top pages and notes among the web rows, each title led by whose it is. */
@@ -832,3 +833,47 @@ html.has-bg #preview > .status { margin: 16px; border-radius: 14px; }
 html.has-bg #preview-bar:not(:has(.where)) { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
 /* The preview ends above the corner (16px, 50px tall, then 8px), wherever it shows. */
 html.has-bgctl #preview { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
+
+/* Images, Videos and News (the web's tabs, as the search page's). Images: a grid of thumbnails, each titled; a tap
+   shows it large, beside the list in a wide window, over everything on a phone. */
+.image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; padding: 6px 12px 12px; }
+.image-tile {
+  display: flex; flex-direction: column; min-width: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px;
+  overflow: hidden; background: var(--card); color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.image-tile img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--raised); display: block; }
+.image-tile-title { padding: 4px 8px 6px; font-size: var(--fs-caption); color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.image-tile:hover, .image-tile:focus-visible { border-color: var(--tab-images); }
+.image-view { margin: 0; display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.image-frame { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.image-frame img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+.image-view figcaption { padding: 10px 16px 14px; border-top: 1px solid var(--line); }
+.image-title { margin: 0 0 2px; font-size: var(--fs-sub); font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.image-facts { margin: 0 0 8px; font-size: var(--fs-foot); color: var(--secondary); }
+.image-links { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font-size: var(--fs-foot); font-weight: 600; }
+.image-links a { color: var(--accent); text-decoration: none; }
+.image-step { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-weight: 400; color: var(--secondary); }
+.image-step .icon-button { font-size: 22px; line-height: 1; color: var(--text); }
+.image-step .icon-button:disabled { opacity: 0.35; cursor: default; }
+.image-count { min-width: 4.5em; text-align: center; font-variant-numeric: tabular-nums; }
+dialog.image-dialog {
+  width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+  background: var(--card); color: var(--text); touch-action: none;
+}
+dialog.image-dialog[open] { display: flex; flex-direction: column; }
+dialog.image-dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+dialog.image-dialog .image-frame { padding-top: calc(64px + env(safe-area-inset-top)); }
+dialog.image-dialog figcaption { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+/* 44 points to tap, clear of the picture: the close and the steps. */
+dialog.image-dialog .image-close {
+  position: absolute; top: calc(10px + env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--raised); color: var(--text); z-index: 1;
+}
+dialog.image-dialog .image-step .icon-button { width: 44px; height: 44px; border-radius: 50%; background: var(--raised); font-size: 28px; }
+/* Videos: the thumbnail on the right with the length over it. */
+.video-row .video-thumb { float: right; position: relative; margin-left: 8px; }
+.video-row .video-thumb img { width: 112px; height: 63px; object-fit: cover; border-radius: 6px; display: block; background: var(--raised); }
+.video-row .length {
+  position: absolute; right: 4px; bottom: 4px; padding: 0 4px; border-radius: 4px; font-size: var(--fs-caption2);
+  font-variant-numeric: tabular-nums; color: #fff; background: rgb(0 0 0 / 0.75);
+}

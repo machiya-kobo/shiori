@@ -1478,15 +1478,15 @@ function viewLibrary(params) {
   searchInput.placeholder = PROMPTS[filter];
   fill($('list-top'), 
     segments(scopes(), filter, (s) => go('library', { s }, { replace: true })),
-    filter === 'opened' || filter === 'web' ? controlsSpacer() : filter === 'media' ? mediaControls('library', params, { search: false }) : controls('library', params, { notes: filter === 'notes' }),
+    filter === 'opened' || filter === 'web' || WEB_TABS.includes(filter) ? controlsSpacer() : filter === 'media' ? mediaControls('library', params, { search: false }) : controls('library', params, { notes: filter === 'notes' }),
   );
   const list = freshList();
   if (filter === 'opened') {
     shownList = { title: 'Opened', feed: S.feedURL(location.origin, { opened: true }) };
     return viewOpened(list);
   }
-  if (filter === 'web') {
-    return list.replaceChildren(status('Search the Web', 'Type in the search field to search the web.'));
+  if (filter === 'web' || WEB_TABS.includes(filter)) {
+    return list.replaceChildren(status(PROMPTS[filter], 'Type in the search field to search the web.'));
   }
   if (filter === 'smallweb') {
     return list.replaceChildren(status('Search the Small Web', 'Type in the search field and press Return to search Gemini and Gopher.'));
@@ -1640,9 +1640,12 @@ function viewList(params) {
 // Files: the folders Hister watches, green (a hue no room wears).
 // Code: your repos (code-import's), red, the one hue left.
 // Media purple; Opened the rooms' slate (--opened), so the two never match.
-const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['media', 'Media', 'purple'], ['opened', 'Opened', 'slate']];
-/** The pills: Opened only while Show Opened is on (on by default); Files only while Hister has some. */
-const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'notes' || S.notesTabShown(!!settings.niwaURL, settings.notesSource)) && (v !== 'opened' || settings.showOpened !== false) && (v !== 'smallweb' || (SMALLWEB && settings.smallWebTab !== false)) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs) && (v !== 'media' || S.mediaConfigured(MEDIA)));
+// Images, Videos and News are the web's own tabs, as on the search page: SearXNG's category of each name, in the
+// search page's colours (Images green, Videos red, News purple).
+const ALL_SCOPES = [['all', 'All', 'cyan'], ['hister', 'Pages', 'blue'], ['notes', 'Notes', 'orange'], ['web', 'Web', 'yellow'], ['images', 'Images', 'images'], ['videos', 'Videos', 'red'], ['news', 'News', 'purple'], ['smallweb', 'Small Web', 'teal'], ['files', 'Files', 'green'], ['code', 'Code', 'red'], ['media', 'Media', 'purple'], ['opened', 'Opened', 'slate']];
+const WEB_TABS = ['images', 'videos', 'news'];
+/** The pills: Opened only while Show Opened is on (on by default); Files only while Hister has some; the web's tabs while the web is on. */
+const availableScopes = () => ALL_SCOPES.filter(([v]) => (v !== 'notes' || S.notesTabShown(!!settings.niwaURL, settings.notesSource)) && (v !== 'opened' || settings.showOpened !== false) && (v !== 'smallweb' || (SMALLWEB && settings.smallWebTab !== false)) && (v !== 'files' || hasLocalFiles) && (v !== 'code' || hasCodeDocs) && (v !== 'media' || S.mediaConfigured(MEDIA)) && (!WEB_TABS.includes(v) || settings.webResults !== false));
 /** The pill's key in the shared vocabulary (S.PILLS). */
 const pillKey = (scope) => (scope === 'hister' ? 'pages' : scope);
 /** The pills in the order set in Settings → Pills, less the ones switched off (S.orderPills). */
@@ -1663,7 +1666,7 @@ async function loadLocalFiles() {
 // One row over every list, browsing or searching, as in the apps (it had
 // been two: the Library's and a search's). `s` in the address is the
 // choice for both, so typing searches whichever is picked.
-const PROMPTS = { all: 'Search All', hister: 'Search Your Pages', notes: 'Search Notes', web: 'Search the Web', smallweb: 'Search Gemini and Gopher', files: 'Search Your Files', code: 'Search Your Code', media: 'Search Your Media', opened: 'Search What You Opened' };
+const PROMPTS = { all: 'Search All', hister: 'Search Your Pages', notes: 'Search Notes', web: 'Search the Web', images: 'Search Images', videos: 'Search Videos', news: 'Search News', smallweb: 'Search Gemini and Gopher', files: 'Search Your Files', code: 'Search Your Code', media: 'Search Your Media', opened: 'Search What You Opened' };
 function scopeOf(params) {
   const s = params.get('s') || { pages: 'hister' }[params.get('f')] || params.get('f') || 'all';
   return scopes().some(([v]) => v === s) ? s : 'all';
@@ -1674,7 +1677,7 @@ function viewSearch(params) {
   const scope = scopeOf(params);
   // No pull to refresh on the web's or the small web's results: the same
   // words find the same results, and each web search counts.
-  if (scope === 'web' || scope === 'smallweb') $('list').setAttribute('data-no-pull', '');
+  if (scope === 'web' || scope === 'smallweb' || WEB_TABS.includes(scope)) $('list').setAttribute('data-no-pull', '');
   setTitle('Search');
   searchInput.placeholder = PROMPTS[scope];
   // No words (the installed app's Search shortcut, #/search): the
@@ -1692,11 +1695,11 @@ function viewSearch(params) {
   const list = freshList();
   fill($('list-top'), 
     // A tap on Media searches it on purpose too (m=1), without making the web's search one (w stays as it was).
-    segments(scopes(), scope, (s) => go('search', { ...keep({ s, ...(s === 'web' ? { w: '1' } : {}) }), ...(s === 'media' ? { m: '1' } : {}) }, { replace: true })),
+    segments(scopes(), scope, (s) => go('search', { ...keep({ s, ...(s === 'web' || WEB_TABS.includes(s) ? { w: '1' } : {}) }), ...(s === 'media' ? { m: '1' } : {}) }, { replace: true })),
     listed ? controls('search', params, { search: true, notes: scope === 'notes' })
       : scope === 'media' ? mediaControls('search', params, { search: true, items: mediaLast.q === q ? mediaLast.res.items : [] })
       // The web's: its time range, as the search page's web tabs have (a change searches the web again, on purpose).
-      : (scope === 'web' || scope === 'all') && settings.webResults ? timeControls(time, (t) => {
+      : (scope === 'web' || scope === 'all' || WEB_TABS.includes(scope)) && settings.webResults ? timeControls(time, (t) => {
           const next = keep({ s: scope, w: '1', t });
           if (!t) delete next.t;
           go('search', next, { replace: true });
@@ -1724,6 +1727,10 @@ function viewSearch(params) {
   } else if (scope === 'web') {
     if (web) webList(list, q);
     else list.replaceChildren(status('Search the Web', 'Press Return to search the web for this.'));
+  } else if (WEB_TABS.includes(scope)) {
+    // Searched on purpose only (Return, the pill), as Web: each web search counts.
+    if (web) webTabList(list, q, scope);
+    else list.replaceChildren(status(PROMPTS[scope], 'Press Return to search the web for this.'));
   } else if (scope === 'smallweb') smallwebList(list, q);
   else if (scope === 'code') codeList(list, q);
   else if (scope === 'media') {
@@ -2220,6 +2227,224 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
   } catch (error) {
     mineOnly(status("The Web Search Didn't Answer", '', () => webList(container, q, { embedded, mix })));
   }
+}
+
+/**
+ * Images, Videos and News: SearXNG's category of each name, searched on purpose (the pill, Return), as the search
+ * page's tabs. Their order and filters (S.webChoiceRow, the search page's) sit in the row under the pills, beside the
+ * time range, and narrow or reorder what came back in place: the web is never asked again for them (each search
+ * counts). A choice is kept in the address (wo, ws, …), so Back and a reload keep it.
+ */
+async function webTabList(container, q, cat) {
+  container.replaceChildren(h('div', { class: 'spinner' }));
+  const wq = S.webQuery(q);
+  if (!wq) return container.replaceChildren(status('Hister Only', 'That query is Hister syntax only, so the web isn’t searched.'));
+  let data;
+  try {
+    data = await api.web(wq, 1, webTime(route().params), cat);
+  } catch (_) {
+    return container.replaceChildren(status("The Web Search Didn't Answer", '', () => webTabList(container, q, cat)));
+  }
+  const here = () => {
+    const { view, params } = route();
+    return view === 'search' && params.get('q') === q && scopeOf(params) === cat && container.isConnected;
+  };
+  if (!here()) return;
+  let results = (data.results || []).filter((r) => typeof r.url === 'string' && /^https?:/.test(r.url));
+  // An image is shown only through SearXNG's proxy (as every thumbnail here): one without is left out.
+  if (cat === 'images') results = results.filter((r) => api.proxiedImage(r.thumbnail_src || r.thumbnail || r.img_src));
+  const health = S.engineHealthLine(S.unansweredEngines(data));
+  if (!results.length) return container.replaceChildren(status({ images: 'No Images', videos: 'No Videos', news: 'No News' }[cat], health));
+  const draw = () => {
+    if (!here()) return;
+    const choices = S.webChoices(cat, route().params);
+    const kept = S.webNarrow(cat, results, choices);
+    webChoiceMenus(cat, results, choices, draw);
+    const body = !kept.length
+      ? status('Nothing Matches These Filters', 'Clear a filter to see more.')
+      : cat === 'images'
+        ? h('div', { class: 'image-grid' }, kept.map((r, i) => imageTile(r, () => showImage(kept, i))))
+        : h('ul', { class: 'rows' }, kept.map((r) => (cat === 'videos' ? videoRow(r) : newsRow(r))));
+    container.replaceChildren(...[health ? h('p', { class: 'engine-health' }, health) : null, body].filter(Boolean));
+  };
+  draw();
+}
+
+/**
+ * The tab's order, then its filters in one Filter menu (Size, Shape, Format…, each its own group), after the time
+ * range: one line in the list's column, as Sort · Group · Filter. Each choice goes in the address and draws in place.
+ */
+function webChoiceMenus(cat, results, choices, draw) {
+  const row = $('list-top').querySelector('.controls');
+  if (!row) return;
+  row.querySelectorAll('.web-choice').forEach((m) => m.remove());
+  const choose = (key, value) => {
+    const { view, params } = route();
+    const next = new URLSearchParams(params);
+    if (value) next.set(S.webChoiceKey(key), value);
+    else next.delete(S.webChoiceKey(key));
+    history.replaceState(null, '', `#/${view}?${next}`);
+    draw();
+  };
+  const items = ({ key, choices: options }) => options.map(([value, text]) => ({ text, checked: value === (choices[key] || ''), pick: () => choose(key, value) }));
+  const sets = S.webChoiceRow(cat, results, choices);
+  const label = (set) => (set.choices.find(([v]) => v === (choices[set.key] || '')) || set.choices[0])[1].replace(/ · \d+$/, '');
+  const order = sets.find((set) => set.key === 'order');
+  const filters = sets.filter((set) => set.key !== 'order');
+  const menus = [];
+  if (order) {
+    menus.push(dropMenu(h('button', { type: 'button', class: `quiet${choices.order ? ' active' : ''}`, 'aria-haspopup': 'menu', 'aria-label': 'Order' }, icon('sort'), label(order)), () => items(order)));
+  }
+  if (filters.length) {
+    const on = filters.filter((set) => choices[set.key]);
+    const name = on.length ? on.map(label).join(' · ') : 'Filter';
+    menus.push(dropMenu(
+      h('button', { type: 'button', class: `quiet${on.length ? ' active' : ''}`, 'aria-haspopup': 'menu', 'aria-label': 'Filter' }, icon('filter'), name),
+      () => filters.flatMap((set, i) => [...(i ? ['-'] : []), ...items(set)]),
+    ));
+  }
+  for (const menu of menus) {
+    menu.classList.add('web-choice');
+    row.append(menu);
+  }
+}
+
+/** An image result: its thumbnail and title; a tap shows it large. */
+function imageTile(r, open) {
+  return h(
+    'button',
+    { type: 'button', class: 'image-tile', title: S.decodeEntities(r.title) || '', onclick: open },
+    h('img', { src: api.proxiedImage(r.thumbnail_src || r.thumbnail || r.img_src), alt: '', loading: 'lazy', onerror: (e) => e.target.closest('.image-tile')?.remove() }),
+    h('span', { class: 'image-tile-title' }, S.decodeEntities(r.title) || hostOf(r.url)),
+  );
+}
+
+/**
+ * An image shown large, as the search page's viewer: the picture (the full one through the proxy, the thumbnail
+ * until it loads), its title, site, size and format, Open Image and Visit Page, and previous and next (the arrow
+ * keys and, on a phone, a swipe too). Beside the list in a wide window, over everything on a phone.
+ */
+let imageViewer = null;
+function showImage(list, at) {
+  const r = list[at];
+  if (!r) return;
+  const thumb = api.proxiedImage(r.thumbnail_src || r.thumbnail || r.img_src);
+  const full = api.proxiedImage(r.img_src);
+  const img = h('img', { src: thumb || full, alt: S.decodeEntities(r.title) || '' });
+  if (full && full !== thumb) {
+    const big = new Image();
+    big.onload = () => img.isConnected && (img.src = full);
+    big.src = full;
+  }
+  const step = (by) => showImage(list, at + by);
+  const facts = [r.source || hostOf(r.url), r.resolution && String(r.resolution).replace(/\s*[x×]\s*/, ' × '), String(r.img_format || '').replace(/^image\//i, '').toUpperCase()].filter(Boolean).join(' · ');
+  const original = S.originalImage(r.img_src);
+  const view = h(
+    'figure',
+    { class: 'image-view' },
+    h('div', { class: 'image-frame' }, img),
+    h(
+      'figcaption',
+      {},
+      r.title ? h('p', { class: 'image-title' }, S.decodeEntities(r.title)) : null,
+      facts ? h('p', { class: 'image-facts' }, facts) : null,
+      h(
+        'p',
+        { class: 'image-links' },
+        original ? h('a', { href: original, target: '_blank', rel: 'noopener noreferrer' }, 'Open Image ›') : null,
+        h('a', { href: r.url, target: '_blank', rel: 'noopener noreferrer' }, 'Visit Page ›'),
+        h(
+          'span',
+          { class: 'image-step' },
+          h('button', { type: 'button', class: 'icon-button', 'aria-label': 'Previous image', title: 'Previous image', disabled: at <= 0, onclick: () => step(-1) }, '‹'),
+          h('span', { class: 'image-count' }, `${at + 1} of ${list.length}`),
+          h('button', { type: 'button', class: 'icon-button', 'aria-label': 'Next image', title: 'Next image', disabled: at >= list.length - 1, onclick: () => step(1) }, '›'),
+        ),
+      ),
+    ),
+  );
+  imageViewer = { step, close: closeImage };
+  if (wide()) {
+    selected = null;
+    fill($('preview-bar'), h('span', { class: 'where' }, r.source || hostOf(r.url)), iconButton('close', 'Close', closeImage));
+    $('preview').replaceChildren(view);
+    return;
+  }
+  let dialog = document.querySelector('dialog.image-dialog');
+  if (!dialog) {
+    dialog = h('dialog', { class: 'image-dialog', 'aria-label': 'Image' });
+    dialog.addEventListener('close', () => (imageViewer = null));
+    dialog.addEventListener('click', (e) => e.target === dialog && dialog.close());
+    // A sideways swipe steps (the dialog takes every touch: no page scroll under it, no double-tap zoom).
+    let from = null;
+    dialog.addEventListener('touchstart', (e) => (from = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null), { passive: true });
+    dialog.addEventListener('touchend', (e) => {
+      const t = e.changedTouches[0];
+      if (!from || !t || !imageViewer) return;
+      const dx = t.clientX - from.x;
+      const dy = t.clientY - from.y;
+      from = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > 2 * Math.abs(dy)) imageViewer.step(dx < 0 ? 1 : -1);
+    });
+    document.body.append(dialog);
+  }
+  dialog.replaceChildren(iconButton('close', 'Close', closeImage), view);
+  dialog.querySelector('.icon-button').classList.add('image-close');
+  if (!dialog.open) dialog.showModal();
+}
+function closeImage() {
+  imageViewer = null;
+  const dialog = document.querySelector('dialog.image-dialog');
+  if (dialog?.open) dialog.close();
+  if (wide() && $('preview').querySelector('.image-view')) {
+    fill($('preview-bar'));
+    $('preview').replaceChildren(status('No Page Selected', 'Select a page to preview it.'));
+  }
+}
+// ← and → while an image is shown, Escape closes it (not while typing in a field).
+document.addEventListener('keydown', (e) => {
+  if (!imageViewer || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    imageViewer.step(e.key === 'ArrowRight' ? 1 : -1);
+  } else if (e.key === 'Escape' && wide()) imageViewer.close();
+});
+
+/** A video: its thumbnail with the length over it, the title, the site and date; a tap opens it. */
+function videoRow(r) {
+  const thumb = api.proxiedImage(r.thumbnail || r.thumbnail_src || r.img_src);
+  const length = S.duration(r.length);
+  const date = S.shortDate(r.publishedDate);
+  return h(
+    'li',
+    { class: 'row web-row video-row', 'data-url': r.url },
+    h('span', { class: 'icon' }, icon('film')),
+    h(
+      'a',
+      { href: r.url, target: '_blank', rel: 'noopener noreferrer', style: 'text-decoration:none;color:inherit' },
+      thumb ? h('span', { class: 'video-thumb' }, h('img', { src: thumb, alt: '', loading: 'lazy', onerror: (e) => e.target.parentElement.remove() }), length ? h('span', { class: 'length' }, length) : null) : null,
+      h('div', { class: 'title' }, S.decodeEntities(r.title) || r.url),
+      h('div', { class: 'meta' }, h('span', { class: 'domain' }, hostOf(r.url)), date ? ` · ${date}` : '', !thumb && length ? ` · ${length}` : ''),
+      r.content ? h('div', { class: 'snippet' }, S.decodeEntities(r.content)) : null,
+    ),
+  );
+}
+
+/** A news story: its title, the site and when, the snippet; a tap opens it. */
+function newsRow(r) {
+  const date = S.shortDate(r.publishedDate);
+  return h(
+    'li',
+    { class: 'row web-row news-row', 'data-url': r.url },
+    h('span', { class: 'icon' }, icon('feed')),
+    h(
+      'a',
+      { href: r.url, target: '_blank', rel: 'noopener noreferrer', style: 'text-decoration:none;color:inherit' },
+      h('div', { class: 'title' }, S.decodeEntities(r.title) || r.url),
+      h('div', { class: 'meta' }, h('span', { class: 'domain' }, hostOf(r.url)), date ? ` · ${date}` : ''),
+      r.content ? h('div', { class: 'snippet' }, S.decodeEntities(r.content)) : null,
+    ),
+  );
 }
 
 /**

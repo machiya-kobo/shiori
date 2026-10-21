@@ -1557,3 +1557,19 @@ test("Images, Videos and News narrow and reorder what SearXNG sent, in place", (
   assert.deepEqual(S.webNarrow('videos', videos, { order: 'longest' }).map((r) => r.url), ['https://vimeo.com/2', 'https://youtube.com/1', 'https://youtube.com/3']);
   assert.deepEqual([...S.webChoiceRow('general', videos, {})], [], 'All and Web have no row of their own');
 });
+
+test("Images, Videos and News choices, on scripts/web-choices-cases.json (HisterKit's WebChoices runs them too)", () => {
+  const data = JSON.parse(readFileSync(fileURLToPath(new URL('./web-choices-cases.json', import.meta.url)), 'utf8'));
+  const plain = (x) => JSON.parse(JSON.stringify(x));
+  for (const [input, out] of data.lengths) assert.equal(S.lengthSeconds(input), out, `lengthSeconds(${JSON.stringify(input)})`);
+  for (const [resolution, img_format, out] of data.sizes) assert.deepEqual(plain(S.imageSize({ resolution, img_format })), out, resolution || img_format);
+  for (const [r, key, out] of data.values) assert.equal(S.webValue(key, r), out, `${key} of ${r.url}`);
+  for (const [key, out] of data.keys) assert.equal(S.webChoiceKey(key), out);
+  assert.ok(data.cases.length > 10);
+  for (const c of data.cases) {
+    const choices = S.webChoices(c.cat, new URLSearchParams(c.params));
+    assert.deepEqual(plain(choices), c.choices, `${c.cat} ${c.params} choices`);
+    assert.deepEqual(plain(S.webNarrow(c.cat, c.results, choices).map((r) => r.url)), c.narrow, `${c.cat} ${c.params} narrow`);
+    assert.deepEqual(plain(S.webChoiceRow(c.cat, c.results, choices)), c.row, `${c.cat} ${c.params} row`);
+  }
+});

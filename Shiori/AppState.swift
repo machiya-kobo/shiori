@@ -451,6 +451,8 @@ final class AppState {
             case .files: hasLocalFiles
             case .code: hasCodeDocs
             case .media: media != nil
+            // The web's own tabs, while web results are on.
+            case .images, .videos, .news: allSearch.webResults
             default: true
             }
         }

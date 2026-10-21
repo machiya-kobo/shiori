@@ -1,0 +1,2475 @@
+{
+ "about": "Images, Videos and News: their order and filters, drawn from SearXNG's results (search-core's S.webChoiceRow / webNarrow / webValue, HisterKit's WebChoices). Expected values come from search-core; both test suites run them.",
+ "lengths": [
+  [
+   "3:45",
+   225
+  ],
+  [
+   "1:02:10",
+   3730
+  ],
+  [
+   90,
+   90
+  ],
+  [
+   "206.0",
+   206
+  ],
+  [
+   "None",
+   null
+  ],
+  [
+   "",
+   null
+  ],
+  [
+   null,
+   null
+  ],
+  [
+   "0:00",
+   0
+  ],
+  [
+   "abc",
+   null
+  ],
+  [
+   "1:xx",
+   null
+  ]
+ ],
+ "sizes": [
+  [
+   "1920 x 1080",
+   "",
+   {
+    "w": 1920,
+    "h": 1080
+   }
+  ],
+  [
+   "",
+   "JPEG 800×600",
+   {
+    "w": 800,
+    "h": 600
+   }
+  ],
+  [
+   "",
+   "",
+   null
+  ],
+  [
+   "5X7",
+   "",
+   null
+  ],
+  [
+   "12345 x 99",
+   "",
+   {
+    "w": 12345,
+    "h": 99
+   }
+  ]
+ ],
+ "values": [
+  [
+   {
+    "url": "https://i1.example/",
+    "resolution": "300 x 300",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "size",
+   "small"
+  ],
+  [
+   {
+    "url": "https://i1.example/",
+    "resolution": "300 x 300",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "shape",
+   "square"
+  ],
+  [
+   {
+    "url": "https://i1.example/",
+    "resolution": "300 x 300",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "format",
+   "png"
+  ],
+  [
+   {
+    "url": "https://i1.example/",
+    "resolution": "300 x 300",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://i1.example/",
+    "resolution": "300 x 300",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "source",
+   "i1.example"
+  ],
+  [
+   {
+    "url": "https://i2.example/",
+    "resolution": "4000 x 3000",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "size",
+   "large"
+  ],
+  [
+   {
+    "url": "https://i2.example/",
+    "resolution": "4000 x 3000",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "shape",
+   "wide"
+  ],
+  [
+   {
+    "url": "https://i2.example/",
+    "resolution": "4000 x 3000",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "format",
+   "jpeg"
+  ],
+  [
+   {
+    "url": "https://i2.example/",
+    "resolution": "4000 x 3000",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://i2.example/",
+    "resolution": "4000 x 3000",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "source",
+   "i2.example"
+  ],
+  [
+   {
+    "url": "https://i3.example/",
+    "resolution": "",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://i3.example/",
+    "resolution": "",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://i3.example/",
+    "resolution": "",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "format",
+   "jpeg"
+  ],
+  [
+   {
+    "url": "https://i3.example/",
+    "resolution": "",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://i3.example/",
+    "resolution": "",
+    "img_format": "jpeg",
+    "img_src": ""
+   },
+   "source",
+   "i3.example"
+  ],
+  [
+   {
+    "url": "https://i4.example/",
+    "resolution": "1920 x 1080",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "size",
+   "large"
+  ],
+  [
+   {
+    "url": "https://i4.example/",
+    "resolution": "1920 x 1080",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "shape",
+   "wide"
+  ],
+  [
+   {
+    "url": "https://i4.example/",
+    "resolution": "1920 x 1080",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "format",
+   "png"
+  ],
+  [
+   {
+    "url": "https://i4.example/",
+    "resolution": "1920 x 1080",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://i4.example/",
+    "resolution": "1920 x 1080",
+    "img_format": "png",
+    "img_src": ""
+   },
+   "source",
+   "i4.example"
+  ],
+  [
+   {
+    "url": "https://i5.example/",
+    "resolution": "1080×1920",
+    "img_format": "JPEG 1080×1920",
+    "img_src": "https://x.example/a.webp"
+   },
+   "size",
+   "large"
+  ],
+  [
+   {
+    "url": "https://i5.example/",
+    "resolution": "1080×1920",
+    "img_format": "JPEG 1080×1920",
+    "img_src": "https://x.example/a.webp"
+   },
+   "shape",
+   "tall"
+  ],
+  [
+   {
+    "url": "https://i5.example/",
+    "resolution": "1080×1920",
+    "img_format": "JPEG 1080×1920",
+    "img_src": "https://x.example/a.webp"
+   },
+   "format",
+   "jpeg"
+  ],
+  [
+   {
+    "url": "https://i5.example/",
+    "resolution": "1080×1920",
+    "img_format": "JPEG 1080×1920",
+    "img_src": "https://x.example/a.webp"
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://i5.example/",
+    "resolution": "1080×1920",
+    "img_format": "JPEG 1080×1920",
+    "img_src": "https://x.example/a.webp"
+   },
+   "source",
+   "i5.example"
+  ],
+  [
+   {
+    "url": "https://i6.example/",
+    "resolution": "640 x 480",
+    "img_format": "",
+    "img_src": "https://x.example/b.JPG?w=1"
+   },
+   "size",
+   "medium"
+  ],
+  [
+   {
+    "url": "https://i6.example/",
+    "resolution": "640 x 480",
+    "img_format": "",
+    "img_src": "https://x.example/b.JPG?w=1"
+   },
+   "shape",
+   "wide"
+  ],
+  [
+   {
+    "url": "https://i6.example/",
+    "resolution": "640 x 480",
+    "img_format": "",
+    "img_src": "https://x.example/b.JPG?w=1"
+   },
+   "format",
+   "jpeg"
+  ],
+  [
+   {
+    "url": "https://i6.example/",
+    "resolution": "640 x 480",
+    "img_format": "",
+    "img_src": "https://x.example/b.JPG?w=1"
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://i6.example/",
+    "resolution": "640 x 480",
+    "img_format": "",
+    "img_src": "https://x.example/b.JPG?w=1"
+   },
+   "source",
+   "i6.example"
+  ],
+  [
+   {
+    "url": "https://i7.example/",
+    "resolution": "500 x 500",
+    "img_format": "gif",
+    "img_src": ""
+   },
+   "size",
+   "medium"
+  ],
+  [
+   {
+    "url": "https://i7.example/",
+    "resolution": "500 x 500",
+    "img_format": "gif",
+    "img_src": ""
+   },
+   "shape",
+   "square"
+  ],
+  [
+   {
+    "url": "https://i7.example/",
+    "resolution": "500 x 500",
+    "img_format": "gif",
+    "img_src": ""
+   },
+   "format",
+   "gif"
+  ],
+  [
+   {
+    "url": "https://i7.example/",
+    "resolution": "500 x 500",
+    "img_format": "gif",
+    "img_src": ""
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://i7.example/",
+    "resolution": "500 x 500",
+    "img_format": "gif",
+    "img_src": ""
+   },
+   "source",
+   "i7.example"
+  ],
+  [
+   {
+    "url": "https://www.youtube.com/watch?v=1",
+    "length": "0:45",
+    "publishedDate": "2026-01-01T00:00:00"
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://www.youtube.com/watch?v=1",
+    "length": "0:45",
+    "publishedDate": "2026-01-01T00:00:00"
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://www.youtube.com/watch?v=1",
+    "length": "0:45",
+    "publishedDate": "2026-01-01T00:00:00"
+   },
+   "format",
+   ""
+  ],
+  [
+   {
+    "url": "https://www.youtube.com/watch?v=1",
+    "length": "0:45",
+    "publishedDate": "2026-01-01T00:00:00"
+   },
+   "length",
+   "short"
+  ],
+  [
+   {
+    "url": "https://www.youtube.com/watch?v=1",
+    "length": "0:45",
+    "publishedDate": "2026-01-01T00:00:00"
+   },
+   "source",
+   "youtube.com"
+  ],
+  [
+   {
+    "url": "https://vimeo.com/2",
+    "length": "30:00",
+    "publishedDate": "2026-03-01T00:00:00"
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://vimeo.com/2",
+    "length": "30:00",
+    "publishedDate": "2026-03-01T00:00:00"
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://vimeo.com/2",
+    "length": "30:00",
+    "publishedDate": "2026-03-01T00:00:00"
+   },
+   "format",
+   ""
+  ],
+  [
+   {
+    "url": "https://vimeo.com/2",
+    "length": "30:00",
+    "publishedDate": "2026-03-01T00:00:00"
+   },
+   "length",
+   "long"
+  ],
+  [
+   {
+    "url": "https://vimeo.com/2",
+    "length": "30:00",
+    "publishedDate": "2026-03-01T00:00:00"
+   },
+   "source",
+   "vimeo.com"
+  ],
+  [
+   {
+    "url": "https://youtube.com/3"
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://youtube.com/3"
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://youtube.com/3"
+   },
+   "format",
+   ""
+  ],
+  [
+   {
+    "url": "https://youtube.com/3"
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://youtube.com/3"
+   },
+   "source",
+   "youtube.com"
+  ],
+  [
+   {
+    "url": "https://m.youtube.com/4",
+    "length": 300,
+    "publishedDate": "2026-02-01T00:00:00"
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://m.youtube.com/4",
+    "length": 300,
+    "publishedDate": "2026-02-01T00:00:00"
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://m.youtube.com/4",
+    "length": 300,
+    "publishedDate": "2026-02-01T00:00:00"
+   },
+   "format",
+   ""
+  ],
+  [
+   {
+    "url": "https://m.youtube.com/4",
+    "length": 300,
+    "publishedDate": "2026-02-01T00:00:00"
+   },
+   "length",
+   "medium"
+  ],
+  [
+   {
+    "url": "https://m.youtube.com/4",
+    "length": 300,
+    "publishedDate": "2026-02-01T00:00:00"
+   },
+   "source",
+   "youtube.com"
+  ],
+  [
+   {
+    "url": "https://peertube.example/5",
+    "length": "1:02:10",
+    "publishedDate": "None"
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://peertube.example/5",
+    "length": "1:02:10",
+    "publishedDate": "None"
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://peertube.example/5",
+    "length": "1:02:10",
+    "publishedDate": "None"
+   },
+   "format",
+   ""
+  ],
+  [
+   {
+    "url": "https://peertube.example/5",
+    "length": "1:02:10",
+    "publishedDate": "None"
+   },
+   "length",
+   "long"
+  ],
+  [
+   {
+    "url": "https://peertube.example/5",
+    "length": "1:02:10",
+    "publishedDate": "None"
+   },
+   "source",
+   "peertube.example"
+  ],
+  [
+   {
+    "url": "https://news.example/a",
+    "publishedDate": "2026-10-10T08:00:00"
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://news.example/a",
+    "publishedDate": "2026-10-10T08:00:00"
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://news.example/a",
+    "publishedDate": "2026-10-10T08:00:00"
+   },
+   "format",
+   ""
+  ],
+  [
+   {
+    "url": "https://news.example/a",
+    "publishedDate": "2026-10-10T08:00:00"
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://news.example/a",
+    "publishedDate": "2026-10-10T08:00:00"
+   },
+   "source",
+   "news.example"
+  ],
+  [
+   {
+    "url": "https://www.news.example/b",
+    "publishedDate": "2026-10-12T08:00:00"
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://www.news.example/b",
+    "publishedDate": "2026-10-12T08:00:00"
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://www.news.example/b",
+    "publishedDate": "2026-10-12T08:00:00"
+   },
+   "format",
+   ""
+  ],
+  [
+   {
+    "url": "https://www.news.example/b",
+    "publishedDate": "2026-10-12T08:00:00"
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://www.news.example/b",
+    "publishedDate": "2026-10-12T08:00:00"
+   },
+   "source",
+   "news.example"
+  ],
+  [
+   {
+    "url": "https://other.example/c"
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://other.example/c"
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://other.example/c"
+   },
+   "format",
+   ""
+  ],
+  [
+   {
+    "url": "https://other.example/c"
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://other.example/c"
+   },
+   "source",
+   "other.example"
+  ],
+  [
+   {
+    "url": "https://third.example/d",
+    "publishedDate": "2026-10-11T08:00:00"
+   },
+   "size",
+   ""
+  ],
+  [
+   {
+    "url": "https://third.example/d",
+    "publishedDate": "2026-10-11T08:00:00"
+   },
+   "shape",
+   ""
+  ],
+  [
+   {
+    "url": "https://third.example/d",
+    "publishedDate": "2026-10-11T08:00:00"
+   },
+   "format",
+   ""
+  ],
+  [
+   {
+    "url": "https://third.example/d",
+    "publishedDate": "2026-10-11T08:00:00"
+   },
+   "length",
+   ""
+  ],
+  [
+   {
+    "url": "https://third.example/d",
+    "publishedDate": "2026-10-11T08:00:00"
+   },
+   "source",
+   "third.example"
+  ]
+ ],
+ "keys": [
+  [
+   "order",
+   "wo"
+  ],
+  [
+   "size",
+   "ws"
+  ],
+  [
+   "shape",
+   "wa"
+  ],
+  [
+   "format",
+   "wf"
+  ],
+  [
+   "length",
+   "wl"
+  ],
+  [
+   "source",
+   "we"
+  ]
+ ],
+ "cases": [
+  {
+   "cat": "images",
+   "params": "",
+   "results": [
+    {
+     "url": "https://i1.example/",
+     "resolution": "300 x 300",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i2.example/",
+     "resolution": "4000 x 3000",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i3.example/",
+     "resolution": "",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i4.example/",
+     "resolution": "1920 x 1080",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i5.example/",
+     "resolution": "1080×1920",
+     "img_format": "JPEG 1080×1920",
+     "img_src": "https://x.example/a.webp"
+    },
+    {
+     "url": "https://i6.example/",
+     "resolution": "640 x 480",
+     "img_format": "",
+     "img_src": "https://x.example/b.JPG?w=1"
+    },
+    {
+     "url": "https://i7.example/",
+     "resolution": "500 x 500",
+     "img_format": "gif",
+     "img_src": ""
+    }
+   ],
+   "choices": {
+    "order": "",
+    "size": "",
+    "shape": "",
+    "format": ""
+   },
+   "narrow": [
+    "https://i1.example/",
+    "https://i2.example/",
+    "https://i3.example/",
+    "https://i4.example/",
+    "https://i5.example/",
+    "https://i6.example/",
+    "https://i7.example/"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "largest",
+       "Largest"
+      ]
+     ]
+    },
+    {
+     "key": "size",
+     "name": "Size",
+     "choices": [
+      [
+       "",
+       "Any Size"
+      ],
+      [
+       "large",
+       "Large · 3"
+      ],
+      [
+       "medium",
+       "Medium · 2"
+      ],
+      [
+       "small",
+       "Small · 1"
+      ]
+     ]
+    },
+    {
+     "key": "shape",
+     "name": "Shape",
+     "choices": [
+      [
+       "",
+       "Any Shape"
+      ],
+      [
+       "wide",
+       "Wide · 3"
+      ],
+      [
+       "square",
+       "Square · 2"
+      ],
+      [
+       "tall",
+       "Tall · 1"
+      ]
+     ]
+    },
+    {
+     "key": "format",
+     "name": "Format",
+     "choices": [
+      [
+       "",
+       "Any Format"
+      ],
+      [
+       "jpeg",
+       "JPEG · 4"
+      ],
+      [
+       "png",
+       "PNG · 2"
+      ],
+      [
+       "gif",
+       "GIF · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "images",
+   "params": "ws=large",
+   "results": [
+    {
+     "url": "https://i1.example/",
+     "resolution": "300 x 300",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i2.example/",
+     "resolution": "4000 x 3000",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i3.example/",
+     "resolution": "",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i4.example/",
+     "resolution": "1920 x 1080",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i5.example/",
+     "resolution": "1080×1920",
+     "img_format": "JPEG 1080×1920",
+     "img_src": "https://x.example/a.webp"
+    },
+    {
+     "url": "https://i6.example/",
+     "resolution": "640 x 480",
+     "img_format": "",
+     "img_src": "https://x.example/b.JPG?w=1"
+    },
+    {
+     "url": "https://i7.example/",
+     "resolution": "500 x 500",
+     "img_format": "gif",
+     "img_src": ""
+    }
+   ],
+   "choices": {
+    "order": "",
+    "size": "large",
+    "shape": "",
+    "format": ""
+   },
+   "narrow": [
+    "https://i2.example/",
+    "https://i4.example/",
+    "https://i5.example/"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "largest",
+       "Largest"
+      ]
+     ]
+    },
+    {
+     "key": "size",
+     "name": "Size",
+     "choices": [
+      [
+       "",
+       "Any Size"
+      ],
+      [
+       "large",
+       "Large · 3"
+      ],
+      [
+       "medium",
+       "Medium · 2"
+      ],
+      [
+       "small",
+       "Small · 1"
+      ]
+     ]
+    },
+    {
+     "key": "shape",
+     "name": "Shape",
+     "choices": [
+      [
+       "",
+       "Any Shape"
+      ],
+      [
+       "wide",
+       "Wide · 2"
+      ],
+      [
+       "tall",
+       "Tall · 1"
+      ]
+     ]
+    },
+    {
+     "key": "format",
+     "name": "Format",
+     "choices": [
+      [
+       "",
+       "Any Format"
+      ],
+      [
+       "jpeg",
+       "JPEG · 2"
+      ],
+      [
+       "png",
+       "PNG · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "images",
+   "params": "ws=large&wo=largest",
+   "results": [
+    {
+     "url": "https://i1.example/",
+     "resolution": "300 x 300",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i2.example/",
+     "resolution": "4000 x 3000",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i3.example/",
+     "resolution": "",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i4.example/",
+     "resolution": "1920 x 1080",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i5.example/",
+     "resolution": "1080×1920",
+     "img_format": "JPEG 1080×1920",
+     "img_src": "https://x.example/a.webp"
+    },
+    {
+     "url": "https://i6.example/",
+     "resolution": "640 x 480",
+     "img_format": "",
+     "img_src": "https://x.example/b.JPG?w=1"
+    },
+    {
+     "url": "https://i7.example/",
+     "resolution": "500 x 500",
+     "img_format": "gif",
+     "img_src": ""
+    }
+   ],
+   "choices": {
+    "order": "largest",
+    "size": "large",
+    "shape": "",
+    "format": ""
+   },
+   "narrow": [
+    "https://i2.example/",
+    "https://i4.example/",
+    "https://i5.example/"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "largest",
+       "Largest"
+      ]
+     ]
+    },
+    {
+     "key": "size",
+     "name": "Size",
+     "choices": [
+      [
+       "",
+       "Any Size"
+      ],
+      [
+       "large",
+       "Large · 3"
+      ],
+      [
+       "medium",
+       "Medium · 2"
+      ],
+      [
+       "small",
+       "Small · 1"
+      ]
+     ]
+    },
+    {
+     "key": "shape",
+     "name": "Shape",
+     "choices": [
+      [
+       "",
+       "Any Shape"
+      ],
+      [
+       "wide",
+       "Wide · 2"
+      ],
+      [
+       "tall",
+       "Tall · 1"
+      ]
+     ]
+    },
+    {
+     "key": "format",
+     "name": "Format",
+     "choices": [
+      [
+       "",
+       "Any Format"
+      ],
+      [
+       "jpeg",
+       "JPEG · 2"
+      ],
+      [
+       "png",
+       "PNG · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "images",
+   "params": "wa=square&wf=gif",
+   "results": [
+    {
+     "url": "https://i1.example/",
+     "resolution": "300 x 300",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i2.example/",
+     "resolution": "4000 x 3000",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i3.example/",
+     "resolution": "",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i4.example/",
+     "resolution": "1920 x 1080",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i5.example/",
+     "resolution": "1080×1920",
+     "img_format": "JPEG 1080×1920",
+     "img_src": "https://x.example/a.webp"
+    },
+    {
+     "url": "https://i6.example/",
+     "resolution": "640 x 480",
+     "img_format": "",
+     "img_src": "https://x.example/b.JPG?w=1"
+    },
+    {
+     "url": "https://i7.example/",
+     "resolution": "500 x 500",
+     "img_format": "gif",
+     "img_src": ""
+    }
+   ],
+   "choices": {
+    "order": "",
+    "size": "",
+    "shape": "square",
+    "format": "gif"
+   },
+   "narrow": [
+    "https://i7.example/"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "largest",
+       "Largest"
+      ]
+     ]
+    },
+    {
+     "key": "shape",
+     "name": "Shape",
+     "choices": [
+      [
+       "",
+       "Any Shape"
+      ],
+      [
+       "square",
+       "Square · 1"
+      ]
+     ]
+    },
+    {
+     "key": "format",
+     "name": "Format",
+     "choices": [
+      [
+       "",
+       "Any Format"
+      ],
+      [
+       "png",
+       "PNG · 1"
+      ],
+      [
+       "gif",
+       "GIF · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "images",
+   "params": "wo=bogus&ws=nope",
+   "results": [
+    {
+     "url": "https://i1.example/",
+     "resolution": "300 x 300",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i2.example/",
+     "resolution": "4000 x 3000",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i3.example/",
+     "resolution": "",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i4.example/",
+     "resolution": "1920 x 1080",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i5.example/",
+     "resolution": "1080×1920",
+     "img_format": "JPEG 1080×1920",
+     "img_src": "https://x.example/a.webp"
+    },
+    {
+     "url": "https://i6.example/",
+     "resolution": "640 x 480",
+     "img_format": "",
+     "img_src": "https://x.example/b.JPG?w=1"
+    },
+    {
+     "url": "https://i7.example/",
+     "resolution": "500 x 500",
+     "img_format": "gif",
+     "img_src": ""
+    }
+   ],
+   "choices": {
+    "order": "",
+    "size": "nope",
+    "shape": "",
+    "format": ""
+   },
+   "narrow": [],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "largest",
+       "Largest"
+      ]
+     ]
+    },
+    {
+     "key": "size",
+     "name": "Size",
+     "choices": [
+      [
+       "",
+       "Any Size"
+      ],
+      [
+       "large",
+       "Large · 3"
+      ],
+      [
+       "medium",
+       "Medium · 2"
+      ],
+      [
+       "small",
+       "Small · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "images",
+   "params": "wf=png&wo=largest",
+   "results": [
+    {
+     "url": "https://i1.example/",
+     "resolution": "300 x 300",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i2.example/",
+     "resolution": "4000 x 3000",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i3.example/",
+     "resolution": "",
+     "img_format": "jpeg",
+     "img_src": ""
+    },
+    {
+     "url": "https://i4.example/",
+     "resolution": "1920 x 1080",
+     "img_format": "png",
+     "img_src": ""
+    },
+    {
+     "url": "https://i5.example/",
+     "resolution": "1080×1920",
+     "img_format": "JPEG 1080×1920",
+     "img_src": "https://x.example/a.webp"
+    },
+    {
+     "url": "https://i6.example/",
+     "resolution": "640 x 480",
+     "img_format": "",
+     "img_src": "https://x.example/b.JPG?w=1"
+    },
+    {
+     "url": "https://i7.example/",
+     "resolution": "500 x 500",
+     "img_format": "gif",
+     "img_src": ""
+    }
+   ],
+   "choices": {
+    "order": "largest",
+    "size": "",
+    "shape": "",
+    "format": "png"
+   },
+   "narrow": [
+    "https://i4.example/",
+    "https://i1.example/"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "largest",
+       "Largest"
+      ]
+     ]
+    },
+    {
+     "key": "size",
+     "name": "Size",
+     "choices": [
+      [
+       "",
+       "Any Size"
+      ],
+      [
+       "large",
+       "Large · 1"
+      ],
+      [
+       "small",
+       "Small · 1"
+      ]
+     ]
+    },
+    {
+     "key": "shape",
+     "name": "Shape",
+     "choices": [
+      [
+       "",
+       "Any Shape"
+      ],
+      [
+       "wide",
+       "Wide · 1"
+      ],
+      [
+       "square",
+       "Square · 1"
+      ]
+     ]
+    },
+    {
+     "key": "format",
+     "name": "Format",
+     "choices": [
+      [
+       "",
+       "Any Format"
+      ],
+      [
+       "jpeg",
+       "JPEG · 4"
+      ],
+      [
+       "png",
+       "PNG · 2"
+      ],
+      [
+       "gif",
+       "GIF · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "videos",
+   "params": "",
+   "results": [
+    {
+     "url": "https://www.youtube.com/watch?v=1",
+     "length": "0:45",
+     "publishedDate": "2026-01-01T00:00:00"
+    },
+    {
+     "url": "https://vimeo.com/2",
+     "length": "30:00",
+     "publishedDate": "2026-03-01T00:00:00"
+    },
+    {
+     "url": "https://youtube.com/3"
+    },
+    {
+     "url": "https://m.youtube.com/4",
+     "length": 300,
+     "publishedDate": "2026-02-01T00:00:00"
+    },
+    {
+     "url": "https://peertube.example/5",
+     "length": "1:02:10",
+     "publishedDate": "None"
+    }
+   ],
+   "choices": {
+    "order": "",
+    "length": "",
+    "source": ""
+   },
+   "narrow": [
+    "https://www.youtube.com/watch?v=1",
+    "https://vimeo.com/2",
+    "https://youtube.com/3",
+    "https://m.youtube.com/4",
+    "https://peertube.example/5"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ],
+      [
+       "shortest",
+       "Shortest"
+      ],
+      [
+       "longest",
+       "Longest"
+      ]
+     ]
+    },
+    {
+     "key": "length",
+     "name": "Length",
+     "choices": [
+      [
+       "",
+       "Any Length"
+      ],
+      [
+       "short",
+       "Under 4 Min · 1"
+      ],
+      [
+       "medium",
+       "4–20 Min · 1"
+      ],
+      [
+       "long",
+       "Over 20 Min · 2"
+      ]
+     ]
+    },
+    {
+     "key": "source",
+     "name": "Source",
+     "choices": [
+      [
+       "",
+       "All Sources"
+      ],
+      [
+       "youtube.com",
+       "youtube.com · 3"
+      ],
+      [
+       "peertube.example",
+       "peertube.example · 1"
+      ],
+      [
+       "vimeo.com",
+       "vimeo.com · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "videos",
+   "params": "wo=newest",
+   "results": [
+    {
+     "url": "https://www.youtube.com/watch?v=1",
+     "length": "0:45",
+     "publishedDate": "2026-01-01T00:00:00"
+    },
+    {
+     "url": "https://vimeo.com/2",
+     "length": "30:00",
+     "publishedDate": "2026-03-01T00:00:00"
+    },
+    {
+     "url": "https://youtube.com/3"
+    },
+    {
+     "url": "https://m.youtube.com/4",
+     "length": 300,
+     "publishedDate": "2026-02-01T00:00:00"
+    },
+    {
+     "url": "https://peertube.example/5",
+     "length": "1:02:10",
+     "publishedDate": "None"
+    }
+   ],
+   "choices": {
+    "order": "newest",
+    "length": "",
+    "source": ""
+   },
+   "narrow": [
+    "https://vimeo.com/2",
+    "https://m.youtube.com/4",
+    "https://www.youtube.com/watch?v=1",
+    "https://youtube.com/3",
+    "https://peertube.example/5"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ],
+      [
+       "shortest",
+       "Shortest"
+      ],
+      [
+       "longest",
+       "Longest"
+      ]
+     ]
+    },
+    {
+     "key": "length",
+     "name": "Length",
+     "choices": [
+      [
+       "",
+       "Any Length"
+      ],
+      [
+       "short",
+       "Under 4 Min · 1"
+      ],
+      [
+       "medium",
+       "4–20 Min · 1"
+      ],
+      [
+       "long",
+       "Over 20 Min · 2"
+      ]
+     ]
+    },
+    {
+     "key": "source",
+     "name": "Source",
+     "choices": [
+      [
+       "",
+       "All Sources"
+      ],
+      [
+       "youtube.com",
+       "youtube.com · 3"
+      ],
+      [
+       "peertube.example",
+       "peertube.example · 1"
+      ],
+      [
+       "vimeo.com",
+       "vimeo.com · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "videos",
+   "params": "wo=longest",
+   "results": [
+    {
+     "url": "https://www.youtube.com/watch?v=1",
+     "length": "0:45",
+     "publishedDate": "2026-01-01T00:00:00"
+    },
+    {
+     "url": "https://vimeo.com/2",
+     "length": "30:00",
+     "publishedDate": "2026-03-01T00:00:00"
+    },
+    {
+     "url": "https://youtube.com/3"
+    },
+    {
+     "url": "https://m.youtube.com/4",
+     "length": 300,
+     "publishedDate": "2026-02-01T00:00:00"
+    },
+    {
+     "url": "https://peertube.example/5",
+     "length": "1:02:10",
+     "publishedDate": "None"
+    }
+   ],
+   "choices": {
+    "order": "longest",
+    "length": "",
+    "source": ""
+   },
+   "narrow": [
+    "https://peertube.example/5",
+    "https://vimeo.com/2",
+    "https://m.youtube.com/4",
+    "https://www.youtube.com/watch?v=1",
+    "https://youtube.com/3"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ],
+      [
+       "shortest",
+       "Shortest"
+      ],
+      [
+       "longest",
+       "Longest"
+      ]
+     ]
+    },
+    {
+     "key": "length",
+     "name": "Length",
+     "choices": [
+      [
+       "",
+       "Any Length"
+      ],
+      [
+       "short",
+       "Under 4 Min · 1"
+      ],
+      [
+       "medium",
+       "4–20 Min · 1"
+      ],
+      [
+       "long",
+       "Over 20 Min · 2"
+      ]
+     ]
+    },
+    {
+     "key": "source",
+     "name": "Source",
+     "choices": [
+      [
+       "",
+       "All Sources"
+      ],
+      [
+       "youtube.com",
+       "youtube.com · 3"
+      ],
+      [
+       "peertube.example",
+       "peertube.example · 1"
+      ],
+      [
+       "vimeo.com",
+       "vimeo.com · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "videos",
+   "params": "wo=shortest&wl=short",
+   "results": [
+    {
+     "url": "https://www.youtube.com/watch?v=1",
+     "length": "0:45",
+     "publishedDate": "2026-01-01T00:00:00"
+    },
+    {
+     "url": "https://vimeo.com/2",
+     "length": "30:00",
+     "publishedDate": "2026-03-01T00:00:00"
+    },
+    {
+     "url": "https://youtube.com/3"
+    },
+    {
+     "url": "https://m.youtube.com/4",
+     "length": 300,
+     "publishedDate": "2026-02-01T00:00:00"
+    },
+    {
+     "url": "https://peertube.example/5",
+     "length": "1:02:10",
+     "publishedDate": "None"
+    }
+   ],
+   "choices": {
+    "order": "shortest",
+    "length": "short",
+    "source": ""
+   },
+   "narrow": [
+    "https://www.youtube.com/watch?v=1"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ],
+      [
+       "shortest",
+       "Shortest"
+      ],
+      [
+       "longest",
+       "Longest"
+      ]
+     ]
+    },
+    {
+     "key": "length",
+     "name": "Length",
+     "choices": [
+      [
+       "",
+       "Any Length"
+      ],
+      [
+       "short",
+       "Under 4 Min · 1"
+      ],
+      [
+       "medium",
+       "4–20 Min · 1"
+      ],
+      [
+       "long",
+       "Over 20 Min · 2"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "videos",
+   "params": "we=youtube.com",
+   "results": [
+    {
+     "url": "https://www.youtube.com/watch?v=1",
+     "length": "0:45",
+     "publishedDate": "2026-01-01T00:00:00"
+    },
+    {
+     "url": "https://vimeo.com/2",
+     "length": "30:00",
+     "publishedDate": "2026-03-01T00:00:00"
+    },
+    {
+     "url": "https://youtube.com/3"
+    },
+    {
+     "url": "https://m.youtube.com/4",
+     "length": 300,
+     "publishedDate": "2026-02-01T00:00:00"
+    },
+    {
+     "url": "https://peertube.example/5",
+     "length": "1:02:10",
+     "publishedDate": "None"
+    }
+   ],
+   "choices": {
+    "order": "",
+    "length": "",
+    "source": "youtube.com"
+   },
+   "narrow": [
+    "https://www.youtube.com/watch?v=1",
+    "https://youtube.com/3",
+    "https://m.youtube.com/4"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ],
+      [
+       "shortest",
+       "Shortest"
+      ],
+      [
+       "longest",
+       "Longest"
+      ]
+     ]
+    },
+    {
+     "key": "length",
+     "name": "Length",
+     "choices": [
+      [
+       "",
+       "Any Length"
+      ],
+      [
+       "short",
+       "Under 4 Min · 1"
+      ],
+      [
+       "medium",
+       "4–20 Min · 1"
+      ]
+     ]
+    },
+    {
+     "key": "source",
+     "name": "Source",
+     "choices": [
+      [
+       "",
+       "All Sources"
+      ],
+      [
+       "youtube.com",
+       "youtube.com · 3"
+      ],
+      [
+       "peertube.example",
+       "peertube.example · 1"
+      ],
+      [
+       "vimeo.com",
+       "vimeo.com · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "videos",
+   "params": "we=gone.example",
+   "results": [
+    {
+     "url": "https://www.youtube.com/watch?v=1",
+     "length": "0:45",
+     "publishedDate": "2026-01-01T00:00:00"
+    },
+    {
+     "url": "https://vimeo.com/2",
+     "length": "30:00",
+     "publishedDate": "2026-03-01T00:00:00"
+    },
+    {
+     "url": "https://youtube.com/3"
+    },
+    {
+     "url": "https://m.youtube.com/4",
+     "length": 300,
+     "publishedDate": "2026-02-01T00:00:00"
+    },
+    {
+     "url": "https://peertube.example/5",
+     "length": "1:02:10",
+     "publishedDate": "None"
+    }
+   ],
+   "choices": {
+    "order": "",
+    "length": "",
+    "source": "gone.example"
+   },
+   "narrow": [],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ],
+      [
+       "shortest",
+       "Shortest"
+      ],
+      [
+       "longest",
+       "Longest"
+      ]
+     ]
+    },
+    {
+     "key": "source",
+     "name": "Source",
+     "choices": [
+      [
+       "",
+       "All Sources"
+      ],
+      [
+       "youtube.com",
+       "youtube.com · 3"
+      ],
+      [
+       "peertube.example",
+       "peertube.example · 1"
+      ],
+      [
+       "vimeo.com",
+       "vimeo.com · 1"
+      ],
+      [
+       "gone.example",
+       "gone.example · 0"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "news",
+   "params": "",
+   "results": [
+    {
+     "url": "https://news.example/a",
+     "publishedDate": "2026-10-10T08:00:00"
+    },
+    {
+     "url": "https://www.news.example/b",
+     "publishedDate": "2026-10-12T08:00:00"
+    },
+    {
+     "url": "https://other.example/c"
+    },
+    {
+     "url": "https://third.example/d",
+     "publishedDate": "2026-10-11T08:00:00"
+    }
+   ],
+   "choices": {
+    "order": "",
+    "source": ""
+   },
+   "narrow": [
+    "https://news.example/a",
+    "https://www.news.example/b",
+    "https://other.example/c",
+    "https://third.example/d"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ]
+     ]
+    },
+    {
+     "key": "source",
+     "name": "Source",
+     "choices": [
+      [
+       "",
+       "All Sources"
+      ],
+      [
+       "news.example",
+       "news.example · 2"
+      ],
+      [
+       "other.example",
+       "other.example · 1"
+      ],
+      [
+       "third.example",
+       "third.example · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "news",
+   "params": "wo=newest",
+   "results": [
+    {
+     "url": "https://news.example/a",
+     "publishedDate": "2026-10-10T08:00:00"
+    },
+    {
+     "url": "https://www.news.example/b",
+     "publishedDate": "2026-10-12T08:00:00"
+    },
+    {
+     "url": "https://other.example/c"
+    },
+    {
+     "url": "https://third.example/d",
+     "publishedDate": "2026-10-11T08:00:00"
+    }
+   ],
+   "choices": {
+    "order": "newest",
+    "source": ""
+   },
+   "narrow": [
+    "https://www.news.example/b",
+    "https://third.example/d",
+    "https://news.example/a",
+    "https://other.example/c"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ]
+     ]
+    },
+    {
+     "key": "source",
+     "name": "Source",
+     "choices": [
+      [
+       "",
+       "All Sources"
+      ],
+      [
+       "news.example",
+       "news.example · 2"
+      ],
+      [
+       "other.example",
+       "other.example · 1"
+      ],
+      [
+       "third.example",
+       "third.example · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "news",
+   "params": "we=news.example",
+   "results": [
+    {
+     "url": "https://news.example/a",
+     "publishedDate": "2026-10-10T08:00:00"
+    },
+    {
+     "url": "https://www.news.example/b",
+     "publishedDate": "2026-10-12T08:00:00"
+    },
+    {
+     "url": "https://other.example/c"
+    },
+    {
+     "url": "https://third.example/d",
+     "publishedDate": "2026-10-11T08:00:00"
+    }
+   ],
+   "choices": {
+    "order": "",
+    "source": "news.example"
+   },
+   "narrow": [
+    "https://news.example/a",
+    "https://www.news.example/b"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ]
+     ]
+    },
+    {
+     "key": "source",
+     "name": "Source",
+     "choices": [
+      [
+       "",
+       "All Sources"
+      ],
+      [
+       "news.example",
+       "news.example · 2"
+      ],
+      [
+       "other.example",
+       "other.example · 1"
+      ],
+      [
+       "third.example",
+       "third.example · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "news",
+   "params": "wo=largest",
+   "results": [
+    {
+     "url": "https://news.example/a",
+     "publishedDate": "2026-10-10T08:00:00"
+    },
+    {
+     "url": "https://www.news.example/b",
+     "publishedDate": "2026-10-12T08:00:00"
+    },
+    {
+     "url": "https://other.example/c"
+    },
+    {
+     "url": "https://third.example/d",
+     "publishedDate": "2026-10-11T08:00:00"
+    }
+   ],
+   "choices": {
+    "order": "",
+    "source": ""
+   },
+   "narrow": [
+    "https://news.example/a",
+    "https://www.news.example/b",
+    "https://other.example/c",
+    "https://third.example/d"
+   ],
+   "row": [
+    {
+     "key": "order",
+     "name": "Order",
+     "choices": [
+      [
+       "",
+       "Best Match"
+      ],
+      [
+       "newest",
+       "Newest"
+      ]
+     ]
+    },
+    {
+     "key": "source",
+     "name": "Source",
+     "choices": [
+      [
+       "",
+       "All Sources"
+      ],
+      [
+       "news.example",
+       "news.example · 2"
+      ],
+      [
+       "other.example",
+       "other.example · 1"
+      ],
+      [
+       "third.example",
+       "third.example · 1"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "cat": "general",
+   "params": "",
+   "results": [
+    {
+     "url": "https://news.example/a",
+     "publishedDate": "2026-10-10T08:00:00"
+    },
+    {
+     "url": "https://www.news.example/b",
+     "publishedDate": "2026-10-12T08:00:00"
+    },
+    {
+     "url": "https://other.example/c"
+    },
+    {
+     "url": "https://third.example/d",
+     "publishedDate": "2026-10-11T08:00:00"
+    }
+   ],
+   "choices": {
+    "order": ""
+   },
+   "narrow": [
+    "https://news.example/a",
+    "https://www.news.example/b",
+    "https://other.example/c",
+    "https://third.example/d"
+   ],
+   "row": []
+  }
+ ]
+}

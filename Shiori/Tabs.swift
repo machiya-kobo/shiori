@@ -285,9 +285,9 @@ struct RecentScreen: View {
             case .all: list(all, title: "Library")
             case .hister: list(pages, title: "Pages")
             case .notes: list(notes, title: "Notes")
-            case .web:
+            case .web, .images, .videos, .news:
                 ContentUnavailableView(
-                    "Search the Web", systemImage: "globe",
+                    session.scope.prompt, systemImage: session.scope == .images ? "photo.on.rectangle" : session.scope == .videos ? "play.rectangle" : session.scope == .news ? "newspaper" : "globe",
                     description: Text("Type in the search field to search the web."))
                     // The whole column, as the other empty states: sized to
                     // itself, the Mac's column shrank around it and the pills
@@ -548,8 +548,8 @@ struct SearchScreen: View {
         // ⌘K or ⌘F from a keyboard.
         .onChange(of: app.searchFocusRequests) { _, _ in searchFocused = true }
         .onChange(of: session.scope) { _, scope in
-            // A tap on the Web pill asks the web: that's on purpose.
-            if scope == .web { session.webAllowed = session.text.trimmingCharacters(in: .whitespaces) }
+            // A tap on the Web pill (or Images, Videos, News) asks the web: that's on purpose.
+            if scope.searchesWeb { session.webAllowed = session.text.trimmingCharacters(in: .whitespaces) }
             run(recording: false)
         }
         .task { await app.loadCardsIfNeeded() }

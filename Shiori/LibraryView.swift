@@ -178,8 +178,8 @@ struct LibraryView: View {
         // No search while typing (the user's call): Return, a recent search
         // or a pill runs it, and the field keeps the keyboard meanwhile.
         .onChange(of: session.scope) { _, scope in
-            // A tap on the Web pill asks the web: that's on purpose.
-            if scope == .web { session.webAllowed = session.text.trimmingCharacters(in: .whitespaces) }
+            // A tap on the Web pill (or Images, Videos, News) asks the web: that's on purpose.
+            if scope.searchesWeb { session.webAllowed = session.text.trimmingCharacters(in: .whitespaces) }
             // A pill runs a search of the words in the field (the rule, as
             // the iPhone has it), not only while one is on screen.
             if scopeSetBySearch {

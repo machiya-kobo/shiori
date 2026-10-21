@@ -10,7 +10,7 @@ import os
 /// Browsing, All, Pages and Notes are the Library, Web asks for a search,
 /// and Opened is what you opened; searching, each one narrows the search.
 enum SearchScope: String, Hashable, CaseIterable, Identifiable {
-    case all, hister, notes, web, smallweb, files, code, media, opened
+    case all, hister, notes, web, images, videos, news, smallweb, files, code, media, opened
 
     var id: Self { self }
 
@@ -27,6 +27,11 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .hister: .blue
         case .notes: .orange
         case .web: .yellow
+        // The web's own tabs, in the search page's colours: Images green,
+        // Videos red, News purple.
+        case .images: .green
+        case .videos: .red
+        case .news: .purple
         // Gemini and Gopher: the web's neighbour, teal.
         case .smallweb: .teal
         // The folders Hister watches: green, a hue no room wears.
@@ -46,6 +51,9 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .hister: "Pages"
         case .notes: "Notes"
         case .web: "Web"
+        case .images: "Images"
+        case .videos: "Videos"
+        case .news: "News"
         case .smallweb: "Small Web"
         case .files: "Files"
         case .code: "Code"
@@ -60,11 +68,25 @@ enum SearchScope: String, Hashable, CaseIterable, Identifiable {
         case .hister: "Search Your Pages"
         case .notes: "Search Notes"
         case .web: "Search the Web"
+        case .images: "Search Images"
+        case .videos: "Search Videos"
+        case .news: "Search News"
         case .smallweb: "Search Gemini and Gopher"
         case .files: "Search Your Files"
         case .code: "Search Your Code"
         case .media: "Search Your Media"
         case .opened: "Search What You Opened"
+        }
+    }
+
+    /// A tab that asks the web: a tap on its pill is a search on purpose (each one counts).
+    var searchesWeb: Bool { [.web, .images, .videos, .news].contains(self) }
+
+    /// SearXNG's category for the web's own tabs (nil for Web, its general search).
+    var webCategory: String? {
+        switch self {
+        case .images, .videos, .news: rawValue
+        default: nil
         }
     }
 }
@@ -102,6 +124,8 @@ private struct SessionTextChange: ViewModifier {
     /// notes. Frugal, as AI is.
     var webAllowed: String?
     var scope = SearchScope.all
+    /// Images', Videos' and News' order and filters, kept per tab for the session (`WebChoices`).
+    var webChoices: [SearchScope: WebChoices.Choices] = [:]
     var selected: StoredPage?
     /// The page open full-screen in a stack (the tabs, the two columns), so
     /// widening to the three columns shows it in the pane.
@@ -157,6 +181,9 @@ struct SearchResultsView: View {
         case .notes:
             _model = State(initialValue: ResultsModel(query: query, source: .notes, filterable: true, respellable: (query, { $0 })))
         case .web: _webModel = State(initialValue: WebResultsModel(query: SearxClient.webQuery(query)))
+        // The web's own tabs: SearXNG's category, the same words.
+        case .images, .videos, .news:
+            _webModel = State(initialValue: WebResultsModel(query: SearxClient.webQuery(query), category: scope.webCategory))
         case .smallweb: _smallWebModel = State(initialValue: SmallWebModel(query: SearxClient.webQuery(query)))
         // The folders Hister watches (`type:local`), here and nowhere else.
         case .files:
@@ -183,7 +210,7 @@ struct SearchResultsView: View {
                     WebResultsList(model: webModel, search: search)
                 } else {
                     ContentUnavailableView(
-                        "Search the Web", systemImage: "globe",
+                        scope.prompt, systemImage: "globe",
                         description: Text("Press Return to search the web for this."))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .themedBackground()

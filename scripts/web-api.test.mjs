@@ -507,10 +507,15 @@ test('the web is searched only on purpose: Return, a recent search, Did you mean
   assert.match(app, /go\('search', \{ q, s, \.\.\.\(record \? \{ w: '1' \} : \{\}\) \}, \{ replace: view === 'search' \}\);/);
   assert.match(app, /item\(text, 'search', \{ q: text, s: params\.get\('s'\) \|\| 'all', w: '1' \}/);
   assert.match(app, /go\('search', \{ q: fix, s: scope, w: '1' \}\)/);
-  assert.match(app, /keep\(\{ s, \.\.\.\(s === 'web' \? \{ w: '1' \} : \{\}\) \}\)/);
-  // All and Web ask the web only with it.
+  // The Web pill, and the web's own tabs (Images, Videos, News), are searches on purpose too.
+  assert.match(app, /keep\(\{ s, \.\.\.\(s === 'web' \|\| WEB_TABS\.includes\(s\) \? \{ w: '1' \} : \{\}\) \}\)/);
+  // All, Web and the web's tabs ask the web only with it.
   assert.match(app, /if \(!settings\.webResults \|\| !web\) \{/);
   assert.match(app, /if \(web\) webList\(list, q\);/);
+  assert.match(app, /if \(web\) webTabList\(list, q, scope\);/);
+  // Their choices narrow what came back: they never search again.
+  const tabs = app.slice(app.indexOf('function webChoiceMenus('), app.indexOf('/** An image result:'));
+  assert.doesNotMatch(tabs, /api\.web\(/);
   // Respellings come from the autocompleter, never a web search.
   assert.doesNotMatch(app, /api\.web\([^)]*\)\.then\(\(d\) => d\.suggestions/);
 });

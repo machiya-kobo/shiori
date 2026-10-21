@@ -2,10 +2,13 @@ import HisterKit
 import Observation
 import SwiftUI
 
-/// SearXNG results for the app's Search → Web, a page at a time.
+/// SearXNG results for the app's Search → Web, a page at a time (and
+/// Images, Videos and News: its categories).
 @Observable
 final class WebResultsModel {
     let query: String
+    /// SearXNG's category (images, videos, news), nil for its general search.
+    let category: String?
     private(set) var results: [WebResult] = []
     private(set) var suggestions: [String] = []
     /// The engines that didn't answer the first page ("No answer from …").
@@ -25,8 +28,9 @@ final class WebResultsModel {
     private var known = Set<String>()
     private var exhausted = false
 
-    init(query: String) {
+    init(query: String, category: String? = nil) {
         self.query = query
+        self.category = category
     }
 
     func load(searx: SearxClient?, hister: HisterClient?) async {
@@ -36,8 +40,9 @@ final class WebResultsModel {
         }
         if results.isEmpty { phase = .loading }
         do {
-            let first = try await searx.search(query, page: 1)
-            results = await wikipediaFirst(first.results, searx: searx)
+            let first = try await searx.search(query, page: 1, category: category)
+            // Wikipedia's article first is for the general search alone.
+            results = category == nil ? await wikipediaFirst(first.results, searx: searx) : first.results
             known = Set(results.map(\.url))
             firstPageCount = results.count
             suggestions = first.suggestions.filter { $0 != query }
@@ -86,7 +91,7 @@ final class WebResultsModel {
         isLoadingMore = true
         defer { isLoadingMore = false }
         moreFailed = false
-        guard let next = try? await searx.search(query, page: page + 1) else {
+        guard let next = try? await searx.search(query, page: page + 1, category: category) else {
             moreFailed = true
             return
         }
@@ -123,6 +128,15 @@ struct WebResultsList: View {
     }
 
     @ViewBuilder private var content: some View {
+        if model.category != nil, model.phase == .loaded, !model.results.isEmpty {
+            // Images, Videos and News: their own row of choices, and a grid for Images.
+            WebCategoryResults(model: model)
+        } else {
+            plain
+        }
+    }
+
+    @ViewBuilder private var plain: some View {
         switch model.phase {
         case .idle, .loading:
             ProgressView()
@@ -229,6 +243,13 @@ struct WebRow: View {
     @State private var image: Image?
     private var thumb: CGFloat { scaledThumb * macScale }
 
+    /// A video's length, "3:45" or "1:02:10" (nil for anything else).
+    private var length: String? {
+        guard let seconds = WebChoices.lengthSeconds(result.length), seconds > 0 else { return nil }
+        let (h, m, s) = (seconds / 3600, seconds / 60 % 60, seconds % 60)
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
@@ -240,6 +261,11 @@ struct WebRow: View {
                         Text("·").accessibilityHidden(true)
                         Text(published, format: .dateTime.year().month(.abbreviated).day())
                             .textStyle(.caption)
+                    }
+                    // A video's length, here when there's no thumbnail to carry it.
+                    if result.thumbnail == nil, let length {
+                        Text("·").accessibilityHidden(true)
+                        Text(length).textStyle(.caption).monospacedDigit()
                     }
                 }
                 .foregroundStyle(palette.secondaryText)
@@ -268,6 +294,19 @@ struct WebRow: View {
                     }
                 }
                 .frame(width: thumb, height: thumb)
+                // A video's length on its picture, as video sites show it.
+                .overlay(alignment: .bottomTrailing) {
+                    if let length {
+                        Text(length)
+                            .textStyle(.caption2, weight: .semibold)
+                            .monospacedDigit()
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(.black.opacity(0.75), in: .rect(cornerRadius: 4))
+                            .padding(4)
+                    }
+                }
                 .clipShape(.rect(cornerRadius: 10))
                 .accessibilityHidden(true)
                 // Downloaded once, decoded off the main actor at the size

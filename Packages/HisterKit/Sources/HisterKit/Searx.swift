@@ -12,17 +12,49 @@ public struct WebResult: Sendable, Equatable, Hashable, Identifiable {
     /// device never loads images from the engines' own hosts.
     public var thumbnail: URL?
     public var published: Date?
+    /// Images: the picture itself, through the same image proxy (nil when
+    /// SearXNG gave none there), its size and format as the engine says
+    /// ("1920 x 1080", "jpeg"), and its own address, read only for a
+    /// format its extension names: never loaded.
+    public var image: URL?
+    public var resolution = ""
+    public var imageFormat = ""
+    public var imageSource = ""
+    /// Videos: the length as SearXNG sends it ("3:45", or seconds).
+    public var length: String?
 
-    public init(url: String, title: String, content: String, engines: [String], thumbnail: URL?, published: Date?) {
+    public init(
+        url: String, title: String, content: String, engines: [String], thumbnail: URL?, published: Date?,
+        image: URL? = nil, resolution: String = "", imageFormat: String = "", imageSource: String = "", length: String? = nil
+    ) {
         self.url = url
         self.title = title
         self.content = content
         self.engines = engines
         self.thumbnail = thumbnail
         self.published = published
+        self.image = image
+        self.resolution = resolution
+        self.imageFormat = imageFormat
+        self.imageSource = imageSource
+        self.length = length
     }
 
     public var host: String { URL(string: url)?.host() ?? url }
+
+    /// The picture's own address, to open in the browser (search-core's
+    /// `S.originalImage`): the image proxy's `url` when it's proxied, else
+    /// the address as given; never anything but the web's schemes.
+    public var originalImage: URL? {
+        guard let given = SafeHref.url(imageSource) else { return nil }
+        guard given.path().hasSuffix("/image_proxy") else { return given }
+        return SafeHref.url(URLComponents(url: given, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "url" }?.value)
+    }
+
+    /// What Images', Videos' and News' choices read (`WebChoices`).
+    public var choiceItem: WebChoices.Item {
+        WebChoices.Item(url: url, resolution: resolution, imgFormat: imageFormat, imgSrc: imageSource, length: length, published: published)
+    }
 }
 
 /// One page of SearXNG results.
@@ -110,13 +142,17 @@ public struct SearxClient: Sendable {
         self.session = session
     }
 
-    public func search(_ query: String, page: Int = 1) async throws(HisterError) -> WebPage {
+    /// One page of `category`'s results (SearXNG's own: images, videos,
+    /// news; nil for its general search).
+    public func search(_ query: String, page: Int = 1, category: String? = nil) async throws(HisterError) -> WebPage {
         var components = URLComponents(url: baseURL.appending(path: "search"), resolvingAgainstBaseURL: false)!
-        components.setQueryItems([
+        var items = [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "format", value: "json"),
             URLQueryItem(name: "pageno", value: String(page)),
-        ])
+        ]
+        if let category { items.append(URLQueryItem(name: "categories", value: category)) }
+        components.setQueryItems(items)
         let request = URLRequest(url: components.url!)
         let data: Data
         let response: URLResponse
@@ -144,6 +180,19 @@ public struct SearxClient: Sendable {
                 var thumbnail_src: String?
                 var img_src: String?
                 var publishedDate: String?
+                var resolution: String?
+                var img_format: String?
+                /// A string ("3:45") or seconds, depending on the engine.
+                var length: Loose?
+            }
+            /// A string or a number, read as text; anything else as nothing.
+            struct Loose: Decodable {
+                var text: String?
+                init(from decoder: Decoder) throws {
+                    let c = try decoder.singleValueContainer()
+                    if let s = try? c.decode(String.self) { text = s }
+                    else if let n = try? c.decode(Double.self) { text = n == n.rounded() ? String(Int(n)) : String(n) }
+                }
             }
             /// One result that doesn't read is skipped, not the page.
             var results: Lenient<Result>?
@@ -177,7 +226,12 @@ public struct SearxClient: Sendable {
                 content: r.content ?? "",
                 engines: r.engines ?? r.engine.map { [$0] } ?? [],
                 thumbnail: [r.thumbnail, r.thumbnail_src, r.img_src].lazy.compactMap { self.proxied($0) }.first,
-                published: r.publishedDate.flatMap(Self.date))
+                published: r.publishedDate.flatMap(Self.date),
+                image: self.proxied(r.img_src),
+                resolution: r.resolution ?? "",
+                imageFormat: r.img_format ?? "",
+                imageSource: r.img_src ?? "",
+                length: r.length?.text)
         }
         return WebPage(
             results: results, suggestions: reply.suggestions ?? [], corrections: reply.corrections ?? [],
