@@ -2974,6 +2974,14 @@
       $('tools-row').append(controls);
       controls.append($('sort-label'));
       if (code) controls.append(codeFilterBar());
+      // Hister's own search of the same words, at the row's end where it's seen (it sat under the last result):
+      // the rooms' Hister address on a hosted page (this host's `/` is this page), the extension's server otherwise.
+      // For Hister's own results, not Kura's.
+      const histerUI = S.histerUIBase('__SHIORI_ROOMS__', histerBase, /^https?:$/.test(location.protocol) ? location.origin : '');
+      if (!vault && histerUI) {
+        const words = files ? S.filesQuery(q) : code ? S.codeQuery(q, codeFiltersFromAddress()) : q;
+        controls.append(el('a', { class: 'tools-link', href: S.linkHref(`${histerUI}?q=${encodeURIComponent(words)}`, location.href) }, 'Open in Hister ›'));
+      }
       fadeEdges($('tools-row'));
       if (vault && !notesBase) return showStatus(notesFromHister ? 'No Hister server is set up.' : 'No Kura address is set up (Settings → Search → Notes).');
       if (!vault && !histerBase) return showStatus('No Hister server is set up.');
@@ -3055,21 +3063,60 @@
         lifted = first.cards.length;
         docs = first.docs;
       }
-      appendFolded($('web-results'), docs, (d) => (vault ? vaultCard(d, cards) : files ? fileCard(d) : code ? codeCard(d) : histerCard(d)));
+      const card = (d) => (vault ? vaultCard(d, cards) : files ? fileCard(d) : code ? codeCard(d) : histerCard(d));
+      appendFolded($('web-results'), docs, card);
       const from = (page - 1) * PAGE_SIZE + 1;
       const noun = vault ? 'notes' : files ? 'files' : code ? 'results' : 'pages';
+      let shown = lifted + docs.length;
+      const seen = new Set(docs.map((d) => d.url));
       // Hister's total is your pages alone (notes are Kura's), so both can say "of".
-      $('timing').textContent = `${from}–${from + lifted + docs.length - 1} of ${(result.total || docs.length).toLocaleString()} ${noun}`;
-      // Hister's own search page: the rooms' Hister address on a hosted page
-      // (this host's `/` is this page), the extension's server otherwise.
-      const histerUI = S.histerUIBase('__SHIORI_ROOMS__', histerBase, /^https?:$/.test(location.protocol) ? location.origin : '');
-      $('hister-more-tab').href = `${histerUI}?q=${encodeURIComponent(files ? S.filesQuery(q) : code ? S.codeQuery(q, codeFiltersFromAddress()) : q)}`;
-      // "Open in Hister" is for Hister's own results, not Kura's.
-      $('hister-more-tab').hidden = vault || !histerUI;
+      const count = () => ($('timing').textContent = `${from}–${from + shown - 1} of ${Math.max(result.total || 0, from + shown - 1).toLocaleString()} ${noun}`);
+      count();
       $('pages').hidden = false;
-      // A close-match page key belongs to the other spelling: no next page.
-      if (result.page_key && docs.length >= PAGE_SIZE && !result.closeMatches) $('next').href = link({ p: page + 1, hk: result.page_key });
-      else $('next').hidden = true;
+      $('next').hidden = true;
+      // The rest of the list, 30 more at a time, added in place until the end (Next page wanted a full page, so a
+      // duplicate dropped from one hid it). A close-match page key belongs to the other spelling: no more then.
+      const nextPage = async (n, key) => {
+        const sort = histerSort === 'new' ? 'date' : '';
+        if (vault && notesFromHister) return histerNotes(q, { limit: PAGE_SIZE, page_key: key, sort });
+        if (vault) {
+          const offset = (n - 1) * PAGE_SIZE;
+          const r = await kuraNotes(q, { limit: PAGE_SIZE, offset, sort: sort ? 'date' : 'relevance', vault: vaultParam });
+          r.page_key = offset + r.documents.length < r.total ? 'kura' : '';
+          return r;
+        }
+        const extra = { highlight: 'HTML', page_key: key, ...(sort ? { sort } : {}) };
+        return histerSearch(files ? S.filesQuery(q) : code ? S.codeQuery(q, codeFiltersFromAddress()) : q, PAGE_SIZE, extra);
+      };
+      let key = result.closeMatches ? '' : result.page_key || '';
+      let n = page;
+      if (key) {
+        const more = el('button', { type: 'button', class: 'page-button primary' }, 'Show More');
+        more.addEventListener('click', async () => {
+          more.disabled = true;
+          more.textContent = 'Loading…';
+          try {
+            const next = await nextPage(n + 1, key);
+            n += 1;
+            let batch = (next.documents || []).filter((d) => (vault || pageOf(d)) && !seen.has(d.url));
+            if (!vault) batch = S.uniqueItems(batch);
+            for (const d of batch) seen.add(d.url);
+            appendFolded($('web-results'), batch, card);
+            shown += batch.length;
+            count();
+            key = next.page_key || '';
+            if (!key || !(next.documents || []).length) more.remove();
+            else {
+              more.disabled = false;
+              more.textContent = 'Show More';
+            }
+          } catch (_) {
+            more.disabled = false;
+            more.textContent = 'Try Again';
+          }
+        });
+        $('pages').append(more);
+      }
       if (page > 1) {
         $('prev').hidden = false;
         $('prev').addEventListener('click', (e) => (e.preventDefault(), history.back()));

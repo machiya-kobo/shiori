@@ -192,11 +192,7 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
   body:not(.home) > .filters :is(#settings-open::before, .rooms-open svg) { width: 20px; height: 20px; }
   body:not(.home) > .filters #settings-open::before { background: var(--text); }
   body:not(.home) > .filters .rooms-open svg { stroke: var(--text); }
-  /* On a touch screen, lower still: into the strip Safari keeps under its toolbar, where the page still shows (a
-     desktop window would cut it off). */
-  @media (pointer: coarse) {
-    body:not(.home) > .filters { bottom: calc(env(safe-area-inset-bottom) - 10px); }
-  }
+
   body:not(.home) > .filters .rooms-menu { top: auto; bottom: calc(100% + 12px); }
   body:not(.home) > .bgctl { display: none; }
   /* The start page's Rain and Watch, as low. */
@@ -435,6 +431,17 @@ body:not(.home) header > .tools-row { margin-bottom: calc(8 * var(--u)); }
   align-self: stretch;
 }
 .tools-row button[aria-pressed="true"] { color: var(--accent); }
+/* Open in Hister on your lists: at the row's end, in the accent. */
+.tools-row .list-controls:has(> .tools-link) { flex: 1; }
+/* A wide window: the row spans the window, the link ends where the results' column does. */
+@media (min-width: 1100px) {
+  body:not(.home) .tools-row .list-controls:has(> .tools-link) { flex: 0 0 var(--col-w); }
+}
+.tools-row .tools-link {
+  margin-left: auto; font-family: inherit; font-size: 0.8125rem; font: -apple-system-footnote; font-weight: 600;
+  color: var(--accent); text-decoration: none; white-space: nowrap;
+}
+.tools-row .tools-link:hover { text-decoration: underline; }
 .tools-row select, .tools-row .list-controls select {
   /* The size and face where -apple-system-footnote is unknown (off Apple), the same for every select here. */
   font-family: inherit; font-size: 0.8125rem; font-weight: 400; line-height: normal;
@@ -1204,11 +1211,12 @@ html.frost-header header {
    chosen, the time range and sort, and the buttons. Each keeps its place: the padding is given back as margin. A
    hover keeps its own fill. Off Apple while the background moves the bar is the plain glass, and they go clear again
    (--glass-backing-bar, backgrounds.css). */
-html.has-bg.frost-header body:not(.home) header :is(.brand, #categories a:not([aria-current="page"], :hover), .tools-row :is(select, button), .icon-button:not(:hover, :focus-visible)) {
+html.has-bg.frost-header body:not(.home) header :is(.brand, #categories a:not([aria-current="page"], :hover), .tools-row :is(select, button, .tools-link), .icon-button:not(:hover, :focus-visible)) {
   background: var(--glass-backing-bar);
 }
 html.has-bg.frost-header body:not(.home) header .brand { padding: 3px 12px 3px 4px; margin: -3px -12px -3px -4px; border-radius: 999px; }
 html.has-bg.frost-header body:not(.home) header .tools-row :is(select, button) { padding: 2px 8px; margin-inline: -8px; border-radius: 999px; }
+html.has-bg.frost-header body:not(.home) header .tools-row .tools-link { padding: 2px 8px; margin-right: -8px; border-radius: 999px; }
 /* The chevron inside its backing: room for it before the backing's end. */
 html.has-bg.frost-header body:not(.home) header .tools-row select { padding-right: 21px; }
 /* Room between those backings (each reaches 8px past its text): 4px of the scene between two, not one long pill. */
