@@ -5,6 +5,18 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.21.3 (2026-10-20)
+
+- Search page: Pages, Notes, Files and Code show every result: Show More
+  adds the next 30 in place until the end. The Next page link never
+  showed when a duplicate was dropped from a page (it wanted a full 30),
+  so a search of 218 pages stopped at the first 29.
+- Search page: Open in Hister sits at the end of the sort row on Pages,
+  Files and Code (it was under the last result), level with the results'
+  right edge.
+- Search page, on a phone: Home and Settings are back where they were,
+  keeping their accent look.
+
 ## 1.21.2 (2026-10-20)
 
 - Search page and web app: the All pill is as wide as Web, the next
