@@ -181,11 +181,22 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
        margin of ours only widened the gap. Snug padding brings the buttons lower still. */
     position: fixed; z-index: 20; right: calc(12px + env(safe-area-inset-right)); bottom: env(safe-area-inset-bottom);
     display: flex; gap: 4px; padding: 3px; border-radius: 999px;
-    background: color-mix(in srgb, var(--card) 90%, transparent); border: 1px solid var(--line);
-    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 18px rgb(0 0 0 / 0.35);
+    /* They stand out from the results under them: an accent ring, a deeper shadow, tinted buttons, bright glyphs. */
+    background: color-mix(in srgb, var(--card) 94%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 6px 24px rgb(0 0 0 / 0.5);
   }
-  body:not(.home) > .filters .icon-button { width: 36px; height: 36px; border-radius: 50%; background: var(--raised); border: 1px solid var(--line); }
-  body:not(.home) > .filters :is(#settings-open::before, .rooms-open svg) { width: 18px; height: 18px; }
+  body:not(.home) > .filters .icon-button {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 22%, var(--raised)); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  body:not(.home) > .filters :is(#settings-open::before, .rooms-open svg) { width: 20px; height: 20px; }
+  body:not(.home) > .filters #settings-open::before { background: var(--text); }
+  body:not(.home) > .filters .rooms-open svg { stroke: var(--text); }
+  /* On a touch screen, lower still: into the strip Safari keeps under its toolbar, where the page still shows (a
+     desktop window would cut it off). */
+  @media (pointer: coarse) {
+    body:not(.home) > .filters { bottom: calc(env(safe-area-inset-bottom) - 10px); }
+  }
   body:not(.home) > .filters .rooms-menu { top: auto; bottom: calc(100% + 12px); }
   body:not(.home) > .bgctl { display: none; }
   /* The start page's Rain and Watch, as low. */
@@ -323,6 +334,8 @@ body[data-pill-row="scroll"] #categories { flex-wrap: nowrap; overflow-x: auto; 
   padding: 4px 8px; border-radius: 999px; text-decoration: none; white-space: nowrap;
   font: -apple-system-footnote; font-weight: 600;
   color: var(--tab); border: 1.5px solid var(--tab); background: transparent;
+  /* At least as wide as Web, the next shortest: All was hard to tap. In the pill's own type, so it holds at any size. */
+  min-width: calc(2.1em + 19px); text-align: center;
 }
 #categories a[aria-current="page"] { color: var(--bg); background: var(--tab); border-color: var(--tab); }
 /* Under the pointer a pill that isn't chosen lifts onto its hover fill (24% of

@@ -229,6 +229,8 @@ body[data-pill-row="scroll"] .segments { flex-wrap: nowrap; overflow-x: auto; }
 }
 .segments button {
   --tab: var(--accent); --tab-hover-bg: var(--accent-hover-bg); --tab-hover: var(--accent-hover); flex: none; padding: 4px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  /* At least as wide as Web, the next shortest: All was hard to tap. */
+  min-width: calc(2.15em + 23px);
   font-size: var(--fs-foot); font-weight: 600;
   color: var(--tab); border: 1.5px solid var(--tab); background: transparent;
 }
