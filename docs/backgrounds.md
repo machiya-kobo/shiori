@@ -19,7 +19,8 @@ Pick one in Settings: the web app's **Appearance** page, or the search page's sh
 As everywhere in Settings, a change previews at once and only Save keeps it; Cancel puts back what was there.
 
 While a background shows, two buttons sit in the lower-right corner: **Rain**, and the eye, **Watch**, which hides the
-page so you see the background alone. A tap anywhere or Escape brings the page back.
+page so you see the background alone. A tap anywhere or Escape brings the page back. On Shiori Search's results pages
+that corner holds Home and Settings instead; the rain is in Settings → Background.
 
 ## What stays where
 

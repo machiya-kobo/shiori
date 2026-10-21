@@ -269,9 +269,9 @@ test("the preview ends above the corner and fits the window in the zoomed page's
   const pane = page.match(/#preview-pane \{[^}]*\}/)[0];
   // Level with the results (main's 8px), under the header, and never 100vh: on a Mac the body's zoom made it 1.2 windows tall.
   assert.match(pane, /top: calc\(var\(--header-h, 0px\) \+ 8px\)/);
-  assert.match(pane, /height: calc\(var\(--vh, 100vh\) - var\(--header-h, 0px\) - 16px\); margin-top: 8px;/);
+  // It ends above the corner's house and gear, there with or without a background.
+  assert.match(pane, /height: calc\(var\(--vh, 100vh\) - var\(--header-h, 0px\) - 90px\); margin-top: 8px;/);
   assert.doesNotMatch(pane, /height: calc\(100vh/);
-  assert.match(page, /html\.has-bgctl #preview-pane \{ height: calc\(var\(--vh, 100vh\) - var\(--header-h, 0px\) - 90px\); \}/);
   assert.match(read('../web/app/app.css'), /html\.has-bgctl #preview \{ padding-bottom: calc\(74px \+ env\(safe-area-inset-bottom\)\); \}/);
 });
 

@@ -1639,19 +1639,9 @@
     return;
   }
 
-  // Under 1100px the results have no name row: the field is the header's top and the house and gear are the corner's,
-  // lower right (search.css). Out of the header for that, whose glass would hold a fixed box inside it; back when the
-  // window widens.
-  {
-    const corner = document.querySelector('#brand-row .filters');
-    const narrow = matchMedia('(max-width: 1099px)');
-    const place = () => {
-      if (narrow.matches && corner.parentElement !== document.body) document.body.append(corner);
-      else if (!narrow.matches && corner.parentElement === document.body) $('brand-row').append(corner);
-    };
-    narrow.addEventListener('change', place);
-    place();
-  }
+  // The results have no name row: the field is the header's top and the house and gear are the corner's, lower right
+  // (search.css). Out of the header for that, whose glass would hold a fixed box inside it.
+  document.body.append(document.querySelector('#brand-row .filters'));
 
   /** Theme, tabs and filters: from the copy before the first paint, then from settings. */
   // The header's height, for the section headings that stick under it
@@ -3834,8 +3824,7 @@
 
   /**
    * From 1100px up the field is in the top row over the results' column: as
-   * wide as it, and level with its left edge (just after the name where the
-   * name leaves no room). It's measured from the column as drawn, not
+   * wide as it, and level with its left edge. It's measured from the column as drawn, not
    * worked out from the page's own sums, so a browser that sizes the grid's
    * tracks or the zoomed units a little differently still lines up. Below
    * 1100px, and on the start page, the stylesheet places it.
@@ -3847,9 +3836,7 @@
     if (document.body.classList.contains('home') || !matchMedia('(min-width: 1100px)').matches) return;
     const main = document.querySelector('main');
     const header = document.querySelector('header');
-    const name = document.querySelector('#brand span');
-    const filters = document.querySelector('.filters');
-    if (!main || !header || !name || !filters) return;
+    if (!main || !header) return;
     // The zoomed page's own pixels (what a CSS length is) against the
     // screen's (what a rect is).
     const z = parseFloat(document.body.style.zoom) || 1;
@@ -3863,8 +3850,6 @@
       const first = parseFloat(style.gridTemplateColumns.split(' ')[0]);
       if (first > 0) right = column.left + first * z;
     }
-    left = Math.max(left, name.getBoundingClientRect().right + 16);
-    right = Math.min(right, filters.getBoundingClientRect().left - 16);
     if (!(right - left > 160)) return;
     const box = header.getBoundingClientRect();
     const inner = box.left + (parseFloat(getComputedStyle(header).paddingLeft) || 0) * z;
