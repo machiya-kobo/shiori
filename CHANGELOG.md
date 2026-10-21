@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.21.2 (2026-10-20)
+
+- Search page and web app: the All pill is as wide as Web, the next
+  shortest, so it's easier to tap.
+- Search page, on a phone: Home and Settings stand out (an accent ring,
+  tinted buttons, bright glyphs, a deeper shadow) and sit lower, into the
+  strip Safari keeps under its toolbar.
+
 ## 1.21.1 (2026-10-20)
 
 - Search page: a result's description is three lines at most, as other
