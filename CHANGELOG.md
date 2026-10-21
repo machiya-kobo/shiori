@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.22.2 (2026-10-21)
+
+- The web image's nginx base re-pinned to the current stable-alpine
+  digest (1.22.1's image couldn't be built on the old pin). It carries
+  1.22.1's changes, which were never deployed.
+
 ## 1.22.1 (2026-10-21)
 
 - Search page, on a wide screen: laid out as on a phone. No Shiori name
