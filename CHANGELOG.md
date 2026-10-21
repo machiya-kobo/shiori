@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.22.3 (2026-10-21)
+
+- Search page, on a wide screen: the footer sits on the bottom edge of the
+  page. The room under it was for Home and Settings, which float at the
+  right, clear of its centred lines there; a phone keeps it.
+
 ## 1.22.2 (2026-10-21)
 
 - The web image's nginx base re-pinned to the current stable-alpine
