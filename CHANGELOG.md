@@ -5,6 +5,22 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.22.0 (2026-10-20)
+
+- iPhone, iPad, Mac and the web app: Images, Videos and News pills after
+  Web, as on Shiori Search. Images is a grid of pictures; a tap shows one
+  large with its site, size and format, Open Image and Visit Page, and the
+  previous and next (buttons, a swipe, the arrow keys). Videos show their
+  length on the thumbnail; News its date. Each searches the web only when
+  chosen, as Web does.
+- Their order and filters (Largest, size, shape and format for Images;
+  Newest, Shortest, Longest and length for Videos; Newest and source for
+  News) sit beside Sort, in one Filter menu, and narrow or reorder what
+  came back in place: never another web search. In the web app the time
+  range is there too.
+- The choices' logic is shared by the search page, the web app and the
+  apps (one set of test cases runs in Swift and JavaScript).
+
 ## 1.21.6 (2026-10-20)
 
 - iPhone, iPad and Mac: a list's next page is asked once more after a
