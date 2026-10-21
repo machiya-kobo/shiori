@@ -1261,5 +1261,12 @@ html.has-bg :is(#bg, #rainfx, .bgimg, .bgvid) { width: var(--vw, 100vw); height:
 /* The footer's glass fits its lines; under it, open space as tall as the corner's buttons (16px in, 50px tall),
    so the last of the page scrolls clear of them. The preview ends above them. */
 html.has-bgctl body:not(.home) { padding-bottom: 74px; }
+/* A wide screen's footer is on the page's bottom edge: its lines are centred and short, well clear of the corner's
+   buttons at the right, so it needs no room under it (a phone's spans the screen, and keeps it). */
+@media (min-width: 1100px) {
+  body:not(.home), html.has-bgctl body:not(.home) { padding-bottom: 0; }
+  body:not(.home) > footer { padding-bottom: 12px; }
+  html.has-bg body:not(.home) > footer { border-radius: 14px 14px 0 0; padding-bottom: 12px; }
+}
 /* Settings → Background: Choose… in the accent; Remove keeps the red of a removal. */
 .setting .bg-actions button.link:not(.danger) { color: var(--accent); }
