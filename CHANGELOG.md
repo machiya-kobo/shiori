@@ -5,6 +5,19 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.21.1 (2026-10-20)
+
+- Search page: a result's description is three lines at most, as other
+  search engines show (and the web app already did). An engine's snippet
+  can be a whole paragraph: Wikipedia's took half a phone's screen.
+- Search page: a search word is bold only where a word starts ("can" no
+  longer half-bolds "American").
+- Search page: room under the time range before the header's line.
+- Search page, on a phone: Home and Settings sit lower, on the bottom of
+  the page, with snug padding.
+- Search page: no empty strip above the placeholder cards while the Small
+  Web, Media, Code or your lists load over a background.
+
 ## 1.21.0 (2026-10-20)
 
 - iPhone, iPad and Mac: your pages are in Spotlight. The newest 300 are
