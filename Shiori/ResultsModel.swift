@@ -1,6 +1,7 @@
 import Foundation
 import HisterKit
 import Observation
+import os
 
 /// One list of search results, loaded a page at a time.
 @Observable
@@ -371,7 +372,9 @@ final class ResultsModel {
         moreFailed = false
         for _ in 0..<6 where !merge.finished {
             if merge.needsPages, let key = merge.pagesKey {
-                guard let page = try? await client.search(query, sort: .newest, pageKey: key, options: options) else {
+                guard let page = await Self.nextPage({ () async throws(HisterError) -> SearchPage in
+                    try await client.search(query, sort: .newest, pageKey: key, options: options)
+                }) else {
                     if mine == generation { moreFailed = true }
                     return
                 }
@@ -601,7 +604,9 @@ final class ResultsModel {
         defer { isLoadingMore = false }
         let mine = generation
         moreFailed = false
-        guard let page = try? await search(client, query, sort: sort, pageKey: key, options: options) else {
+        guard let page = await Self.nextPage({ () async throws(HisterError) -> SearchPage in
+            try await search(client, query, sort: sort, pageKey: key, options: options)
+        }) else {
             if mine == generation { moreFailed = true }
             return
         }
@@ -613,6 +618,24 @@ final class ResultsModel {
             isLoadingMore = false
             await loadMoreIfNeeded(after: last, using: client, tries: tries + 1)
         }
+    }
+
+    private static let log = Logger(subsystem: ShioriID.app, category: "network")
+
+    /// A next page, asked once more after a moment when the first try fails: a phone's link drops a request now and
+    /// then, and "More didn't load" came up for that alone. Why it failed is logged (the error's kind, never content).
+    private static func nextPage(_ ask: () async throws(HisterError) -> SearchPage) async -> SearchPage? {
+        for attempt in 1...2 {
+            do {
+                return try await ask()
+            } catch .cancelled {
+                return nil
+            } catch {
+                log.error("Next page failed (try \(attempt, privacy: .public)): \(String(describing: error), privacy: .public)")
+                if attempt == 1 { try? await Task.sleep(for: .seconds(1)) }
+            }
+        }
+        return nil
     }
 
     /// Try Again after a next page that didn't come.

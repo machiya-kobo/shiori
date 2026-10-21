@@ -832,7 +832,11 @@ private struct PillFace: View {
         let lifted = hovering && !on
         let hover = palette.pillHover(tint)
         let ink = lifted ? hover.ink : color
-        text
+        // At least as wide as Web, the next shortest: All was hard to tap (the web pages' min-width, in the pill's type).
+        ZStack {
+            Text(verbatim: "Web").hidden().accessibilityHidden(true)
+            text
+        }
             .textStyle(.subheadline, weight: .semibold)
             .foregroundStyle(on ? palette.background : ink)
             .padding(.horizontal, 11)
