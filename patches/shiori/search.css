@@ -177,9 +177,10 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
   body:not(.home) .brand-row { display: none; }
   body:not(.home) header > #search { padding-top: calc(10 * var(--u)); }
   body:not(.home) > .filters {
-    /* Close to the bottom: Safari's page already ends above its floating toolbar, so 16px more left a wide gap. */
-    position: fixed; z-index: 20; right: calc(12px + env(safe-area-inset-right)); bottom: calc(6px + env(safe-area-inset-bottom));
-    display: flex; gap: 6px; padding: 6px; border-radius: 999px;
+    /* On the bottom: Safari's page already ends above its floating toolbar (fixed boxes can't go lower), so any
+       margin of ours only widened the gap. Snug padding brings the buttons lower still. */
+    position: fixed; z-index: 20; right: calc(12px + env(safe-area-inset-right)); bottom: env(safe-area-inset-bottom);
+    display: flex; gap: 4px; padding: 3px; border-radius: 999px;
     background: color-mix(in srgb, var(--card) 90%, transparent); border: 1px solid var(--line);
     -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 4px 18px rgb(0 0 0 / 0.35);
   }
@@ -188,7 +189,7 @@ body:not(.home) .field-button svg { width: calc(20 * var(--u)); height: calc(20 
   body:not(.home) > .filters .rooms-menu { top: auto; bottom: calc(100% + 12px); }
   body:not(.home) > .bgctl { display: none; }
   /* The start page's Rain and Watch, as low. */
-  .bgctl { right: calc(12px + env(safe-area-inset-right)); bottom: calc(6px + env(safe-area-inset-bottom)); }
+  .bgctl { right: calc(12px + env(safe-area-inset-right)); bottom: env(safe-area-inset-bottom); padding: 3px; gap: 4px; }
   body:not(.home) { padding-bottom: 0; }
   body:not(.home) > footer {
     box-sizing: border-box; min-height: 82px; display: flex; flex-direction: column; justify-content: flex-start;
@@ -397,6 +398,8 @@ body[data-pill-row="scroll"] #categories { flex-wrap: nowrap; overflow-x: auto; 
    under it starts in one place. A phone scrolls it sideways (search.js
    fades its ends, as the pills'). */
 .tools-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 4px; min-height: 24px; }
+/* Room under it before the header's line (a backed choice sat right on it). */
+body:not(.home) header > .tools-row { margin-bottom: calc(8 * var(--u)); }
 /* A select inside its label sits as a bare one does (in a line box it rode a fraction of a pixel lower). */
 .tools-row label, .tools-row .list-controls, .tools-row .code-filters { display: inline-flex; align-items: center; }
 .tools-row .list-controls, .tools-row .code-filters { flex-wrap: wrap; margin: 0; gap: 4px 14px; }
@@ -520,6 +523,9 @@ body[data-result-style="none"] :is(.hister-card, .vault-card, .smallweb-card, .m
 .title:hover, .title:focus-visible { text-decoration: underline; }
 .date { margin-top: 3px; font: -apple-system-caption1; color: var(--secondary); }
 .snippet { margin: 5px 0 0; font: -apple-system-subheadline; color: var(--secondary); line-height: 1.4; }
+/* Three lines at most, as other search engines show (and the web app's rows): an engine's snippet can be a whole
+   paragraph (Wikipedia's took half a phone's screen). The page itself, or its preview, has the rest. */
+.card > .snippet { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .snippet b { color: var(--text); font-weight: 600; }
 mark { background: var(--highlight); color: var(--text); border-radius: 3px; padding: 0 1px; }
 .meta {
@@ -1213,6 +1219,11 @@ html.has-bg body:not(.home) > footer {
 /* 8px between boxes of glass: every box after a shown one (~, not +: the AI answer, hidden, and the Info column sit
    between Did you mean and the first section, which then ran into it). */
 html.has-bg body:not(.home) main > :is(section:not(#infobox-slot), p:not(.more), p.more:has(> a:not([hidden])), nav):not([hidden]) ~ :is(section:not(#infobox-slot, #answer, #suggestions), p, nav) { margin-top: 8px; }
+/* The results' section shown before anything is in it (the Small Web, Media, Code and your lists show it as they
+   start asking) draws no glass: it was an empty strip above the placeholder cards while they waited. */
+html.has-bg body:not(.home) main > #web:not(:has(#web-results > *, #images > *, #web-status:not(:empty), #web-title:not([hidden]))) {
+  background: none; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0;
+}
 /* AI Answer, Info and Related Searches are solid panels of their own (no glass box round them, which gave AI Answer
    its own padding and corners): the three rows alike, with or without a background. */
 /* The start page's header is the whole window (the field in its middle): not glass, or it was a pane again. */

@@ -202,8 +202,12 @@
   /** Text split into runs, the query's words marked, for building DOM safely. */
   function splitHighlights(text, terms) {
     if (!text || !terms.length) return [{ text: text || '', hit: false }];
-    const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const re = new RegExp(`(${escaped.join('|')})`, 'gi');
+    // A word's match starts a word: "can" bolds "can" and "canal", never the end of "American".
+    const escaped = terms.map((t) => {
+      const plain = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return /^[\p{L}\p{N}]/u.test(t) ? `(?<![\\p{L}\\p{N}])${plain}` : plain;
+    });
+    const re = new RegExp(`(${escaped.join('|')})`, 'giu');
     const out = [];
     let last = 0;
     for (const m of text.matchAll(re)) {

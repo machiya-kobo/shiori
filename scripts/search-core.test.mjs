@@ -103,6 +103,10 @@ test('snippets split into runs around the query words, case-insensitively', () =
     ],
   );
   assert.equal(S.splitHighlights('a.b', ['.'])[0].text, 'a');
+  // A word matches at a word's start only: never inside one ("American" for "can").
+  const can = S.splitHighlights('You Can See is a 2026 American film; cans too.', ['can']);
+  assert.deepEqual([...can.filter((r) => r.hit).map((r) => r.text)], ['Can', 'can']);
+  assert.ok(can.some((r) => !r.hit && r.text.includes('American')));
 });
 
 test('dates and durations read like SearXNG', () => {
