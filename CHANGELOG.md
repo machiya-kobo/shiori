@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.22.7 (2026-10-22)
+
+- Search page: results no longer shift sideways as they land where the
+  scrollbar takes room (it's there from the start), and over a background
+  they appear at once instead of fading in with the scene showing through.
+
 ## 1.22.6 (2026-10-22)
 
 - Search page, over a background: AI Answer and Info line up with the first
