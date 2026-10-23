@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.22.6 (2026-10-22)
+
+- Search page, over a background: AI Answer and Info line up with the first
+  result, not the edge of the glass above it, and the placeholders shown
+  while results load no longer move when the background starts.
+
 ## 1.22.5 (2026-10-22)
 
 - The hosted pages' image builds on the current Python base (1.22.4's pin
