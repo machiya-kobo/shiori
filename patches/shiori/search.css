@@ -1031,7 +1031,12 @@ body.home footer #ddg, body.home footer #timing, body.home footer #engines { dis
    (your pages and notes are drawn among its results), so the page doesn't
    jump when they arrive. */
 body.settling > main:not(.tab-snapshot) > :not(#skeleton) { opacity: 0; }
-body > main > * { transition: opacity 120ms ease-out; }
+/* A short fade in; not over a background, where the half-faded glass showed the scene through for a moment as the
+   placeholders went. */
+html:not(.has-bg) body > main > * { transition: opacity 120ms ease-out; }
+/* The scrollbar from the first paint, where it takes room: the placeholders fit the window, the results don't, and
+   the columns narrowed by its width as they landed. (scrollbar-gutter on the root didn't hold the room in Chrome.) */
+html:has(> body:not(.home)) { overflow-y: scroll; }
 /* Meanwhile, cards that shimmer where the results will be: a page that
    shows something while the server works. */
 /* Laid over the results, not before them, so the unseen layout (and the
