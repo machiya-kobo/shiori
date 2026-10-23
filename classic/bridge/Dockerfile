@@ -1,7 +1,7 @@
 # mac-bridge (shiori classic/bridge): Shiori for Classic Macintosh's plain-HTTP way into Hister and Kura.
 # Stdlib Python only. Build context: this directory. Runs as uid 1000 with no state.
 # The base is pinned by digest; run machiya's tools/pin-bases before each mac-bridge release.
-FROM public.ecr.aws/docker/library/python:3.13-alpine@sha256:2d9aefe2fef018a7eb2c13064c89c71929800fd2e5dccdbf52ea5da5bb8d929a
+FROM public.ecr.aws/docker/library/python:3.13-alpine@sha256:bf12ecc0bea3f171d55145dd02c78b5eeb09f30ee2ac9cc2b4c9e4e8f5e30741
 RUN adduser -D -u 1000 -h /nonexistent -s /sbin/nologin bridge
 WORKDIR /app
 COPY bridge.py /app/
