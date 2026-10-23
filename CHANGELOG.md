@@ -5,6 +5,11 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.22.5 (2026-10-22)
+
+- The hosted pages' image builds on the current Python base (1.22.4's pin
+  had gone stale). No change to Shiori itself.
+
 ## 1.22.4 (2026-10-22)
 
 - Search page, over a background: the placeholder cards shown while results
