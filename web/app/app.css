@@ -844,9 +844,11 @@ html.has-bgctl #preview { padding-bottom: calc(74px + env(safe-area-inset-bottom
 .image-tile img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--raised); display: block; }
 .image-tile-title { padding: 4px 8px 6px; font-size: var(--fs-caption); color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .image-tile:hover, .image-tile:focus-visible { border-color: var(--tab-images); }
-.image-view { margin: 0; display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.image-view { margin: 0; display: flex; flex-direction: column; height: 100%; min-height: 0; outline: none; }
 .image-frame { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.image-frame img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+/* The picture fills the frame, held to its own size by app.js (max-width and max-height), so the thumbnail shown
+   first is as large as the full picture that replaces it: it grew when the full one arrived. */
+.image-frame img { width: 100%; height: 100%; object-fit: contain; }
 .image-view figcaption { padding: 10px 16px 14px; border-top: 1px solid var(--line); }
 .image-title { margin: 0 0 2px; font-size: var(--fs-sub); font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
 .image-facts { margin: 0 0 8px; font-size: var(--fs-foot); color: var(--secondary); }
@@ -870,6 +872,16 @@ dialog.image-dialog .image-close {
   background: var(--raised); color: var(--text); z-index: 1;
 }
 dialog.image-dialog .image-step .icon-button { width: 44px; height: 44px; border-radius: 50%; background: var(--raised); font-size: 28px; }
+/* Wide, a window in the middle, 32px clear of each edge: the page around it dimmed. */
+@media (min-width: 760px) {
+  dialog.image-dialog {
+    width: min(calc(100vw - 64px), 112rem); height: calc(100dvh - 64px); margin: auto;
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden; touch-action: auto;
+  }
+  dialog.image-dialog .image-frame { padding-top: 60px; }
+  dialog.image-dialog figcaption { padding-bottom: 14px; }
+  dialog.image-dialog .image-close { top: 8px; right: 8px; }
+}
 /* Videos: the thumbnail on the right with the length over it. */
 .video-row .video-thumb { float: right; position: relative; margin-left: 8px; }
 .video-row .video-thumb img { width: 112px; height: 63px; object-fit: cover; border-radius: 6px; display: block; background: var(--raised); }

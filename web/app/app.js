@@ -2342,7 +2342,8 @@ function imageTile(r, open) {
 /**
  * An image shown large, as the search page's viewer: the picture (the full one through the proxy, the thumbnail
  * until it loads), its title, site, size and format, Open Image and Visit Page, and previous and next (the arrow
- * keys and, on a phone, a swipe too). Beside the list in a wide window, over everything on a phone.
+ * keys and, on a phone, a swipe too). In the middle of a wide window (never the preview column: a picture wants
+ * the room), over everything on a phone.
  */
 let imageViewer = null;
 function showImage(list, at) {
@@ -2351,17 +2352,27 @@ function showImage(list, at) {
   const thumb = api.proxiedImage(r.thumbnail_src || r.thumbnail || r.img_src);
   const full = api.proxiedImage(r.img_src);
   const img = h('img', { src: thumb || full, alt: S.decodeEntities(r.title) || '' });
+  // The picture fills the frame (app.css) up to its own size, so the thumbnail is drawn as large as the full one
+  // will be, which then takes its place without a jump: the size SearXNG gives, else the picture's own.
+  const fit = (size) => size && ((img.style.maxWidth = `${size.w}px`), (img.style.maxHeight = `${size.h}px`));
+  fit(S.imageSize(r));
   if (full && full !== thumb) {
     const big = new Image();
-    big.onload = () => img.isConnected && (img.src = full);
+    big.onload = () => {
+      if (!img.isConnected) return;
+      fit(S.imageSize({ resolution: `${big.naturalWidth}x${big.naturalHeight}` }));
+      img.src = full;
+    };
     big.src = full;
+  } else if (!S.imageSize(r)) {
+    img.addEventListener('load', () => fit(S.imageSize({ resolution: `${img.naturalWidth}x${img.naturalHeight}` })), { once: true });
   }
   const step = (by) => showImage(list, at + by);
   const facts = [r.source || hostOf(r.url), r.resolution && String(r.resolution).replace(/\s*[x×]\s*/, ' × '), String(r.img_format || '').replace(/^image\//i, '').toUpperCase()].filter(Boolean).join(' · ');
   const original = S.originalImage(r.img_src);
   const view = h(
     'figure',
-    { class: 'image-view' },
+    { class: 'image-view', tabindex: '-1' },
     h('div', { class: 'image-frame' }, img),
     h(
       'figcaption',
@@ -2384,12 +2395,6 @@ function showImage(list, at) {
     ),
   );
   imageViewer = { step, close: closeImage };
-  if (wide()) {
-    selected = null;
-    fill($('preview-bar'), h('span', { class: 'where' }, r.source || hostOf(r.url)), iconButton('close', 'Close', closeImage));
-    $('preview').replaceChildren(view);
-    return;
-  }
   let dialog = document.querySelector('dialog.image-dialog');
   if (!dialog) {
     dialog = h('dialog', { class: 'image-dialog', 'aria-label': 'Image' });
@@ -2410,24 +2415,24 @@ function showImage(list, at) {
   }
   dialog.replaceChildren(iconButton('close', 'Close', closeImage), view);
   dialog.querySelector('.icon-button').classList.add('image-close');
-  if (!dialog.open) dialog.showModal();
+  if (!dialog.open) {
+    dialog.showModal();
+    // The picture, not ×: a ring on × looked like a pressed button.
+    view.focus();
+  }
 }
 function closeImage() {
   imageViewer = null;
   const dialog = document.querySelector('dialog.image-dialog');
   if (dialog?.open) dialog.close();
-  if (wide() && $('preview').querySelector('.image-view')) {
-    fill($('preview-bar'));
-    $('preview').replaceChildren(status('No Page Selected', 'Select a page to preview it.'));
-  }
 }
-// ← and → while an image is shown, Escape closes it (not while typing in a field).
+// ← and → while an image is shown (not while typing in a field); Escape closes the dialog itself.
 document.addEventListener('keydown', (e) => {
   if (!imageViewer || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
   if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
     e.preventDefault();
     imageViewer.step(e.key === 'ArrowRight' ? 1 : -1);
-  } else if (e.key === 'Escape' && wide()) imageViewer.close();
+  }
 });
 
 /** A video: its thumbnail with the length over it, the title, the site and date; a tap opens it. */

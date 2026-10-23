@@ -202,8 +202,9 @@ private struct ImageGrid: View {
         }
         #else
         .sheet(item: viewingItem) { start in
+            // Large, as the web pages' viewer: a sheet takes its ideal size, up to the window's.
             WebImageViewer(results: results, index: start.index)
-                .frame(minWidth: 640, minHeight: 520)
+                .frame(minWidth: 640, idealWidth: 1200, minHeight: 520, idealHeight: 860)
         }
         #endif
     }

@@ -821,13 +821,9 @@
     const wide = matchMedia('(min-width: 1100px)');
     let current = null;
     const on = () => settings.previewPane !== false && wide.matches;
-    // An image floats over the grid's right side rather than splitting the
-    // page: the tiles and the search field stay where they are.
-    const isImage = () => typeof current === 'string' && current.startsWith('image:');
     function update() {
       const shown = on() && current !== null;
-      document.body.classList.toggle('with-preview', shown && !isImage());
-      document.body.classList.toggle('image-preview', shown && isImage());
+      document.body.classList.toggle('with-preview', shown);
       $('preview-pane').hidden = !shown;
       placeSide(); // the right column goes while the pane shows
     }
@@ -867,10 +863,8 @@
         const title = card.querySelector('.title')?.textContent || '';
         setTimeout(() => current === url && recordOpened(url, title), 2000);
       }
-      document.querySelectorAll('.card.previewing, .image-grid > a.previewing').forEach((c) => c.classList.remove('previewing'));
+      document.querySelectorAll('.card.previewing').forEach((c) => c.classList.remove('previewing'));
       if (card) card.classList.add('previewing');
-      $('preview-image').hidden = true;
-      $('preview-image').replaceChildren();
       const opens = S.safeHref(url);
       if (opens) $('preview-open').href = opens;
       else $('preview-open').removeAttribute('href');
@@ -908,23 +902,9 @@
         frame.srcdoc = `<!doctype html><meta charset="utf-8"><style>${pageCSS()}</style><p class="meta">Hister couldn't show a preview of this page.</p>`;
       }
     }
-    /** An image result: the picture and its links in place of a page (its tile is already marked). */
-    function showImage(view, key) {
-      current = `image:${key}`;
-      update();
-      document.querySelectorAll('.card.previewing').forEach((c) => c.classList.remove('previewing'));
-      $('preview-open').hidden = true;
-      $('preview-empty').hidden = true;
-      $('preview-frame').hidden = true;
-      $('preview-frame').srcdoc = '';
-      $('preview-image').replaceChildren(view);
-      $('preview-image').hidden = false;
-    }
     function clear() {
       current = null;
-      document.querySelectorAll('.card.previewing, .image-grid > a.previewing').forEach((c) => c.classList.remove('previewing'));
-      $('preview-image').hidden = true;
-      $('preview-image').replaceChildren();
+      document.querySelectorAll('.card.previewing').forEach((c) => c.classList.remove('previewing'));
       $('preview-frame').hidden = true;
       $('preview-open').hidden = true;
       $('preview-empty').hidden = false;
@@ -948,7 +928,7 @@
     );
     $('preview-close').addEventListener('click', clear);
     update();
-    return { update, clear, show, showImage, on, isOpen: () => current !== null, showingImage: () => on() && isImage() };
+    return { update, clear, show, on, isOpen: () => current !== null };
   })();
 
   // A card opens from anywhere on it, as its title does (the preview pane,
@@ -2594,20 +2574,30 @@
     return tile;
   }
 
-  // A click on an image shows it large, with links to the picture and its
-  // page below: in the preview pane when it's on, else over the page. The
-  // tile's own link (to the page) still works with a modifier key. ‹ ›,
-  // ← → and a swipe step through the tiles.
+  // A click on an image shows it large over the page, with links to the
+  // picture and its page below (never in the preview pane: a picture wants
+  // the room). The tile's own link (to the page) still works with a modifier
+  // key. ‹ ›, ← → and a swipe step through the tiles.
   /** The picture large (the thumbnail until the full one arrives), what it is, its two links and ‹ n of N ›. */
   function imageView(r, at, of) {
     const thumb = firstImage(r.thumbnail_src, r.thumbnail, r.img_src);
     const full = imageURL(r.img_src);
     const name = r.title || S.breadcrumb(r.url).origin;
     const img = el('img', { src: thumb || full, alt: name, referrerpolicy: 'no-referrer' });
+    // The picture fills the frame (search.css) up to its own size, so the thumbnail is drawn as large as the full
+    // one will be, which then takes its place without a jump: the size SearXNG gives, else the picture's own.
+    const fit = (size) => size && ((img.style.maxWidth = `${size.w}px`), (img.style.maxHeight = `${size.h}px`));
+    fit(S.imageSize(r));
     if (full && full !== img.getAttribute('src')) {
       const big = new Image();
-      big.onload = () => img.isConnected && (img.src = full);
+      big.onload = () => {
+        if (!img.isConnected) return;
+        fit(S.imageSize({ resolution: `${big.naturalWidth}x${big.naturalHeight}` }));
+        img.src = full;
+      };
       big.src = full;
+    } else if (!S.imageSize(r)) {
+      img.addEventListener('load', () => fit(S.imageSize({ resolution: `${img.naturalWidth}x${img.naturalHeight}` })), { once: true });
     }
     let site = r.source || '';
     try {
@@ -2657,12 +2647,6 @@
     const tiles = imageTiles();
     // Counted against every image, the ones Show More hasn't added yet too.
     const view = imageView(r, tiles.indexOf(tile) + 1, Math.max(tiles.length, Number($('images').dataset.total) || 0));
-    document.querySelectorAll('.image-grid > a.previewing').forEach((t) => t.classList.remove('previewing'));
-    if (previewPane.on()) {
-      tile.classList.add('previewing');
-      previewPane.showImage(view, r.img_src || r.url);
-      return true;
-    }
     const dialog = $('image-viewer');
     $('image-viewer-body').replaceChildren(view);
     if (!dialog.open) {
@@ -2695,7 +2679,7 @@
     showImage(next);
     next.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
-  const imageShown = () => $('image-viewer').open || previewPane.showingImage();
+  const imageShown = () => $('image-viewer').open;
   // ← and → while a picture is shown (the vi keys' h and l stay the tabs).
   document.addEventListener(
     'keydown',
