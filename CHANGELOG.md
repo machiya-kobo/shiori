@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.23.0 (2026-10-22)
+
+- Save Web Results You Open (Settings, off by default): a web or news
+  result you open from a search is saved to Hister too, never replacing a
+  page Hister already holds. The Mac and iPhone apps download the page
+  themselves; the search page and web app ask the small-web gateway, and
+  offer the option only when it can do this safely.
+
 ## 1.22.7 (2026-10-22)
 
 - Search page: results no longer shift sideways as they land where the
