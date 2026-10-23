@@ -178,6 +178,37 @@ public enum WebChoices {
             .map(\.value)
     }
 
+    /// Text as phrases are compared: lowercase words, one space apart, a space at each end.
+    static func phraseText(_ text: String) -> String {
+        let words = text.lowercased().replacing(/[^\p{L}\p{N}]+/.matchingSemantics(.unicodeScalar), with: " ")
+        return " \(words.trimmingCharacters(in: .whitespaces)) "
+    }
+
+    /// The search's "quoted phrases", as `phraseText` writes them; an unclosed quote counts for nothing.
+    public static func quotedPhrases(_ query: String) -> [String] {
+        query.matches(of: /"([^"]*)"/).map { phraseText(String($0.1)) }.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
+
+    /// Image results naming more of the search's quoted phrases first, in
+    /// their title, snippet, page or picture address ("stevie-case.jpg"
+    /// names "Stevie Case"); otherwise as they came. Image engines treat
+    /// quotes loosely, so the picture that names the phrase leads and
+    /// nothing is hidden. Twin of search-core's `S.phrasesFirst`.
+    public static func phrasesFirst<T>(
+        _ query: String, _ results: [T], fields: (T) -> (title: String, content: String, url: String, imgSrc: String)
+    ) -> [T] {
+        let phrases = quotedPhrases(query)
+        guard !phrases.isEmpty else { return results }
+        func score(_ r: T) -> Int {
+            let f = fields(r)
+            let parts: [String] = [f.title, f.content, f.url.removingPercentEncoding ?? f.url, f.imgSrc.removingPercentEncoding ?? f.imgSrc]
+            let words = phraseText(parts.joined(separator: " "))
+            return phrases.filter { words.contains($0) }.count
+        }
+        let scored: [(index: Int, value: T, k: Int)] = results.enumerated().map { ($0.offset, $0.element, score($0.element)) }
+        return scored.sorted { $0.k != $1.k ? $0.k > $1.k : $0.index < $1.index }.map(\.value)
+    }
+
     /// The row's menus for the tab: the order first, then each filter whose
     /// results differ in it (or one chosen), every choice counted against
     /// the other choices made.

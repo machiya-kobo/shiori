@@ -3595,7 +3595,8 @@
       };
       more.addEventListener('click', showMore);
       $('images').after(el('p', { class: 'more' }, more));
-      webChoiceBar(results, (kept) => {
+      // Pictures naming the search's "quoted phrases" lead: image engines treat quotes loosely.
+      webChoiceBar(S.phrasesFirst(q, results), (kept) => {
         tiles = kept.map((r) => tileOf.get(r)).filter(Boolean);
         $('images').replaceChildren();
         $('images').dataset.total = String(tiles.length);

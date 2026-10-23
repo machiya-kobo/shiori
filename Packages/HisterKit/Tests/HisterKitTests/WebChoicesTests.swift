@@ -83,4 +83,22 @@ struct WebChoicesTests {
             }
         }
     }
+
+    @Test func quotedPhrasesFirst() throws {
+        let phrases = try #require(try Self.data()["phrases"] as? [String: Any])
+        for pair in try #require(phrases["quoted"] as? [[Any]]) {
+            let query = try #require(pair[0] as? String)
+            #expect(WebChoices.quotedPhrases(query) == pair[1] as? [String], "\(query)")
+        }
+        let cases = try #require(phrases["first"] as? [[String: Any]])
+        #expect(cases.count >= 3)
+        for c in cases {
+            let query = try #require(c["q"] as? String)
+            let results = try #require(c["results"] as? [[String: String]])
+            let order = WebChoices.phrasesFirst(query, results) { r in
+                (r["title"] ?? "", r["content"] ?? "", r["url"] ?? "", r["img_src"] ?? "")
+            }
+            #expect(order.map { $0["url"] ?? "" } == c["order"] as? [String], "\(query)")
+        }
+    }
 }

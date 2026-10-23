@@ -345,6 +345,37 @@
     return keep.map((r, i) => ({ r, i, k: by(r) })).sort((a, b) => (a.k == null) - (b.k == null) || (a.k ?? 0) - (b.k ?? 0) || a.i - b.i).map((x) => x.r);
   }
 
+  /** Text as phrases are compared: lowercase words, one space apart, a space at each end. */
+  const phraseText = (s) => ` ${String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+
+  /** The search's "quoted phrases", as phraseText writes them; an unclosed quote counts for nothing. */
+  function quotedPhrases(q) {
+    return [...String(q || '').matchAll(/"([^"]*)"/g)].map((m) => phraseText(m[1])).filter((p) => p.trim());
+  }
+
+  /**
+   * Image results naming more of the search's quoted phrases first, in their
+   * title, snippet, page or picture address ("stevie-case.jpg" names "Stevie
+   * Case"); otherwise as they came. Image engines treat quotes loosely, so
+   * the picture that names the phrase leads and nothing is hidden.
+   */
+  function phrasesFirst(q, results) {
+    const phrases = quotedPhrases(q);
+    if (!phrases.length) return results || [];
+    const decoded = (s) => {
+      try {
+        return decodeURIComponent(s || '');
+      } catch (_) {
+        return s || '';
+      }
+    };
+    const score = (r) => {
+      const text = phraseText([r && r.title, r && r.content, decoded(r && r.url), decoded(r && r.img_src)].join(' '));
+      return phrases.filter((p) => text.includes(p)).length;
+    };
+    return (results || []).map((r, i) => ({ r, i, k: score(r) })).sort((a, b) => b.k - a.k || a.i - b.i).map((x) => x.r);
+  }
+
   /**
    * The row's selects for the tab: [{key, name, choices: [[value, label]]}],
    * the order first, then each filter whose results differ in it (or one
@@ -4177,6 +4208,8 @@
     webChoices,
     webChoiceKey,
     webNarrow,
+    quotedPhrases,
+    phrasesFirst,
     webChoiceRow,
     cachedURL,
     archiveURL,

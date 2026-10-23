@@ -42,7 +42,7 @@ final class WebResultsModel {
         do {
             let first = try await searx.search(query, page: 1, category: category)
             // Wikipedia's article first is for the general search alone.
-            results = category == nil ? await wikipediaFirst(first.results, searx: searx) : first.results
+            results = category == nil ? await wikipediaFirst(first.results, searx: searx) : phrasesFirst(first.results)
             known = Set(results.map(\.url))
             firstPageCount = results.count
             suggestions = first.suggestions.filter { $0 != query }
@@ -98,8 +98,14 @@ final class WebResultsModel {
         page += 1
         let fresh = next.results.filter { known.insert($0.url).inserted }
         exhausted = fresh.isEmpty
-        results += fresh
+        results += phrasesFirst(fresh)
         await mark(fresh, hister: hister)
+    }
+
+    /// Images naming the search's quoted phrases lead, a page at a time, so
+    /// pictures already seen stay put as later pages arrive.
+    private func phrasesFirst(_ batch: [WebResult]) -> [WebResult] {
+        category == "images" ? WebChoices.phrasesFirst(query, batch, fields: \.phraseFields) : batch
     }
 
     private func mark(_ batch: [WebResult], hister: HisterClient?) async {

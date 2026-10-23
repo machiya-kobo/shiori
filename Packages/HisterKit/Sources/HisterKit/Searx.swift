@@ -55,6 +55,11 @@ public struct WebResult: Sendable, Equatable, Hashable, Identifiable {
     public var choiceItem: WebChoices.Item {
         WebChoices.Item(url: url, resolution: resolution, imgFormat: imageFormat, imgSrc: imageSource, length: length, published: published)
     }
+
+    /// What `WebChoices.phrasesFirst` reads for a search's quoted phrases.
+    public var phraseFields: (title: String, content: String, url: String, imgSrc: String) {
+        (title, content, url, imageSource)
+    }
 }
 
 /// One page of SearXNG results.

@@ -1,5 +1,5 @@
 {
- "about": "Images, Videos and News: their order and filters, drawn from SearXNG's results (search-core's S.webChoiceRow / webNarrow / webValue, HisterKit's WebChoices). Expected values come from search-core; both test suites run them.",
+ "about": "Images, Videos and News: their order and filters, drawn from SearXNG's results (search-core's S.webChoiceRow / webNarrow / webValue, HisterKit's WebChoices), and the images naming a search's quoted phrases first (quotedPhrases / phrasesFirst). Expected values come from search-core; both test suites run them.",
  "lengths": [
   [
    "3:45",
@@ -2471,5 +2471,161 @@
    ],
    "row": []
   }
- ]
+ ],
+ "phrases": {
+  "quoted": [
+   [
+    "\"Stevie Case\" vanity fair",
+    [
+     " stevie case "
+    ]
+   ],
+   [
+    "no quotes",
+    []
+   ],
+   [
+    "\"a\" \"b c\"",
+    [
+     " a ",
+     " b c "
+    ]
+   ],
+   [
+    "\"unclosed phrase",
+    []
+   ],
+   [
+    "\"  \" x",
+    []
+   ],
+   [
+    "\"Café-Bar!\"",
+    [
+     " café bar "
+    ]
+   ],
+   [
+    "\"X\" \"x\"",
+    [
+     " x ",
+     " x "
+    ]
+   ]
+  ],
+  "first": [
+   {
+    "q": "\"Stevie Case\" vanity fair",
+    "results": [
+     {
+      "url": "https://a.example/nicks",
+      "title": "Stevie Nicks at the Oscars",
+      "content": "",
+      "img_src": ""
+     },
+     {
+      "url": "https://b.example/p",
+      "title": "Vanity Fair, 1999",
+      "content": "Stevie Case, the game designer",
+      "img_src": ""
+     },
+     {
+      "url": "https://c.example/gallery/stevie-case-1999",
+      "title": "Gallery",
+      "content": "",
+      "img_src": ""
+     },
+     {
+      "url": "https://d.example/x",
+      "title": "Photo",
+      "content": "",
+      "img_src": "https://cdn.example/Stevie%20Case.jpg"
+     },
+     {
+      "url": "https://e.example/y",
+      "title": "STEVIE CASE portrait",
+      "content": "",
+      "img_src": ""
+     },
+     {
+      "url": "https://f.example/z",
+      "title": "Stevie Cases of wine",
+      "content": "",
+      "img_src": ""
+     },
+     {
+      "url": "https://g.example/bad%E0",
+      "title": "Malformed address, Stevie Case",
+      "content": "",
+      "img_src": ""
+     }
+    ],
+    "order": [
+     "https://b.example/p",
+     "https://c.example/gallery/stevie-case-1999",
+     "https://d.example/x",
+     "https://e.example/y",
+     "https://g.example/bad%E0",
+     "https://a.example/nicks",
+     "https://f.example/z"
+    ]
+   },
+   {
+    "q": "vanity fair",
+    "results": [
+     {
+      "url": "https://a.example/1",
+      "title": "One",
+      "content": "",
+      "img_src": ""
+     },
+     {
+      "url": "https://b.example/2",
+      "title": "Stevie Case",
+      "content": "",
+      "img_src": ""
+     }
+    ],
+    "order": [
+     "https://a.example/1",
+     "https://b.example/2"
+    ]
+   },
+   {
+    "q": "\"stevie case\" \"vanity fair\"",
+    "results": [
+     {
+      "url": "https://a.example/1",
+      "title": "Stevie Case",
+      "content": "",
+      "img_src": ""
+     },
+     {
+      "url": "https://b.example/2",
+      "title": "Stevie Case in Vanity Fair",
+      "content": "",
+      "img_src": ""
+     },
+     {
+      "url": "https://c.example/3",
+      "title": "Vanity Fair",
+      "content": "",
+      "img_src": ""
+     },
+     {
+      "url": "https://d.example/4",
+      "title": "Nothing",
+      "content": "",
+      "img_src": ""
+     }
+    ],
+    "order": [
+     "https://b.example/2",
+     "https://a.example/1",
+     "https://c.example/3",
+     "https://d.example/4"
+    ]
+   }
+  ]
+ }
 }

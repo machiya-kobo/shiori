@@ -2271,8 +2271,9 @@ async function webTabList(container, q, cat) {
   };
   if (!here()) return;
   let results = (data.results || []).filter((r) => typeof r.url === 'string' && /^https?:/.test(r.url));
-  // An image is shown only through SearXNG's proxy (as every thumbnail here): one without is left out.
-  if (cat === 'images') results = results.filter((r) => api.proxiedImage(r.thumbnail_src || r.thumbnail || r.img_src));
+  // An image is shown only through SearXNG's proxy (as every thumbnail here): one without is left out. Pictures
+  // naming the search's "quoted phrases" lead: image engines treat quotes loosely.
+  if (cat === 'images') results = S.phrasesFirst(q, results.filter((r) => api.proxiedImage(r.thumbnail_src || r.thumbnail || r.img_src)));
   const health = S.engineHealthLine(S.unansweredEngines(data));
   if (!results.length) return container.replaceChildren(status({ images: 'No Images', videos: 'No Videos', news: 'No News' }[cat], health));
   const draw = () => {
