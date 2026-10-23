@@ -1061,7 +1061,17 @@ body.pending:not(.home, .settling, [data-cat="images"]) > main:not(:has(.results
 /* The first placeholder where the first result lands: main's 8px padding, then the list's 6px (over a background,
    the glass panel's 4px too); Info where its card lands, level with it, or over a background 8px under the header. */
 #skeleton > div > .sk-card:first-child, .sk-info { margin-top: 14px; }
-html.has-bg #skeleton > div > .sk-card:first-child { margin-top: 18px; }
+/* Over a background the result placeholders sit on a box of glass, as the results will: Info lines up with that box,
+   so bare placeholder cards sat lower than the one beside them. */
+html.has-bg body:not(.home) #skeleton > div:first-child {
+  background: color-mix(in srgb, var(--bg) var(--glass-mix), var(--glass-under));
+  -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+  border-radius: 14px; padding: 4px 8px 10px; margin: 8px -8px 0;
+}
+html.frost-results body:not(.home) #skeleton > div:first-child {
+  --glass-mix: var(--glass-mix-frosted); --glass-filter: var(--glass-filter-frosted); --glass-under: var(--glass-under-frosted);
+}
+html.has-bg #skeleton > div > .sk-card:first-child { margin-top: 6px; }
 html.has-bg .sk-info { margin-top: 8px; }
 /* Beside the results only where the Info card goes beside them (the
    phone drew the result placeholders in a sliver). */
