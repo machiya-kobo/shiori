@@ -95,6 +95,9 @@
   };
 
   let kept = read();
+  // A background is coming: it starts once its script has loaded (has-bg, apply), and the page's loading
+  // placeholders take its places from the first paint, so they don't move when it arrives.
+  document.documentElement.classList.toggle('bg-wanted', kept.scene !== OFF);
   // The sheet's preview of your video (a blob: address), dropped when the sheet closes.
   let thumbURL = null;
   const dropThumb = () => {
@@ -158,6 +161,7 @@
         try {
           bg = await loadEngine();
         } catch (_) {
+          root.classList.remove('bg-wanted');
           return; // the file didn't load: the page stays as it is
         }
         if (t !== token) return;
@@ -170,6 +174,7 @@
     }
     const on = shown !== '';
     root.classList.toggle('has-bg', on);
+    root.classList.toggle('bg-wanted', on);
     // Moving: a scene, the rain or a video, redrawn many times a second. Off Apple (bg-lite) the glass then dims
     // without a backdrop filter (backgrounds.css): the browser would blur the moving layers again for every frame,
     // the most of what a background costs (Firefox on Linux, without a GPU, used more than a whole core for it).
