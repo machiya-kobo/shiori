@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.23.2 (2026-10-23)
+
+- Images: with a "quoted phrase" in the search, pictures whose title or
+  address names it come first ("Stevie Case" ahead of other Stevies).
+  Image engines treat quotes loosely; nothing is hidden.
+
 ## 1.23.1 (2026-10-23)
 
 - Images: a picture you click opens large in the middle of the window
