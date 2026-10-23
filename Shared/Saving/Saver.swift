@@ -207,15 +207,9 @@ extension Saver {
     }
 
     /// Saves one of a note's links (Shiori saves pages into Hister; the
-    /// other rooms only look up what it holds).
-    /// - Never a URL Hister holds: it's looked up right before the save
-    ///   (and again under its address after redirects), since `api/add`
-    ///   replaces a stored page's metadata.
-    /// - The page is downloaded here (Hister doesn't fetch a bare URL).
-    /// - Skip rules hold unless `anyway` (Save Anyway, one link at a time).
-    /// - Records `via: note-links` and `from_note` (best-effort provenance;
-    ///   the rooms' "saved in Hister" badge comes from presence).
-    /// - Unreachable, 429 or 5xx: the outbox, as every save.
+    /// other rooms only look up what it holds), by `saveNew`'s rules.
+    /// Records `via: note-links` and `from_note` (best-effort provenance;
+    /// the rooms' "saved in Hister" badge comes from presence).
     static func saveLink(
         _ link: LinkToSave, label: String?, anyway: Bool, client: HisterClient, outbox: Outbox?,
         smallweb: SmallWebClient? = nil,
@@ -225,9 +219,39 @@ extension Saver {
         if SaveLinks.isSmallWeb(link.url) {
             return await saveThroughGateway(link, client: client, smallweb: smallweb, wait: wait)
         }
-        guard let url = URL(string: link.url) else { return .failed("That isn't a web address.") }
-        if SaveLinks.looksLikeFile(link.url) { return .failed(Self.notAPage) }
-        if let held = await heldOutcome(link.url, client: client) { return held }
+        return await saveNew(
+            link.url, title: link.text, label: label, via: "note-links", extra: ["from_note": link.notePath],
+            anyway: anyway, client: client, outbox: outbox, fetch: fetch)
+    }
+
+    /// A web result opened from a search (Settings → Save Web Results You
+    /// Open): saved as Save This Note's Links saves a link, never a page
+    /// Hister holds, skip rules on. Records `via: web-result` and the search.
+    static func saveOpened(
+        _ url: String, title: String, query: String, client: HisterClient, outbox: Outbox?,
+        fetch: @Sendable (URL) async throws -> PageFetcher.Fetched = { try await PageFetcher.fetch($0) }
+    ) async -> LinkOutcome {
+        await saveNew(
+            url, title: title, label: nil, via: "web-result", extra: query.isEmpty ? [:] : ["query": String(query.prefix(200))],
+            anyway: false, client: client, outbox: outbox, fetch: fetch)
+    }
+
+    /// One page Hister doesn't hold yet, downloaded here and saved:
+    /// - Never a URL Hister holds: it's looked up right before the save
+    ///   (and again under its address after redirects), since `api/add`
+    ///   replaces a stored page's metadata.
+    /// - The page is downloaded here (Hister doesn't fetch a bare URL).
+    /// - Skip rules hold unless `anyway` (Save Anyway, one link at a time).
+    /// - Unreachable, 429 or 5xx: the outbox, as every save.
+    private static func saveNew(
+        _ address: String, title: String, label: String?, via: String, extra: [String: String], anyway: Bool,
+        client: HisterClient, outbox: Outbox?, fetch: @Sendable (URL) async throws -> PageFetcher.Fetched
+    ) async -> LinkOutcome {
+        guard let url = URL(string: address), let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            return .failed("That isn't a web address.")
+        }
+        if SaveLinks.looksLikeFile(address) { return .failed(Self.notAPage) }
+        if let held = await heldOutcome(address, client: client) { return held }
         // An http:// link is tried as https:// first (`fetchPreferringHTTPS`),
         // and Hister keeps whatever address it lands on.
         var fetchedPage: PageFetcher.Fetched?
@@ -245,11 +269,10 @@ extension Saver {
         }
         // A file, not a page (a package, an image): nothing for Hister to read.
         guard !fetched.html.isEmpty else { return .failed(Self.notAPage) }
-        if fetched.url != link.url, let held = await heldOutcome(fetched.url, client: client) { return held }
+        if fetched.url != address, let held = await heldOutcome(fetched.url, client: client) { return held }
         let page = NewPage(
-            url: fetched.url, title: fetched.title.isEmpty ? (link.text.isEmpty ? (url.host() ?? link.url) : link.text) : fetched.title,
-            html: fetched.html, label: label, via: "note-links", ignoreSkipRules: anyway,
-            extra: ["from_note": link.notePath])
+            url: fetched.url, title: fetched.title.isEmpty ? (title.isEmpty ? (url.host() ?? address) : title) : fetched.title,
+            html: fetched.html, label: label, via: via, ignoreSkipRules: anyway, extra: extra)
         do {
             try await client.add(page)
             return .saved

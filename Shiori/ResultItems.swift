@@ -9,6 +9,8 @@ struct ResultActions {
     var delete: @MainActor (StoredPage) -> Void = { _ in }
     var preview: @MainActor (StoredPage) -> Void = { _ in }
     var save: @MainActor (WebResult) -> Void = { _ in }
+    /// A web result was opened in the browser from this list's search.
+    var openedWeb: @MainActor (WebResult) -> Void = { _ in }
     /// A page was opened (previewed, or handed to Obsidian or the
     /// browser) from this list: Hister learns it, for the list's search.
     var opened: @MainActor (StoredPage) -> Void = { _ in }
@@ -83,6 +85,9 @@ private struct ResultActionsHost: ViewModifier {
                     },
                     // Only an address that parses: the sheet was empty otherwise.
                     save: { result in if URL(string: result.url) != nil { saving = result } },
+                    openedWeb: { result in
+                        if let query { app.saveOpenedWeb(url: result.url, title: result.title, query: query) }
+                    },
                     opened: { document in
                         if let query { app.recordOpened(document, query: query) }
                     },
@@ -462,12 +467,16 @@ struct WebItem: View {
     @Environment(\.palette) private var palette
     @Environment(\.openURL) private var openURL
     @Environment(\.resultActions) private var actions
+    @Environment(AppState.self) private var app
 
     var body: some View {
         Button {
-            if let url = SafeHref.url(result.url) { openURL(url) }
+            if let url = SafeHref.url(result.url) {
+                openURL(url)
+                actions.openedWeb(result)
+            }
         } label: {
-            WebRow(result: result, query: query, saved: saved)
+            WebRow(result: result, query: query, saved: saved ?? (app.webSavedNow.contains(result.url) ? "" : nil))
         }
         .buttonStyle(.plain)
         .listRowBackground(palette.background)

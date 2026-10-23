@@ -369,6 +369,37 @@ export function smallwebSave(url) {
   return request('smallweb/api/save', { method: 'POST', body: { url }, keepalive: true }).catch(() => {});
 }
 
+/**
+ * Whether the gateway can do Save Web Results You Open (S.webSaveReady:
+ * it saves to Hister and never replaces a page Hister holds). Asked once;
+ * false when it doesn't answer.
+ */
+let webSaveStatus = null;
+export function webSaveReady() {
+  webSaveStatus ??= request('smallweb/api/status', { timeout: 6000 })
+    .then((status) => globalThis.ShioriSearch.webSaveReady(status))
+    .catch(() => false);
+  return webSaveStatus;
+}
+
+/**
+ * Hands a web result opened from a search to the gateway, which downloads
+ * it and saves it unless Hister holds it (S.webSaveBody). Resolves to ''
+ * once it's taken, else why not, in the app's words.
+ */
+export async function saveOpenedWeb(url, title, q) {
+  const body = globalThis.ShioriSearch.webSaveBody(url, title, q);
+  if (!body || !(await webSaveReady())) return '';
+  try {
+    await request('smallweb/api/save', { method: 'POST', body, keepalive: true, timeout: 8000 });
+    return '';
+  } catch (error) {
+    if (error.status === 429) return 'Not saved to Hister: too many saves are waiting.';
+    if (error.status === 400 || error.status === 403) return "Not saved to Hister: the gateway wouldn't take it.";
+    return "Not saved to Hister: the gateway didn't answer.";
+  }
+}
+
 // --- Add Page: a page saved through the small-web gateway -----------------------
 
 const ADDABLE = new Set(['http:', 'https:', 'gemini:', 'gopher:']);

@@ -54,6 +54,28 @@ struct LinkSaverTests {
         #expect(metadata["ignore_skip_rules"] == nil)
     }
 
+    @Test func anOpenedWebResultIsSavedAsOneWithItsSearch() async throws {
+        hister()
+        let outcome = await Saver.saveOpened("https://a.example/post", title: "A post", query: "penne", client: client, outbox: outbox, fetch: fetch)
+        #expect(outcome == .saved)
+        let body = try #require(adds().first)
+        #expect(body["label"] == nil)
+        let metadata = try #require(body["metadata"] as? [String: Any])
+        #expect(metadata["via"] as? String == "web-result")
+        #expect(metadata["query"] as? String == "penne")
+        #expect(metadata["ignore_skip_rules"] == nil)
+    }
+
+    @Test func anOpenedWebResultHisterHoldsIsNeverSent() async {
+        // Under its address after redirects too.
+        hister(known: ["https://a.example/final"])
+        let redirected: @Sendable (URL) async throws -> PageFetcher.Fetched = { _ in
+            PageFetcher.Fetched(url: "https://a.example/final", title: "A post", html: "<p>hi</p>")
+        }
+        #expect(await Saver.saveOpened("https://a.example/post", title: "", query: "q", client: client, outbox: outbox, fetch: redirected) == .alreadyInHister)
+        #expect(adds().isEmpty)
+    }
+
     @Test func aPageHisterHoldsIsNeverSent() async {
         hister(known: ["https://a.example/post"])
         #expect(await Saver.saveLink(link, label: nil, anyway: false, client: client, outbox: outbox, fetch: fetch) == .alreadyInHister)

@@ -20,6 +20,7 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 ## Keeping and sharing
 
 - **Label, share or delete** a page. A delete checks that exactly one page matches, and waits for Undo.
+- **Save Web Results You Open** (Settings, off by default): a web result you open from a search is saved to Hister too, never replacing a page it holds. The apps download it themselves; the hosted pages ask the small-web gateway.
 - **Save pages** from the share sheet on iPhone, iPad and Mac, by address (Add Page, ⇧⌘A on the Mac), or with Shortcuts and Siri ("Search Hister", "Save URL to Hister"), with an optional label. A page Hister can't take yet waits on the device; Settings → Account → Waiting to Send lists what waits, and any page given up on, with why.
 - **Spotlight, Siri and Shortcuts find your pages**: your newest 300 pages are in the device's search (title, site, snippet), and "Open … in Shiori" or the Open Page action finds any of them in Hister. A tap opens the page. Never notes, files or code; Settings → Search → Spotlight turns it off and empties it.
 - **Offline support.** Saves wait on the device, out of your backups, and go when Hister answers. After 14 days they're dropped.

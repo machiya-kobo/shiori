@@ -39,6 +39,14 @@ small-web gateway (TLGS, Kennedy and Veronica-2).
 - **The web app's Add Page and share target** save any http(s), gemini
   or gopher page through the same `POST /api/save` (web/README.md); only
   in a build with `SHIORI_SMALLWEB_URL`. Never a note.
+- **Save Web Results You Open** (off by default): on the hosted pages a web
+  or news result opened from a search goes to `/smallweb/api/save` with
+  `only_new: true`, `via: "web-result"` and the search, so the gateway
+  never replaces a page Hister holds (`S.webSaveBody`). Offered only when
+  `/api/status` says `hister.enabled` and `hister.only_new`
+  (`S.webSaveReady`, smallweb 0.4.1); never on Safari's extension page,
+  whose extension saves what you open anyway. The apps download the page
+  themselves under the same rules (`Saver.saveOpened`).
 - Settings: `smallwebURL` (the build's `SHIORI_SMALLWEB_URL` by default),
   `smallWebTab`, `smallWebOpen`; the hosted pages use `/smallweb/` on their
   own host.

@@ -1573,3 +1573,18 @@ test("Images, Videos and News choices, on scripts/web-choices-cases.json (Hister
     assert.deepEqual(plain(S.webChoiceRow(c.cat, c.results, choices)), c.row, `${c.cat} ${c.params} row`);
   }
 });
+
+test('Save Web Results You Open: only a gateway that never replaces a held page, only web pages', () => {
+  assert.equal(S.webSaveReady({ hister: { enabled: true, only_new: true } }), true);
+  assert.equal(S.webSaveReady({ hister: { enabled: true } }), false);
+  assert.equal(S.webSaveReady({ hister: { enabled: false, only_new: true } }), false);
+  assert.equal(S.webSaveReady(null), false);
+  assert.deepEqual(JSON.parse(JSON.stringify(S.webSaveBody('https://example.com/a', 'A &amp; B', ' penne '))),
+    { url: 'https://example.com/a', only_new: true, via: 'web-result', title: 'A & B', query: 'penne' });
+  assert.deepEqual(JSON.parse(JSON.stringify(S.webSaveBody('https://example.com/a', '', ''))),
+    { url: 'https://example.com/a', only_new: true, via: 'web-result' });
+  assert.equal(S.webSaveBody('gemini://capsule.example/', 'x', 'q'), null);
+  assert.equal(S.webSaveBody('javascript:alert(1)', 'x', 'q'), null);
+  assert.equal(S.webSaveBody('https://kura.example.ts.net/v/work/n/plan', 'x', 'q'), null);
+  assert.equal(S.webSaveBody('https://example.com/a', 'x', 'q'.repeat(300)).query.length, 200);
+});

@@ -46,6 +46,8 @@ nonisolated enum SharedSettings {
         static let previewImages = "previewImages"
         /// Tell Hister which result was opened for a search (it ranks it first).
         static let rememberOpened = "rememberOpened"
+        /// Save a web result to Hister when it's opened from a search (off by default; this device's own).
+        static let saveOpenedWeb = "saveOpenedWeb"
         /// The filter bar on search results.
         static let searchFilters = "searchFilters"
         /// Meaning-based search, where the server has it set up.

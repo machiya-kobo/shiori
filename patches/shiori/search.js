@@ -200,6 +200,8 @@
     previewPane: true,
     previewImages: true,
     rememberOpened: true,
+    // Save Web Results You Open (the hosted page only, through the gateway): off by default.
+    saveOpenedWeb: false,
     // Pages you opened, shown (lifted into Your Pages): off by default,
     // they mostly cluttered things.
     showOpened: true,
@@ -233,6 +235,16 @@
   // else its own address (the app's setting).
   const smallwebBase = withSlash(settings.smallwebAPIURL || '') || withSlash(settings.smallwebURL || '');
   const searxBase = withSlash(settings.searxngURL || '');
+  // Save Web Results You Open: only on the hosted page (its /smallweb/), and only once the gateway says it never
+  // replaces a page Hister holds (S.webSaveReady). Safari's own page has nothing to ask, and its extension saves what
+  // you open anyway.
+  let webSaveOffered = false;
+  if (settings.smallwebAPIURL) {
+    fetch(`${smallwebBase}api/status`, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then((r) => r.json())
+      .then((status) => { webSaveOffered = S.webSaveReady(status); })
+      .catch(() => {});
+  }
   // Media (docs/media.md): the hosted page's /jellyfin/, /plex/, /koito/ and /movary/, each adding its token there
   // (web/shim.js passes the build's list). Safari's own page has none, so no Media there.
   const mediaServices = S.mediaServicesFromBuild(settings.mediaBuild || '', location.origin + '/');
@@ -1182,7 +1194,8 @@
       { key: 'labelSuggestions', label: 'Labels in Suggestions' },
       { key: 'rememberOpened', label: 'Remember What You Open' },
       { key: 'showOpened', label: 'Show Opened' },
-    ]],
+      { key: 'saveOpenedWeb', label: 'Save Web Results You Open', when: () => webSaveOffered },
+    ], () => (webSaveOffered ? 'Save Web Results You Open adds a web result you open to Hister.' : '')],
   ];
   const LOOK_KEYS = ['theme', 'palette', 'textSize', 'previewPane', 'pillRow'];
   // Settings → Pills: whether the pills' editor is open.
@@ -1281,6 +1294,8 @@
         }
         // A dependent row shows only while what it needs is on.
         if (row.needs && !settings[row.needs]) continue;
+        // One the page can't offer here.
+        if (row.when && !row.when()) continue;
         const id = `setting-${row.key || row.action}`;
         let control;
         if (row.action === 'pills') {
@@ -1995,6 +2010,35 @@
     if (S.noteVault(url) === null) return void send();
     void S.isPrivateNoteNow(url, readVaultsNow).then((isPrivate) => (isPrivate ? undefined : send()));
   }
+
+  // Save Web Results You Open: a web result opened from a search goes to the gateway, which downloads it and saves it
+  // unless Hister holds it. Not a video, an image, the Small Web's or your own pages among the results.
+  function saveOpenedWeb(link) {
+    if (!settings.saveOpenedWeb || !webSaveOffered || category === 'videos') return;
+    const body = S.webSaveBody(link.href, link.textContent, S.webQuery(q));
+    if (!body) return;
+    fetch(`${smallwebBase}api/save`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body),
+      credentials: 'same-origin', keepalive: true,
+    })
+      .then((r) => (r.ok ? '' : r.status === 429 ? 'Not saved to Hister: too many saves are waiting.' : "Not saved to Hister: the gateway wouldn't take it."))
+      .catch(() => "Not saved to Hister: the gateway didn't answer.")
+      .then((problem) => {
+        if (!problem) return;
+        const t = el('div', { class: 'kbd-toast', role: 'status' }, problem);
+        document.body.append(t);
+        setTimeout(() => t.remove(), 2600);
+      });
+  }
+  const webTitle = (event) => event.target.closest('#web-results > li.card:not(.hister-card, .vault-card, .smallweb-card, .media-card) > a.title');
+  document.addEventListener('click', (event) => {
+    const link = webTitle(event);
+    if (link) saveOpenedWeb(link);
+  });
+  document.addEventListener('auxclick', (event) => {
+    const link = event.button === 1 && webTitle(event);
+    if (link) saveOpenedWeb(link);
+  });
 
   document.addEventListener('click', (event) => {
     const link = event.target.closest('.hister-card a.title, .vault-card a.title');

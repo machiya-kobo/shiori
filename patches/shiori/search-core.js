@@ -1611,6 +1611,32 @@
   }
 
   /**
+   * Save Web Results You Open, on the hosted pages: only with a gateway
+   * that saves to Hister and never replaces a page Hister holds
+   * (`/api/status`'s `hister.only_new`, smallweb 0.4.0); without it a save
+   * could replace a stored page's metadata, so nothing is sent.
+   */
+  function webSaveReady(status) {
+    const hister = status && status.hister;
+    return !!hister && hister.enabled === true && hister.only_new === true;
+  }
+
+  /**
+   * What `POST /api/save` gets for a web result opened from a search, or
+   * null: http(s) pages only, never a private vault's note or a file.
+   */
+  function webSaveBody(url, title, q) {
+    const address = String(url || '');
+    if (!/^https?:\/\//i.test(address) || isPrivateNote(address) || isLocalFile(address)) return null;
+    const body = { url: address, only_new: true, via: 'web-result' };
+    const name = decodeEntities(String(title || '')).trim();
+    if (name) body.title = name.slice(0, 300);
+    const query = String(q || '').trim().slice(0, 200);
+    if (query) body.query = query;
+    return body;
+  }
+
+  /**
    * The web engines that didn't answer a SearXNG search, from its reply's
    * `unresponsive_engines` ([[name, reason], …], or plain names): each
    * name once, in order, blanks and anything else left out. Twin of
@@ -4046,6 +4072,8 @@
     smallwebSearchURL,
     histerUIBase,
     smallwebResults,
+    webSaveReady,
+    webSaveBody,
     unansweredEngines,
     engineHealthLine,
     markRuns,

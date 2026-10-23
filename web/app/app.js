@@ -176,7 +176,7 @@ async function copy(text) {
 // --- Settings: this browser's own (nothing is shared between devices) --------
 
 const DEFAULTS = {
-  theme: 'system', palette: 'tokyo-night', textSize: 'system', previewImages: true, rememberOpened: true, searchHistory: true,
+  theme: 'system', palette: 'tokyo-night', textSize: 'system', previewImages: true, rememberOpened: true, saveOpenedWeb: false, searchHistory: true,
   histerCount: 5, vaultCount: 3, webResults: true,
   // The build's SHIORI_OBSIDIAN_VAULT, else none.
   obsidianVault: fromBuild('__SHIORI_OBSIDIAN_VAULT__'),
@@ -217,6 +217,9 @@ const SOURCE_URL = S.sourceLink(fromBuild('__SHIORI_SOURCE_URL__'));
  * through it, so without it neither is offered.
  */
 const SMALLWEB = fromBuild('__SHIORI_SMALLWEB_URL__') !== '';
+/** Save Web Results You Open is offered once the gateway says it can (api.webSaveReady). */
+let webSaveOffered = false;
+if (SMALLWEB) void api.webSaveReady().then((ready) => { webSaveOffered = ready; });
 /**
  * The media services this host routes (SHIORI_MEDIA, "jellyfin=https://…/,…"; docs/media.md): each reached at its
  * /<name>/ here, which adds its token, the address after "=" only for links. None: no Media pill.
@@ -740,6 +743,23 @@ document.addEventListener('click', (e) => {
   const row = e.target.closest && e.target.closest('li.web-row');
   if (!row || e.target.closest('a[href], button') || e.button !== 0) return;
   row.querySelector('a[href]')?.click();
+});
+
+// Save Web Results You Open: a web or news result opened from a search goes
+// to the gateway to be saved (never one Hister holds). Off by default.
+document.addEventListener('click', (e) => {
+  const link = e.target.closest && e.target.closest('li.web-row:not(.smallweb-row, .video-row) > a[href]');
+  if (!link || !settings.saveOpenedWeb || !webSaveOffered) return;
+  const row = link.closest('li');
+  const title = link.querySelector('.title')?.textContent || '';
+  void api.saveOpenedWeb(row.dataset.url || link.href, title, listSearch).then((problem) => problem && toast(problem));
+});
+document.addEventListener('auxclick', (e) => {
+  if (e.button !== 1) return;
+  const link = e.target.closest && e.target.closest('li.web-row:not(.smallweb-row, .video-row) > a[href]');
+  if (!link || !settings.saveOpenedWeb || !webSaveOffered) return;
+  void api.saveOpenedWeb(link.closest('li').dataset.url || link.href, link.querySelector('.title')?.textContent || '', listSearch)
+    .then((problem) => problem && toast(problem));
 });
 
 /**
@@ -3135,7 +3155,10 @@ function settingsPage(key, title) {
           } }, 'Clear Recent Searches')),
           toggle('rememberOpened', 'Remember What You Open'),
           toggle('showOpened', 'Show Opened'),
-        ], 'Recent searches stay in this browser. Remember What You Open puts the results you open first next time.'),
+          webSaveOffered ? toggle('saveOpenedWeb', 'Save Web Results You Open') : null,
+        ], webSaveOffered
+          ? 'Recent searches stay in this browser. Remember What You Open puts what you open first next time, and Save Web Results You Open adds a web result you open to Hister.'
+          : 'Recent searches stay in this browser. Remember What You Open puts the results you open first next time.'),
       ];
     case 'media':
       return group('Media', Object.entries(MEDIA).map(([name, service]) =>

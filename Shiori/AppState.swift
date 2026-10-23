@@ -1022,6 +1022,27 @@ final class AppState {
         }
     }
 
+    /// Web results saved since launch by Save Web Results You Open: their
+    /// rows show the visited mark before Hister is asked again.
+    private(set) var webSavedNow: Set<String> = []
+
+    /// Saves a web result opened from a search for `query`, when Settings
+    /// says so (`Saver.saveOpened`: never a page Hister holds). Best effort:
+    /// nothing waits on it, and a failure is only logged.
+    func saveOpenedWeb(url: String, title: String, query: String) {
+        guard searchPage.saveOpenedWeb, let client, !webSavedNow.contains(url),
+              HisterGuard.mayRecordOpened(url: url, query: query) else { return }
+        let outbox = saveOutbox
+        Task {
+            let outcome = await Saver.saveOpened(url, title: title, query: query, client: client, outbox: outbox)
+            switch outcome {
+            case .saved, .alreadyInHister: webSavedNow.insert(url)
+            case .queued: webSavedNow.insert(url); refreshWaiting()
+            default: Self.log.notice("Opened web result not saved: \(String(describing: outcome), privacy: .private)")
+            }
+        }
+    }
+
     func forgetOpened(_ url: String, query: String) async throws(HisterError) {
         guard let client else { throw .unreachable }
         try await client.forgetOpened(url: url, query: query)
@@ -1169,6 +1190,8 @@ struct SearchPageOptions: Equatable {
     /// Tell Hister which result you opened for a search, so it ranks it
     /// first next time (and show those first).
     var rememberOpened = true
+    /// Save a web result you open to Hister (`Saver.saveOpened`). This device's own.
+    var saveOpenedWeb = false
     /// The filter bar (site, date, visits…) on search results.
     var searchFilters = true
     /// Meaning-based matches mixed in, where the server has them set up.
@@ -1245,6 +1268,7 @@ struct SearchPageOptions: Equatable {
         flag(K.previewPane, &previewPane)
         flag(K.previewImages, &previewImages)
         flag(K.rememberOpened, &rememberOpened)
+        flag(K.saveOpenedWeb, &saveOpenedWeb)
         flag(K.searchFilters, &searchFilters)
         flag(K.semanticSearch, &semanticSearch)
         flag(K.foldRepeats, &foldRepeats)
@@ -1287,6 +1311,7 @@ struct SearchPageOptions: Equatable {
         defaults.set(previewPane, forKey: K.previewPane)
         defaults.set(previewImages, forKey: K.previewImages)
         defaults.set(rememberOpened, forKey: K.rememberOpened)
+        defaults.set(saveOpenedWeb, forKey: K.saveOpenedWeb)
         defaults.set(searchFilters, forKey: K.searchFilters)
         defaults.set(semanticSearch, forKey: K.semanticSearch)
         defaults.set(foldRepeats, forKey: K.foldRepeats)

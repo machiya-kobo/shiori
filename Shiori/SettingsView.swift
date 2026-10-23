@@ -322,10 +322,11 @@ struct SettingsView: View {
                 .disabled(app.recentSearches.isEmpty)
                 Toggle("Remember What You Open", isOn: $app.searchPage.rememberOpened)
                 Toggle("Show Opened", isOn: $app.searchPage.showOpened)
+                Toggle("Save Web Results You Open", isOn: $app.searchPage.saveOpenedWeb)
             } header: {
                 Text("History")
             } footer: {
-                Text("Your last \(SharedSettings.recentLimit) searches, from Shiori and from Safari, shown when you tap a search field and kept on this device only. Remember What You Open puts the results you open first next time.")
+                Text("Your last \(SharedSettings.recentLimit) searches, from Shiori and Safari, kept on this device only. Remember What You Open puts what you open first next time, and Save Web Results You Open adds a web result you open to Hister.")
             }
             .listRowBackground(palette.surface)
             .onAppear { app.reloadRecentSearches() }
