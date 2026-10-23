@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.22.4 (2026-10-22)
+
+- Search page, over a background: the placeholder cards shown while results
+  load sit on the same glass as the results, level with the Info placeholder
+  beside them (they sat a little lower).
+
 ## 1.22.3 (2026-10-21)
 
 - Search page, on a wide screen: the footer sits on the bottom edge of the
