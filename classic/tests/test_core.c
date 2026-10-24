@@ -572,6 +572,26 @@ static void test_page_key(void)
 	CHECK(shiori_hister_search_target("lantern", PILL_PAGES, 10, "a\\\"b", target, (long) sizeof(target)));
 }
 
+/* A newest-first key carries the last row's address: one past 255 bytes still pages. */
+static void test_long_page_key(void)
+{
+	static char reply[2048], target[1100 + 3 * SHIORI_PAGE_KEY_CAP];
+	static ShioriPage page;
+	char url[400];
+	int i;
+
+	strcpy(url, "https://kyoto.example/");
+	for (i = (int) strlen(url); i < 380; i++)
+		url[i] = 'a' + i % 26;
+	url[i] = '\0';
+	sprintf(reply, "{\"total\": 4181, \"documents\": [], \"page_key\": \"[\\\"1790000000\\\",\\\"%s\\\"]\"}", url);
+	memset(&page, 0, sizeof(page));
+	CHECK(shiori_parse_hister(reply, (long) strlen(reply), &page, NULL, NULL));
+	CHECK(strlen(page.next) > 380 && strstr(page.next, url) != NULL);
+	CHECK(shiori_hister_search_target("", PILL_PAGES, 20, page.next, target, (long) sizeof(target)));
+	CHECK(strstr(target, "sort") != NULL);
+}
+
 /* -- Mac Roman ---------------------------------------------------------------------------- */
 
 static void test_roman(void)
@@ -742,6 +762,7 @@ int main(void)
 	test_hosts();
 	test_credentials();
 	test_page_key();
+	test_long_page_key();
 	test_hister_notes();
 	test_roman();
 	test_query_bounds();

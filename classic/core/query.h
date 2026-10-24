@@ -14,6 +14,12 @@
 #define SHIORI_QUERY_H
 
 #define SHIORI_MAX_TEXT 512
+/* Hister's page_key, raw: the last row's sort value and its address, so as
+   long as that address can be (a newest-first key ran past 255 bytes). The
+   desk accessory never pages and builds with a few bytes. */
+#ifndef SHIORI_PAGE_KEY_CAP
+#define SHIORI_PAGE_KEY_CAP 1024
+#endif
 
 enum { PILL_ALL, PILL_PAGES, PILL_NOTES, PILL_CODE };
 

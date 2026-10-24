@@ -70,7 +70,7 @@ static Boolean gFocusList;
 static Boolean gActive = true;
 static long gTotalPages, gTotalNotes;
 static int gMoreStage = STAGE_NONE;             /* what Show More asks for, or STAGE_NONE */
-static char gMoreKey[256];                      /* Hister's page_key, raw (ShioriPage.next) */
+static char gMoreKey[SHIORI_PAGE_KEY_CAP];      /* Hister's page_key, raw (ShioriPage.next) */
 static long gMoreOffset;                        /* Kura's next offset */
 static Boolean gAppending;                      /* the request is Show More's */
 static long gTag;
@@ -377,7 +377,7 @@ static void ShowTotals(void)
 
 static void Request(int stage)
 {
-	static char target[1100];           /* static: off the 68000's small stack */
+	static char target[1100 + 3 * SHIORI_PAGE_KEY_CAP];   /* static: off the 68000's small stack; a key form-encoded */
 	const char *base;
 	int ok;
 
@@ -486,7 +486,7 @@ static void Answered(void)
 	Boolean notes = stage == STAGE_ALL_NOTES || stage == STAGE_NOTES;
 	Boolean fromHister = notes && NotesFromHister();
 	Boolean kura = notes && !fromHister;
-	ShioriPage page;
+	static ShioriPage page;             /* static: its page key is too big for the 68000's stack */
 	long len;
 	const char *body;
 

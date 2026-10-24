@@ -496,7 +496,7 @@ int shiori_hister_notes_text(const char *text, char *out, long cap)
 int shiori_hister_search_target(const char *typed, int pill, int limit, const char *pageKey, char *out, long cap)
 {
 	char t[SHIORI_MAX_TEXT + 1], words[SHIORI_MAX_TEXT + 32], text[2 * SHIORI_MAX_TEXT + 96];
-	char json[2 * SHIORI_MAX_TEXT + 256];
+	char json[2 * SHIORI_MAX_TEXT + 256 + SHIORI_PAGE_KEY_CAP];
 	int newest;
 	Buf j, b;
 

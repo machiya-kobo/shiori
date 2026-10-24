@@ -7,6 +7,8 @@
 #ifndef SHIORI_RESULTS_H
 #define SHIORI_RESULTS_H
 
+#include "query.h"
+
 enum { ROW_PAGE = 'p', ROW_NOTE = 'n', ROW_CODE = 'c' };
 
 typedef struct ShioriRow {
@@ -24,7 +26,7 @@ typedef struct ShioriRow {
 typedef struct ShioriPage {
 	int ok;                 /* the reply was a JSON object of the right shape */
 	long total;
-	char next[256];         /* Hister's page_key for the next page, raw: its JSON escapes kept ("" at the end) */
+	char next[SHIORI_PAGE_KEY_CAP]; /* Hister's page_key for the next page, raw: its JSON escapes kept ("" at the end) */
 	int received;           /* rows in the reply, ones dropped as non-web included */
 } ShioriPage;
 
