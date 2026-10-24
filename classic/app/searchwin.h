@@ -21,6 +21,8 @@
 void SearchWindowOpen(Prefs *prefs);
 /* After Preferences changed the bridge or the token. */
 void SearchWindowConfigChanged(void);
+/* With nothing typed and nothing shown: the newest pages (at launch, and once set up). */
+void SearchWindowNewest(void);
 Boolean IsSearchWindow(WindowPtr w);
 
 /* Events the app passes on when the window is in front (or for it). */

@@ -337,6 +337,7 @@ int main(void)
 		if (PrefsDialog(&gPrefs))
 			SearchWindowConfigChanged();
 	}
+	SearchWindowNewest();               /* something to read before any search */
 	while (!gQuit) {
 		Boolean busy = SearchWindowBusy() || gReadersBusy;
 		if (GetEvent(&e, busy ? 0 : (gInBackground ? 30 : 10))) {

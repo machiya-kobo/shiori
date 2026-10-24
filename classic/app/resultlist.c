@@ -46,6 +46,12 @@ static short ViewHeight(const ResultList *l)
 	return (short) (l->frame.bottom - l->frame.top);
 }
 
+Boolean ListMoreInView(const ResultList *l)
+{
+	short last = (short) (l->count - 1);
+	return last >= 0 && Rows(l)[last].kind == LROW_MORE && RowTop(l, last) < l->top + ViewHeight(l);
+}
+
 static void BarRect(const ResultList *l, Rect *r)
 {
 	SetRect(r, l->frame.right - 1, l->frame.top - 1, l->frame.right + 15, l->frame.bottom + 1);

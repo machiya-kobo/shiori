@@ -25,6 +25,11 @@
 #define LIST_TOP 54
 #define STATUS_H 15
 #define PAGE_ROWS 10            /* a page of results (the list shows about 8 on a Mac Plus) */
+#ifdef SHIORI_TALKIP
+#define NEWEST_ROWS 10          /* Shiori Lite: a page of the newest still fits its reply */
+#else
+#define NEWEST_ROWS 20          /* the newest pages, with nothing typed */
+#endif
 #define ALL_NOTES 5             /* All's top notes */
 #define MAX_ROWS 120
 #ifdef SHIORI_TALKIP
@@ -354,12 +359,14 @@ static void ShowTotals(void)
 		SetStatus(gProblem);
 		return;
 	}
-	switch (gPill) {
+	switch (gQuery[0] || gPill != PILL_ALL ? gPill : PILL_PAGES) {
 	case PILL_ALL:
 		sprintf(s, "%ld page%s \245 %ld note%s", gTotalPages, gTotalPages == 1 ? "" : "s", gTotalNotes,
 			gTotalNotes == 1 ? "" : "s");
 		break;
-	case PILL_PAGES: sprintf(s, "%ld page%s", gTotalPages, gTotalPages == 1 ? "" : "s"); break;
+	case PILL_PAGES:
+		sprintf(s, gQuery[0] ? "%ld page%s" : "%ld page%s, newest first", gTotalPages, gTotalPages == 1 ? "" : "s");
+		break;
 	case PILL_NOTES: sprintf(s, "%ld note%s", gTotalNotes, gTotalNotes == 1 ? "" : "s"); break;
 	default: sprintf(s, "%ld code page%s", gTotalPages, gTotalPages == 1 ? "" : "s"); break;
 	}
@@ -408,7 +415,7 @@ static void Request(int stage)
 		base = gConfig.kura;
 		break;
 	default:
-		ok = shiori_hister_search_target(gQuery, PILL_PAGES, PAGE_ROWS, gAppending ? gMoreKey : "", target,
+		ok = shiori_hister_search_target(gQuery, PILL_PAGES, gQuery[0] ? PAGE_ROWS : NEWEST_ROWS, gAppending ? gMoreKey : "", target,
 			(long) sizeof(target));
 		base = gConfig.hister;
 		break;
@@ -563,7 +570,7 @@ static void Search(void)
 	gAppending = false;
 	gProblem[0] = '\0';
 	switch (gPill) {
-	case PILL_ALL: Request(STAGE_ALL_NOTES); break;
+	case PILL_ALL: Request(gQuery[0] ? STAGE_ALL_NOTES : STAGE_PAGES); break;   /* nothing typed: the newest pages */
 	case PILL_PAGES: Request(STAGE_PAGES); break;
 	case PILL_NOTES: Request(STAGE_NOTES); break;
 	default: Request(STAGE_CODE); break;
@@ -571,6 +578,20 @@ static void Search(void)
 }
 
 /* -- the window -------------------------------------------------------------------------- */
+
+void SearchWindowNewest(void)
+{
+	GrafPtr old;
+
+	if (gWin == NULL || (**gField).teLength > 0 || gStage != STAGE_NONE || ListCount(&gList) > 0)
+		return;
+	if (strstr(gConfig.hister, "192.0.2.") != NULL || (!gConfig.direct && !gConfig.roomToken[0]))
+		return;                         /* not set up yet: Preferences first */
+	GetPort(&old);
+	SetPort(gWin);
+	Search();
+	SetPort(old);
+}
 
 void SearchWindowConfigChanged(void)
 {
@@ -582,6 +603,7 @@ void SearchWindowConfigChanged(void)
 		SetPort(gWin);
 		InvalRect(&gWin->portRect);
 		SetStatus(gConfig.roomToken[0] ? "Type, then Return, to search Hister and Kura." : "No room token yet: Preferences\311");
+		SearchWindowNewest();
 	}
 }
 
@@ -792,6 +814,12 @@ void SearchWindowIdle(void)
 
 Boolean SearchWindowPoll(void)
 {
+	if (gStage == STAGE_NONE && gMoreStage != STAGE_NONE && ListMoreInView(&gList)) {
+		GrafPtr old;
+		GetPort(&old);
+		SearchWindowShowMore();         /* scrolled to the end: the next page, as a click on Show More */
+		SetPort(old);
+	}
 	if (gStage == STAGE_NONE)
 		return false;
 	if (FetchPoll(&gFetch))
@@ -865,7 +893,7 @@ const char *SearchWindowBalloon(Point where, Rect *hot)
 	GlobalToLocal(&p);
 	if (PtInRect(p, &gFieldRect)) {
 		*hot = gFieldRect;
-		return "Type words, then press Return to search your pages in Hister and your notes in Kura.";
+		return "Type words, then press Return to search your pages in Hister and your notes in Kura. With nothing typed, Return shows your newest pages.";
 	}
 	for (i = 0; i < 4; i++)
 		if (PtInRect(p, &gPillRects[i])) {

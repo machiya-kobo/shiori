@@ -66,7 +66,11 @@ file.
 
 - **Search** (Return, or a pill): **All** (your top notes, then your
   pages), **Pages**, **Notes** and **Code**. Nothing searches while you
-  type. *Show More* ends a list that has another page.
+  type. *Show More* ends a list that has another page, and the next
+  page loads by itself once you scroll to it.
+- **Your newest pages** fill the list at launch, 20 at a time (10 in
+  Shiori Lite), so there's something to read before you search. Return
+  with nothing typed shows them again.
 - **Notes** come from Kura (the default vault, or a shared one from the
   vault menu) or from Hister (the default vault only): Preferences → Notes
   from. Until you choose, Kura when one is set up.

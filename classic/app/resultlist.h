@@ -57,6 +57,8 @@ void ListFocus(ResultList *l, Boolean focused);
 Boolean ListClick(ResultList *l, Point where, Boolean doubleClick);
 /* ↑ ↓, Page Up/Down, Home/End: true when it was one of those keys. */
 Boolean ListKey(ResultList *l, char key);
+/* The list ends in Show More and it's scrolled into view (load the next page). */
+Boolean ListMoreInView(const ResultList *l);
 /* Selects the first result (not a header); false when there's none. */
 Boolean ListSelectFirst(ResultList *l);
 
