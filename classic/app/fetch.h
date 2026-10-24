@@ -11,6 +11,7 @@
 
 #include "../core/config.h"
 #include "../core/http.h"
+#include "../core/query.h"
 #include "net.h"
 
 enum {
@@ -38,8 +39,8 @@ typedef struct Fetch {
 	OSErr err;
 	long tag;               /* the caller's: which request this is (a generation) */
 	NetConn conn;
-	char req[1600];         /* the request: a long search plus Hister's page_key fits */
-	char url[1300];         /* base + target while the request is made (off the stack: a DA has
+	char req[1600 + SHIORI_PAGE_KEY_EXTRA];   /* the request: a long search plus Hister's page_key fits */
+	char url[1300 + SHIORI_PAGE_KEY_EXTRA];         /* base + target while the request is made (off the stack: a DA has
 	                           only its host application's) */
 	unsigned short reqLen;
 	Handle body;            /* the whole reply as it came, head included */

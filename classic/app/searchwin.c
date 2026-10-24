@@ -377,7 +377,7 @@ static void ShowTotals(void)
 
 static void Request(int stage)
 {
-	static char target[1100 + 3 * SHIORI_PAGE_KEY_CAP];   /* static: off the 68000's small stack; a key form-encoded */
+	static char target[1100 + SHIORI_PAGE_KEY_EXTRA];     /* static: off the 68000's small stack */
 	const char *base;
 	int ok;
 

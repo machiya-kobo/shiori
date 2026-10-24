@@ -592,6 +592,34 @@ static void test_long_page_key(void)
 	CHECK(strstr(target, "sort") != NULL);
 }
 
+/* A row whose address is too long to keep is left out, never cut into another page's. */
+static int gLongRows;
+static void count_row(void *ctx, const ShioriRow *row)
+{
+	(void) ctx;
+	CHECK(strlen(row->url) < 200);
+	gLongRows++;
+}
+
+static void test_long_url_row(void)
+{
+	static char reply[2048];
+	char url[400];
+	ShioriPage page;
+	int i;
+
+	strcpy(url, "https://hotel.example/stay?");
+	for (i = (int) strlen(url); i < 380; i++)
+		url[i] = 'a' + i % 26;
+	url[i] = '\0';
+	sprintf(reply, "{\"total\": 2, \"documents\": [{\"url\": \"%s\", \"title\": \"Long\"}, "
+		"{\"url\": \"https://short.example/\", \"title\": \"Short\"}], \"page_key\": \"\"}", url);
+	memset(&page, 0, sizeof(page));
+	gLongRows = 0;
+	CHECK(shiori_parse_hister(reply, (long) strlen(reply), &page, count_row, NULL));
+	CHECK(gLongRows == 1 && page.received == 2);
+}
+
 /* -- Mac Roman ---------------------------------------------------------------------------- */
 
 static void test_roman(void)
@@ -763,6 +791,7 @@ int main(void)
 	test_credentials();
 	test_page_key();
 	test_long_page_key();
+	test_long_url_row();
 	test_hister_notes();
 	test_roman();
 	test_query_bounds();

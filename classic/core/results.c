@@ -273,7 +273,8 @@ static int read_hister_doc(JsonReader *r, ShioriRow *row)
 			}
 			if (t != JSON_STRING)
 				continue;
-			if (strcmp(key, "url") == 0) COPY(row->url, r);
+			if (strcmp(key, "url") == 0 && COPY(row->url, r) >= (long) sizeof(row->url) - 4)
+				row->url[0] = '\0';     /* too long to keep: cut, it would open another page; left out */
 			else if (strcmp(key, "title") == 0) COPY(row->title, r);
 			else if (strcmp(key, "domain") == 0) COPY(row->host, r);
 			else if (strcmp(key, "text") == 0) COPY(row->snippet, r);

@@ -20,6 +20,9 @@
 #ifndef SHIORI_PAGE_KEY_CAP
 #define SHIORI_PAGE_KEY_CAP 1024
 #endif
+/* What a request's buffers add for a key past the 256 bytes they were sized
+   for: form-encoded, each byte can take three. */
+#define SHIORI_PAGE_KEY_EXTRA (SHIORI_PAGE_KEY_CAP > 256 ? 3 * (SHIORI_PAGE_KEY_CAP - 256) : 0)
 
 enum { PILL_ALL, PILL_PAGES, PILL_NOTES, PILL_CODE };
 
