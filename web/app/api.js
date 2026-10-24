@@ -264,9 +264,13 @@ export const histerPageURL = (url) => `${ROOT}preview?${query({ id: url })}`;
 const WEB_KEEP_MS = 5 * 60_000;
 const webKept = new Map();
 
-/** Web results from SearXNG (through /searx/): its `categories` (general, images, videos, news), within `time` (day, week, month, year) when given. */
-export function web(q, page = 1, time = '', categories = 'general') {
-  const url = `${ROOT}searx/search?${query({ q, format: 'json', pageno: String(page), categories, ...(time ? { time_range: time } : {}) })}`;
+/**
+ * Web results from SearXNG (through /searx/): its `categories` (general, images, videos, news), within `time` (day,
+ * week, month, year) when given, with safe search at `safe` ("moderate", "strict"; "off" sends none).
+ */
+export function web(q, page = 1, time = '', categories = 'general', safe = 'off') {
+  const level = globalThis.ShioriSearch.safeSearchLevel(safe);
+  const url = `${ROOT}searx/search?${query({ q, format: 'json', pageno: String(page), categories, ...(time ? { time_range: time } : {}), ...(level ? { safesearch: level } : {}) })}`;
   const kept = webKept.get(url);
   if (kept && Date.now() - kept.at < WEB_KEEP_MS) return Promise.resolve(structuredClone(kept.reply));
   return shared('web ' + url, async () => {

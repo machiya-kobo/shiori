@@ -6,7 +6,7 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 
 - **Search your pages** with Hister's query syntax, completions included. Filter by date, site, visits, language and type.
 - **Search your notes**: your Obsidian vault, through [Kura](https://github.com/machiya-kobo/kura). A note opens in Obsidian, its Kura page and [Konbini](https://github.com/machiya-kobo/konbini) card a tap away.
-- **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in (one the web also found is a single entry) and the ones you've visited marked.
+- **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in (one the web also found is a single entry) and the ones you've visited marked. Settings → Search → Safe Search (Off, Moderate or Strict) hides adult results where the engine allows it.
 - **Images, Videos and News** pills, as on Shiori Search: a grid of pictures with a viewer (Open Image, Visit Page, previous and next), videos with their length, news with its date. Each has an order and filters (size, shape, format; length; source) drawn from what came back, without another web search. Pictures that name a "quoted phrase" from the search come first.
 - **Search Gemini and Gopher** through a [small-web gateway](https://github.com/machiya-kobo/machiya/tree/main/stack/smallweb).
 - **Search your code** in the Code view: repos, READMEs, docs, issues, pull requests and releases imported into Hister by Machiya's [code-import](https://github.com/machiya-kobo/machiya/blob/main/docs/services/code-import.md). Filter by kind, forge, open or private; each opens at its forge.

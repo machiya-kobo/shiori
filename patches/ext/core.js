@@ -692,6 +692,7 @@ const shioriMachiya = (() => {
     pills: [],
     smallWebTab: true,
     smallWebOpen: 'gateway',
+    safeSearch: 'off',
     pillRow: 'auto',
     smallwebURL: '',
     // Sent by the app too; without them here the page never heard of a

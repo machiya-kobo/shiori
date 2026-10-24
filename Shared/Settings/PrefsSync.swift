@@ -32,6 +32,7 @@ enum PrefsSync {
     static let choices: [String: [String]] = [
         SharedSettings.Key.resultStyle: SharedSettings.resultStyles,
         SharedSettings.Key.smallWebOpen: SharedSettings.smallWebOpens,
+        SharedSettings.Key.safeSearch: SharedSettings.safeSearches,
     ]
 
     /// Shiori's local setting → its account key, for every one that follows the person.

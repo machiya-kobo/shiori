@@ -234,10 +234,15 @@ struct SettingsView: View {
                 Toggle("Web Results", isOn: $app.searchPage.webResults)
                 SettingsField(label: "SearXNG", text: $searxngDraft, prompt: "https://searxng.example/", submit: saveSearxng)
                 unencryptedNote(searxngDraft)
+                Picker("Safe Search", selection: $app.searchPage.safeSearch) {
+                    Text("Off").tag("off")
+                    Text("Moderate").tag("moderate")
+                    Text("Strict").tag("strict")
+                }
             } header: {
                 Text("Web")
             } footer: {
-                Text("Your SearXNG: the web results here and in Safari. Thumbnails come only through its image proxy.")
+                Text("Your SearXNG: the web results here and in Safari. Safe Search hides adult results where the engine allows it.")
             }
             .listRowBackground(palette.surface)
 

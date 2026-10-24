@@ -218,6 +218,7 @@
     smallwebURL: '',
     smallWebTab: true,
     smallWebOpen: 'gateway',
+    safeSearch: 'off',
     pillRow: 'auto',
     ...(stored.shioriSettings || {}),
   };
@@ -1147,6 +1148,7 @@
       { key: 'showRelated', label: 'Related Searches', needs: 'webResults' },
       { key: 'showThumbnails', label: 'Thumbnails', needs: 'webResults' },
       { key: 'aiAnswer', label: 'AI Answer', needs: 'webResults' },
+      { key: 'safeSearch', label: 'Safe Search', options: [['off', 'Off'], ['moderate', 'Moderate'], ['strict', 'Strict']], needs: 'webResults' },
     ]],
     ['Small Web', [
       { key: 'smallWebTab', label: 'Small Web' },
@@ -3459,6 +3461,7 @@
       const url = new URL(`${searxBase}search`);
       url.search = new URLSearchParams({ q: wq, format: 'json', pageno: String(page), categories: webLike ? 'general' : category }).toString();
       if (time) url.searchParams.set('time_range', time);
+      if (S.safeSearchLevel(settings.safeSearch)) url.searchParams.set('safesearch', S.safeSearchLevel(settings.safeSearch));
       try {
         data = await fetchJSON(url.href, { timeout: page === 1 && webLike ? WEB_TIMEOUT_MS : 10000 });
         pageState.web = data;
@@ -3781,6 +3784,7 @@
   function searx(text, params = {}) {
     const url = new URL(`${searxBase}search`);
     url.search = new URLSearchParams({ q: text, format: 'json', pageno: '1', categories: 'general', ...params }).toString();
+    if (S.safeSearchLevel(settings.safeSearch)) url.searchParams.set('safesearch', S.safeSearchLevel(settings.safeSearch));
     return fetchJSON(url.href, { timeout: WEB_TIMEOUT_MS });
   }
 

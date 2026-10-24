@@ -135,6 +135,8 @@ public enum EngineHealth {
 public struct SearxClient: Sendable {
     public let baseURL: URL
     let session: URLSession
+    /// "off" (SearXNG's own setting, nothing sent), "moderate" or "strict".
+    public var safeSearch = "off"
 
     public init?(serverURL: String, session: URLSession = HisterClient.defaultSession) {
         var s = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -147,6 +149,17 @@ public struct SearxClient: Sendable {
         self.session = session
     }
 
+    /// SearXNG's `safesearch` for a choice: "1" moderate, "2" strict; nil
+    /// for off (or anything else), so SearXNG's own setting holds. Twin of
+    /// search-core's `S.safeSearchLevel`, on scripts/web-choices-cases.json.
+    public static func safeSearchLevel(_ choice: String) -> String? {
+        switch choice {
+        case "moderate": "1"
+        case "strict": "2"
+        default: nil
+        }
+    }
+
     /// One page of `category`'s results (SearXNG's own: images, videos,
     /// news; nil for its general search).
     public func search(_ query: String, page: Int = 1, category: String? = nil) async throws(HisterError) -> WebPage {
@@ -157,6 +170,7 @@ public struct SearxClient: Sendable {
             URLQueryItem(name: "pageno", value: String(page)),
         ]
         if let category { items.append(URLQueryItem(name: "categories", value: category)) }
+        if let level = Self.safeSearchLevel(safeSearch) { items.append(URLQueryItem(name: "safesearch", value: level)) }
         components.setQueryItems(items)
         let request = URLRequest(url: components.url!)
         let data: Data

@@ -41,7 +41,7 @@ enum AccountPrefs {
     static func current(_ d: UserDefaults) -> [String: String] {
         var settings: [String: Any] = [:]
         for key in [SharedSettings.Key.theme, SharedSettings.Key.palette, SharedSettings.Key.textSize, SharedSettings.Key.resultStyle,
-                    SharedSettings.Key.smallWebOpen] {
+                    SharedSettings.Key.smallWebOpen, SharedSettings.Key.safeSearch] {
             if let value = d.string(forKey: key) { settings[key] = value }
         }
         if let pills = d.array(forKey: SharedSettings.Key.pills) { settings[SharedSettings.Key.pills] = PillOrder.clean(pills) }

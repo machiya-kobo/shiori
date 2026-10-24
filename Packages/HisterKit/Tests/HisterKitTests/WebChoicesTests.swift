@@ -84,6 +84,12 @@ struct WebChoicesTests {
         }
     }
 
+    @Test func safeSearchLevels() throws {
+        for pair in try #require(try Self.data()["safeSearch"] as? [[String]]) {
+            #expect(SearxClient.safeSearchLevel(pair[0]) == (pair[1].isEmpty ? nil : pair[1]), "\(pair[0])")
+        }
+    }
+
     @Test func quotedPhrasesFirst() throws {
         let phrases = try #require(try Self.data()["phrases"] as? [String: Any])
         for pair in try #require(phrases["quoted"] as? [[Any]]) {

@@ -101,6 +101,8 @@
     { "key": "shiori.hister_count", "value": "10", "ok": true },
     { "key": "shiori.hister_count", "value": "7", "ok": false },
     { "key": "shiori.small_web_open", "value": "direct", "ok": true },
+    { "key": "shiori.safe_search", "value": "strict", "ok": true },
+    { "key": "shiori.safe_search", "value": "on", "ok": false },
     { "key": "shiori.preview_pane", "value": "on", "ok": false },
     { "key": "shiori.niwa_url", "value": "https://evil.example/", "ok": false }
   ]

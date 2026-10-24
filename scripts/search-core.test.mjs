@@ -1572,6 +1572,7 @@ test("Images, Videos and News choices, on scripts/web-choices-cases.json (Hister
     assert.deepEqual(plain(S.webNarrow(c.cat, c.results, choices).map((r) => r.url)), c.narrow, `${c.cat} ${c.params} narrow`);
     assert.deepEqual(plain(S.webChoiceRow(c.cat, c.results, choices)), c.row, `${c.cat} ${c.params} row`);
   }
+  for (const [choice, level] of data.safeSearch) assert.equal(S.safeSearchLevel(choice), level, `safeSearchLevel(${choice})`);
   for (const [q, out] of data.phrases.quoted) assert.deepEqual(plain(S.quotedPhrases(q)), out, q);
   for (const c of data.phrases.first) assert.deepEqual(plain(S.phrasesFirst(c.q, c.results).map((r) => r.url)), c.order, c.q);
   const nicks = data.phrases.first[0];

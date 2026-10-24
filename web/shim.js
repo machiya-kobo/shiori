@@ -17,7 +17,7 @@
   const SETTABLE = [
     'combinedSearch', 'showInfobox', 'showRelated', 'showThumbnails', 'histerInGeneral', 'histerTab',
     'vaultInGeneral', 'vaultTab', 'webResults', 'searchHistory', 'previewPane', 'previewImages',
-    'rememberOpened', 'showOpened', 'resultStyle', 'pills', 'smallWebTab', 'smallWebOpen', 'pillRow', 'searchFilters', 'semanticSearch', 'aiAnswer', 'histerCount', 'vaultCount', 'niwaURL',
+    'rememberOpened', 'showOpened', 'resultStyle', 'pills', 'smallWebTab', 'smallWebOpen', 'safeSearch', 'pillRow', 'searchFilters', 'semanticSearch', 'aiAnswer', 'histerCount', 'vaultCount', 'niwaURL',
     'labelSuggestions', 'foldRepeats', 'saveOpenedWeb',
     'konbiniURL', 'newsBlurURL', 'theme', 'palette', 'textSize', 'obsidianVault', 'notesSource',
   ];

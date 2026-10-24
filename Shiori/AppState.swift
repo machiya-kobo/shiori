@@ -204,7 +204,11 @@ final class AppState {
     @ObservationIgnored private var roomsGeneration = 0
 
     /// The SearXNG instance, for the app's web search.
-    var searx: SearxClient? { SearxClient(serverURL: searxngURL) }
+    var searx: SearxClient? {
+        var client = SearxClient(serverURL: searxngURL)
+        client?.safeSearch = searchPage.safeSearch
+        return client
+    }
     /// The last text's respellings from SearXNG's autocompleter, shared by the lists
     /// that ask at once (Search → All's pages and notes).
     @ObservationIgnored private var suggestionsFor: (text: String, task: Task<[String], Never>)?
@@ -1229,6 +1233,8 @@ struct SearchPageOptions: Equatable {
     var smallwebURL = ""
     var smallWebTab = true
     var smallWebOpen = "gateway"
+    /// SearXNG's safe search: "off", "moderate" or "strict" (`SharedSettings.Key.safeSearch`).
+    var safeSearch = "off"
     /// How the pills sit when they don't fit: "auto" (they wrap) or
     /// "scroll" (`SharedSettings.Key.pillRow`). This device's own.
     var pillRow = "auto"
@@ -1290,6 +1296,7 @@ struct SearchPageOptions: Equatable {
         if let v = defaults.string(forKey: K.smallwebURL), !v.isEmpty { smallwebURL = v }
         flag(K.smallWebTab, &smallWebTab)
         if let v = defaults.string(forKey: K.smallWebOpen), SharedSettings.smallWebOpens.contains(v) { smallWebOpen = v }
+        if let v = defaults.string(forKey: K.safeSearch), SharedSettings.safeSearches.contains(v) { safeSearch = v }
         if let v = defaults.string(forKey: K.pillRow), SharedSettings.pillRows.contains(v) { pillRow = v }
     }
 
@@ -1328,6 +1335,7 @@ struct SearchPageOptions: Equatable {
         defaults.set(smallwebURL, forKey: K.smallwebURL)
         defaults.set(smallWebTab, forKey: K.smallWebTab)
         defaults.set(smallWebOpen, forKey: K.smallWebOpen)
+        defaults.set(safeSearch, forKey: K.safeSearch)
         defaults.set(pillRow, forKey: K.pillRow)
         defaults.removeObject(forKey: K.histerPlacement)
     }

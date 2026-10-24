@@ -85,6 +85,14 @@ struct SharedSettingsTests {
         #expect(defaults.string(forKey: SharedSettings.Key.smallWebOpen) == "direct")
     }
 
+    @Test func safeSearchIsOneOfItsChoices() {
+        SharedSettings.applyFromPage(["safeSearch": "strict"], to: defaults)
+        #expect(defaults.string(forKey: SharedSettings.Key.safeSearch) == "strict")
+        #expect(SharedSettings.extensionPayload(from: defaults)[SharedSettings.Key.safeSearch] as? String == "strict")
+        SharedSettings.applyFromPage(["safeSearch": "on"], to: defaults)
+        #expect(defaults.string(forKey: SharedSettings.Key.safeSearch) == "strict")
+    }
+
     @Test func notesComeFromKuraOrHisterOnly() {
         SharedSettings.applyFromPage(["notesSource": "hister"], to: defaults)
         #expect(defaults.string(forKey: SharedSettings.Key.notesSource) == "hister")

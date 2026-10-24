@@ -183,7 +183,7 @@ const DEFAULTS = {
   // The notes' homes, from the build (the server passes them in).
   niwaURL: fromBuild('__SHIORI_KURA_URL__'), konbiniURL: fromBuild('__SHIORI_KONBINI_URL__'),
   foldRepeats: true, searchFilters: true, labelSuggestions: true, newsBlurURL: '', aiAnswer: true,
-  showOpened: true, resultStyle: 'tint', clickOpens: 'auto', smallWebTab: true, smallWebOpen: 'gateway',
+  showOpened: true, resultStyle: 'tint', clickOpens: 'auto', smallWebTab: true, smallWebOpen: 'gateway', safeSearch: 'off',
   // How the pills sit when they don't fit: 'auto' (wrap) or 'scroll'. This browser's own.
   pillRow: 'auto',
   // Which of Kura's vaults the Notes lists search: 'all', or one's name.
@@ -2181,7 +2181,7 @@ async function wikipediaFirst(results, wq) {
   let article = S.wikipediaArticle(results, langs);
   let found = null;
   if (!article || !readers(article)) {
-    const other = await api.web(words).catch(() => null);
+    const other = await api.web(words, 1, '', 'general', settings.safeSearch).catch(() => null);
     const better = other && S.wikipediaArticle(other.results, langs);
     if (better && (!article || readers(better))) {
       article = better;
@@ -2202,7 +2202,7 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
   const mineOnly = (...rest) => container.replaceChildren(...[...rest, mix.some(Boolean) ? h('ul', { class: 'rows' }, mix.filter(Boolean)) : null].filter(Boolean));
   if (!wq) return mineOnly(status('Hister Only', 'That query is Hister syntax only, so the web isn’t searched.'));
   try {
-    const data = await api.web(wq, 1, webTime(route().params));
+    const data = await api.web(wq, 1, webTime(route().params), 'general', settings.safeSearch);
     const results = (await wikipediaFirst(data.results || [], wq)).filter((r) => typeof r.url === 'string' && /^https?:/.test(r.url));
     // The engines that didn't answer, as the search page says it.
     const health = S.engineHealthLine(S.unansweredEngines(data));
@@ -2261,7 +2261,7 @@ async function webTabList(container, q, cat) {
   if (!wq) return container.replaceChildren(status('Hister Only', 'That query is Hister syntax only, so the web isn’t searched.'));
   let data;
   try {
-    data = await api.web(wq, 1, webTime(route().params), cat);
+    data = await api.web(wq, 1, webTime(route().params), cat, settings.safeSearch);
   } catch (_) {
     return container.replaceChildren(status("The Web Search Didn't Answer", '', () => webTabList(container, q, cat)));
   }
@@ -3130,8 +3130,10 @@ function settingsPage(key, title) {
       // Every section the apps' way: its switch first, then its choices.
       return [
         ...pillsGroup(group, choice),
-        ...group('Web', [toggle('webResults', 'Web Results')],
-          'Your SearXNG, on this host: the web results here. Thumbnails come only through its image proxy.'),
+        ...group('Web', [
+          toggle('webResults', 'Web Results'),
+          settings.webResults ? choice('safeSearch', 'Safe Search', [['off', 'Off'], ['moderate', 'Moderate'], ['strict', 'Strict']]) : null,
+        ], 'Your SearXNG, on this host: the web results here. Safe Search hides adult results where the engine allows it.'),
         ...group('Small Web', [
           toggle('smallWebTab', 'Small Web'),
           settings.smallWebTab ? choice('smallWebOpen', 'Open Results', [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']]) : null,

@@ -345,6 +345,13 @@
     return keep.map((r, i) => ({ r, i, k: by(r) })).sort((a, b) => (a.k == null) - (b.k == null) || (a.k ?? 0) - (b.k ?? 0) || a.i - b.i).map((x) => x.r);
   }
 
+  /**
+   * SearXNG's `safesearch` for a choice: '1' moderate, '2' strict; '' for
+   * off (or anything else), so SearXNG's own setting holds. Twin of
+   * HisterKit's `SearxClient.safeSearchLevel`, on scripts/web-choices-cases.json.
+   */
+  const safeSearchLevel = (choice) => ({ moderate: '1', strict: '2' })[choice] || '';
+
   /** Text as phrases are compared: lowercase words, one space apart, a space at each end. */
   const phraseText = (s) => ` ${String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
 
@@ -2659,7 +2666,7 @@
     'searchFilters', 'foldRepeats', 'labelSuggestions', 'showOpened', 'smallWebTab',
   ];
   const shioriFlags = () => PREFS_SHIORI_FLAGS;
-  const shioriChoices = () => ({ resultStyle: PAGE_CHOICES.resultStyle, smallWebOpen: PAGE_CHOICES.smallWebOpen });
+  const shioriChoices = () => ({ resultStyle: PAGE_CHOICES.resultStyle, smallWebOpen: PAGE_CHOICES.smallWebOpen, safeSearch: PAGE_CHOICES.safeSearch });
   const PREFS_SHIORI_COUNTS = ['histerCount', 'vaultCount'];
   const snake = (key) => key.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase());
   const shioriKey = (local) => 'shiori.' + snake(local);
@@ -3553,6 +3560,7 @@
     palette: ['tokyo-night', 'solarized', 'nord', 'dracula', 'catppuccin', 'gruvbox', 'rose-pine', 'kanagawa', 'everforest', 'ayu'],
     resultStyle: ['tint', 'solid', 'bar', 'none'],
     smallWebOpen: ['gateway', 'direct'],
+    safeSearch: ['off', 'moderate', 'strict'],
     // This device's own (never the account's): how the pills sit when they don't fit.
     pillRow: ['auto', 'scroll'],
   };
@@ -4210,6 +4218,7 @@
     webNarrow,
     quotedPhrases,
     phrasesFirst,
+    safeSearchLevel,
     webChoiceRow,
     cachedURL,
     archiveURL,
