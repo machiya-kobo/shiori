@@ -571,6 +571,8 @@ a.link-chip:hover, a.link-chip:focus-visible { background: color-mix(in srgb, cu
 
 /* Image results */
 .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+/* The last row's leftovers while there's more (search.js hold): they lead the next page. */
+.image-grid > .held { display: none; }
 .image-grid a {
   display: block; background: var(--card); border-radius: 10px; overflow: hidden;
   text-decoration: none; color: var(--secondary); box-shadow: var(--shadow);

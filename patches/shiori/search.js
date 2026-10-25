@@ -18,6 +18,8 @@
   // second or two. Out of reach fails at once anyway.
   const WEB_TIMEOUT_MS = 5000;
   const PAGE_CACHE_KEY = 'shioriPageCache';
+  // The pictures an Images page held back from its last, unfilled row: they lead the next page.
+  const CARRY_KEY = 'shioriImageCarry';
   const PAGE_CACHE_MS = 30 * 60_000;
   const PAGE_CACHE_MAX = 12;
   // Leaving the page (the sign-in, a new search, a link) cancels its
@@ -460,6 +462,7 @@
       vault: cached && cached.vault,
       web: cached && cached.web,
       answer: cached && cached.answer,
+      carried: (cached && cached.carried) || null,
       y: 0,
       folds: {},
     };
@@ -504,6 +507,7 @@
       vaultCount: ALL_COUNT,
       web: state.web,
       answer: state.answer,
+      carried: state.carried,
       y: y ?? ((before && before.y) || 0),
       folds: state.folds,
     };
@@ -3574,7 +3578,18 @@
       }
     }
 
-    const results = S.wikiFirst(data.results, wiki.article, wiki.found).filter((r) => r && isHTTP(r.url));
+    let results = S.wikiFirst(data.results, wiki.article, wiki.found).filter((r) => r && isHTTP(r.url));
+    // Images: the last page's held-back pictures first (those this page already has, once).
+    const carryKey = (p) => JSON.stringify([q, category, time, p]);
+    if (category === 'images') {
+      if (!pageState.carried) {
+        const carry = (await chrome.storage.local.get([CARRY_KEY]))[CARRY_KEY];
+        pageState.carried = carry && carry.key === carryKey(page) && Array.isArray(carry.results) ? carry.results : [];
+        if (pageState.carried.length) saveState(run);
+      }
+      const here = new Set(pageState.carried.map((r) => r.url));
+      results = [...pageState.carried, ...results.filter((r) => !here.has(r.url))];
+    }
     $('web').hidden = false;
     placeSide(); // lined up again with the results drawn
     $('web-title').textContent = webLike ? 'Web' : CATEGORIES.find(([c]) => c === category)[1];
@@ -3588,13 +3603,35 @@
       // 60 tiles at a time; the rest on request. Drawn again for each choice in the row (size, shape…).
       $('images').hidden = false;
       const tileOf = new Map(results.map((r) => [r, imageTile(r)]));
+      const resultOf = new Map([...tileOf].map(([r, tile]) => [tile, r]));
       let tiles = [];
       let shown = 0;
       const more = el('button', { type: 'button', class: 'page-button show-more' }, 'Show more images');
+      // Only full rows while there's more: the last row's leftovers wait for Show more images, or lead the next
+      // page (held, never dropped). Again as the window narrows or widens, or a picture that won't load leaves.
+      const hold = () => {
+        if (!run.landed || !$('images').isConnected) return;
+        const shownTiles = [...$('images').children];
+        for (const tile of shownTiles) tile.classList.remove('held');
+        const columns = getComputedStyle($('images')).gridTemplateColumns.split(' ').filter(Boolean).length;
+        const extra = columns > 1 && shownTiles.length > columns ? shownTiles.length % columns : 0;
+        const held = extra ? shownTiles.slice(-extra) : [];
+        for (const tile of held) tile.classList.add('held');
+        const carry = more.hidden ? held.map((tile) => resultOf.get(tile)).filter(Boolean) : [];
+        chrome.storage.local.set({ [CARRY_KEY]: { key: carryKey(page + 1), results: carry } });
+      };
+      let holdFrame = 0;
+      const holdSoon = () => {
+        cancelAnimationFrame(holdFrame);
+        holdFrame = requestAnimationFrame(hold);
+      };
+      new MutationObserver(holdSoon).observe($('images'), { childList: true });
+      new ResizeObserver(holdSoon).observe($('images'));
       const showMore = () => {
         for (const tile of tiles.slice(shown, shown + 60)) $('images').append(tile);
         shown += 60;
         more.hidden = shown >= tiles.length;
+        holdSoon();
       };
       more.addEventListener('click', showMore);
       $('images').after(el('p', { class: 'more' }, more));
