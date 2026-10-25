@@ -5,6 +5,14 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.24.0 (2026-10-25)
+
+- Safe Search: Settings → Search → Safe Search (Off, Moderate or Strict)
+  for web and image results. Off, the default, leaves it to your
+  SearXNG.
+- Images: only full rows while there's a next page. The last row's
+  leftovers lead the next page instead of sitting alone at the bottom.
+
 ## 1.23.2 (2026-10-23)
 
 - Images: with a "quoted phrase" in the search, pictures whose title or
