@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../core/json.h"
 #include "../core/notetext.h"
 #include "../core/query.h"
 #include "../core/results.h"
@@ -70,7 +71,9 @@ static Boolean gFocusList;
 static Boolean gActive = true;
 static long gTotalPages, gTotalNotes;
 static int gMoreStage = STAGE_NONE;             /* what Show More asks for, or STAGE_NONE */
-static char gMoreKey[SHIORI_PAGE_KEY_CAP];      /* Hister's page_key, raw (ShioriPage.next) */
+static Handle gMoreKey;                         /* Hister's page_key, raw (ShioriPage.nextAt), NUL-terminated:
+                                                   any length, it holds the last row's address */
+static char gShort[40];                         /* why the list stops short of what's there, or "" */
 static long gMoreOffset;                        /* Kura's next offset */
 static Boolean gAppending;                      /* the request is Show More's */
 static long gTag;
@@ -314,7 +317,25 @@ static void AddMore(int stage)
 	if (row != NULL) {
 		strcpy(row->title, "Show More\311");
 		gMoreStage = stage;
+	} else {
+		strcpy(gShort, ListCount(&gList) >= MAX_ROWS ? "Type to narrow it." : "Not enough memory for more.");
 	}
+}
+
+/* Hister's key for the next page, kept as long as it is; false when memory is short. */
+static Boolean KeepKey(const ShioriPage *page)
+{
+	if (gMoreKey != NULL)
+		DisposeHandle(gMoreKey);
+	gMoreKey = NULL;
+	if (page->nextLen == 0)
+		return true;
+	gMoreKey = NewHandle(page->nextLen + 1);
+	if (gMoreKey == NULL)
+		return false;
+	BlockMove(page->nextAt, *gMoreKey, page->nextLen);
+	(*gMoreKey)[page->nextLen] = '\0';
+	return true;
 }
 
 static int gSection;                            /* the stage whose rows are coming in */
@@ -324,8 +345,21 @@ static void AddRow(void *ctx, const ShioriRow *r)
 {
 	ListRow *row;
 	char snippet[sizeof(r->snippet)];
+	Handle longURL = NULL;
 
 	(void) ctx;
+	/* a long address whole, before ListAppend's pointer (memory moves); without it the row would open
+	   another page, so it's left out */
+	if (r->urlRaw != NULL) {
+		longURL = NewHandle(r->urlRawLen + 1);
+		if (longURL == NULL) {
+			strcpy(gShort, "Not enough memory for every result.");
+			return;
+		}
+		HLock(longURL);
+		SetHandleSize(longURL, json_decode(r->urlRaw, r->urlRawLen, *longURL, r->urlRawLen + 1) + 1);
+		HUnlock(longURL);
+	}
 	if (!gHeaderDone && (gSection == STAGE_ALL_NOTES || gSection == STAGE_ALL_PAGES)) {
 		row = ListAppend(&gList, LROW_HEADER);
 		if (row != NULL)
@@ -333,8 +367,12 @@ static void AddRow(void *ctx, const ShioriRow *r)
 	}
 	gHeaderDone = true;
 	row = ListAppend(&gList, r->kind == ROW_NOTE ? LROW_NOTE : r->kind == ROW_CODE ? LROW_CODE : LROW_PAGE);
-	if (row == NULL)
+	if (row == NULL) {
+		if (longURL != NULL)
+			DisposeHandle(longURL);
 		return;
+	}
+	row->longURL = longURL;
 	strncpy(row->title, r->title, sizeof(row->title) - 1);
 	roman_from_utf8(row->title);
 	if (r->kind == ROW_NOTE)
@@ -372,41 +410,57 @@ static void ShowTotals(void)
 	}
 	if (ListCount(&gList) == 0)
 		strcpy(s, gQuery[0] ? "Nothing found." : "Nothing here yet.");
+	else if (gShort[0])
+		sprintf(s + strlen(s), ". %s", gShort);
 	SetStatus(s);
 }
 
 static void Request(int stage)
 {
-	static char target[1100 + SHIORI_PAGE_KEY_EXTRA];     /* static: off the 68000's small stack */
-	const char *base;
+	const char *base, *key = "";
+	char *target;
+	long cap;
 	int ok;
 
+	/* off the 68000's small stack, and only as long as this request: the key can be long */
+	cap = shiori_hister_search_cap(NULL);
+	if (gAppending && gMoreKey != NULL)
+		cap += 3 * GetHandleSize(gMoreKey);
+	target = NewPtr(cap);
+	if (target == NULL) {
+		gStage = STAGE_NONE;
+		SetStatus(gAppending ? "Not enough memory for more." : "Not enough memory to search.");
+		gAppending = false;
+		gMoreStage = STAGE_NONE;
+		return;
+	}
+	if (gAppending && gMoreKey != NULL) {
+		HLock(gMoreKey);
+		key = *gMoreKey;
+	}
 	gStage = stage;
 	switch (stage) {
 	case STAGE_ALL_NOTES:
 		if (NotesFromHister()) {
-			ok = shiori_hister_search_target(gQuery, PILL_NOTES, ALL_NOTES, "", target, (long) sizeof(target));
+			ok = shiori_hister_search_target(gQuery, PILL_NOTES, ALL_NOTES, "", target, cap);
 			base = gConfig.hister;
 		} else {
-			ok = shiori_kura_search_target(gQuery, ALL_NOTES, 0, "", target, (long) sizeof(target));
+			ok = shiori_kura_search_target(gQuery, ALL_NOTES, 0, "", target, cap);
 			base = gConfig.kura;
 		}
 		break;
 	case STAGE_NOTES:
 		if (NotesFromHister()) {
 			/* the default vault's notes only: no vault menu */
-			ok = shiori_hister_search_target(gQuery, PILL_NOTES, PAGE_ROWS, gAppending ? gMoreKey : "", target,
-				(long) sizeof(target));
+			ok = shiori_hister_search_target(gQuery, PILL_NOTES, PAGE_ROWS, key, target, cap);
 			base = gConfig.hister;
 		} else {
-			ok = shiori_kura_search_target(gQuery, PAGE_ROWS, gAppending ? gMoreOffset : 0, gVault, target,
-				(long) sizeof(target));
+			ok = shiori_kura_search_target(gQuery, PAGE_ROWS, gAppending ? gMoreOffset : 0, gVault, target, cap);
 			base = gConfig.kura;
 		}
 		break;
 	case STAGE_CODE:
-		ok = shiori_hister_search_target(gQuery, PILL_CODE, PAGE_ROWS, gAppending ? gMoreKey : "", target,
-			(long) sizeof(target));
+		ok = shiori_hister_search_target(gQuery, PILL_CODE, PAGE_ROWS, key, target, cap);
 		base = gConfig.hister;
 		break;
 	case STAGE_VAULTS:
@@ -415,17 +469,20 @@ static void Request(int stage)
 		base = gConfig.kura;
 		break;
 	default:
-		ok = shiori_hister_search_target(gQuery, PILL_PAGES, gQuery[0] ? PAGE_ROWS : NEWEST_ROWS, gAppending ? gMoreKey : "", target,
-			(long) sizeof(target));
+		ok = shiori_hister_search_target(gQuery, PILL_PAGES, gQuery[0] ? PAGE_ROWS : NEWEST_ROWS, key, target, cap);
 		base = gConfig.hister;
 		break;
 	}
+	if (gMoreKey != NULL)
+		HUnlock(gMoreKey);
+	if (ok)
+		FetchStart(&gFetch, &gConfig, base, target, MAX_REPLY, ++gTag);
+	DisposePtr(target);
 	if (!ok) {
 		gStage = STAGE_NONE;
 		SetStatus("That search is too long.");
 		return;
 	}
-	FetchStart(&gFetch, &gConfig, base, target, MAX_REPLY, ++gTag);
 	if (stage != STAGE_VAULTS)
 		SetStatus("Searching\311");
 }
@@ -486,7 +543,8 @@ static void Answered(void)
 	Boolean notes = stage == STAGE_ALL_NOTES || stage == STAGE_NOTES;
 	Boolean fromHister = notes && NotesFromHister();
 	Boolean kura = notes && !fromHister;
-	static ShioriPage page;             /* static: its page key is too big for the 68000's stack */
+	ShioriPage page;
+	Boolean more = false;
 	long len;
 	const char *body;
 
@@ -512,12 +570,16 @@ static void Answered(void)
 		if (kura) {
 			gTotalNotes = page.total;
 			gMoreOffset = (gAppending ? gMoreOffset : 0) + page.received;
-		} else if (fromHister) {
-			gTotalNotes = page.total;
-			strcpy(gMoreKey, page.next);
+			more = gMoreOffset < page.total && page.received > 0;
 		} else {
-			gTotalPages = page.total;
-			strcpy(gMoreKey, page.next);
+			if (fromHister)
+				gTotalNotes = page.total;
+			else
+				gTotalPages = page.total;
+			/* the key points into the reply: kept before the reply goes */
+			more = page.nextLen > 0 && KeepKey(&page);
+			if (page.nextLen > 0 && !more)
+				strcpy(gShort, "Not enough memory for more.");
 		}
 	} else if (!gProblem[0]) {
 		FetchProblem(&gFetch, kura ? "Kura" : "Hister", gProblem, (long) sizeof(gProblem));
@@ -532,11 +594,11 @@ static void Answered(void)
 	case STAGE_ALL_PAGES:
 	case STAGE_PAGES:
 	case STAGE_CODE:
-		if (page.ok && page.next[0])
+		if (page.ok && more)
 			AddMore(stage == STAGE_ALL_PAGES ? STAGE_PAGES : stage);
 		break;
 	case STAGE_NOTES:
-		if (page.ok && (fromHister ? page.next[0] != '\0' : gMoreOffset < page.total && page.received > 0))
+		if (page.ok && more)
 			AddMore(STAGE_NOTES);
 		break;
 	}
@@ -569,6 +631,7 @@ static void Search(void)
 	gMoreStage = STAGE_NONE;
 	gAppending = false;
 	gProblem[0] = '\0';
+	gShort[0] = '\0';
 	switch (gPill) {
 	case PILL_ALL: Request(gQuery[0] ? STAGE_ALL_NOTES : STAGE_PAGES); break;   /* nothing typed: the newest pages */
 	case PILL_PAGES: Request(STAGE_PAGES); break;
@@ -953,15 +1016,19 @@ void SearchWindowStop(void)
 void SearchWindowCopyLink(void)
 {
 	ListRow row;
-	char roman[256];
+	char *roman;
 
 	if (!ListGet(&gList, ListSelected(&gList), &row) || row.url[0] == '\0')
 		return;
-	strncpy(roman, row.url, sizeof(roman) - 1);
-	roman[sizeof(roman) - 1] = '\0';
+	/* the whole address, however long */
+	if ((roman = ListRowURL(&row)) == NULL) {
+		SetStatus("Not enough memory to copy the link.");
+		return;
+	}
 	roman_from_utf8(roman);
 	ZeroScrap();
 	PutScrap((long) strlen(roman), 'TEXT', roman);
+	DisposePtr(roman);
 	SetStatus("Copied the link.");
 }
 

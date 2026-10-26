@@ -48,6 +48,8 @@ void FetchReset(Fetch *f)
 	NetRelease(&f->conn);
 	if (f->body != NULL)
 		DisposeHandle(f->body);
+	if (f->req != NULL)
+		DisposePtr(f->req);
 	FetchInit(f);
 }
 
@@ -56,7 +58,6 @@ void FetchStart(Fetch *f, const ShioriConfig *config, const char *base, const ch
 	HttpBase b;
 	ip_addr ip;
 	char credential[160];
-	char *url = f->url;
 	const char *headers[4];
 	int n = 0;
 	long len;
@@ -66,30 +67,30 @@ void FetchStart(Fetch *f, const ShioriConfig *config, const char *base, const ch
 	f->tag = tag;
 	f->cap = cap;
 	f->started = TickCount();
-	/* only the configured bridge, by address (no DNS), and only plain http */
-	if (!http_base(base, &b) || !NetParseIP(b.host, &ip) || strlen(b.path) > strlen(base)) {
+	/* only the configured bridge, by address (no DNS), and only plain http; base ends in its path's
+	   "/", so the target can't change where the request goes or which credential it carries */
+	if (!http_base(base, &b) || !NetParseIP(b.host, &ip) || strlen(b.path) > strlen(base)
+			|| !shiori_is_configured_origin(config, base)) {
 		Fail(f, fetchBadAddress);
 		return;
 	}
-	if (strlen(base) + strlen(target) >= sizeof(f->url)) {
-		Fail(f, fetchTooLong);
-		return;
-	}
-	strcpy(url, base);
-	strcat(url, target);
-	if (!shiori_is_configured_origin(config, url)) {
-		Fail(f, fetchBadAddress);
-		return;
-	}
-	shiori_credential_header(config, url, credential, (long) sizeof(credential));
+	shiori_credential_header(config, base, credential, (long) sizeof(credential));
 	headers[n++] = "Accept: application/json";
 	headers[n++] = "Origin: hister://";
 	if (credential[0])
 		headers[n++] = credential;
 	headers[n] = NULL;
-	/* the path is the URL's own tail: base ends with its path, the target follows */
-	len = http_request(f->req, (long) sizeof(f->req), &b, url + strlen(base) - strlen(b.path), headers);
-	if (len < 0) {
+	/* base's path, the target, and the request line and headers around them */
+	len = (long) strlen(target) + (long) (sizeof(b.path) + sizeof(b.host) + sizeof(credential)) + 120;
+	if (len > 65000L) {
+		Fail(f, fetchTooLong);
+		return;
+	}
+	if ((f->req = NewPtr(len)) == NULL) {
+		Fail(f, memFullErr);
+		return;
+	}
+	if ((len = http_request(f->req, len, &b, target, headers)) < 0) {
 		Fail(f, fetchTooLong);
 		return;
 	}
@@ -199,7 +200,7 @@ static Boolean Step(Fetch *f)
 			return false;
 		}
 		f->connected = TickCount();
-		/* the request lives in f, which doesn't move while the send runs */
+		/* the request is a pointer block: it doesn't move while the send runs */
 		if ((err = NetBeginSend(&f->conn, f->req, f->reqLen)) != noErr) {
 			Fail(f, err);
 			return false;

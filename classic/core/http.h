@@ -15,9 +15,10 @@ typedef struct HttpBase {
    a query, a fragment, a bad port). */
 int http_base(const char *url, HttpBase *out);
 
-/* The request text: GET <target> with Host, Connection: close and the
-   given "Name: value" lines (NULL-terminated, may be NULL). The target must
-   start with "/". Returns its length, or -1 when it doesn't fit out. */
+/* The request text: GET <base's path><target> with Host, Connection: close
+   and the given "Name: value" lines (NULL-terminated, may be NULL). The
+   target is relative ("search?…"). Returns its length, or -1 when it
+   doesn't fit out. */
 long http_request(char *out, long cap, const HttpBase *base, const char *target, const char *const *headers);
 
 typedef struct HttpReply {

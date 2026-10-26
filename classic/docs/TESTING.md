@@ -315,6 +315,13 @@ tools/quickstart/seed-hister.py http://127.0.0.1:4440/
   (the origin as `basilisk_session.py` prints it; the display cuts the
   screen's bottom rows).
 
+The fake house's newest list (Return with nothing typed, as at launch) is
+50 pages as a real Hister pages them: addresses of 40, 300, 1,100 and
+1,589 bytes, and page keys past 1.6 KB with Hister's escapes. All three
+pages load as you scroll, and a long address opens in the reader (the
+fake house logs each preview's address length). In Snow, click the
+scroll bar a few seconds apart: quick clicks are dropped.
+
 ### Shiori Lite (talkip, a 512Ke in Snow)
 
 `SHIORI_TALKIP=1 TALKIP_DIR=<talkip checkout> classic/scripts/build.sh`,

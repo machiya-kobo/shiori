@@ -22,7 +22,11 @@ Loaded when you work in `classic/`. The project-wide rules, layout and build/tes
   sends `part`. docs/classic.md says what plain HTTP exposes;
   keep that warning wherever direct mode is offered.
 - Hister's `page_key` holds escaped control characters and a NUL: keep it raw
-  (`ShioriPage.next`) and send it back as it came. A note's vault comes from
+  (`ShioriPage.nextAt`) and send it back as it came. It carries the last
+  row's address, and addresses run past 1 KB: neither has a fixed cap. The
+  parser points into the reply (`nextAt`, a row's `urlRaw`), and the app
+  keeps each in a block of its own size (the list's `longURL`, the
+  reader's `url`, the request's `req`). A note's vault comes from
   its address; private vaults are never offered, and `SHIO/read` refuses any
   vault but the default.
 - The 68000's stack is small (the app sets 32 KB): big buffers live in structs

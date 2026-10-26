@@ -13,7 +13,10 @@ enum { ROW_PAGE = 'p', ROW_NOTE = 'n', ROW_CODE = 'c' };
 
 typedef struct ShioriRow {
 	char kind;              /* ROW_PAGE, ROW_NOTE or ROW_CODE */
-	char url[256];
+	char url[256];          /* cut when longer: then urlRaw has it whole */
+	const char *urlRaw;     /* a longer address, raw (JSON escapes kept) in the reply, for json_decode
+	                           while the row is handed over; else NULL */
+	long urlRawLen;
 	char title[160];
 	char host[64];          /* the page's host; a note's folder */
 	char snippet[400];      /* HTML whose only markup is <mark> */
@@ -26,7 +29,8 @@ typedef struct ShioriRow {
 typedef struct ShioriPage {
 	int ok;                 /* the reply was a JSON object of the right shape */
 	long total;
-	char next[SHIORI_PAGE_KEY_CAP]; /* Hister's page_key for the next page, raw: its JSON escapes kept ("" at the end) */
+	const char *nextAt;     /* Hister's page_key for the next page, in the reply, raw: its JSON escapes kept */
+	long nextLen;           /* its length (0 at the end): any, since it holds the last row's address */
 	int received;           /* rows in the reply, ones dropped as non-web included */
 } ShioriPage;
 

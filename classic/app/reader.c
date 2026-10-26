@@ -52,7 +52,7 @@ typedef struct Reader {
 	Boolean fromKura;       /* a note read from Kura's /api/note; else Hister's readable copy */
 	char title[100];        /* Mac Roman */
 	char place[64];
-	char url[256];          /* the note's or page's own address (UTF-8) */
+	char *url;              /* the note's or page's own address (UTF-8), however long: a pointer block */
 	char path[160];         /* a note's path and vault, to ask again for another part */
 	char vault[48];
 	int part, parts;        /* mac-bridge's parts (1 of 1 when it gives none) */
@@ -628,19 +628,25 @@ Boolean ReaderPollAll(void)
 
 static Boolean Start(Reader *r, const char *path, const char *vault, const char *url)
 {
-	char target[700];
+	/* encoded, a byte can take three; off the stack, as long as the address */
+	long cap = 3L * (long) (strlen(path) + strlen(vault) + strlen(url)) + 100;
+	char *target = NewPtr(cap);
 	int ok;
 
+	if (target == NULL)
+		return false;
 	if (r->fromKura)
-		ok = shiori_kura_note_target(path, vault, target, (long) sizeof(target));
+		ok = shiori_kura_note_target(path, vault, target, cap);
 	else
-		ok = shiori_hister_preview_target(url, target, (long) sizeof(target));
+		ok = shiori_hister_preview_target(url, target, cap);
 	/* through mac-bridge, a part at a time: a big page fits */
 	if (ok && !gConfig.direct)
-		ok = shiori_part_target(target, (long) sizeof(target), r->part);
+		ok = shiori_part_target(target, cap, r->part);
+	if (ok)
+		FetchStart(&r->fetch, &gConfig, r->fromKura ? gConfig.kura : gConfig.hister, target, MAX_REPLY, 0);
+	DisposePtr(target);
 	if (!ok)
 		return false;
-	FetchStart(&r->fetch, &gConfig, r->fromKura ? gConfig.kura : gConfig.hister, target, MAX_REPLY, 0);
 	r->loading = r->fetch.state != FETCH_FAILED;
 	if (!r->loading) {
 		char problem[160];
@@ -697,12 +703,15 @@ Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
 	r = (Reader *) NewPtrClear(sizeof(Reader));
 	if (r == NULL)
 		return false;
+	if ((r->url = ListRowURL(row)) == NULL) {
+		DisposePtr((Ptr) r);
+		return false;
+	}
 	r->kind = row->kind == LROW_NOTE ? LROW_NOTE : LROW_PAGE;
 	/* notes from Hister (no Kura, or the person's choice): its readable copy, as a page's */
 	r->fromKura = r->kind == LROW_NOTE && !shiori_notes_from_hister(&gConfig);
 	strcpy(r->title, row->title);
 	strcpy(r->place, row->place);
-	strncpy(r->url, row->url, sizeof(r->url) - 1);
 	strncpy(r->path, row->path, sizeof(r->path) - 1);
 	strncpy(r->vault, row->vault, sizeof(r->vault) - 1);
 	r->part = r->parts = 1;
@@ -725,6 +734,9 @@ Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
 	if (r->win == NULL || r->lines == NULL) {
 		if (r->win)
 			DisposeWindow(r->win);
+		if (r->lines)
+			DisposeHandle(r->lines);
+		DisposePtr(r->url);
 		DisposePtr((Ptr) r);
 		return false;
 	}
@@ -761,6 +773,7 @@ static void Dispose(Reader *r)
 	for (i = 0; i < MAX_READERS; i++)
 		if (gReaders[i] == r)
 			gReaders[i] = NULL;
+	DisposePtr(r->url);
 	DisposePtr((Ptr) r);
 }
 
@@ -1085,15 +1098,21 @@ Boolean ReaderCanFindAgain(WindowPtr w)
 void ReaderCopyLink(WindowPtr w)
 {
 	Reader *r = Find(w);
-	char roman[256];
+	const char *link;
+	char *roman;
 
 	if (r == NULL)
 		return;
-	strncpy(roman, r->link[0] ? r->link : r->url, sizeof(roman) - 1);
-	roman[sizeof(roman) - 1] = '\0';
+	link = r->link[0] ? r->link : r->url;
+	if ((roman = NewPtr((long) strlen(link) + 1)) == NULL) {
+		SetStatus(r, "Not enough memory to copy the link.");
+		return;
+	}
+	strcpy(roman, link);
 	roman_from_utf8(roman);
 	ZeroScrap();
 	PutScrap((long) strlen(roman), 'TEXT', roman);
+	DisposePtr(roman);
 	SetStatus(r, r->link[0] ? "Copied the link." : "Copied this page's address.");
 }
 

@@ -325,8 +325,8 @@ static void AddRow(void *ctx, const ShioriRow *r)
 	DARow *row;
 	char vault[48];
 
-	if (d->count >= ROWS)
-		return;
+	if (d->count >= ROWS || r->urlRaw != NULL)
+		return;                         /* an address past 255 bytes: the app's list has it */
 	if (r->kind == ROW_NOTE) {
 		/* the default vault only: the address decides (Kura names the default too) */
 		shiori_url_vault(r->url, vault, (long) sizeof(vault));

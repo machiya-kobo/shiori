@@ -84,8 +84,19 @@ void ListSetFrame(ResultList *l, const Rect *frame)
 	ListChanged(l);
 }
 
+static void FreeRow(ListRow *row)
+{
+	if (row->longURL != NULL)
+		DisposeHandle(row->longURL);
+	row->longURL = NULL;
+}
+
 void ListClear(ResultList *l)
 {
+	short i;
+
+	for (i = 0; i < l->count; i++)
+		FreeRow(Rows(l) + i);
 	SetHandleSize(l->rows, 0);
 	l->count = 0;
 	l->selected = -1;
@@ -112,6 +123,7 @@ void ListDropLast(ResultList *l)
 {
 	if (l->count == 0)
 		return;
+	FreeRow(Rows(l) + l->count - 1);
 	l->count--;
 	if (l->selected >= l->count)
 		l->selected = (short) (l->count - 1);
@@ -124,6 +136,21 @@ Boolean ListGet(const ResultList *l, short i, ListRow *out)
 		return false;
 	*out = Rows(l)[i];
 	return true;
+}
+
+char *ListRowURL(const ListRow *row)
+{
+	long n = row->longURL != NULL ? GetHandleSize(row->longURL) : (long) strlen(row->url) + 1;
+	char *out = NewPtr(n);
+
+	if (out == NULL)
+		return NULL;
+	if (row->longURL != NULL)
+		BlockMove(*row->longURL, out, n);
+	else
+		memcpy(out, row->url, (size_t) n);
+	out[n - 1] = '\0';
+	return out;
 }
 
 short ListCount(const ResultList *l)

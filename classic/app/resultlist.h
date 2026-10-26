@@ -19,7 +19,8 @@ typedef struct ListRow {
 	char title[100];        /* Mac Roman; a header's text */
 	char place[64];         /* Mac Roman: the host, or a note's folder */
 	char snippet[160];      /* Mac Roman, with SNIPPET_MARK_ON/OFF bytes */
-	char url[256];          /* as the server sent it (UTF-8) */
+	char url[256];          /* as the server sent it (UTF-8); its start when longURL has it */
+	Handle longURL;         /* an address past 255 bytes, whole (UTF-8, NUL-terminated); the list's */
 	char path[160];         /* a note's path in its vault (UTF-8) */
 	char vault[48];         /* a note's vault ("" for the default) */
 } ListRow;
@@ -44,7 +45,7 @@ void ListClear(ResultList *l);
 ListRow *ListAppend(ResultList *l, char kind);
 /* Removes the last row (a Show More that's being replaced). */
 void ListDropLast(ResultList *l);
-/* A copy of row i; false when there is none. */
+/* A copy of row i; false when there is none. Its longURL stays the list's. */
 Boolean ListGet(const ResultList *l, short i, ListRow *out);
 short ListCount(const ResultList *l);
 short ListSelected(const ResultList *l);
@@ -59,6 +60,8 @@ Boolean ListClick(ResultList *l, Point where, Boolean doubleClick);
 Boolean ListKey(ResultList *l, char key);
 /* The list ends in Show More and it's scrolled into view (load the next page). */
 Boolean ListMoreInView(const ResultList *l);
+/* The row's whole address in a new pointer block (UTF-8), however long; NULL when memory is short. */
+char *ListRowURL(const ListRow *row);
 /* Selects the first result (not a header); false when there's none. */
 Boolean ListSelectFirst(ResultList *l);
 

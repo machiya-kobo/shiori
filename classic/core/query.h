@@ -14,15 +14,6 @@
 #define SHIORI_QUERY_H
 
 #define SHIORI_MAX_TEXT 512
-/* Hister's page_key, raw: the last row's sort value and its address, so as
-   long as that address can be (a newest-first key ran past 255 bytes). The
-   desk accessory never pages and builds with a few bytes. */
-#ifndef SHIORI_PAGE_KEY_CAP
-#define SHIORI_PAGE_KEY_CAP 1024
-#endif
-/* What a request's buffers add for a key past the 256 bytes they were sized
-   for: form-encoded, each byte can take three. */
-#define SHIORI_PAGE_KEY_EXTRA (SHIORI_PAGE_KEY_CAP > 256 ? 3 * (SHIORI_PAGE_KEY_CAP - 256) : 0)
 
 enum { PILL_ALL, PILL_PAGES, PILL_NOTES, PILL_CODE };
 
@@ -46,13 +37,16 @@ int shiori_uri_encode(const char *s, char *out, long cap);
 
 /* Hister's search, relative to the Hister base: search?query=<JSON>. No words:
    the newest ("*" sorted by date); PILL_NOTES asks Hister for notes (label:vault). pageKey: the last reply's page_key, raw as
-   ShioriPage.next keeps it (JSON escapes intact: Hister's holds \u0000), or "". */
+   ShioriPage.nextAt has it (JSON escapes intact: Hister's holds \u0000), or "". It
+   holds the last row's address, so it can be any length: out needs
+   shiori_hister_search_cap(pageKey) bytes. */
 /* Where notes come from (scripts/notes-source-cases.json): "hister" when chosen, else
    "kura" when one is set up, else "hister". choice: the setting ("" until chosen). */
 const char *shiori_notes_source(const char *choice, int kuraConfigured);
 /* Hister's query for notes: the words (the last a prefix), "*" for the newest, and label:vault. */
 int shiori_hister_notes_text(const char *text, char *out, long cap);
 int shiori_hister_search_target(const char *typed, int pill, int limit, const char *pageKey, char *out, long cap);
+long shiori_hister_search_cap(const char *pageKey);
 /* Kura's, relative to the Kura base: api/search?… or api/recent?…; vault "" (the
    default vault), a name, or "all" */
 int shiori_kura_search_target(const char *typed, int limit, long offset, const char *vault, char *out, long cap);

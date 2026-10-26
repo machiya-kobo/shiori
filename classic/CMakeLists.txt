@@ -57,8 +57,7 @@ if(SHIORI_TALKIP)
     add_subdirectory(${TALKIP_DIR} talkip)
     add_application(Shiori CREATOR "SHIO" ${SHIORI_SOURCES} app/net_talkip.c ${CMAKE_CURRENT_BINARY_DIR}/shiori.r)
     target_link_libraries(Shiori talkip)
-    # Shiori Lite: room for a page key with a long address, not the full app's.
-    target_compile_definitions(Shiori PRIVATE SHIORI_TALKIP SHIORI_VERSION="${SHIORI_VERSION}" SHIORI_PAGE_KEY_CAP=512)
+    target_compile_definitions(Shiori PRIVATE SHIORI_TALKIP SHIORI_VERSION="${SHIORI_VERSION}")
     foreach(v SHIORI_DEFAULT_HISTER SHIORI_DEFAULT_KURA SHIORI_DEFAULT_TOKEN)
         if(${v})
             target_compile_definitions(Shiori PRIVATE ${v}="${${v}}")
@@ -81,8 +80,6 @@ add_executable(ShioriDA da/ShioriDA.c da/sendread.c
     app/fetch.c app/net.c app/prefs.c app/draw.c app/theme.c)
 set_target_properties(ShioriDA PROPERTIES OUTPUT_NAME ShioriDA.flt LINK_FLAGS "-Wl,--mac-flat -Wl,-gc-sections -Wl,--undefined=da_header")
 target_compile_options(ShioriDA PRIVATE -m68000 -Os -Wall -Wno-unused-parameter -ffunction-sections -fdata-sections)
-# It never pages: no room kept for Hister's page_key.
-target_compile_definitions(ShioriDA PRIVATE SHIORI_PAGE_KEY_CAP=4)
 foreach(v SHIORI_DEFAULT_HISTER SHIORI_DEFAULT_KURA SHIORI_DEFAULT_TOKEN)
     if(${v})
         target_compile_definitions(ShioriDA PRIVATE ${v}="${${v}}")

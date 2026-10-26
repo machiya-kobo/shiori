@@ -219,6 +219,17 @@ static long number_or_zero(JsonReader *r, int t)
 	return t == JSON_NUMBER ? json_long(r) : 0;
 }
 
+/* The address: cut to fit url (enough to tell its host), and whole in urlRaw when it may not have fit. */
+static void url_of(JsonReader *r, ShioriRow *row)
+{
+	row->urlRaw = NULL;
+	row->urlRawLen = 0;
+	if (COPY(row->url, r) >= (long) sizeof(row->url) - 4) {
+		row->urlRaw = r->tok;
+		row->urlRawLen = r->tokLen;
+	}
+}
+
 /* Reads one document object (after its JSON_OBJECT); 1 when it closed cleanly. */
 static int read_hister_doc(JsonReader *r, ShioriRow *row)
 {
@@ -273,8 +284,7 @@ static int read_hister_doc(JsonReader *r, ShioriRow *row)
 			}
 			if (t != JSON_STRING)
 				continue;
-			if (strcmp(key, "url") == 0 && COPY(row->url, r) >= (long) sizeof(row->url) - 4)
-				row->url[0] = '\0';     /* too long to keep: cut, it would open another page; left out */
+			if (strcmp(key, "url") == 0) url_of(r, row);
 			else if (strcmp(key, "title") == 0) COPY(row->title, r);
 			else if (strcmp(key, "domain") == 0) COPY(row->host, r);
 			else if (strcmp(key, "text") == 0) COPY(row->snippet, r);
@@ -350,7 +360,7 @@ static int read_kura_note(JsonReader *r, ShioriRow *row)
 			continue;
 		}
 		switch (k) {
-		case 0: if (t == JSON_STRING) COPY(row->url, r); break;
+		case 0: if (t == JSON_STRING) url_of(r, row); break;
 		case 1: if (t == JSON_STRING) COPY(row->path, r); break;
 		case 2: if (t == JSON_STRING) COPY(row->vault, r); break;
 		case 3: if (t == JSON_STRING) { COPY(row->title, r); haveTitle = 1; } break;
@@ -443,11 +453,10 @@ static int parse_reply(const char *buf, long len, ShioriPage *page, ShioriRowFn 
 		} else if (!kura && json_is(&r, "page_key")) {
 			t = json_next(&r);
 			/* kept raw, its escapes as sent: Hister's key holds \u0000, which a C string can't */
-			if (t == JSON_STRING && r.tokLen < (long) sizeof(page->next)) {
-				memcpy(page->next, r.tok, (size_t) r.tokLen);
-				page->next[r.tokLen] = '\0';
-			}
-			else if (t == JSON_OBJECT || t == JSON_ARRAY)
+			if (t == JSON_STRING) {
+				page->nextAt = r.tok;
+				page->nextLen = r.tokLen;
+			} else if (t == JSON_OBJECT || t == JSON_ARRAY)
 				if (json_skip(&r, t) == JSON_ERROR)
 					return 0;
 		} else if (json_skip(&r, JSON_KEY) == JSON_ERROR) {

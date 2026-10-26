@@ -55,7 +55,9 @@ def main():
 
     helper = http.server.ThreadingHTTPServer(("127.0.0.1", fl), Helper)
     threading.Thread(target=helper.serve_forever, daemon=True).start()
-    fakes = subprocess.Popen([sys.executable, os.path.join(root, "haiku", "fake-services.py"), str(fh), str(fk)])
+    # the newest pages with long addresses and page keys, as a real Hister has them
+    fakes = subprocess.Popen([sys.executable, os.path.join(root, "haiku", "fake-services.py"), str(fh), str(fk)],
+                             env=dict(os.environ, FAKE_LONG_NEWEST="1"))
 
     token = tempfile.NamedTemporaryFile("w", prefix="fake-hister-token-", delete=False)
     token.write(HISTER_TOKEN)

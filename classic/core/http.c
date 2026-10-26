@@ -78,7 +78,7 @@ long http_request(char *out, long cap, const HttpBase *base, const char *target,
 	int i;
 	unsigned short v;
 
-	if (cap <= 0 || target[0] != '/')
+	if (cap <= 0)
 		return -1;
 	out[0] = '\0';
 	i = 7;
@@ -89,7 +89,7 @@ long http_request(char *out, long cap, const HttpBase *base, const char *target,
 		v /= 10;
 	} while (v && i > 1);
 	port[--i] = ':';
-	if (!add(out, cap, &n, "GET ") || !add(out, cap, &n, target) || !add(out, cap, &n, " HTTP/1.0\r\nHost: ")
+	if (!add(out, cap, &n, "GET ") || !add(out, cap, &n, base->path) || !add(out, cap, &n, target) || !add(out, cap, &n, " HTTP/1.0\r\nHost: ")
 			|| !add(out, cap, &n, base->host) || (base->port != 80 && !add(out, cap, &n, port + i))
 			|| !add(out, cap, &n, "\r\nConnection: close\r\n"))
 		return -1;

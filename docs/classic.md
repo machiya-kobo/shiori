@@ -70,7 +70,9 @@ file.
   page loads by itself once you scroll to it.
 - **Your newest pages** fill the list at launch, 20 at a time (10 in
   Shiori Lite), so there's something to read before you search. Return
-  with nothing typed shows them again.
+  with nothing typed shows them again. Long addresses open and page like
+  any other; when memory runs short, the status line says the list stops
+  there.
 - **Notes** come from Kura (the default vault, or a shared one from the
   vault menu) or from Hister (the default vault only): Preferences → Notes
   from. Until you choose, Kura when one is set up.

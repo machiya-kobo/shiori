@@ -18,6 +18,7 @@ Bearer mhs_; the session at Kura, or the id at Hister, is a LEAK.
 """
 import http.server
 import json
+import os
 import sys
 import threading
 import urllib.parse
@@ -149,6 +150,7 @@ class Hister(Base):
         if url.path == "/api/preview":
             # Hister's readable copy of a page, for Classic's reader.
             page = params.get("url", [""])[0]
+            log("hister preview of a %d-byte address" % len(page))
             for purl, title, domain, text, label, added in SAMPLE_PAGES:
                 if purl == page:
                     content = (f"<h1>{title}</h1><p>{text}</p><p>Saved from <a href=\"{purl}\">{domain}</a>, "
@@ -190,6 +192,26 @@ class Hister(Base):
                      "score": 12.5 - i / 10, "text": filler,
                      "metadata": {"source": "shiori", "client": "shiori", "client_version": "1.2.3"}} for i in range(20)]
             return self.reply(200, {"total": 230, "documents": docs, "page_key": "p2", "query_suggestion": ""})
+        # The newest pages with nothing typed, as Hister pages them, only for Classic's fake house
+        # (FAKE_LONG_NEWEST): 50 pages, 20 at a time, some addresses past 255 and 1,024 bytes, and a
+        # page_key that carries the last row's address with Hister's escapes (control characters, a NUL).
+        if os.environ.get("FAKE_LONG_NEWEST") and q.get("sort") == "date" and not words_of(text):
+            def long_url(i):
+                url = f"https://news.example/story/{i}?from=list"
+                want = (40, 300, 1100, 1589)[i % 4]
+                while len(url) < want:
+                    url += f"&p{len(url)}=v"
+                return url[:max(want, 30)]
+            start = 0
+            if q.get("page_key"):
+                start = [long_url(i) for i in range(50)].index(json.loads(q["page_key"])[2]) + 1
+            n = range(start, min(start + int(q.get("limit") or 20), 50))
+            docs = [{"url": long_url(i), "title": f"Story {i} ({len(long_url(i))}-byte address)",
+                     "domain": "news.example", "added": 1790000000 - i, "text": f"newest page {i}",
+                     "metadata": {"source": "shiori"}} for i in n]
+            key = json.dumps([str(1790000000 - n[-1]), " \u0001Am,2K\u0016\u0000", long_url(n[-1])]) \
+                if n[-1] < 49 else ""
+            return self.reply(200, {"total": 50, "documents": docs, "page_key": key})
         # Notes from Hister ("label:vault": Shiori's Notes From set to Hister): the
         # notes as Kura pushes them, at Kura's addresses, and one from another
         # vault that a client must never show.

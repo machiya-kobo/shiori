@@ -3,6 +3,7 @@
  *   make -C classic/tests test
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "../core/http.h"
@@ -13,6 +14,17 @@
 #include "../core/roman.h"
 #include "../core/notetext.h"
 #include "vectors.h"
+
+/* The page's key as a string, as the app keeps it (ShioriPage.nextAt points into the reply). */
+static const char *page_key(const ShioriPage *page)
+{
+	static char key[4096];
+	long n = page->nextLen < (long) sizeof(key) - 1 ? page->nextLen : (long) sizeof(key) - 1;
+
+	memcpy(key, page->nextAt ? page->nextAt : "", (size_t) n);
+	key[n] = '\0';
+	return key;
+}
 
 static int passed, failed;
 
@@ -164,16 +176,19 @@ static void test_http_request(void)
 	long n;
 
 	http_base("http://192.168.1.5:8070/", &b);
-	n = http_request(out, sizeof(out), &b, "/api/recent?limit=20", headers);
+	n = http_request(out, sizeof(out), &b, "api/recent?limit=20", headers);
 	CHECK(n > 0 && strcmp(out, "GET /api/recent?limit=20 HTTP/1.0\r\nHost: 192.168.1.5:8070\r\nConnection: close\r\n"
 		"Accept: application/json\r\nAuthorization: Bearer mht_x\r\n\r\n") == 0);
 	CHECK(n == (long) strlen(out));
 	http_base("http://h.example/", &b);
-	http_request(out, sizeof(out), &b, "/x", NULL);
+	http_request(out, sizeof(out), &b, "x", NULL);
 	CHECK(strcmp(out, "GET /x HTTP/1.0\r\nHost: h.example\r\nConnection: close\r\n\r\n") == 0);
-	CHECK(http_request(out, 20, &b, "/x", NULL) == -1);
-	CHECK(http_request(out, sizeof(out), &b, "x", NULL) == -1);
-	CHECK(http_request(out, sizeof(out), &b, "/x", bad) == -1);
+	CHECK(http_request(out, 20, &b, "x", NULL) == -1);
+	CHECK(http_request(out, sizeof(out), &b, "x", bad) == -1);
+	/* the target follows the base's own path */
+	http_base("http://h.example/bridge/", &b);
+	http_request(out, sizeof(out), &b, "search?q=1", NULL);
+	CHECK(strncmp(out, "GET /bridge/search?q=1 HTTP/1.0\r\n", 33) == 0);
 }
 
 static void test_http_head(void)
@@ -294,7 +309,7 @@ static void test_hister_reply(void)
 
 	gRowCount = 0;
 	CHECK(shiori_parse_hister(reply, (long) strlen(reply), &page, keep_row, NULL) == 1);
-	CHECK(page.ok && page.total == 230 && page.received == 3 && strcmp(page.next, "p2") == 0);
+	CHECK(page.ok && page.total == 230 && page.received == 3 && strcmp(page_key(&page), "p2") == 0);
 	CHECK(gRowCount == 2);
 	CHECK(gRows[0].kind == ROW_PAGE && strcmp(gRows[0].title, "Caf\xC3\xA9 \xE2\x80\x94 one") == 0);
 	CHECK(strcmp(gRows[0].host, "example.com") == 0);        /* from the url: no www., no port */
@@ -546,8 +561,8 @@ static void test_page_key(void)
 
 	memset(&page, 0, sizeof(page));
 	CHECK(shiori_parse_hister(reply, (long) strlen(reply), &page, NULL, NULL));
-	CHECK(strstr(page.next, "\\u0000") != NULL && strlen(page.next) > 40);
-	CHECK(shiori_hister_search_target("lantern", PILL_PAGES, 10, page.next, target, (long) sizeof(target)));
+	CHECK(strstr(page_key(&page), "\\u0000") != NULL && strlen(page_key(&page)) > 40);
+	CHECK(shiori_hister_search_target("lantern", PILL_PAGES, 10, page_key(&page), target, (long) sizeof(target)));
 	/* the key goes back exactly as it came */
 	q = strstr(target, "query=");
 	CHECK(q != NULL);
@@ -566,58 +581,87 @@ static void test_page_key(void)
 		}
 		json[n] = '\0';
 	}
-	CHECK(strstr(json, page.next) != NULL);
-	/* an unescaped quote can't close the string early */
+	CHECK(strstr(json, page_key(&page)) != NULL);
+	CHECK(strlen(json) > 2 && strcmp(json + strlen(json) - 2, "\"}") == 0);
+	/* an unescaped quote can't close the string early, nor a last backslash escape its end */
 	CHECK(!shiori_hister_search_target("lantern", PILL_PAGES, 10, "a\"b", target, (long) sizeof(target)));
 	CHECK(shiori_hister_search_target("lantern", PILL_PAGES, 10, "a\\\"b", target, (long) sizeof(target)));
+	CHECK(!shiori_hister_search_target("lantern", PILL_PAGES, 10, "ab\\", target, (long) sizeof(target)));
+	CHECK(shiori_hister_search_target("lantern", PILL_PAGES, 10, "ab\\\\", target, (long) sizeof(target)));
+	/* the end comes back without a key */
+	memset(&page, 0, sizeof(page));
+	CHECK(shiori_parse_hister("{\"total\": 1, \"documents\": []}", 29, &page, NULL, NULL) && page.nextLen == 0);
 }
 
-/* A newest-first key carries the last row's address: one past 255 bytes still pages. */
+/* A newest-first key carries the last row's address, so it can be any length: one of
+   1,500 bytes (an address past 1 KB) still pages, and goes back exactly as it came. */
 static void test_long_page_key(void)
 {
-	static char reply[2048], target[1100 + 3 * SHIORI_PAGE_KEY_CAP];
+	static char reply[4096], url[1600], *target;
 	static ShioriPage page;
-	char url[400];
+	long cap;
 	int i;
 
 	strcpy(url, "https://kyoto.example/");
-	for (i = (int) strlen(url); i < 380; i++)
+	for (i = (int) strlen(url); i < 1500; i++)
 		url[i] = 'a' + i % 26;
 	url[i] = '\0';
 	sprintf(reply, "{\"total\": 4181, \"documents\": [], \"page_key\": \"[\\\"1790000000\\\",\\\"%s\\\"]\"}", url);
 	memset(&page, 0, sizeof(page));
 	CHECK(shiori_parse_hister(reply, (long) strlen(reply), &page, NULL, NULL));
-	CHECK(strlen(page.next) > 380 && strstr(page.next, url) != NULL);
-	CHECK(shiori_hister_search_target("", PILL_PAGES, 20, page.next, target, (long) sizeof(target)));
-	CHECK(strstr(target, "sort") != NULL);
+	CHECK(page.nextLen > 1500 && strstr(page_key(&page), url) != NULL);
+	cap = shiori_hister_search_cap(page_key(&page));
+	target = malloc((size_t) cap);
+	CHECK(target != NULL && shiori_hister_search_target("", PILL_PAGES, 20, page_key(&page), target, cap));
+	CHECK(strstr(target, "sort") != NULL && strstr(target, url + 22) != NULL);    /* its letters, as they went */
+	/* the most a key can take, with the longest search */
+	{
+		char typed[SHIORI_MAX_TEXT + 1];
+		memset(typed, '"', SHIORI_MAX_TEXT);
+		typed[SHIORI_MAX_TEXT] = '\0';
+		CHECK(shiori_hister_search_target(typed, PILL_PAGES, 20, page_key(&page), target, cap));
+		CHECK(!shiori_hister_search_target(typed, PILL_PAGES, 20, page_key(&page), target, cap - 3L * 1500));
+	}
+	free(target);
 }
 
-/* A row whose address is too long to keep is left out, never cut into another page's. */
+/* A long address comes whole (urlRaw), with enough of it in url to tell its host. */
 static int gLongRows;
-static void count_row(void *ctx, const ShioriRow *row)
+static char gLongURL[1600];
+static void long_row(void *ctx, const ShioriRow *row)
 {
 	(void) ctx;
-	CHECK(strlen(row->url) < 200);
-	gLongRows++;
+	if (gLongRows++ == 0) {
+		CHECK(row->urlRaw != NULL && strlen(row->url) < sizeof(row->url) && strcmp(row->host, "hotel.example") == 0);
+		CHECK(json_decode(row->urlRaw, row->urlRawLen, gLongURL, (long) sizeof(gLongURL)) > 1000);
+	} else {
+		CHECK(row->urlRaw == NULL && strcmp(row->url, "https://short.example/") == 0);
+	}
 }
 
 static void test_long_url_row(void)
 {
-	static char reply[2048];
-	char url[400];
+	static char reply[4096], url[1200], want[1200];
 	ShioriPage page;
 	int i;
 
 	strcpy(url, "https://hotel.example/stay?");
-	for (i = (int) strlen(url); i < 380; i++)
-		url[i] = 'a' + i % 26;
+	for (i = (int) strlen(url); i < 1100; i++)
+		url[i] = (i % 40 == 0) ? '&' : 'a' + i % 26;
 	url[i] = '\0';
-	sprintf(reply, "{\"total\": 2, \"documents\": [{\"url\": \"%s\", \"title\": \"Long\"}, "
-		"{\"url\": \"https://short.example/\", \"title\": \"Short\"}], \"page_key\": \"\"}", url);
+	/* as Go writes it: & as \u0026 */
+	{
+		char *o = reply + sprintf(reply, "{\"total\": 2, \"documents\": [{\"url\": \"");
+		const char *c;
+		for (c = url; *c; c++)
+			o += *c == '&' ? sprintf(o, "\\u0026") : sprintf(o, "%c", *c);
+		sprintf(o, "\", \"title\": \"Long\"}, {\"url\": \"https://short.example/\", \"title\": \"Short\"}], \"page_key\": \"\"}");
+	}
+	strcpy(want, url);
 	memset(&page, 0, sizeof(page));
 	gLongRows = 0;
-	CHECK(shiori_parse_hister(reply, (long) strlen(reply), &page, count_row, NULL));
-	CHECK(gLongRows == 1 && page.received == 2);
+	CHECK(shiori_parse_hister(reply, (long) strlen(reply), &page, long_row, NULL));
+	CHECK(gLongRows == 2 && page.received == 2 && strcmp(gLongURL, want) == 0 && page.nextLen == 0);
 }
 
 /* -- Mac Roman ---------------------------------------------------------------------------- */

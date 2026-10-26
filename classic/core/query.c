@@ -496,7 +496,7 @@ int shiori_hister_notes_text(const char *text, char *out, long cap)
 int shiori_hister_search_target(const char *typed, int pill, int limit, const char *pageKey, char *out, long cap)
 {
 	char t[SHIORI_MAX_TEXT + 1], words[SHIORI_MAX_TEXT + 32], text[2 * SHIORI_MAX_TEXT + 96];
-	char json[2 * SHIORI_MAX_TEXT + 256 + SHIORI_PAGE_KEY_CAP];
+	char json[2 * SHIORI_MAX_TEXT + 256];
 	int newest;
 	Buf j, b;
 
@@ -525,32 +525,39 @@ int shiori_hister_search_target(const char *typed, int pill, int limit, const ch
 	if (newest)
 		b_add(&j, ",\"sort\":\"date\"");
 	if (pageKey != NULL && pageKey[0]) {
-		/* raw, as the reply had it (ShioriPage.next): escapes kept, so put back as is */
+		/* raw, as the reply had it (ShioriPage.nextAt): escapes kept, so put back as is. A quote
+		   after an even run of backslashes would end the string, and so would a last odd run. */
 		const char *c;
+		long run = 0;
 		for (c = pageKey; *c; c++) {
-			long slashes = 0;
-			const char *b = c;
-			if ((unsigned char) *c < 0x20)
+			if ((unsigned char) *c < 0x20 || (*c == '"' && run % 2 == 0))
 				return 0;
-			while (b > pageKey && b[-1] == '\\') {
-				slashes++;
-				b--;
-			}
-			if (*c == '"' && slashes % 2 == 0)         /* a quote that would end the string */
-				return 0;
+			run = *c == '\\' ? run + 1 : 0;
 		}
+		if (run % 2)
+			return 0;
 		b_add(&j, ",\"page_key\":\"");
-		b_add(&j, pageKey);
-		b_add(&j, "\"");
 	}
-	b_add(&j, "}");
 	if (!j.ok)
 		return 0;
+	/* form encoding goes byte by byte: the JSON up to the key, the key, then its end */
 	b_init(&b, out, cap);
 	b_add(&b, "search?query=");
-	if (!b.ok)
+	if (!b.ok || !shiori_form_encode(json, out + b.len, cap - b.len))
 		return 0;
-	return shiori_form_encode(json, out + b.len, cap - b.len);
+	if (pageKey != NULL && pageKey[0]) {
+		b.len += (long) strlen(out + b.len);
+		if (!shiori_form_encode(pageKey, out + b.len, cap - b.len))
+			return 0;
+	}
+	b.len += (long) strlen(out + b.len);
+	return shiori_form_encode(pageKey != NULL && pageKey[0] ? "\"}" : "}", out + b.len, cap - b.len);
+}
+
+long shiori_hister_search_cap(const char *pageKey)
+{
+	/* the words and the rest of the JSON, form-encoded, then the key at three bytes a byte */
+	return 3L * (2 * SHIORI_MAX_TEXT + 256) + 32 + (pageKey != NULL ? 3L * (long) strlen(pageKey) : 0);
 }
 
 int shiori_kura_search_target(const char *typed, int limit, long offset, const char *vault, char *out, long cap)
