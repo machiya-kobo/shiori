@@ -32,7 +32,11 @@
 #define NEWEST_ROWS 20          /* the newest pages, with nothing typed */
 #endif
 #define ALL_NOTES 5             /* All's top notes */
+#ifdef SHIORI_TALKIP
+#define MAX_ROWS 60             /* Shiori Lite: 120 rows left 38K of 288K, too little to open a page */
+#else
 #define MAX_ROWS 120
+#endif
 #ifdef SHIORI_TALKIP
 #define MAX_REPLY (32L * 1024L)       /* Shiori Lite: a page of results fits, else half a page (RowsFor) */
 #else

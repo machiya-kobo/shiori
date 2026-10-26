@@ -468,6 +468,20 @@ static void ScrollTo(Reader *r, long top)
 
 /* -- loading ----------------------------------------------------------------------------------- */
 
+/* No room for the text: what was made goes, and the body stops saying Loading. */
+static void NoMemory(Reader *r)
+{
+	if (r->text)
+		DisposeHandle(r->text);
+	if (r->runs)
+		DisposeHandle(r->runs);
+	if (r->hrefs)
+		DisposeHandle(r->hrefs);
+	r->text = r->runs = r->hrefs = NULL;
+	SetStatus(r, "Not enough memory to read this: close a window, or search for less.");
+	InvalRect(&r->textRect);
+}
+
 static void Loaded(Reader *r)
 {
 	long len, rawLen = 0, htmlLen, hrefCap;
@@ -540,7 +554,7 @@ static void Loaded(Reader *r)
 	html = NewHandle(rawLen + 1 + 2 * NAV_LEN);
 	if (html == NULL) {
 		FetchReset(&r->fetch);
-		SetStatus(r, "Not enough memory to read this.");
+		NoMemory(r);
 		return;
 	}
 	HLock(html);
@@ -572,7 +586,7 @@ static void Loaded(Reader *r)
 	r->hrefs = NewHandle(hrefCap);
 	if (r->text == NULL || r->runs == NULL || r->hrefs == NULL) {
 		DisposeHandle(html);
-		SetStatus(r, "Not enough memory to read this.");
+		NoMemory(r);
 		return;
 	}
 	HLock(r->text);

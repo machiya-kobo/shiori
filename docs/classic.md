@@ -169,8 +169,9 @@ release file; build it with `SHIORI_TALKIP=1 TALKIP_DIR=<a talkip
 checkout> classic/scripts/build.sh` (into `classic/build-talkip`).
 
 To fit in 512 KB it keeps one reader window, smaller replies (a 32 KB
-search, a 48 KB part of a page or note) and a smaller stack, and has no
-desk accessory. Read pages through mac-bridge 0.2.0 or later: it sends
+search, asked again with fewer rows when a page of results is larger; a
+48 KB part of a page or note), a list of at most 60 rows and a smaller
+stack, and has no desk accessory. Read pages through mac-bridge 0.2.0 or later: it sends
 them in parts, and a real page's whole readable copy is often more than
 48 KB. Its
 About box shows the free memory. The gateway's address on your LAN is the
