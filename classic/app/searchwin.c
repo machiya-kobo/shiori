@@ -1063,7 +1063,7 @@ void SearchWindowOpenSelected(void)
 	if (!ListGet(&gList, ListSelected(&gList), &row) || row.url[0] == '\0')
 		return;
 	if (!ReaderOpen(&gConfig, &row))
-		SetStatus("Three readers are open: close one first.");
+		SetStatus(ReaderOpenProblem());
 }
 
 void SearchWindowEdit(short item)

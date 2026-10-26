@@ -18,6 +18,8 @@
 
 /* Opens row (a page or a note) in a reader window; false when it can't (three are open, or memory). */
 Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row);
+/* Why ReaderOpen said no, in words that say what to do. */
+const char *ReaderOpenProblem(void);
 Boolean IsReaderWindow(WindowPtr w);
 
 void ReaderUpdate(WindowPtr w);

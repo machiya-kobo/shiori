@@ -770,6 +770,20 @@ Boolean ReaderOpen(const ShioriConfig *config, const ListRow *row)
 	return true;
 }
 
+const char *ReaderOpenProblem(void)
+{
+	int i;
+
+	for (i = 0; i < MAX_READERS; i++)
+		if (gReaders[i] == NULL)
+			return "Not enough memory to open this: close a window, or search for less.";
+#ifdef SHIORI_TALKIP
+	return "Shiori Lite reads one page at a time: close it first.";
+#else
+	return "Three readers are open: close one first.";
+#endif
+}
+
 static void Dispose(Reader *r)
 {
 	int i;
@@ -941,11 +955,7 @@ void ReaderClick(WindowPtr w, EventRecord *e)
 				strcpy(row.path, path);
 				strcpy(row.vault, vault);
 				if (!ReaderOpen(&gConfig, &row))
-#ifdef SHIORI_TALKIP
-					SetStatus(r, "Close this note first: Shiori Lite reads one at a time.");
-#else
-					SetStatus(r, "Three readers are open: close one first.");
-#endif
+					SetStatus(r, ReaderOpenProblem());
 				return;
 			}
 			sprintf(s, "Link: %.150s (Copy Link copies it)", r->link);
