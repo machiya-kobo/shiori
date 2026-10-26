@@ -5,6 +5,23 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.25.0 (2026-10-26)
+
+- Classic Macintosh: your newest pages fill the list at launch, 20 at a
+  time (10 in Shiori Lite), and the next ones load as you scroll, so
+  there's something to read before you search. Return with nothing
+  typed shows them again.
+- Classic: pages with long addresses (past 255 bytes, some past 1 KB)
+  show, open and page like any other, and Copy Link copies the whole
+  address.
+- Classic: a page of results too large for the Mac is fetched again
+  with fewer rows. When memory runs short or the list is full, the
+  status line says so. Shiori Lite's list holds 60 rows, leaving room
+  to read.
+- Classic: a reader that can't open says why, and a page Hister kept
+  no text for says so.
+- The hosted pages' image builds on the current nginx base.
+
 ## 1.24.0 (2026-10-25)
 
 - Safe Search: Settings → Search → Safe Search (Off, Moderate or Strict)
