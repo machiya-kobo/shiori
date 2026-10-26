@@ -606,6 +606,16 @@ static void Loaded(Reader *r)
 	SetPort(r->win);
 	Relayout(r);
 	InvalRect(&r->textRect);
+	{
+		/* a readable copy with no words (a page that is all script or images) still says something */
+		long i;
+		for (i = 0; i < r->textLen && (unsigned char) (*r->text)[i] <= ' '; i++)
+			;
+		if (i == r->textLen && r->parts <= 1) {
+			SetStatus(r, r->kind == LROW_NOTE ? "This note has no text." : "Hister kept no text for this page.");
+			return;
+		}
+	}
 	if (t.truncated)
 		SetStatus(r, "Shown in part: too long for this Mac.");
 	else if (r->parts > 1) {

@@ -151,6 +151,10 @@ class Hister(Base):
             # Hister's readable copy of a page, for Classic's reader.
             page = params.get("url", [""])[0]
             log("hister preview of a %d-byte address" % len(page))
+            if page.startswith("https://news.example/story/5?"):
+                # a readable copy with no words (a page of script or images), for Classic's reader
+                return self.reply(200, {"title": "Story 5", "content": "<div><img src=\"x.png\"></div>",
+                                        "added": 1790000000, "updated": 1790000000})
             for purl, title, domain, text, label, added in SAMPLE_PAGES:
                 if purl == page:
                     content = (f"<h1>{title}</h1><p>{text}</p><p>Saved from <a href=\"{purl}\">{domain}</a>, "
