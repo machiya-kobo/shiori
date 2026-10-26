@@ -34,7 +34,7 @@
 #define ALL_NOTES 5             /* All's top notes */
 #define MAX_ROWS 120
 #ifdef SHIORI_TALKIP
-#define MAX_REPLY (32L * 1024L)       /* Shiori Lite: a page of results fits */
+#define MAX_REPLY (32L * 1024L)       /* Shiori Lite: a page of results fits, else half a page (RowsFor) */
 #else
 #define MAX_REPLY (256L * 1024L)
 #endif
@@ -74,6 +74,7 @@ static int gMoreStage = STAGE_NONE;             /* what Show More asks for, or S
 static Handle gMoreKey;                         /* Hister's page_key, raw (ShioriPage.nextAt), NUL-terminated:
                                                    any length, it holds the last row's address */
 static char gShort[40];                         /* why the list stops short of what's there, or "" */
+static int gHalvings;                           /* pages halved since the search began: a reply was too large */
 static long gMoreOffset;                        /* Kura's next offset */
 static Boolean gAppending;                      /* the request is Show More's */
 static long gTag;
@@ -415,6 +416,17 @@ static void ShowTotals(void)
 	SetStatus(s);
 }
 
+/* How many rows a stage asks for: halved for each reply that was too large (long addresses and
+   snippets), down to one, for the rest of this search. */
+static int RowsFor(int stage)
+{
+	int rows = stage == STAGE_ALL_NOTES ? ALL_NOTES : stage == STAGE_PAGES && !gQuery[0] ? NEWEST_ROWS
+		: stage == STAGE_VAULTS ? 1 : PAGE_ROWS;
+
+	rows >>= gHalvings;
+	return rows > 0 ? rows : 1;
+}
+
 static void Request(int stage)
 {
 	const char *base, *key = "";
@@ -442,25 +454,25 @@ static void Request(int stage)
 	switch (stage) {
 	case STAGE_ALL_NOTES:
 		if (NotesFromHister()) {
-			ok = shiori_hister_search_target(gQuery, PILL_NOTES, ALL_NOTES, "", target, cap);
+			ok = shiori_hister_search_target(gQuery, PILL_NOTES, RowsFor(stage), "", target, cap);
 			base = gConfig.hister;
 		} else {
-			ok = shiori_kura_search_target(gQuery, ALL_NOTES, 0, "", target, cap);
+			ok = shiori_kura_search_target(gQuery, RowsFor(stage), 0, "", target, cap);
 			base = gConfig.kura;
 		}
 		break;
 	case STAGE_NOTES:
 		if (NotesFromHister()) {
 			/* the default vault's notes only: no vault menu */
-			ok = shiori_hister_search_target(gQuery, PILL_NOTES, PAGE_ROWS, key, target, cap);
+			ok = shiori_hister_search_target(gQuery, PILL_NOTES, RowsFor(stage), key, target, cap);
 			base = gConfig.hister;
 		} else {
-			ok = shiori_kura_search_target(gQuery, PAGE_ROWS, gAppending ? gMoreOffset : 0, gVault, target, cap);
+			ok = shiori_kura_search_target(gQuery, RowsFor(stage), gAppending ? gMoreOffset : 0, gVault, target, cap);
 			base = gConfig.kura;
 		}
 		break;
 	case STAGE_CODE:
-		ok = shiori_hister_search_target(gQuery, PILL_CODE, PAGE_ROWS, key, target, cap);
+		ok = shiori_hister_search_target(gQuery, PILL_CODE, RowsFor(stage), key, target, cap);
 		base = gConfig.hister;
 		break;
 	case STAGE_VAULTS:
@@ -469,7 +481,7 @@ static void Request(int stage)
 		base = gConfig.kura;
 		break;
 	default:
-		ok = shiori_hister_search_target(gQuery, PILL_PAGES, gQuery[0] ? PAGE_ROWS : NEWEST_ROWS, key, target, cap);
+		ok = shiori_hister_search_target(gQuery, PILL_PAGES, RowsFor(stage), key, target, cap);
 		base = gConfig.hister;
 		break;
 	}
@@ -555,6 +567,13 @@ static void Answered(void)
 		FetchReset(&gFetch);
 		return;
 	}
+	/* too large for this Mac: the same page again, half as many rows (the key and offset still hold) */
+	if (gFetch.state == FETCH_FAILED && gFetch.err == fetchTooLarge && RowsFor(stage) > 1) {
+		FetchReset(&gFetch);
+		gHalvings++;
+		Request(stage);
+		return;
+	}
 	if (gFetch.state == FETCH_DONE && gFetch.head.status == 200) {
 		body = FetchBody(&gFetch, &len);
 		gSection = stage;
@@ -632,6 +651,7 @@ static void Search(void)
 	gAppending = false;
 	gProblem[0] = '\0';
 	gShort[0] = '\0';
+	gHalvings = 0;
 	switch (gPill) {
 	case PILL_ALL: Request(gQuery[0] ? STAGE_ALL_NOTES : STAGE_PAGES); break;   /* nothing typed: the newest pages */
 	case PILL_PAGES: Request(STAGE_PAGES); break;

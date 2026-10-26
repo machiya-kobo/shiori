@@ -193,7 +193,7 @@ class Hister(Base):
                      "metadata": {"source": "shiori", "client": "shiori", "client_version": "1.2.3"}} for i in range(20)]
             return self.reply(200, {"total": 230, "documents": docs, "page_key": "p2", "query_suggestion": ""})
         # The newest pages with nothing typed, as Hister pages them, only for Classic's fake house
-        # (FAKE_LONG_NEWEST): 50 pages, 20 at a time, some addresses past 255 and 1,024 bytes, and a
+        # (FAKE_LONG_NEWEST): 50 pages, 20 at a time (fewer if asked), some addresses past 255 and 1,024 bytes, and a
         # page_key that carries the last row's address with Hister's escapes (control characters, a NUL).
         if os.environ.get("FAKE_LONG_NEWEST") and q.get("sort") == "date" and not words_of(text):
             def long_url(i):
@@ -207,7 +207,9 @@ class Hister(Base):
                 start = [long_url(i) for i in range(50)].index(json.loads(q["page_key"])[2]) + 1
             n = range(start, min(start + int(q.get("limit") or 20), 50))
             docs = [{"url": long_url(i), "title": f"Story {i} ({len(long_url(i))}-byte address)",
-                     "domain": "news.example", "added": 1790000000 - i, "text": f"newest page {i}",
+                     "domain": "news.example", "added": 1790000000 - i,
+                     # a real reply's size: about 50 KB for 20 rows, over Shiori Lite's 32 KB
+                     "text": f"newest page {i}: " + "words of the page as Hister kept them, " * 36,
                      "metadata": {"source": "shiori"}} for i in n]
             key = json.dumps([str(1790000000 - n[-1]), " \u0001Am,2K\u0016\u0000", long_url(n[-1])]) \
                 if n[-1] < 49 else ""
