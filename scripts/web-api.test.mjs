@@ -204,11 +204,14 @@ test('the web app follows the account: one contact on load, on return and after 
 test("the web app's Settings say whether Kura knows you, and All says when it asks", () => {
   const app = read('../web/app/app.js');
   const row = app.slice(app.indexOf('function machiyaRow()'), app.indexOf('/**\n * Settings → Feeds & Export'));
-  assert.match(row, /200: \['Signed in'/);
-  assert.match(row, /401: \['Not signed in', link\(S\.roomSignInURL\(kuraAccount\.helperSignIn, settings\.niwaURL, ROOMS_STAMP, location\.origin, location\.href\), 'Sign In'\)\]/);
-  assert.match(row, /loadKuraStatus\(\)\.then/, 'asked afresh');
-  // In Account, with Hister's rows (the house's order).
-  assert.match(app.slice(app.indexOf('function accountGroup('), app.indexOf('function prefsStateLine(')), /const machiya = machiyaRow\(\);/);
+  assert.match(row, /\? \['Signed in'/);
+  assert.match(row, /: \['Not signed in', link\(S\.roomSignInURL\(false, settings\.niwaURL, ROOMS_STAMP, location\.origin, location\.href\), 'Sign In'\)\]/);
+  // Only on the identity file: never when Kura names Hister's sign-in, asks nothing or didn't answer.
+  assert.match(row, /if \(!settings\.niwaURL \|\| !\(status === 200 \|\| \(status === 401 && !helperSignIn\)\)\) return null;/);
+  // In Account, asked afresh, and left out beside Hister's rows: one sign-in.
+  const account = app.slice(app.indexOf('function accountGroup('), app.indexOf('function prefsStateLine('));
+  assert.match(account, /void loadKuraStatus\(\)\.then\(\(\) => \{\s*machiya = machiyaRow\(\);/, 'asked afresh');
+  assert.match(account, /const rows = \[\.\.\.histerRows, histerRows\.length \? null : machiya\]\.filter\(Boolean\);/);
   // All: a 401 from Kura is the Notes pill's notice, not silence.
   assert.match(app, /error\.status === 401 \? \{ signIn: error/);
   assert.match(app, /if \(notes && notes\.signIn\) container\.append\(h\('section', \{ class: 'list-section' \}, signInStatus\(/);
@@ -228,6 +231,17 @@ test("the search page's Sign In for Kura is a link Safari follows", () => {
   assert.match(css, /\.fold\.signin \.fold-head a \{ pointer-events: auto;/);
   // Hister's sign-in: this host's sign-in, from Kura's 401 (S.roomSignInURL).
   assert.match(page, /S\.roomSignInURL\(!!\(error && error\.helperSignIn\), niwaBase, '__SHIORI_ROOMS__', location\.origin, location\.href\)/);
+});
+
+test("the extension's page tries a room once more when its sign-in came late, and points at the app's Account", () => {
+  const page = read('../patches/shiori/search.js');
+  // The Mac's keychain can hold the sign-in past the page's 500 ms wait.
+  assert.match(page, /if \(room && r\.status === 401 && !sameOrigin\(url\) && !\(await machiyaTokenReady\) && \(await machiyaTokenLate\)\) \{/);
+  assert.match(page, /r = await fetch\(url, await roomInit\(url, \{ \.\.\.init, signal: AbortSignal\.timeout\(timeout\) \}, true\)\);/);
+  // One sign-in, the app's: never "Sign in to Machiya" by name.
+  assert.match(page, /asks you to sign in: Settings → Account in the Shiori app\./);
+  assert.match(page, /didn’t accept your sign-in: sign in again in the Shiori app \(Settings → Account\)\./);
+  assert.doesNotMatch(page, /Sign in to Machiya/);
 });
 
 test('a slow web sends the search page to DuckDuckGo only when nothing answered', () => {

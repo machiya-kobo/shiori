@@ -280,19 +280,20 @@
   // no token: its /kura/ and /konbini/ are on its own host, and the
   // browser's machiya_session cookie goes with them.
   const machiyaRooms = S.machiyaRooms([niwaBase, konbiniBase, kuraBase, konbiniAPIBase], [histerBase, searxBase]);
-  const machiyaTokenReady = Promise.race([
-    new Promise((resolve) => {
-      try {
-        chrome.runtime.sendMessage({ shiori: 'machiya' }, (reply) => {
-          void chrome.runtime.lastError;
-          resolve((reply && reply.ok && reply.token) || '');
-        });
-      } catch (_) {
-        resolve('');
-      }
-    }),
-    new Promise((resolve) => setTimeout(() => resolve(''), 500)),
-  ]);
+  const machiyaTokenAsked = new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage({ shiori: 'machiya' }, (reply) => {
+        void chrome.runtime.lastError;
+        resolve((reply && reply.ok && reply.token) || '');
+      });
+    } catch (_) {
+      resolve('');
+    }
+  });
+  const machiyaTokenReady = Promise.race([machiyaTokenAsked, new Promise((resolve) => setTimeout(() => resolve(''), 500))]);
+  // The answer however late (the Mac's keychain may ask you first), for one
+  // retry after a 401; at most 20 s.
+  const machiyaTokenLate = Promise.race([machiyaTokenAsked, new Promise((resolve) => setTimeout(() => resolve(''), 20000))]);
   /** Whether url is on this page's own host (the hosted page's /kura/, /konbini/). */
   function sameOrigin(url) {
     try {
@@ -302,11 +303,10 @@
     }
   }
   /** A room's fetch options: the hosted page's cookie, or the extension's token where the rule allows. */
-  async function roomInit(url, init) {
+  async function roomInit(url, init, late = false) {
     if (sameOrigin(url)) return { ...init, credentials: 'same-origin' };
-    // Hister's token too (the extension's): rooms in Hister sign-in mode take it.
     // The app's id (mhs_) or the identity file's token: never Hister's token to a room.
-    return S.machiyaFetchOptions(url, await machiyaTokenReady, machiyaRooms, init);
+    return S.machiyaFetchOptions(url, await (late ? machiyaTokenLate : machiyaTokenReady), machiyaRooms, init);
   }
   /**
    * What to say when a room answers 401: sign in (here, the sign-in that
@@ -314,9 +314,11 @@
    */
   function signInNote(room, error) {
     const where = sameOrigin(kuraBase) ? S.roomSignInURL(!!(error && error.helperSignIn), niwaBase, '__SHIORI_ROOMS__', location.origin, location.href) : '';
-    return where
-      ? [`${room} asks you to sign in. `, el('a', { href: where }, 'Sign In')]
-      : [`${room} asks you to sign in: Settings → Account → Sign in to Machiya.`];
+    if (where) return [`${room} asks you to sign in. `, el('a', { href: where }, 'Sign In')];
+    // In the extension the app's sign-in is the one: sent and refused, it has ended.
+    return error && error.sentSignIn
+      ? [`${room} didn’t accept your sign-in: sign in again in the Shiori app (Settings → Account).`]
+      : [`${room} asks you to sign in: Settings → Account in the Shiori app.`];
   }
   /** Notes from Kura, in Hister's shape ({documents, total}). */
   async function kuraNotes(text, options) {
@@ -1823,7 +1825,15 @@
       const init = { headers, signal: controller.signal, credentials: sameOrigin(url) ? 'same-origin' : 'omit' };
       // Hister's token never follows a redirect (fetch would keep the header).
       if (headers['X-Access-Token']) init.redirect = 'error';
-      const r = await fetch(url, room ? await roomInit(url, init) : init);
+      const sent = room ? await roomInit(url, init) : init;
+      let r = await fetch(url, sent);
+      // The sign-in arrived too late for the first try (the keychain asked
+      // first): once more with it, on a fresh clock.
+      if (room && r.status === 401 && !sameOrigin(url) && !(await machiyaTokenReady) && (await machiyaTokenLate)) {
+        clearTimeout(timer);
+        r = await fetch(url, await roomInit(url, { ...init, signal: AbortSignal.timeout(timeout) }, true));
+      }
+      const sentSignIn = room && !sameOrigin(url) && !!(await (r.status === 401 ? machiyaTokenLate : machiyaTokenReady));
       if (!r.ok) {
         refused(r.status, url);
         // A room on Hister's sign-in names the helper's sign-in in its 401 (S.roomSignInURL).
@@ -1833,13 +1843,13 @@
             helperSignIn = typeof JSON.parse(await r.text()).signin === 'string';
           } catch (_) {}
         }
-        throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status, helperSignIn });
+        throw Object.assign(new Error(`HTTP ${r.status}`), { status: r.status, helperSignIn, sentSignIn });
       }
       // Hister can leave raw control characters in text; blank them.
       return JSON.parse((await r.text()).replace(/[\u0000-\u001f]/g, ' '));
     } catch (error) {
       // Our own wait ran out (an abort for any other reason is a cancel).
-      if (timedOut && error && typeof error === 'object') error.timedOut = true;
+      if ((timedOut || (error && error.name === 'TimeoutError')) && error && typeof error === 'object') error.timedOut = true;
       throw error;
     } finally {
       clearTimeout(timer);
