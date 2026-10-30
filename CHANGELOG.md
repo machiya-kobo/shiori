@@ -5,6 +5,19 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.26.0 (2026-10-29)
+
+- One sign-in: Settings → Account shows Sign in to Hister, which covers
+  Hister, Kura and Konbini. When Hister offers Tailscale, Sign In with
+  Tailscale is the one button; Other Ways to Sign In has the rest.
+- Sign in to Machiya shows only when Kura asks for Machiya's identity
+  file, in the apps and the web app.
+- Safari Extension Token moves to Settings → Safari, shown only while
+  Hister has users.
+- Safari's results page: when the Mac's keychain asks before handing
+  over your sign-in, Kura's notes still load once you answer. If Kura
+  wants a sign-in, the page points at the app's Settings → Account.
+
 ## 1.25.0 (2026-10-26)
 
 - Classic Macintosh: your newest pages fill the list at launch, 20 at a
