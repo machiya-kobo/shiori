@@ -14,8 +14,8 @@ With neither, Shiori sends nothing more than before, and none of this shows.
 
 No sign-in while Hister has no users (the default). When it has them (`app.user_handling`, v0.20.0+, with Machiya's sign-in helper on Hister's host), sign in once on each:
 
-- **iPhone, iPad and Mac:** Settings → Account → Sign in to Hister, shown only while Hister has users. Pick **Sign In with Tailscale** when Hister offers its OIDC sign-in, else **Sign In with Saved Password** (Hister's page, where your saved password is offered), or type a name and password. The app keeps the sign-in in the Keychain.
-- **Safari's extension:** paste your Hister user's token into the app (Settings → Account → Safari Extension Token) on each device with the extension.
+- **iPhone, iPad and Mac:** Settings → Account → Sign in to Hister, shown only while Hister has users. When Hister offers its OIDC sign-in it's one button, **Sign In with Tailscale**; **Other Ways to Sign In** shows **Sign In with Saved Password** (Hister's page, where your saved password is offered) and a name and password, which are the only ways without it. The app keeps the sign-in in the Keychain.
+- **Safari's extension:** uses the app's sign-in for Kura and Konbini. For Hister itself, paste your Hister user's token into the app (Settings → Safari → Safari Extension Token, shown only while Hister has users) on each device with the extension.
 - **The hosted pages** send you to Hister's sign-in and back.
 - **Linux:** `shiori sign-in` (a small window) and `shiori sign-out`, or `"histerToken"` in config.json.
 - **Haiku:** Settings → Sign In…, or `"histerToken"` in config.json.
@@ -31,7 +31,7 @@ No sign-in unless Machiya's identity file is on (off by default). Then Kura and 
 
 Where to enter it:
 
-- **iPhone, iPad and Mac:** Settings → Account → Sign in to Machiya. The app keeps it in the Keychain; Safari's extension asks the app.
+- **iPhone, iPad and Mac:** Settings → Account → Sign in to Machiya, shown only when Kura asks for it (a 401 that doesn't name Hister's sign-in) or a token is kept. With Hister's users it never shows: that one sign-in covers the rooms. The app keeps it in the Keychain; Safari's extension asks the app.
 - **Linux:** `"machiyaToken"` in `~/.config/shiori/config.json`. `shiori pair <code>` prints it.
 - **The hosted pages** use Kura's own `/signin` cookie.
 
@@ -48,7 +48,7 @@ page and app flow) and turns a Hister session into an opaque id,
 | Shiori | How it signs in | What it sends |
 |---|---|---|
 | iPhone, iPad, Mac | Settings → Account → **Sign in to Hister**: first **Sign In with Saved Password** (the helper's `/machiya/signin?app=1&return=shiori://signed-in` in a private web session, back with `#sid=…&hister=…`; Safari's AutoFill offers the saved login there, which the app's own fields can't without Associated Domains, a paid team's), or a name and password (Hister's `POST /api/login`, then the helper's `POST /machiya/api/app-session` trades the session for an id). Shown only while the helper's `/machiya/healthz` says Hister has users, or while signed in. | `Cookie: hister=<session>` to Hister (HisterKit keeps cookies off and sets it itself), `Authorization: Bearer mhs_…` to the rooms. Kept in the Keychain, service `Hister` (`HisterKeychain`): this device only, shared with the share extension. |
-| Safari extension | The app's sign-in, and Settings → Account → **Safari Extension Token** in the app (paste your Hister user's token, once per device, and again after a rotation) | To Hister, `X-Access-Token`, handed over by native messaging (`hister`; a browser extension can't set `Cookie`), kept in the background's memory a minute, never stored; the extension's own pages ask the background for it, never a content script. To the rooms, the app's own id `Authorization: Bearer mhs_…` (native messaging, `machiya`), never Hister's token. |
+| Safari extension | The app's sign-in, and Settings → Safari → **Safari Extension Token** in the app (paste your Hister user's token, once per device, and again after a rotation) | To Hister, `X-Access-Token`, handed over by native messaging (`hister`; a browser extension can't set `Cookie`), kept in the background's memory a minute, never stored; the extension's own pages ask the background for it, never a content script. To the rooms, the app's own id `Authorization: Bearer mhs_…` (native messaging, `machiya`), never Hister's token. |
 | Hosted search page and web app | The helper's sign-in page: a 401 or 403 from Hister's routes sends the page to `<hister>/machiya/signin?return=<the page>` (at most once in 30 s), and back through the page's own host (`/machiya/start`, `/machiya/callback`) | Nothing of their own: the host's room cookie (`__Host-machiya_sso_shiori`, a room session `mhr_…` the helper sets for that host) goes to this host, whose nginx asks the helper and adds Hister's session on its own hop, and passes it on to `/kura/` and `/konbini/` (machiya docs/services/hister-login.md). **Sign Out** (Settings → Account) posts to `/machiya/signout` on the page's own origin; **Sessions…** is the helper's page for other devices. |
 | Linux | `shiori sign-in` (a small window, name and password) | The session and id in `$XDG_DATA_HOME/shiori/sign-in.json` (0600, tied to the server's origin); `histerToken` in config.json for Hister. Not signed in, the rooms get a room token, `"roomToken": "mht_…"` (made on the helper's sessions page), else the identity file's token. `shiori sign-out`, `shiori status`. |
 

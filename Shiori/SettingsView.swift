@@ -359,6 +359,9 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.surface)
 
+            HisterTokenSection()
+                .listRowBackground(palette.surface)
+
             Section {
                 Toggle("Search with Shiori", isOn: $app.combinedSearch)
             } header: {
@@ -406,9 +409,6 @@ struct SettingsView: View {
 
             case .account:
             HisterSignInSection()
-                .listRowBackground(palette.surface)
-
-            HisterTokenSection()
                 .listRowBackground(palette.surface)
 
             MachiyaSignInSection()

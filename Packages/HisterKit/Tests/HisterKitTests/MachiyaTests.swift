@@ -145,6 +145,23 @@ struct MachiyaTests {
         #expect(StubProtocol.requests(Self.kuraHost).first?.value(forHTTPHeaderField: "Authorization") == nil)
     }
 
+    @Test func onlyAKuraOnTheIdentityFileAsksForMachiyasSignIn() async throws {
+        // The identity file: a plain-text 401. Hister sign-in mode: a 401 naming the helper's sign-in.
+        #expect(KuraClient.asksForIdentity(status: 401, body: Data("missing proof".utf8)))
+        #expect(KuraClient.asksForIdentity(status: 401, body: Data(#"{"error":"unauthorized"}"#.utf8)))
+        #expect(!KuraClient.asksForIdentity(status: 401, body: Data(#"{"error":"sign in","signin":"https://hister.example/machiya/signin"}"#.utf8)))
+        #expect(!KuraClient.asksForIdentity(status: 200, body: Data(#"{"vaults":[]}"#.utf8)))
+        #expect(!KuraClient.asksForIdentity(status: 403, body: Data("no grant".utf8)))
+        #expect(!KuraClient.asksForIdentity(status: 503, body: Data()))
+        // Asked with nothing of its own, even from a client that holds a sign-in.
+        let signIn = try #require(MachiyaSignIn(token: Self.token, rooms: rooms))
+        StubProtocol.handle(Self.kuraHost) { _ in (401, Data("missing proof".utf8)) }
+        #expect(await KuraClient(serverURL: Self.kura, session: session, signIn: signIn)!.asksForIdentity())
+        let request = try #require(StubProtocol.requests(Self.kuraHost).first)
+        #expect(request.url?.absoluteString == Self.kura + "api/vaults")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+    }
+
     @Test func aKuraOffTheRoomsGetsNoToken() async throws {
         // Signed in for other rooms: this Kura's origin isn't one.
         let signIn = try #require(MachiyaSignIn(token: Self.token, rooms: Machiya.rooms([Self.konbini])))

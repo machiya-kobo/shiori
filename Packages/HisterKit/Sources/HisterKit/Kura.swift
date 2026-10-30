@@ -90,6 +90,27 @@ public struct KuraClient: Sendable {
         return html
     }
 
+    /// Whether Kura wants Machiya's identity-file sign-in (Settings →
+    /// Account → Sign in to Machiya, shown only then): asked with no
+    /// sign-in, it answers 401 with a plain reason. A Kura in Hister
+    /// sign-in mode names the helper's sign-in in its 401 (`signin`) and
+    /// takes the Hister sign-in instead; one that answers needs none.
+    /// False when it can't be reached.
+    public func asksForIdentity() async -> Bool {
+        var request = URLRequest(url: baseURL.appending(path: "api/vaults"), timeoutInterval: 6)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        guard let (data, response) = try? await session.roomData(for: request, signIn: nil),
+            let http = response as? HTTPURLResponse
+        else { return false }
+        return Self.asksForIdentity(status: http.statusCode, body: data)
+    }
+
+    static func asksForIdentity(status: Int, body: Data) -> Bool {
+        guard status == 401 else { return false }
+        let reply = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
+        return !(reply?["signin"] is String)
+    }
+
     /// Whether Kura has a note at `path` in the default vault (`/api/note`
     /// answers 200): a repo's note, for its Code rows. False on any failure.
     public func hasNote(path: String) async -> Bool {

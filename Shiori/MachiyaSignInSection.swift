@@ -8,7 +8,9 @@ import UIKit
 /// Machiya's identity file, which want to know who is calling. One field
 /// takes a pairing code from `identity pair` (paired against Kura) or a
 /// pasted token from `identity token mint`; the token goes to the Keychain
-/// (`MachiyaKeychain`) and from there only to Kura and Konbini.
+/// (`MachiyaKeychain`) and from there only to Kura and Konbini. Shown
+/// only where it applies (`AppState.machiyaSignInOffered`): with Hister's
+/// users, the Hister sign-in covers the rooms.
 struct MachiyaSignInSection: View {
     @Environment(AppState.self) private var app
     @Environment(\.palette) private var palette
@@ -27,6 +29,12 @@ struct MachiyaSignInSection: View {
     }
 
     var body: some View {
+        if app.machiyaSignInOffered {
+            section
+        }
+    }
+
+    private var section: some View {
         Section {
             LabeledContent("Status") {
                 Text(Machiya.statusText(token: app.machiyaToken, principal: app.machiyaPrincipal))

@@ -1,7 +1,7 @@
 import HisterKit
 import SwiftUI
 
-/// Settings → Account → Safari Extension Token: Hister's token for this
+/// Settings → Safari → Safari Extension Token: Hister's token for this
 /// device, when the server has users. It's Safari's extension's credential:
 /// an extension can't send the sign-in's session (no `Cookie` header), so
 /// it asks the app for this token. The app itself carries it beside the
@@ -16,6 +16,14 @@ struct HisterTokenSection: View {
     @State private var problem: String?
 
     var body: some View {
+        // Only with Hister's users (or a token kept, to remove it): without
+        // them Hister asks nothing of the extension.
+        if app.histerSignInOffered || app.histerAccount != nil || !app.histerToken.isEmpty {
+            section
+        }
+    }
+
+    private var section: some View {
         Section {
             LabeledContent("Token") {
                 SecureField(
@@ -54,7 +62,7 @@ struct HisterTokenSection: View {
         } header: {
             Text("Safari Extension Token")
         } footer: {
-            Text("Only when your Hister has users: Safari's extension saves pages with your Hister token, pasted here. It stays in this device's Keychain and goes only to your Hister.")
+            Text("Safari's extension saves pages with your Hister token, pasted here once. It stays in this device's Keychain and goes only to your Hister.")
         }
     }
 

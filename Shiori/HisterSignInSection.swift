@@ -21,6 +21,8 @@ struct HisterSignInSection: View {
     @State private var password = ""
     @State private var working = false
     @State private var problem: String?
+    /// Saved Password and the name and password, shown under Tailscale on request.
+    @State private var otherWays = false
     /// The server's answer about this device's session (nil: not asked yet).
     @State private var stillSignedIn: Bool?
 
@@ -68,31 +70,40 @@ struct HisterSignInSection: View {
                     if working { ProgressView().controlSize(.small) }
                 }
             } else {
-                // First: Hister's own sign-in page in a Safari sheet, where
-                // Safari's AutoFill (Passwords, Bitwarden) offers the saved
-                // login for the site. The app's own fields can't be matched
-                // to the site without Associated Domains (a paid team's).
                 // The tailnet's sign-in (Hister's OIDC provider), when it has
-                // one: one tap, no form.
-                if app.histerOAuthProviders.contains("oidc") {
-                    Button("Sign In with Tailscale", systemImage: "network") { signInWithBrowser(provider: "oidc") }
-                        .disabled(working)
+                // one: one tap, no form, and the only way shown; the others
+                // wait under Other Ways to Sign In.
+                let tailscale = app.histerOAuthProviders.contains("oidc")
+                if tailscale {
+                    HStack {
+                        Button("Sign In with Tailscale", systemImage: "network") { signInWithBrowser(provider: "oidc") }
+                            .disabled(working)
+                        if working { ProgressView().controlSize(.small) }
+                    }
+                    Button(otherWays ? "Fewer Ways to Sign In" : "Other Ways to Sign In…") { otherWays.toggle() }
+                        .foregroundStyle(palette.secondaryText)
                 }
-                Button("Sign In with Saved Password…", systemImage: "key.fill") { signInWithBrowser() }
-                    .disabled(working)
-                TextField("Name", text: $username, prompt: Text("Name"))
-                    .textContentType(.username)
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                    .autocorrectionDisabled()
-                SecureField("Password", text: $password, prompt: Text("Password"))
-                    .textContentType(.password)
-                    .onSubmit(signInWithPassword)
-                HStack {
-                    Button("Sign In", action: signInWithPassword)
-                        .disabled(working || username.trimmingCharacters(in: .whitespaces).isEmpty || password.isEmpty)
-                    if working { ProgressView().controlSize(.small) }
+                if !tailscale || otherWays {
+                    // Hister's own sign-in page in a Safari sheet, where
+                    // Safari's AutoFill (Passwords, Bitwarden) offers the saved
+                    // login for the site. The app's own fields can't be matched
+                    // to the site without Associated Domains (a paid team's).
+                    Button("Sign In with Saved Password…", systemImage: "key.fill") { signInWithBrowser() }
+                        .disabled(working)
+                    TextField("Name", text: $username, prompt: Text("Name"))
+                        .textContentType(.username)
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
+                        .autocorrectionDisabled()
+                    SecureField("Password", text: $password, prompt: Text("Password"))
+                        .textContentType(.password)
+                        .onSubmit(signInWithPassword)
+                    HStack {
+                        Button("Sign In", action: signInWithPassword)
+                            .disabled(working || username.trimmingCharacters(in: .whitespaces).isEmpty || password.isEmpty)
+                        if working && !tailscale { ProgressView().controlSize(.small) }
+                    }
                 }
             }
             if let problem {
@@ -103,7 +114,7 @@ struct HisterSignInSection: View {
         } header: {
             Text("Sign in to Hister")
         } footer: {
-            Text("Your Hister has users: sign in once on this device. The session stays in this device's Keychain and goes only to your Hister.")
+            Text("Sign in once on this device for Hister, Kura and Konbini. It stays in this device's Keychain.")
         }
         .buttonStyle(.borderless)
     }

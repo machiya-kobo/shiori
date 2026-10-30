@@ -349,6 +349,27 @@ final class AppState {
         let providers = offered ? await HisterAccount.oauthProviders(server: server) : []
         guard generation == clientGeneration else { return }
         if providers != histerOAuthProviders { histerOAuthProviders = providers }
+        await checkMachiyaSignIn()
+    }
+
+    /// Whether to offer Sign in to Machiya (Settings → Account): only for
+    /// rooms on Machiya's identity file, or while a token is kept (to sign
+    /// out). With Hister's users the one Hister sign-in covers the rooms,
+    /// so it never shows then. Checked with Hister's, for the same reason.
+    private(set) var machiyaSignInOffered = false
+
+    private func checkMachiyaSignIn() async {
+        let offered: Bool
+        if !machiyaToken.isEmpty {
+            offered = true
+        } else if histerAccount != nil || histerSignInOffered {
+            offered = false
+        } else if let kura = KuraClient(serverURL: searchPage.niwaURL) {
+            offered = await kura.asksForIdentity()
+        } else {
+            offered = false
+        }
+        if offered != machiyaSignInOffered { machiyaSignInOffered = offered }
     }
 
     /// Keeps a sign-in. Nil when kept, else what to tell the person.
