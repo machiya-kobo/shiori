@@ -3205,15 +3205,17 @@ function settingsPage(key, title) {
  */
 function accountGroup(group) {
   const box = h('div', {});
-  const machiya = machiyaRow();
+  // Kura's own sign-in only where the rooms use Machiya's identity file:
+  // with Hister's users the one Hister sign-in covers them (machiyaRow).
+  let machiya = null;
   let histerRows = [];
   let histerSignedIn = false;
   const foot = () => [
     histerSignedIn ? 'Signed in once, every Machiya room knows you. Sign Out ends it in this browser and every room; Sessions… ends another device’s.' : '',
-    machiya ? 'Signing in to Kura and out happens on Kura’s own pages.' : '',
+    machiya && !histerRows.length ? 'Signing in to Kura and out happens on Kura’s own pages.' : '',
   ].filter(Boolean).join(' ');
   const draw = () => {
-    const rows = [...histerRows, machiya].filter(Boolean);
+    const rows = [...histerRows, histerRows.length ? null : machiya].filter(Boolean);
     box.hidden = !rows.length;
     box.replaceChildren(...(rows.length ? group('Account', rows, foot()) : []));
   };
@@ -3234,6 +3236,12 @@ function accountGroup(group) {
       : [h('div', { class: 'item' }, h('span', {}, 'Not signed in'), signIn ? h('a', { class: 'link-button', href: signIn }, 'Sign In') : null)];
     draw();
   });
+  if (settings.niwaURL) {
+    void loadKuraStatus().then(() => {
+      machiya = machiyaRow();
+      draw();
+    });
+  }
   return box;
 }
 
@@ -3315,31 +3323,22 @@ function pillsGroup(group, choice) {
 
 /**
  * Settings → Account → Machiya, as the apps' Sign in to Machiya: whether
- * Kura knows you (its /api/prefs answering 200, 401 or 404), with Sign In
+ * Kura knows you (its /api/prefs answering 200 or 401), with Sign In
  * (Kura's /signin) or Sign Out (Kura's Settings: its sign-out is a form
  * on Kura's own origin, which this host doesn't pass). Asked afresh each
- * time Settings opens. Only with Kura's address set.
+ * time Settings opens (loadKuraStatus first). Only where the rooms use
+ * Machiya's identity file: none when Kura asks nothing (404), didn't
+ * answer, or names Hister's sign-in in its 401 (Account's own rows).
  */
 function machiyaRow() {
-  if (!settings.niwaURL) return null;
-  const state = h('span', { class: 'machiya-state' });
-  const action = h('span', {});
-  const row = h('div', { class: 'item' }, h('span', {}, 'Machiya'), h('span', { class: 'machiya-account' }, state, action));
-  const draw = () => {
-    const own = S.machiyaSignInURL(settings.niwaURL);
-    const link = (href, text) => (href ? h('a', { class: 'link-button', href }, text) : null);
-    const [text, a] = {
-      200: ['Signed in', link(own && own.replace(/signin$/, 'settings'), 'Sign Out…')],
-      401: ['Not signed in', link(S.roomSignInURL(kuraAccount.helperSignIn, settings.niwaURL, ROOMS_STAMP, location.origin, location.href), 'Sign In')],
-      404: ['Kura doesn’t ask who you are', null],
-      0: ['Kura didn’t answer', null],
-    }[kuraAccount.status] || ['Checking…', null];
-    state.textContent = text;
-    fill(action, a);
-  };
-  draw();
-  loadKuraStatus().then(() => row.isConnected && draw());
-  return row;
+  const { status, helperSignIn } = kuraAccount;
+  if (!settings.niwaURL || !(status === 200 || (status === 401 && !helperSignIn))) return null;
+  const own = S.machiyaSignInURL(settings.niwaURL);
+  const link = (href, text) => (href ? h('a', { class: 'link-button', href }, text) : null);
+  const [text, a] = status === 200
+    ? ['Signed in', link(own && own.replace(/signin$/, 'settings'), 'Sign Out…')]
+    : ['Not signed in', link(S.roomSignInURL(false, settings.niwaURL, ROOMS_STAMP, location.origin, location.href), 'Sign In')];
+  return h('div', { class: 'item' }, h('span', {}, 'Machiya'), h('span', { class: 'machiya-account' }, h('span', { class: 'machiya-state' }, text), h('span', {}, a)));
 }
 
 /**
