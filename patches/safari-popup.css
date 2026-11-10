@@ -58,3 +58,11 @@ main > div:first-child { background: var(--shiori-card) !important; }
 main > div:first-child a { color: var(--shiori-accent) !important; text-transform: none; letter-spacing: normal; font-weight: 700; }
 main > div:first-child button { color: var(--shiori-secondary) !important; }
 main > div:first-child button:hover { color: var(--shiori-accent) !important; }
+
+/* Open Elsewhere (shiori-popup.js), under upstream's popup and as wide. */
+#shiori-elsewhere { width: 20rem; box-sizing: border-box; padding: 10px 12px 12px; border-top: 1px solid var(--shiori-line); font-family: -apple-system, system-ui, sans-serif; }
+@media (pointer: coarse) { #shiori-elsewhere { width: 100%; } }
+#shiori-elsewhere h2 { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--shiori-secondary); }
+#shiori-elsewhere div { display: flex; flex-wrap: wrap; gap: 6px; }
+#shiori-elsewhere button { font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 10px; border: 1px solid var(--shiori-line); background: var(--shiori-card); color: var(--shiori-accent); cursor: pointer; }
+#shiori-elsewhere button:hover { border-color: var(--shiori-accent); }

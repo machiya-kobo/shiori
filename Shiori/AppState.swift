@@ -1217,6 +1217,8 @@ struct SearchPageOptions: Equatable {
     var rememberOpened = true
     /// Save a web result you open to Hister (`Saver.saveOpened`). This device's own.
     var saveOpenedWeb = false
+    /// Safari opens the sites the build has front ends for through them. This device's own.
+    var frontendRedirect = false
     /// The filter bar (site, date, visits…) on search results.
     var searchFilters = true
     /// Meaning-based matches mixed in, where the server has them set up.
@@ -1296,6 +1298,7 @@ struct SearchPageOptions: Equatable {
         flag(K.previewImages, &previewImages)
         flag(K.rememberOpened, &rememberOpened)
         flag(K.saveOpenedWeb, &saveOpenedWeb)
+        flag(K.frontendRedirect, &frontendRedirect)
         flag(K.searchFilters, &searchFilters)
         flag(K.semanticSearch, &semanticSearch)
         flag(K.foldRepeats, &foldRepeats)
@@ -1340,6 +1343,7 @@ struct SearchPageOptions: Equatable {
         defaults.set(previewImages, forKey: K.previewImages)
         defaults.set(rememberOpened, forKey: K.rememberOpened)
         defaults.set(saveOpenedWeb, forKey: K.saveOpenedWeb)
+        defaults.set(frontendRedirect, forKey: K.frontendRedirect)
         defaults.set(searchFilters, forKey: K.searchFilters)
         defaults.set(semanticSearch, forKey: K.semanticSearch)
         defaults.set(foldRepeats, forKey: K.foldRepeats)

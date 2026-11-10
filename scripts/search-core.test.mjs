@@ -1594,3 +1594,35 @@ test('Save Web Results You Open: only a gateway that never replaces a held page,
   assert.equal(S.webSaveBody('https://kura.example.ts.net/v/work/n/plan', 'x', 'q'), null);
   assert.equal(S.webSaveBody('https://example.com/a', 'x', 'q'.repeat(300)).query.length, 200);
 });
+
+test('sites through their front ends: where a page goes, and what stays', () => {
+  const redirects = S.frontendInstances('redlib=https://redlib.example.ts.net/,breezewiki=https://bw.example.ts.net/');
+
+  const go = (url, type) => S.frontendRedirect(url, redirects, type);
+  assert.equal(go('https://www.reddit.com/r/unix/comments/abc/title/?utm_source=share&utm_term=1'),
+    'https://redlib.example.ts.net/r/unix/comments/abc/title/?utm_source=share&utm_term=1');
+  assert.equal(go('https://old.reddit.com/r/unix/', 'navigate'), 'https://redlib.example.ts.net/r/unix/');
+  assert.equal(go('https://redd.it/abc', 'reload'), 'https://redlib.example.ts.net/comments/abc');
+  assert.equal(go('https://minecraft.fandom.com/wiki/Creeper'), 'https://bw.example.ts.net/minecraft/wiki/Creeper');
+  // Back and Forward, a visit marked to stay, and what Redlib can't show stay on the site.
+  assert.equal(go('https://www.reddit.com/r/unix/', 'back_forward'), null);
+  assert.equal(go('https://www.reddit.com/r/unix/#shiori-stay'), null);
+  for (const path of ['/login', '/settings/account', '/submit', '/media?url=x', '/message/inbox', '/api/v1/me']) {
+    assert.equal(go('https://www.reddit.com' + path), null, path);
+  }
+  assert.equal(go('https://www.reddit.com/r/settings/'), 'https://redlib.example.ts.net/r/settings/');
+  // Sites with no front end in the build, and non-web addresses.
+  assert.equal(go('https://www.youtube.com/watch?v=x'), null);
+  assert.equal(go('https://example.com/'), null);
+  assert.equal(go('not a url'), null);
+  assert.equal(S.frontendRedirect('https://www.reddit.com/r/unix/', []), null);
+
+  assert.equal(S.stayingURL('https://www.reddit.com/r/unix/#top'), 'https://www.reddit.com/r/unix/#shiori-stay');
+  assert.equal(go(S.stayingURL('https://www.reddit.com/r/unix/')), null);
+
+  const matches = Array.from(S.frontendMatches(redirects));
+  assert.ok(matches.includes('*://www.reddit.com/*') && matches.includes('*://redd.it/*'));
+  assert.ok(matches.includes('*://*.fandom.com/*'));
+  assert.ok(!matches.some((m) => m.includes('youtube')));
+  assert.equal(S.frontendMatches([]).length, 0);
+});

@@ -48,8 +48,10 @@ settings:
     # plain http(s) address; empty shows nothing. The web builds read it
     # from the environment.
     SHIORI_SOURCE_URL: ""
-    # Your privacy front ends, offered in a page's menu for the sites they
-    # stand in for: "redlib=https://redlib.example.ts.net/,invidious=…".
+    # Your privacy front ends, offered in a page's menu (and Safari's Shiori
+    # menu) for the sites they stand in for, and opened in their place with
+    # Settings → Safari → Open Sites in Your Front Ends on (off by default):
+    # "redlib=https://redlib.example.ts.net/,invidious=…".
     # Known: redlib, invidious, piped, nitter, scribe, libmedium, rimgo, libremdb,
     # breezewiki. Empty offers none (Archive.org and Archive.is still are).
     SHIORI_FRONTENDS: ""

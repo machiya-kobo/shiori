@@ -665,6 +665,8 @@ const shioriMachiya = (() => {
   // SearXNG default baked in by scripts/build-extension.sh (local.yml).
   const DEFAULTS = {
     combinedSearch: true,
+    // Sites opened through the build's front ends (shiori/frontend-redirect.js): this device's own, off by default.
+    frontendRedirect: false,
     searxngURL: '__SHIORI_SEARXNG_URL__',
     theme: 'system',
     // One of the Machiya rooms' themes (S.PALETTES).

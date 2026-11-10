@@ -371,6 +371,18 @@ struct SettingsView: View {
             }
             .listRowBackground(palette.surface)
 
+            // Only in a build with privacy front ends (SHIORI_FRONTENDS).
+            if !ElsewhereLinks.instances.isEmpty {
+                Section {
+                    Toggle("Open Sites in Your Front Ends", isOn: $app.searchPage.frontendRedirect)
+                } header: {
+                    Text("Front Ends")
+                } footer: {
+                    Text("Safari opens pages on the sites they stand in for through \(ListFormatter.localizedString(byJoining: ElsewhereLinks.instances.map(\.frontend.name))). Shiori's menu in Safari still offers the original.")
+                }
+                .listRowBackground(palette.surface)
+            }
+
             // Shiori Search's own options (Safari's results page and the
             // hosted page); the app's lists don't read them. Not tied to
             // Search with Shiori: the hosted page follows them too.

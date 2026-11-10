@@ -48,6 +48,9 @@ nonisolated enum SharedSettings {
         static let rememberOpened = "rememberOpened"
         /// Save a web result to Hister when it's opened from a search (off by default; this device's own).
         static let saveOpenedWeb = "saveOpenedWeb"
+        /// Safari opens the sites the build has privacy front ends for through them
+        /// (Reddit in Redlib…; off by default; this device's own).
+        static let frontendRedirect = "frontendRedirect"
         /// The filter bar on search results.
         static let searchFilters = "searchFilters"
         /// Meaning-based search, where the server has it set up.
@@ -241,6 +244,7 @@ nonisolated enum SharedSettings {
             Key.showInfobox, Key.showRelated, Key.showThumbnails, Key.histerInGeneral, Key.histerTab,
             Key.vaultInGeneral, Key.vaultTab, Key.webResults, Key.searchHistory, Key.previewPane, Key.previewImages,
             Key.rememberOpened, Key.foldRepeats, Key.searchFilters, Key.labelSuggestions, Key.aiAnswer, Key.showOpened, Key.smallWebTab,
+            Key.frontendRedirect,
         ]
         for key in flags where defaults.object(forKey: key) != nil {
             payload[key] = defaults.bool(forKey: key)

@@ -84,3 +84,55 @@
     watch.observe(document.documentElement, { childList: true, subtree: true });
   }
 })();
+
+// Open Elsewhere: the page in this tab through the build's privacy front ends
+// (Redlib for Reddit…), on the Wayback Machine or archive.is, or back on its
+// own site from a front end, as the results' cards link them (search-core's
+// elsewhereLinks). Links only, opened in this tab; nothing is fetched. Drawn
+// under upstream's popup, outside the element Svelte owns.
+(() => {
+  const S = globalThis.ShioriSearch;
+  if (!S || typeof chrome === 'undefined' || !chrome.tabs || !chrome.tabs.query) return;
+  const frontends = S.frontendInstances(S.fromBuild('__SHIORI_FRONTENDS__'));
+
+  async function draw() {
+    let tab;
+    try {
+      [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    } catch (_) {
+      return;
+    }
+    if (!tab || tab.id == null) return;
+    const links = S.elsewhereLinks(tab.url || '', frontends);
+    if (!links.length) return;
+
+    const section = document.createElement('section');
+    section.id = 'shiori-elsewhere';
+    const heading = document.createElement('h2');
+    heading.textContent = 'Open Elsewhere';
+    section.append(heading);
+    const row = document.createElement('div');
+    for (const link of links) {
+      // Back to a site a front end stands in for: marked, so this visit stays
+      // there with Open Sites in Your Front Ends on (frontend-redirect.js).
+      const original = link.name === 'Original';
+      const url = original && S.frontendRedirect(link.url, frontends) ? S.stayingURL(link.url) : link.url;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = original ? link.site || 'Original' : link.name;
+      button.title = original ? `Open on ${link.site || 'its own site'}` : `Open in ${link.name}`;
+      button.addEventListener('click', async () => {
+        try {
+          await chrome.tabs.update(tab.id, { url });
+        } catch (_) {}
+        window.close();
+      });
+      row.append(button);
+    }
+    section.append(row);
+    document.body.append(section);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => void draw(), { once: true });
+  else void draw();
+})();

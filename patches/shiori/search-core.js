@@ -634,6 +634,55 @@
     ];
   }
 
+  // --- sites opened through their front ends (Settings: Open Sites in Your Front Ends) ---
+
+  /** Paths a front end can't show (signing in, settings, the site's own tools): left on the site. */
+  const STAYS_ON_SITE = {
+    redlib: /^\/(login|register|account|settings|prefs|password|verification|message|notifications|submit|media|chat|mod|api|svc|appeals?|premium|coins|policies)(\/|$)/i,
+  };
+  /** The fragment that keeps one visit on the site itself (Open Elsewhere's way back to the original). */
+  const STAY_MARK = 'shiori-stay';
+
+  /**
+   * Where a page goes when sites open through the build's front ends, or
+   * null: never on Back or Forward, never a visit marked to stay, never a
+   * path the front end can't show.
+   */
+  function frontendRedirect(url, instances, navigationType) {
+    if (navigationType === 'back_forward') return null;
+    let u;
+    try { u = new URL(url); } catch (_) { return null; }
+    if (u.hash === '#' + STAY_MARK) return null;
+    for (const instance of instances || []) {
+      const skip = STAYS_ON_SITE[instance.frontend.key];
+      if (skip && skip.test(u.pathname)) continue;
+      const link = frontendLinks(url, [instance])[0];
+      if (link) return link.url;
+    }
+    return null;
+  }
+
+  /** The page on its own site, marked so frontendRedirect leaves this one visit there. */
+  function stayingURL(url) {
+    try {
+      const u = new URL(url);
+      u.hash = STAY_MARK;
+      return u.href;
+    } catch (_) {
+      return url;
+    }
+  }
+
+  /** Match patterns for the sites these front ends stand in for, for the redirect's content script. */
+  function frontendMatches(instances) {
+    const out = [];
+    for (const { frontend } of instances || []) {
+      if (frontend.key === 'breezewiki') out.push('*://*.fandom.com/*');
+      for (const host of frontend.hosts) out.push(`*://${host}/*`);
+    }
+    return [...new Set(out)];
+  }
+
   // --- vault notes (Hister's label:vault documents) ---------------------------
 
   /**
@@ -4232,6 +4281,10 @@
     frontendLinks,
     originalLink,
     elsewhereLinks,
+    frontendRedirect,
+    stayingURL,
+    frontendMatches,
+    STAY_MARK,
     hasBang,
     layoutScale,
     webQuery,

@@ -156,7 +156,7 @@ s = open(p, encoding="utf-8").read()
 anchor = '<link rel="stylesheet" href="style.css" />'
 if anchor not in s:
     sys.exit("popup.html no longer links style.css as expected; update the popup patch")
-s = s.replace(anchor, anchor + '\n    <link rel="stylesheet" href="safari-popup.css" />\n    <script src="shiori-popup.js"></script>', 1)
+s = s.replace(anchor, anchor + '\n    <link rel="stylesheet" href="safari-popup.css" />\n    <script src="search-core.js"></script>\n    <script src="shiori-popup.js"></script>', 1)
 open(p, "w", encoding="utf-8").write(s)
 PY
 
@@ -220,18 +220,47 @@ open(p, "w", encoding="utf-8").write(s.replace("__SHIORI_SOURCE_URL__", url))
 PY
 
 # The privacy front ends (Redlib, Invidious…) linked from the results
-# page's cards beside the archives; none when unset.
+# page's cards and the popup's Open Elsewhere beside the archives; none
+# when unset. With some, the sites they stand in for get the content
+# script that opens them through the front ends when the app's Open Sites
+# in Your Front Ends is on (off by default).
 SHIORI_FRONTENDS="${SHIORI_FRONTENDS:-$(yml SHIORI_FRONTENDS)}"
-python3 - "$RESOURCES/search.js" "$SHIORI_FRONTENDS" <<'PY'
-import sys
-p, value = sys.argv[1:]
-s = open(p, encoding="utf-8").read()
-if "__SHIORI_FRONTENDS__" not in s:
-    sys.exit("search.js lost the front ends placeholder")
-if value:
-    s = s.replace("__SHIORI_FRONTENDS__", value)
-open(p, "w", encoding="utf-8").write(s)
+REDIRECT_MATCHES="$(node - "$RESOURCES/search-core.js" "$SHIORI_FRONTENDS" <<'JS'
+const [core, frontends] = process.argv.slice(2);
+const vm = require('node:vm');
+const ctx = { URL, URLSearchParams };
+ctx.globalThis = ctx;
+vm.createContext(ctx);
+vm.runInContext(require('node:fs').readFileSync(core, 'utf8'), ctx);
+const S = ctx.ShioriSearch;
+process.stdout.write(JSON.stringify(S.frontendMatches(S.frontendInstances(frontends))));
+JS
+)"
+cp -- patches/shiori/frontend-redirect.js "$RESOURCES/shiori-frontend-redirect.js"
+python3 - "$RESOURCES" "$SHIORI_FRONTENDS" "$REDIRECT_MATCHES" <<'PY'
+import json, os, sys
+root, value, matches = sys.argv[1:]
+for name in ("search.js", "shiori-popup.js", "shiori-frontend-redirect.js"):
+    p = os.path.join(root, name)
+    s = open(p, encoding="utf-8").read()
+    if "__SHIORI_FRONTENDS__" not in s:
+        sys.exit("%s lost the front ends placeholder" % name)
+    if value:
+        s = s.replace("__SHIORI_FRONTENDS__", value)
+    open(p, "w", encoding="utf-8").write(s)
+matches = json.loads(matches)
+if matches:
+    p = os.path.join(root, "manifest.json")
+    m = json.load(open(p))
+    m["content_scripts"].append({"js": ["search-core.js", "shiori-frontend-redirect.js"],
+                                 "matches": matches, "run_at": "document_start"})
+    json.dump(m, open(p, "w"), indent=2)
+    open(p, "a").write("\n")
+else:
+    os.remove(os.path.join(root, "shiori-frontend-redirect.js"))
 PY
+FRONTEND_NAMES="$(printf %s "$SHIORI_FRONTENDS" | sed -E 's/=[^,]*//g')"
+echo "==> Front ends: ${FRONTEND_NAMES:-(none)}"
 
 # The neighbours' icons in the results page: neutral glyphs unless local.yml
 # (or the environment) names a folder holding their own logos (hister.png,
