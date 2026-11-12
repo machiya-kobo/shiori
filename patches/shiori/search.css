@@ -1208,6 +1208,11 @@ html.has-bg.frost-header body:not(.home) header .tools-row :is(select, button) {
 html.has-bg.frost-header body:not(.home) header .tools-row .tools-link { padding: 2px 8px; margin-right: -8px; border-radius: 999px; }
 /* The chevron inside its backing: room for it before the backing's end. */
 html.has-bg.frost-header body:not(.home) header .tools-row select { padding-right: 21px; }
+/* The first backing starts where the pills above do, not 8px out past them: the row's text moves in by as much. */
+html.has-bg.frost-header body:not(.home) header > #tools-row { padding-left: 8px; }
+@media (max-width: 759px) {
+  html.has-bg.frost-header body:not(.home) header > #tools-row { padding-left: 16px; }
+}
 /* Room between those backings (each reaches 8px past its text): 4px of the scene between two, not one long pill. */
 html.has-bg.frost-header body:not(.home) header :is(.tools-row, .tools-row .list-controls, .tools-row .code-filters) { column-gap: 20px; }
 html.frost-results body:not(.home) main > :is(section:not(#infobox-slot, #answer, #suggestions), p:not(.more), p.more:has(> a:not([hidden])), nav:not(.pages)),
