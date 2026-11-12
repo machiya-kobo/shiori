@@ -13,13 +13,24 @@ final class ShareModel {
     }
 
     private let context: NSExtensionContext?
+    /// Opens a page in the browser and closes the sheet (the controller's).
+    private let opener: @MainActor (URL) -> Void
     private(set) var input: Saver.Input?
     private(set) var phase: Phase = .loading
     var label = ""
     let labels: [String] = SharedSettings.defaults?.stringArray(forKey: SharedSettings.Key.labels) ?? []
 
-    init(context: NSExtensionContext?) {
+    init(context: NSExtensionContext?, open: @escaping @MainActor (URL) -> Void = { _ in }) {
         self.context = context
+        self.opener = open
+    }
+
+    /// Open Elsewhere's links: not while a save is in flight, which the
+    /// sheet closing would cut short.
+    @MainActor
+    func open(_ url: URL) {
+        guard phase != .saving else { return }
+        opener(url)
     }
 
     func load() async {
@@ -166,6 +177,19 @@ struct ShareView: View {
                         Text("A label marks the page as kept. Without one it's saved as visited.")
                     }
                     .listRowBackground(palette.surface)
+                    if let input = model.input, Self.hasElsewhere(input.url) {
+                        // The page through a front end (Reddit's on Redlib…) or
+                        // an archive, in the browser.
+                        Section("Open Elsewhere") {
+                            ElsewhereLinks(url: input.url.absoluteString, frontendsFirst: true)
+                        }
+                        .disabled(model.phase == .saving)
+                        .listRowBackground(palette.surface)
+                        .environment(\.openURL, OpenURLAction { url in
+                            model.open(url)
+                            return .handled
+                        })
+                    }
                     if case .done(let outcome) = model.phase {
                         Section {
                             Label(outcome.message, systemImage: symbol(for: outcome))
@@ -201,6 +225,12 @@ struct ShareView: View {
         #if os(macOS)
         .frame(minWidth: 420, minHeight: 300)
         #endif
+    }
+
+    /// Whether ElsewhereLinks has anything for it (any web page has its
+    /// archives; the section is skipped for anything else).
+    private static func hasElsewhere(_ url: URL) -> Bool {
+        Elsewhere.wayback(url.absoluteString) != nil
     }
 
     private func symbol(for outcome: Saver.Outcome) -> String {

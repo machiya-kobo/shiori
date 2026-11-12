@@ -39,5 +39,7 @@
 	</dict>
 	<key>ShioriAppGroup</key>
 	<string>$(SHIORI_APP_GROUP)</string>
+	<key>ShioriFrontends</key>
+	<string>$(SHIORI_FRONTENDS)</string>
 </dict>
 </plist>

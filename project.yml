@@ -189,6 +189,8 @@ targets:
       # The palette plumbing and LabelChip, shared with the app.
       - Shiori/Theming.swift
       - Shiori/TextSize.swift
+      # Open Elsewhere: the same links as a result's menu.
+      - Shiori/ElsewhereLinks.swift
     dependencies:
       - package: HisterKit
     settings:
@@ -207,6 +209,8 @@ targets:
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         ShioriAppGroup: $(SHIORI_APP_GROUP)
+        # The privacy front ends for Open Elsewhere (local.yml), as the app's.
+        ShioriFrontends: $(SHIORI_FRONTENDS)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -238,6 +242,8 @@ targets:
       # The palette plumbing and LabelChip, shared with the app.
       - Shiori/Theming.swift
       - Shiori/TextSize.swift
+      # Open Elsewhere: the same links as a result's menu.
+      - Shiori/ElsewhereLinks.swift
     dependencies:
       - package: HisterKit
     settings:
@@ -257,6 +263,8 @@ targets:
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         ShioriAppGroup: $(SHIORI_APP_GROUP)
+        # The privacy front ends for Open Elsewhere (local.yml), as the app's.
+        ShioriFrontends: $(SHIORI_FRONTENDS)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
