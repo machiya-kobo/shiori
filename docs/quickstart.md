@@ -64,7 +64,7 @@ The Mac and iOS builds also need `git submodule update --init`: the Safari exten
 ```bash
 podman run -d --name shiori-hister -p 127.0.0.1:4433:4433 \
   -e HISTER__SERVER__ADDRESS=0.0.0.0:4433 -e HISTER__SERVER__BASE_URL=http://localhost:4433 \
-  ghcr.io/asciimoo/hister:v0.20.0
+  ghcr.io/asciimoo/nogon:v0.22.0
 ```
 
 *With docker:*
@@ -73,7 +73,7 @@ podman run -d --name shiori-hister -p 127.0.0.1:4433:4433 \
 ```bash
 docker run -d --name shiori-hister -p 127.0.0.1:4433:4433 \
   -e HISTER__SERVER__ADDRESS=0.0.0.0:4433 -e HISTER__SERVER__BASE_URL=http://localhost:4433 \
-  ghcr.io/asciimoo/hister:v0.20.0
+  ghcr.io/asciimoo/nogon:v0.22.0
 ```
 
 Fill it with a dozen invented pages from a paper-lantern workshop and a Kyoto trip. The script writes only to a Hister on this machine.

@@ -40,7 +40,7 @@ html, html.dark, html .dark {
   --text-muted-brand: var(--shiori-secondary); --muted-foreground: var(--shiori-secondary);
   --border: var(--shiori-line); --input: var(--shiori-line); --brutal-border: var(--shiori-line);
   --border-brand: var(--shiori-line); --border-muted-brand: var(--shiori-line);
-  --hister-indigo: var(--shiori-accent); --hister-coral: var(--shiori-accent); --ring: var(--shiori-accent);
+  --nogon-indigo: var(--shiori-accent); --nogon-coral: var(--shiori-accent); --ring: var(--shiori-accent);
   --destructive: var(--shiori-danger); --brutal-shadow: transparent;
   color-scheme: light dark;
 }

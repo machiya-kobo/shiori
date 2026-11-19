@@ -6,13 +6,13 @@ Shiori is licensed under the GNU Affero General Public License, version 3 or
 following third-party software, each under its own license.
 
 --------------------------------------------------------------------------------
-Hister (vendor/hister, a git submodule at an upstream tag)
-https://github.com/asciimoo/hister
+Nogon, formerly Hister (vendor/hister, a git submodule at an upstream tag)
+https://github.com/asciimoo/nogon
 --------------------------------------------------------------------------------
 
-Shiori's Safari extension is Hister's own browser extension (webui/ext),
+Shiori's Safari extension is Nogon's (formerly Hister's) own browser extension (webui/ext),
 built from the submodule and patched at build time by scripts/build-extension.sh
-(patches/); its source is never modified. Hister is licensed under the GNU
+(patches/); its source is never modified. Nogon is licensed under the GNU
 Affero General Public License v3.0, the same license as Shiori (see LICENSE).
 Its source is at the upstream tag the submodule points to.
 

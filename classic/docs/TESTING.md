@@ -277,16 +277,18 @@ a tmpfs, holding only the sample pages. Never the live one:
 ```sh
 podman run -d --name shiori-classic-hister --tmpfs /hister/data:rw,size=200m,mode=1777 \
     -e HISTER__SERVER__ADDRESS=0.0.0.0:4433 -e HISTER__SERVER__BASE_URL=http://<VM's LAN address>:4440/ \
-    -p <VM's LAN address>:4440:4433 -p 127.0.0.1:4440:4433 ghcr.io/asciimoo/hister:v0.20.0
+    -p <VM's LAN address>:4440:4433 -p 127.0.0.1:4440:4433 ghcr.io/asciimoo/nogon:v0.22.0
 tools/quickstart/seed-hister.py http://127.0.0.1:4440/
 ```
 
 - With a token: add `-e HISTER__APP__ACCESS_TOKEN=…` (another name and
   port) and seed with `HISTER_TOKEN=… tools/quickstart/seed-hister.py`.
   Without it Shiori says "Hister refused this Mac (403)".
-- With users: `-e HISTER__APP__USER_HANDLING=true`; `hister create-user`
-  reads its password from a terminal (drive `podman exec -it` through a
-  pty), and `hister update-user <name> --regen-token` prints the token.
+- With users: `-e HISTER__APP__USER_HANDLING=true`; `nogon user create`
+  (Hister 0.20's `hister create-user`; Nogon's
+  [user handling](https://nogon.eu/docs/user-handling)) reads its password
+  from a terminal (drive `podman exec -it` through a pty), and
+  `nogon user update <name> --regen-token` prints the token.
 - In Shiori: File > Preferences (`menu:54,76`), type the address (the field
   starts selected), Tab to Kura and `key:BackSpace` to clear it, click
   *Directly (HTTP)* (`click:323,48`), OK (`click:417,315`). The radio for

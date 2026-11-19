@@ -108,7 +108,7 @@ git clone https://github.com/machiya-kobo/shiori && cd shiori
 ```bash
 podman run -d --name shiori-hister -p 127.0.0.1:4433:4433 \
   -e HISTER__SERVER__ADDRESS=0.0.0.0:4433 -e HISTER__SERVER__BASE_URL=http://localhost:4433 \
-  ghcr.io/asciimoo/hister:v0.20.0
+  ghcr.io/asciimoo/nogon:v0.22.0
 ```
 
 <!-- quickstart: seed -->

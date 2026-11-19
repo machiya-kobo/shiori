@@ -47,7 +47,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LIMIT = 200 * 1024
 DESKTOP = {"width": 1280, "height": 800}
 PHONE = {"width": 390, "height": 844}
-HISTER_IMAGE = "ghcr.io/asciimoo/hister:v0.20.0"
+HISTER_IMAGE = "ghcr.io/asciimoo/nogon:v0.22.0"
 # Machiya's site images: (name, viewport, scale).
 SITE_HERO = {"width": 1280, "height": 800}
 SITE_WEB = {"width": 1280, "height": 720}

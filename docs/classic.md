@@ -140,7 +140,8 @@ and delete them.
 
 Tested with Hister 0.20.0: with no token, with `app.access_token`, and
 with users on (`app.user_handling`), where each user's own token works
-the same way (`hister update-user <name> --regen-token` makes one).
+the same way (`hister update-user <name> --regen-token` made one; on Nogon
+it's `nogon user update <name> --regen-token`).
 
 ## What stays private
 

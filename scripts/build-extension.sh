@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the upstream Hister extension and patch it for Safari:
+# Build the upstream extension (Nogon's, formerly Hister's) and patch it for Safari:
 #
 #   scripts/build-extension.sh   staged in ShioriExtension/Resources/
 #       (gitignored); every Xcode build copies it into both the iOS and
@@ -64,11 +64,11 @@ fi
 
 echo "==> Building upstream extension ($(git -C "$UPSTREAM_ROOT" describe --tags --always)) for $TARGET"
 # The extension is an npm workspace; install from the workspace root so
-# @hister/components resolves, then build only the extension.
+# @nogon/components resolves, then build only the extension.
 (
     cd -- "$UPSTREAM_ROOT"
     npm ci --no-audit --no-fund --loglevel=error
-    npm --workspace @hister/ext run build
+    npm --workspace @nogon/ext run build
 )
 
 echo "==> Staging into $RESOURCES"
@@ -84,7 +84,7 @@ rsync -a --delete \
 # so a submodule bump cannot slip a permission past review.
 python3 - "$DIST/$UPSTREAM_MANIFEST" "$TARGET" <<'PY'
 import json, sys
-known = {"tabs", "storage", "cookies"}
+known = {"tabs", "storage", "cookies", "webRequest"}
 m = json.load(open(sys.argv[1]))
 if m.get("content_scripts") != [{"js": ["content.js"], "matches": ["<all_urls>"]}]:
     sys.exit("upstream content_scripts changed; update the copy in patches/manifest.shiori.json")

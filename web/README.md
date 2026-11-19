@@ -168,7 +168,7 @@ pass through untouched and are never added, so Hister's same-origin check still 
 
 Over http, Hister's `base_url` doesn't have to match the address you open Shiori at. Over https it does matter: an https
 `base_url` makes Hister's cookie Secure, so Shiori must be served over https too. To make a Hister user, run
-`hister create-user` on a terminal: it asks for the password there.
+`nogon user create` (Hister 0.20's `hister create-user`) on a terminal: it asks for the password there.
 
 **Verify the image** (each release is signed by its workflow, no key to fetch):
 

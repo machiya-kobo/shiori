@@ -40,7 +40,7 @@ The popup, skip rules, "index this page", "skip this page/domain" and PDF indexi
 
 ## How it's built
 
-- `vendor/hister/` pins the **official upstream extension** as a git submodule (currently **v0.20.0**, extension 0.31.0). Shiori never modifies or forks it.
+- `vendor/hister/` pins the **official upstream extension** as a git submodule (currently Nogon **v0.22.0**, extension 0.34.0; Hister before v0.22). Shiori never modifies or forks it.
 - `scripts/build-extension.sh` builds it with npm, then patches the built bundle:
   - `patches/manifest.shiori.json` and `patches/manifest.safari.json`: icons, name, Shiori's shortcuts, no `cookies` permission.
   - Prepended to `background.js`: `patches/safari-shims.js`, `patches/ext/host-native.js`, `patches/ext/core.js` (the offline queue, tagged captures, combined search), `patches/shiori/search-core.js`, `patches/ext/badge.js` and `patches/ext/menus.js`.

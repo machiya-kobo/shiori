@@ -2,7 +2,7 @@
 //
 // No text beside the HTML. Upstream sends the page's innerText as well as
 // its HTML, but Hister derives the text from the HTML: every extractor
-// either sets it or leaves the page unindexed (server/extractor, v0.20.0),
+// either sets it or leaves the page unindexed (server/extractor, v0.20.0; Nogon v0.22.0 still does),
 // so the text was carried to the background, through the offline queue and
 // up to the server only to be replaced. It stays when there's no HTML.
 //

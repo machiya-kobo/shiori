@@ -78,8 +78,8 @@ means sign-in is unavailable, said in a line, never an error page.
 `/machiya/signout`, which ends the Hister session and every id on it, then
 forgets both. A browser signs out on the helper's `/machiya/sessions` page
 (it lists every browser and app, with Sign Out for one or all). The token
-is separate: make a new one in Hister (`hister update-user <you>
---regen-token`) and every holder needs the new one.
+is separate: make a new one in Hister (`nogon user update <you>
+--regen-token`, Hister 0.20's `hister update-user`) and every holder needs the new one.
 
 **Testing.** Never against a live Hister: a sign-in writes a session.
 HisterKit's `HisterUsersLiveTests` run against a throwaway Hister with
