@@ -407,7 +407,8 @@ struct ResultsScreen: View {
         .onChange(of: searched) { _, words in
             // Best match while searching, the newest first while browsing.
             model = ResultsModel(
-                query: words.isEmpty ? route.query : "\(route.query) \(words)",
+                // Grouped when an OR joins them, so the label holds for every one.
+                query: words.isEmpty ? route.query : "\(route.query) \(SearchText.histerWords(words, prefix: false))",
                 sort: words.isEmpty ? .newest : .relevance, filterable: true)
         }
         .navigationTitle(route.title)

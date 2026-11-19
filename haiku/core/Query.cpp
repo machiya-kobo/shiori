@@ -262,6 +262,92 @@ std::string CloseQuote(const std::string& text)
 	return quotes % 2 ? text + "\"" : text;
 }
 
+// Nogon's operators (v0.21+): AND, OR and NOT, uppercase. NOT binds tighter
+// than AND, then OR, and an operator left without a term fails the whole
+// search. search-core.js's quoteStrayOperators / groupWords are the twins.
+static bool IsOperatorWord(const std::string& w)
+{
+	return w == "AND" || w == "OR" || w == "NOT";
+}
+
+static size_t CountQuotes(const std::string& w)
+{
+	size_t n = 0;
+	for (char c : w) {
+		if (c == '"')
+			n++;
+	}
+	return n;
+}
+
+// Each word, and whether it's an operator (outside a quote).
+static std::vector<bool> OperatorFlags(const std::vector<std::string>& words)
+{
+	std::vector<bool> ops;
+	bool quoted = false;
+	for (const auto& w : words) {
+		ops.push_back(!quoted && IsOperatorWord(w));
+		if (CountQuotes(w) % 2)
+			quoted = !quoted;
+	}
+	return ops;
+}
+
+std::string QuoteStrayOperators(const std::string& text)
+{
+	std::vector<std::string> words = SplitWords(text);
+	std::vector<bool> ops = OperatorFlags(words);
+	const long n = long(words.size());
+	auto isOp = [&](long i, bool anyOperator) {
+		if (i < 0 || i >= n || !ops[size_t(i)])
+			return false;
+		return anyOperator || words[size_t(i)] != "NOT";
+	};
+	std::vector<std::string> out;
+	bool changed = false;
+	for (long i = 0; i < n; i++) {
+		const std::string& w = words[size_t(i)];
+		bool stray = false;
+		if (ops[size_t(i)]) {
+			bool last = i == n - 1;
+			stray = w == "NOT" ? last || isOp(i + 1, false)
+				: i == 0 || last || isOp(i - 1, true) || isOp(i + 1, false);
+		}
+		out.push_back(stray ? "\"" + w + "\"" : w);
+		changed = changed || stray;
+	}
+	return changed ? JoinWords(out) : text;
+}
+
+std::string GroupWords(const std::string& text)
+{
+	std::string t = Trim(text);
+	std::vector<std::string> words = SplitWords(t);
+	std::vector<bool> ops = OperatorFlags(words);
+	int depth = 0;
+	bool quoted = false;
+	bool orWord = false;
+	for (size_t i = 0; i < words.size(); i++) {
+		if (ops[i] && words[i] == "OR" && depth == 0)
+			orWord = true;
+		for (char c : words[i]) {
+			if (c == '"')
+				quoted = !quoted;
+			else if (!quoted && c == '(')
+				depth++;
+			else if (!quoted && c == ')')
+				depth = depth > 0 ? depth - 1 : 0;
+		}
+	}
+	return orWord ? "(" + t + ")" : t;
+}
+
+std::string HisterWords(const std::string& text, bool prefix)
+{
+	std::string t = QuoteStrayOperators(CloseQuote(Trim(text)));
+	return GroupWords(prefix ? PrefixLastWord(t, true) : t);
+}
+
 std::string ExcludingNotes(const std::string& text)
 {
 	std::string t = Trim(text);
@@ -273,7 +359,7 @@ std::string ExcludingNotes(const std::string& text)
 
 std::string HisterText(const std::string& text)
 {
-	std::string sent = ExcludingNotes(PrefixLastWord(CloseQuote(Trim(text)), true));
+	std::string sent = ExcludingNotes(HisterWords(text));
 	std::vector<std::string> words = SplitWords(sent);
 	if (!Contains(words, kFilesTerm) && !Contains(words, kFilesExclusion))
 		sent += std::string(" ") + kFilesExclusion;
@@ -284,13 +370,13 @@ std::string HisterText(const std::string& text)
 
 std::string CodeQuery(const std::string& typed)
 {
-	std::string words = Trim(typed);
+	std::string words = HisterWords(typed, false);
 	return std::string(kCodeTerm) + " " + (words.empty() ? "*" : words);
 }
 
 std::string FilesQuery(const std::string& typed)
 {
-	std::string words = Trim(typed);
+	std::string words = HisterWords(typed, false);
 	return std::string(kFilesTerm) + " " + (words.empty() ? "*" : words);
 }
 
@@ -363,7 +449,7 @@ std::string NotesSource(const std::string& choice, bool kuraConfigured)
 std::string HisterNotesText(const std::string& text)
 {
 	std::string t = Trim(text);
-	std::string words = t.empty() || t == "*" ? "*" : PrefixLastWord(CloseQuote(t), true);
+	std::string words = t.empty() || t == "*" ? "*" : HisterWords(t);
 	return words + " label:vault";
 }
 

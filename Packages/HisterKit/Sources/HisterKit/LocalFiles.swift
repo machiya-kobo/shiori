@@ -20,7 +20,7 @@ public enum LocalFiles {
     /// The Files pill's query from what was typed (`*` for none). The term
     /// leads, so the last typed word still becomes a prefix.
     public static func query(_ typed: String) -> String {
-        let words = typed.trimmingCharacters(in: .whitespaces)
+        let words = SearchText.histerWords(typed, prefix: false)
         return "\(term) \(words.isEmpty ? "*" : words)"
     }
 

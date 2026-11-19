@@ -17,7 +17,11 @@ public struct OpenedEntry: Sendable, Equatable, Hashable, Identifiable, Decodabl
     public var added: Date
     /// The search as it was typed, for showing.
     public var typedQuery: String {
-        let shown = Notes.withoutExclusion(query)
+        var shown = Notes.withoutExclusion(query)
+        // "(a OR b)": the words `SearchText.groupWords` put in parentheses.
+        if shown.hasPrefix("("), shown.hasSuffix(")"), SearchText.groupWords(String(shown.dropFirst().dropLast())) == shown {
+            shown = String(shown.dropFirst().dropLast())
+        }
         // "(word|word*)" as sent now (`SearchText.forHister`), "word*" before.
         if shown.hasSuffix("*)"), let open = shown.lastIndex(of: "("), let bar = shown[open...].firstIndex(of: "|") {
             let word = shown[shown.index(after: open)..<bar]

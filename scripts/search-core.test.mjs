@@ -591,6 +591,25 @@ test('Hister never gets the notes or the files', () => {
   assert.equal(S.typedQuery(S.histerText('raspberry pi')), 'raspberry pi');
 });
 
+// HisterKit's OperatorTests, and the Haiku and classic cores through gen-vectors.
+test("Nogon's AND, OR and NOT: stray ones quoted, an OR grouped (scripts/operator-cases.json)", () => {
+  const { cases } = JSON.parse(readFileSync(new URL('./operator-cases.json', import.meta.url), 'utf8'));
+  assert.ok(cases.length > 20);
+  for (const c of cases) {
+    assert.equal(S.quoteStrayOperators(c.typed), c.stray, c.typed);
+    assert.equal(S.groupWords(c.typed), c.grouped, c.typed);
+    assert.equal(S.histerText(c.typed), c.sent, c.typed);
+    assert.equal(S.histerNotesText(c.typed), c.notes, c.typed);
+    assert.equal(S.typedQuery(S.histerText(c.typed)), c.shown, c.typed);
+  }
+  // "a OR b -label:vault" would be "a OR (b -label:vault)": a's notes in.
+  assert.equal(S.histerText('a OR b'), '(a OR b) -label:vault -metadata.source:vault -type:local -metadata.source:code');
+  assert.equal(S.filesQuery('a OR b'), 'type:local (a OR b)');
+  assert.equal(S.codeQuery('bug OR crash'), 'metadata.source:code (bug OR crash)');
+  assert.equal(S.histerText(S.histerText('a OR b')), S.histerText('a OR b'));
+  assert.equal(S.rankedText('rock AND'), 'rock "AND"');
+});
+
 // HisterKit's RankedPagesTests, case for case.
 test("All asks for the plain words too, in Hister's own order", () => {
   const cases = [

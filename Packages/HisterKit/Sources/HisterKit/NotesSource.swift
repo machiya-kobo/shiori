@@ -23,7 +23,7 @@ extension SearchText {
     /// newest, and `label:vault`.
     public static func forHisterNotes(_ text: String) -> String {
         let t = text.trimmingCharacters(in: .whitespaces)
-        let words = t.isEmpty || t == "*" ? "*" : prefixLastWord(closeQuote(t), union: true)
+        let words = t.isEmpty || t == "*" ? "*" : histerWords(t)
         return "\(words) label:vault"
     }
 }

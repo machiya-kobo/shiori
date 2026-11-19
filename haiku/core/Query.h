@@ -29,6 +29,13 @@ std::string CloseQuote(const std::string& text);
 std::string ExcludingNotes(const std::string& text);
 // search-core: a Hister search as sent (the last word a prefix, never the
 // notes, and never the files or code unless it asks).
+// Nogon's operators: a stray AND, OR or NOT quoted, and words an OR joins
+// in parentheses (search-core.js's quoteStrayOperators / groupWords).
+std::string QuoteStrayOperators(const std::string& text);
+std::string GroupWords(const std::string& text);
+// Typed words as sent: a dangling quote closed, stray operators quoted, the
+// last word a prefix (unless prefix is false), grouped.
+std::string HisterWords(const std::string& text, bool prefix = true);
 std::string HisterText(const std::string& text);
 // search-core's notesSource (scripts/notes-source-cases.json): "hister" when chosen,
 // else "kura" when one is set up, else "hister". choice: the setting ('' until chosen).

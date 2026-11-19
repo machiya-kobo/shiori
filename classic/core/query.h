@@ -23,6 +23,11 @@ int shiori_trim(const char *text, char *out, long cap);
 /* the last word as a prefix: "hist" -> "hist*", or with unionForm "(hist|hist*)" */
 int shiori_prefix_last_word(const char *text, int unionForm, char *out, long cap);
 /* a Hister search as sent: the last word a prefix, never the notes, files or code unless asked */
+/* Nogon's operators: a stray AND, OR or NOT quoted; words an OR joins in parentheses;
+   both, with the dangling quote closed and the last word a prefix (search-core.js's twins). */
+int shiori_quote_stray_operators(const char *text, char *out, long cap);
+int shiori_group_words(const char *text, char *out, long cap);
+int shiori_hister_words(const char *text, int prefix, char *out, long cap);
 int shiori_hister_text(const char *text, char *out, long cap);
 int shiori_code_query(const char *typed, char *out, long cap);
 int shiori_files_query(const char *typed, char *out, long cap);

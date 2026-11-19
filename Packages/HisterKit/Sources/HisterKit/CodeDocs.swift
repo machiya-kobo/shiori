@@ -81,7 +81,7 @@ public enum CodeDocs {
         if filters.open { terms.append("metadata.code_state:open") }
         if let repo = filters.repo, !repo.isEmpty { terms.append("metadata.code_repo:\(repoKey(repo))") }
         if filters.privateOnly { terms.append("metadata.code_private:true") }
-        let words = typed.trimmingCharacters(in: .whitespaces)
+        let words = SearchText.histerWords(typed, prefix: false)
         return "\(terms.joined(separator: " ")) \(words.isEmpty ? "*" : words)"
     }
 

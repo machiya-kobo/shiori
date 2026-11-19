@@ -7,15 +7,23 @@ Loaded when you work in `Packages/HisterKit`. The same logic lives in JavaScript
 - Every request needs `Origin: hister://`. `limit`, `sort` and `highlight`
   only work inside the JSON `query=` parameter. `*` with sort `date` is
   "recent". Snippets are HTML with `<mark>`. A malformed regexp returns zero
-  results. Replies can hold raw control characters (decoding retries with
+  results; a malformed query (an operator with no term, an unclosed group) is
+  a 400 (`invalidQuery`, Nogon's message). Replies can hold raw control characters (decoding retries with
   them blanked). Query strings go through `URLComponents.setQueryItems` (it
   escapes "+").
 - **Every Hister query ends in ` -label:vault -metadata.source:vault
   -type:local -metadata.source:code`** (`SearchText.forHister` /
   `S.histerText`, applied inside the clients): notes come from Kura, files
   only on the Files pill (a query with `type:local` keeps them), code only on
-  the Code pill. There's no `NOT` and no exclude parameter; a negated field
-  works with exact totals.
+  the Code pill. There's no exclude parameter; a negated field works with
+  exact totals.
+- **Uppercase `AND`, `OR` and `NOT` are operators** (Nogon v0.21+): NOT binds
+  tighter than AND, then OR. So the typed words go through
+  `SearchText.histerWords` / `S.histerWords` (twins with the Haiku and classic
+  cores, on `scripts/operator-cases.json`): a stray operator is quoted (alone it
+  fails the whole search), and words an OR joins are grouped, or the exclusions
+  after them would hold for the last alternative only (`a OR b -label:vault`
+  let a's notes in). Anything that adds a term to typed words groups them first.
 - The last typed word is searched as a prefix (`prefixLastWord`): Hister and
   Kura match whole words. Hister has no fuzzy search (`word~2` finds "2");
   respellings come from SearXNG's autocomplete (`Respelling.didYouMean` /

@@ -1188,6 +1188,63 @@
     return union ? `${t.slice(0, t.length - word.length)}(${word}|${word}*)` : t + '*';
   }
 
+  // --- Nogon's operators (v0.21+): AND, OR and NOT, uppercase -------------------------
+  // NOT binds tighter than AND, then OR, and a query an operator leaves without a
+  // term fails whole (400). HisterKit's SearchText is the twin, with the same tests.
+  const OPERATORS = ['AND', 'OR', 'NOT'];
+  /** The words split on spaces, each with whether it's an operator (outside a quote). */
+  function operatorWords(text) {
+    let quoted = false;
+    return String(text || '').split(/\s+/).filter(Boolean).map((w) => {
+      const op = !quoted && OPERATORS.includes(w);
+      if ((w.match(/"/g) || []).length % 2) quoted = !quoted;
+      return { w, op };
+    });
+  }
+  /**
+   * A stray AND, OR or NOT quoted, so it's searched as a word: one with no
+   * term to join or negate ("AND", "rock AND", "NOT OR x") fails the whole search.
+   */
+  function quoteStrayOperators(text) {
+    const words = operatorWords(text);
+    const isOp = (i, names) => i >= 0 && i < words.length && words[i].op && names.includes(words[i].w);
+    const out = words.map(({ w, op }, i) => {
+      if (!op) return w;
+      const last = i === words.length - 1;
+      const stray = w === 'NOT'
+        ? last || isOp(i + 1, ['AND', 'OR'])
+        : i === 0 || last || isOp(i - 1, OPERATORS) || isOp(i + 1, ['AND', 'OR']);
+      return stray ? `"${w}"` : w;
+    });
+    // Unchanged when nothing was quoted, spaces and all.
+    return out.some((w, i) => w !== words[i].w) ? out.join(' ') : String(text || '');
+  }
+  /**
+   * The words in parentheses when an OR joins them, so a term added after them
+   * (the notes' exclusion, a label, a filter) applies to all: "a OR b
+   * -label:vault" is "a OR (b -label:vault)", which lets a's notes in.
+   */
+  function groupWords(text) {
+    const t = String(text || '').trim();
+    let depth = 0;
+    let quoted = false;
+    let or = false;
+    for (const { w, op } of operatorWords(t)) {
+      if (op && w === 'OR' && depth === 0) or = true;
+      for (const ch of w) {
+        if (ch === '"') quoted = !quoted;
+        else if (!quoted && ch === '(') depth++;
+        else if (!quoted && ch === ')') depth = Math.max(0, depth - 1);
+      }
+    }
+    return or ? `(${t})` : t;
+  }
+  /** Typed words as Nogon takes them: a dangling quote closed, stray operators quoted, the last word a prefix, grouped. */
+  function histerWords(text, { prefix = true } = {}) {
+    const t = quoteStrayOperators(closeQuote(String(text || '').trim()));
+    return groupWords(prefix ? prefixLastWord(t, { union: true }) : t);
+  }
+
   /**
    * Shiori reads notes only from Kura: every Hister query leaves them out.
    * Hister has no exclude parameter, but a negated field works ("*
@@ -1216,7 +1273,7 @@
   }
   /** The Files tab's query from what was typed; the term leads, so the last word stays a prefix. */
   function filesQuery(typed) {
-    const words = String(typed || '').trim();
+    const words = histerWords(typed, { prefix: false });
     return `${FILES_TERM} ${words || '*'}`;
   }
   /** A watched file, known by its address. */
@@ -1278,7 +1335,7 @@
     if (f.open === true) terms.push('metadata.code_state:open');
     if (f.repo) terms.push(`metadata.code_repo:${codeRepoKey(f.repo)}`);
     if (f.private === true) terms.push('metadata.code_private:true');
-    const words = String(typed || '').trim();
+    const words = histerWords(typed, { prefix: false });
     return `${terms.join(' ')} ${words || '*'}`;
   }
   // The forges code-import reads, for the host filter and each row's badge.
@@ -1317,7 +1374,7 @@
   }
 
   function histerText(text) {
-    let sent = excludingNotes(prefixLastWord(closeQuote(String(text || '').trim()), { union: true }));
+    let sent = excludingNotes(histerWords(text));
     const words = sent.split(/\s+/);
     if (!asksForFiles(sent) && !words.includes(FILES_EXCLUSION)) sent = `${sent} ${FILES_EXCLUSION}`;
     if (!asksForCode(sent) && !words.includes(CODE_EXCLUSION)) sent = `${sent} ${CODE_EXCLUSION}`;
@@ -1326,7 +1383,10 @@
 
   /** A query as typed, from one sent (the Opened list shows it). */
   function typedQuery(text) {
-    const shown = String(text || '').split(/\s+/).filter((w) => w && !EXCLUSION_TERMS.includes(w) && w !== FILES_EXCLUSION && w !== CODE_EXCLUSION).join(' ');
+    let shown = String(text || '').split(/\s+/).filter((w) => w && !EXCLUSION_TERMS.includes(w) && w !== FILES_EXCLUSION && w !== CODE_EXCLUSION).join(' ');
+    // "(a OR b)": the words groupWords put in parentheses.
+    const grouped = shown.match(/^\((.*)\)$/s);
+    if (grouped && groupWords(grouped[1]) === shown) shown = grouped[1];
     // "(word|word*)" as sent now, "word*" before.
     const union = shown.match(/^(.*?)\(([\p{L}\p{N}]+)\|\2\*\)$/u);
     if (union) return union[1] + union[2];
@@ -1343,7 +1403,7 @@
 
   /** The words as Hister ranks them, or '' when they hold syntax (a field, -word, a group, *, an @alias). */
   function rankedText(text) {
-    const t = closeQuote(String(text || '').trim());
+    const t = quoteStrayOperators(closeQuote(String(text || '').trim()));
     if (!t || t === '*') return '';
     return t.split(/\s+/).every((w) => !/[:()|*]/.test(w) && !/^[-@]/.test(w)) ? t : '';
   }
@@ -3014,7 +3074,7 @@
   /** Hister's query for notes: the words (the last a prefix), `*` for the newest, and label:vault. */
   function histerNotesText(text) {
     const t = String(text || '').trim();
-    const words = !t || t === '*' ? '*' : prefixLastWord(closeQuote(t), { union: true });
+    const words = !t || t === '*' ? '*' : histerWords(t);
     return `${words} label:vault`;
   }
 
@@ -4227,6 +4287,9 @@
     prefixLastWord,
     excludingNotes,
     histerText,
+    histerWords,
+    groupWords,
+    quoteStrayOperators,
     asksForFiles,
     filesQuery,
     isLocalFile,

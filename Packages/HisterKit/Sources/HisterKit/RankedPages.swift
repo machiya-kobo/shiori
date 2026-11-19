@@ -12,7 +12,7 @@ public enum RankedPages {
     /// The words as Hister ranks them, or nil when they hold syntax (a
     /// field, -word, a group, *, an @alias), which turns the bonuses off anyway.
     public static func text(_ typed: String) -> String? {
-        let t = SearchText.closeQuote(typed.trimmingCharacters(in: .whitespaces))
+        let t = SearchText.quoteStrayOperators(SearchText.closeQuote(typed.trimmingCharacters(in: .whitespaces)))
         guard !t.isEmpty, t != "*" else { return nil }
         let plain = t.split(whereSeparator: \.isWhitespace).allSatisfy { word in
             !word.contains(where: { ":()|*".contains($0) }) && !word.hasPrefix("-") && !word.hasPrefix("@")

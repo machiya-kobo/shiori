@@ -1612,7 +1612,8 @@ function viewList(params) {
   const load = () => {
     const words = field.value.trim();
     const c = listChoices(params, { search: !!words });
-    const query = withWord(words ? `${q} ${words}` : q, c.word);
+    // Grouped when an OR joins them, so the label holds for every one.
+    const query = withWord(words ? `${q} ${S.histerWords(words, { prefix: false })}` : q, c.word);
     shownList = { title, query, sort: c.hister, feed: S.feedURL(location.origin, { query, title, feedService: FEED_SERVICE }) };
     resultsList(freshList(), {
       query, sort: c.hister, group: c.group, opened: false,

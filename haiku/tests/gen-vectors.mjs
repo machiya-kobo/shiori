@@ -28,6 +28,8 @@ const inputs = [
   'rust label:programming async', 'label:(alpha|mac) added:>2026-01-01', '-domain:www.example.com go', 'site:example.com go',
   '@vintage amiga', 'rust -domain:reddit.com', 'metadata.code_kind:issue bug', 'type:local pi', 'a1', '12', 'x2',
   'hello—world', 'emoji 😀', '  padded  words  ', 'tab\there', 'Ünïcödé', 'привет мир', 'ab',
+  // Nogon's AND, OR and NOT (scripts/operator-cases.json): stray ones quoted, an OR grouped.
+  ...JSON.parse(readFileSync(new URL('../../scripts/operator-cases.json', import.meta.url), 'utf8')).cases.map((c) => c.typed),
 ];
 
 // A C89 string literal: printable ASCII as is (but \\, " and ?, which could

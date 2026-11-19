@@ -1,0 +1,205 @@
+{
+ "_about": "Nogon (v0.21+) operators: quoteStrayOperators, groupWords and the sent text (histerText, histerNotesText). search-core.js and HisterKit SearchText read these; haiku and classic get them through gen-vectors.",
+ "cases": [
+  {
+   "typed": "AND",
+   "stray": "\"AND\"",
+   "grouped": "AND",
+   "sent": "\"AND\" -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "\"AND\" label:vault",
+   "shown": "\"AND\""
+  },
+  {
+   "typed": "OR",
+   "stray": "\"OR\"",
+   "grouped": "(OR)",
+   "sent": "\"OR\" -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "\"OR\" label:vault",
+   "shown": "\"OR\""
+  },
+  {
+   "typed": "NOT",
+   "stray": "\"NOT\"",
+   "grouped": "NOT",
+   "sent": "\"NOT\" -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "\"NOT\" label:vault",
+   "shown": "\"NOT\""
+  },
+  {
+   "typed": "rock AND",
+   "stray": "rock \"AND\"",
+   "grouped": "rock AND",
+   "sent": "rock \"AND\" -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "rock \"AND\" label:vault",
+   "shown": "rock \"AND\""
+  },
+  {
+   "typed": "AND roll",
+   "stray": "\"AND\" roll",
+   "grouped": "AND roll",
+   "sent": "\"AND\" (roll|roll*) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "\"AND\" (roll|roll*) label:vault",
+   "shown": "\"AND\" roll"
+  },
+  {
+   "typed": "rock AND roll",
+   "stray": "rock AND roll",
+   "grouped": "rock AND roll",
+   "sent": "rock AND (roll|roll*) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "rock AND (roll|roll*) label:vault",
+   "shown": "rock AND roll"
+  },
+  {
+   "typed": "rock and roll",
+   "stray": "rock and roll",
+   "grouped": "rock and roll",
+   "sent": "rock and (roll|roll*) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "rock and (roll|roll*) label:vault",
+   "shown": "rock and roll"
+  },
+  {
+   "typed": "x AND OR y",
+   "stray": "x \"AND\" \"OR\" y",
+   "grouped": "(x AND OR y)",
+   "sent": "x \"AND\" \"OR\" y -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "x \"AND\" \"OR\" y label:vault",
+   "shown": "x \"AND\" \"OR\" y"
+  },
+  {
+   "typed": "NOT OR x",
+   "stray": "\"NOT\" \"OR\" x",
+   "grouped": "(NOT OR x)",
+   "sent": "\"NOT\" \"OR\" x -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "\"NOT\" \"OR\" x label:vault",
+   "shown": "\"NOT\" \"OR\" x"
+  },
+  {
+   "typed": "NOT NOT x",
+   "stray": "NOT NOT x",
+   "grouped": "NOT NOT x",
+   "sent": "NOT NOT x -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "NOT NOT x label:vault",
+   "shown": "NOT NOT x"
+  },
+  {
+   "typed": "foo NOT",
+   "stray": "foo \"NOT\"",
+   "grouped": "foo NOT",
+   "sent": "foo \"NOT\" -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "foo \"NOT\" label:vault",
+   "shown": "foo \"NOT\""
+  },
+  {
+   "typed": "NOT foo",
+   "stray": "NOT foo",
+   "grouped": "NOT foo",
+   "sent": "NOT (foo|foo*) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "NOT (foo|foo*) label:vault",
+   "shown": "NOT foo"
+  },
+  {
+   "typed": "a OR b",
+   "stray": "a OR b",
+   "grouped": "(a OR b)",
+   "sent": "(a OR b) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "(a OR b) label:vault",
+   "shown": "a OR b"
+  },
+  {
+   "typed": "a OR b c",
+   "stray": "a OR b c",
+   "grouped": "(a OR b c)",
+   "sent": "(a OR b c) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "(a OR b c) label:vault",
+   "shown": "a OR b c"
+  },
+  {
+   "typed": "(a OR b) c",
+   "stray": "(a OR b) c",
+   "grouped": "(a OR b) c",
+   "sent": "(a OR b) c -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "(a OR b) c label:vault",
+   "shown": "(a OR b) c"
+  },
+  {
+   "typed": "\"a OR b\"",
+   "stray": "\"a OR b\"",
+   "grouped": "\"a OR b\"",
+   "sent": "\"a OR b\" -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "\"a OR b\" label:vault",
+   "shown": "\"a OR b\""
+  },
+  {
+   "typed": "\"tom AND\" jerry",
+   "stray": "\"tom AND\" jerry",
+   "grouped": "\"tom AND\" jerry",
+   "sent": "\"tom AND\" (jerry|jerry*) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "\"tom AND\" (jerry|jerry*) label:vault",
+   "shown": "\"tom AND\" jerry"
+  },
+  {
+   "typed": "a OR",
+   "stray": "a \"OR\"",
+   "grouped": "(a OR)",
+   "sent": "a \"OR\" -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "a \"OR\" label:vault",
+   "shown": "a \"OR\""
+  },
+  {
+   "typed": "OR a",
+   "stray": "\"OR\" a",
+   "grouped": "(OR a)",
+   "sent": "\"OR\" a -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "\"OR\" a label:vault",
+   "shown": "\"OR\" a"
+  },
+  {
+   "typed": "forth OR tom",
+   "stray": "forth OR tom",
+   "grouped": "(forth OR tom)",
+   "sent": "(forth OR (tom|tom*)) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "(forth OR (tom|tom*)) label:vault",
+   "shown": "forth OR tom"
+  },
+  {
+   "typed": "a OR b label:x",
+   "stray": "a OR b label:x",
+   "grouped": "(a OR b label:x)",
+   "sent": "(a OR b label:x) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "(a OR b label:x) label:vault",
+   "shown": "a OR b label:x"
+  },
+  {
+   "typed": "label:(a|b) OR c",
+   "stray": "label:(a|b) OR c",
+   "grouped": "(label:(a|b) OR c)",
+   "sent": "(label:(a|b) OR c) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "(label:(a|b) OR c) label:vault",
+   "shown": "label:(a|b) OR c"
+  },
+  {
+   "typed": "café OR thé",
+   "stray": "café OR thé",
+   "grouped": "(café OR thé)",
+   "sent": "(café OR (thé|thé*)) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "(café OR (thé|thé*)) label:vault",
+   "shown": "café OR thé"
+  },
+  {
+   "typed": "ORegon AND",
+   "stray": "ORegon \"AND\"",
+   "grouped": "ORegon AND",
+   "sent": "ORegon \"AND\" -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "ORegon \"AND\" label:vault",
+   "shown": "ORegon \"AND\""
+  },
+  {
+   "typed": "a  OR  b",
+   "stray": "a  OR  b",
+   "grouped": "(a  OR  b)",
+   "sent": "(a  OR  b) -label:vault -metadata.source:vault -type:local -metadata.source:code",
+   "notes": "(a  OR  b) label:vault",
+   "shown": "a OR b"
+  }
+ ]
+}

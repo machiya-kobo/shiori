@@ -318,16 +318,130 @@ int shiori_prefix_last_word(const char *t, int unionForm, char *out, long cap)
 	return b.ok;
 }
 
+/* -- Nogon's operators (v0.21+): AND, OR and NOT, uppercase --------------------------------- */
+/* NOT binds tighter than AND, then OR, and an operator left without a term fails the whole
+   search. search-core.js's quoteStrayOperators / groupWords are the twins. */
+
+/* 1 for AND or OR, 2 for NOT, 0 for anything else */
+static int operator_kind(const char *w, long n)
+{
+	if (n == 2 && w[0] == 'O' && w[1] == 'R')
+		return 1;
+	if (n == 3 && w[0] == 'A' && w[1] == 'N' && w[2] == 'D')
+		return 1;
+	if (n == 3 && w[0] == 'N' && w[1] == 'O' && w[2] == 'T')
+		return 2;
+	return 0;
+}
+
+/* The next word and its operator kind (0 inside a quote); *quoted follows the quotes. */
+static int next_op_word(const char *t, long len, long *i, long *start, long *n, int *quoted, int *kind)
+{
+	long k;
+	int q = 0;
+
+	if (!next_word(t, len, i, start, n))
+		return 0;
+	*kind = *quoted ? 0 : operator_kind(t + *start, *n);
+	for (k = 0; k < *n; k++)
+		if (t[*start + k] == '"')
+			q++;
+	if (q % 2)
+		*quoted = !*quoted;
+	return 1;
+}
+
+int shiori_quote_stray_operators(const char *t, char *out, long cap)
+{
+	long len = (long) strlen(t), i = 0, start, n, nextStart = 0, nextN = 0;
+	int quoted = 0, kind, prevKind = 0, nextKind = 0, hasNext, first = 1, stray, changed = 0;
+	Buf b;
+
+	b_init(&b, out, cap);
+	hasNext = next_op_word(t, len, &i, &nextStart, &nextN, &quoted, &nextKind);
+	while (hasNext) {
+		start = nextStart;
+		n = nextN;
+		kind = nextKind;
+		hasNext = next_op_word(t, len, &i, &nextStart, &nextN, &quoted, &nextKind);
+		/* NOT needs a term after it; AND and OR one on each side */
+		if (kind == 2)
+			stray = !hasNext || nextKind == 1;
+		else if (kind == 1)
+			stray = first || !hasNext || prevKind != 0 || (hasNext && nextKind == 1);
+		else
+			stray = 0;
+		if (!first)
+			b_add(&b, " ");
+		if (stray)
+			b_add(&b, "\"");
+		b_addn(&b, t + start, n);
+		if (stray)
+			b_add(&b, "\"");
+		changed |= stray;
+		prevKind = kind;
+		first = 0;
+	}
+	/* unchanged when nothing was quoted, spaces and all */
+	return changed ? b.ok : b_set(out, cap, t, len);
+}
+
+int shiori_group_words(const char *text, char *out, long cap)
+{
+	long len, i = 0, start, n, k;
+	int quoted = 0, wordQuoted = 0, kind, depth = 0, orWord = 0;
+	char ch;
+
+	if (!shiori_trim(text, out, cap))
+		return 0;
+	len = (long) strlen(out);
+	while (next_op_word(out, len, &i, &start, &n, &wordQuoted, &kind)) {
+		if (kind == 1 && n == 2 && depth == 0)
+			orWord = 1;
+		for (k = 0; k < n; k++) {
+			ch = out[start + k];
+			if (ch == '"')
+				quoted = !quoted;
+			else if (!quoted && ch == '(')
+				depth++;
+			else if (!quoted && ch == ')')
+				depth = depth > 0 ? depth - 1 : 0;
+		}
+	}
+	if (!orWord)
+		return 1;
+	if (len + 3 > cap)
+		return 0;
+	/* in place: the words moved one along, then the parentheses */
+	memmove(out + 1, out, (size_t) len);
+	out[0] = '(';
+	out[len + 1] = ')';
+	out[len + 2] = '\0';
+	return 1;
+}
+
+int shiori_hister_words(const char *text, int prefix, char *out, long cap)
+{
+	char tmp[2 * SHIORI_MAX_TEXT + 16];
+
+	/* a dangling quote closed, stray operators quoted, the last word a prefix (prefix), grouped */
+	if (!shiori_trim(text, out, cap - 1))
+		return 0;
+	if (quote_count(out) % 2)
+		strcat(out, "\"");
+	if (!shiori_quote_stray_operators(out, tmp, (long) sizeof(tmp)))
+		return 0;
+	if (prefix ? !shiori_prefix_last_word(tmp, 1, out, cap) : !b_set(out, cap, tmp, (long) strlen(tmp)))
+		return 0;
+	return shiori_group_words(out, out, cap);
+}
+
 int shiori_hister_text(const char *text, char *out, long cap)
 {
 	char a[SHIORI_MAX_TEXT + 8], c[2 * SHIORI_MAX_TEXT + 16];
 	Buf b;
 
-	if (!shiori_trim(text, a, (long) sizeof(a) - 1))
-		return b_set(out, cap, "", 0) && 0;
-	if (quote_count(a) % 2)
-		strcat(a, "\"");
-	if (!shiori_prefix_last_word(a, 1, c, (long) sizeof(c)))
+	if (!shiori_trim(text, a, (long) sizeof(a) - 1) || !shiori_hister_words(a, 1, c, (long) sizeof(c)))
 		return b_set(out, cap, "", 0) && 0;
 	/* never the notes (ExcludingNotes over the trimmed text) */
 	if (!shiori_trim(c, c, (long) sizeof(c)))
@@ -348,10 +462,10 @@ int shiori_hister_text(const char *text, char *out, long cap)
 
 static int term_query(const char *term, const char *typed, char *out, long cap)
 {
-	char t[SHIORI_MAX_TEXT + 1];
+	char a[SHIORI_MAX_TEXT + 1], t[2 * SHIORI_MAX_TEXT + 16];
 	Buf b;
 
-	if (!shiori_trim(typed, t, (long) sizeof(t)))
+	if (!shiori_trim(typed, a, (long) sizeof(a)) || !shiori_hister_words(a, 0, t, (long) sizeof(t)))
 		return 0;
 	b_init(&b, out, cap);
 	b_add(&b, term);
@@ -484,9 +598,7 @@ int shiori_hister_notes_text(const char *text, char *out, long cap)
 		b_add(&b, "* label:vault");
 		return b.ok;
 	}
-	if (quote_count(a) % 2)
-		strcat(a, "\"");
-	if (!shiori_prefix_last_word(a, 1, c, (long) sizeof(c)))
+	if (!shiori_hister_words(a, 1, c, (long) sizeof(c)))
 		return 0;
 	b_add(&b, c);
 	b_add(&b, " label:vault");
