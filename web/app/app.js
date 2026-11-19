@@ -1033,7 +1033,7 @@ function resultsList(container, options) {
     } catch (error) {
       loading = false;
       const retry = () => resultsList(container, options);
-      if (first) container.replaceChildren(error.status === 401 && source !== 'pages' ? signInStatus(retry, error) : status(error.unreachable ? "Can't Reach Hister" : 'Something Went Wrong', error.message, retry));
+      if (first) container.replaceChildren(error.status === 401 && source !== 'pages' ? signInStatus(retry, error) : status(error.unreachable ? "Can't Reach Nogon" : 'Something Went Wrong', error.message, retry));
     }
   }
   new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && page(false), { root: $('list'), rootMargin: '600px' }).observe(sentinel);
@@ -1397,7 +1397,7 @@ api.setRefusedHandler((status, path) => {
     if (S.signInDue(storage || { getItem: () => null, setItem() {} })) location.assign(url);
   } else if (asked === 'unavailable' && !unavailableSaid && readLocal('shioriSignInSeen')) {
     unavailableSaid = true;
-    toast("Sign-in is unavailable right now: Hister or its sign-in helper isn't answering.");
+    toast("Sign-in is unavailable right now: Nogon or its sign-in helper isn't answering.");
   }
 });
 /** The Rooms menu's last row, as the rooms end theirs: Shiori's Settings. */
@@ -1519,7 +1519,7 @@ function viewLibrary(params) {
   if (filter === 'files') {
     // The folders Hister watches, newest first; never mixed into the rest.
     shownList = { title: 'Files' };
-    return resultsList(list, { query: S.filesQuery(''), sort: 'date', group: '', source: 'pages', empty: 'Files show up here once your Hister server watches a folder.', opened: false });
+    return resultsList(list, { query: S.filesQuery(''), sort: 'date', group: '', source: 'pages', empty: 'Files show up here once your Nogon server watches a folder.', opened: false });
   }
   const c = listChoices(params);
   const query = withWord('*', c.word);
@@ -1534,7 +1534,7 @@ function viewLibrary(params) {
     // All mixes in your notes newest first, unfiltered (Kura has no visits,
     // sites or filter words); otherwise it's your pages.
     merge: c.hister === 'date' && !c.word && (c.group === '' || c.group === 'day' || c.group === 'month'),
-    empty: 'Pages you visit show up here once Hister has them.',
+    empty: 'Pages you visit show up here once Nogon has them.',
     opened: false,
   });
 }
@@ -1558,7 +1558,7 @@ async function viewOpened(container, filter = '') {
     container.replaceChildren(list);
     dropStaleSelection(container);
   } catch (error) {
-    container.replaceChildren(status("Can't Reach Hister", error.message, () => viewOpened(container, filter)));
+    container.replaceChildren(status("Can't Reach Nogon", error.message, () => viewOpened(container, filter)));
   }
 }
 
@@ -1575,7 +1575,7 @@ function viewLabels() {
       h('div', { class: 'title', style: 'color:var(--text)' }, name),
     );
   if (!labels.length) {
-    $('list').replaceChildren(status('No Labels Yet', 'Labels come from your Hister server’s aliases.', async () => {
+    $('list').replaceChildren(status('No Labels Yet', 'Labels come from your Nogon server’s aliases.', async () => {
       await loadRules();
       render();
     }));
@@ -2201,7 +2201,7 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
   if (!embedded) container.replaceChildren(h('div', { class: 'spinner' }));
   const wq = S.webQuery(q);
   const mineOnly = (...rest) => container.replaceChildren(...[...rest, mix.some(Boolean) ? h('ul', { class: 'rows' }, mix.filter(Boolean)) : null].filter(Boolean));
-  if (!wq) return mineOnly(status('Hister Only', 'That query is Hister syntax only, so the web isn’t searched.'));
+  if (!wq) return mineOnly(status('Nogon Only', 'That query is Nogon syntax only, so the web isn’t searched.'));
   try {
     const data = await api.web(wq, 1, webTime(route().params), 'general', settings.safeSearch);
     const results = (await wikipediaFirst(data.results || [], wq)).filter((r) => typeof r.url === 'string' && /^https?:/.test(r.url));
@@ -2259,7 +2259,7 @@ async function webList(container, q, { embedded = false, mix = [] } = {}) {
 async function webTabList(container, q, cat) {
   container.replaceChildren(h('div', { class: 'spinner' }));
   const wq = S.webQuery(q);
-  if (!wq) return container.replaceChildren(status('Hister Only', 'That query is Hister syntax only, so the web isn’t searched.'));
+  if (!wq) return container.replaceChildren(status('Nogon Only', 'That query is Nogon syntax only, so the web isn’t searched.'));
   let data;
   try {
     data = await api.web(wq, 1, webTime(route().params), cat, settings.safeSearch);
@@ -2654,12 +2654,12 @@ async function showPreview(doc, { extractor = '' } = {}) {
       ? [
           // Hister's copy: the file:// address is the server's.
           iconButton('open', 'Open', () => open(S.localFileURL(location.origin, doc.url))),
-          iconButton('search', 'Open in Hister', () => open(api.histerPageURL(doc.url))),
+          iconButton('search', 'Open in Nogon', () => open(api.histerPageURL(doc.url))),
         ]
       : [
         iconButton('open', 'Open in Browser', () => open(doc.url)),
         iconButton('share', 'Share', () => (navigator.share ? navigator.share({ url: doc.url, title: doc.title }).catch(() => {}) : copy(doc.url))),
-        iconButton('search', 'Open in Hister', () => open(api.histerPageURL(doc.url))),
+        iconButton('search', 'Open in Nogon', () => open(api.histerPageURL(doc.url))),
       ];
   // A code document's repo note in Kura (Repos/<name>.git.md), when there is one.
   const code = S.codeInfo(doc);
@@ -3104,7 +3104,7 @@ function settingsPage(key, title) {
   // Notes From: the source in use until one's picked ('' isn't a choice).
   const notesFrom = () => {
     const now = notesFromHister() ? 'hister' : 'kura';
-    const select = h('select', { 'aria-label': 'Notes From' }, [['kura', 'Kura'], ['hister', 'Hister']].map(([v, t]) => h('option', { value: v, selected: now === v }, t)));
+    const select = h('select', { 'aria-label': 'Notes From' }, [['kura', 'Kura'], ['hister', 'Nogon']].map(([v, t]) => h('option', { value: v, selected: now === v }, t)));
     select.addEventListener('change', () => changeSetting('notesSource', select.value));
     return h('label', { class: 'item' }, h('span', {}, 'Notes From'), select);
   };
@@ -3140,7 +3140,7 @@ function settingsPage(key, title) {
           settings.smallWebTab ? choice('smallWebOpen', 'Open Results', [['gateway', 'Through the Gateway'], ['direct', 'In a Gemini App']]) : null,
         ], 'Gemini and Gopher through the small-web gateway, searched when you press Return.'),
         ...group('Notes', [notesFrom(), text('niwaURL', 'Kura', 'https://kura.example/'), text('konbiniURL', 'Konbini', 'https://konbini.example/'), text('obsidianVault', 'Obsidian Vault', 'Your vault’s name', 'text')],
-          'Notes open in this Obsidian vault, with their Kura page and Konbini card beside them. From Hister, only your default vault’s notes.'),
+          'Notes open in this Obsidian vault, with their Kura page and Konbini card beside them. From Nogon, only your default vault’s notes.'),
       ];
     case 'results':
       return [
@@ -3166,7 +3166,7 @@ function settingsPage(key, title) {
           toggle('showOpened', 'Show Opened'),
           webSaveOffered ? toggle('saveOpenedWeb', 'Save Web Results You Open') : null,
         ], webSaveOffered
-          ? 'Recent searches stay in this browser. Remember What You Open puts what you open first next time, and Save Web Results You Open adds a web result you open to Hister.'
+          ? 'Recent searches stay in this browser. Remember What You Open puts what you open first next time, and Save Web Results You Open adds a web result you open to Nogon.'
           : 'Recent searches stay in this browser. Remember What You Open puts the results you open first next time.'),
       ];
     case 'media':

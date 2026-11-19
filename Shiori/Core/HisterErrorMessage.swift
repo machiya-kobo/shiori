@@ -13,9 +13,9 @@ extension HisterError {
         case .previewUnavailable:
             "This page's preview couldn't be shown."
         case .invalidQuery(let message):
-            message.isEmpty ? "Hister couldn't read that query." : message
+            message.isEmpty ? "Nogon couldn't read that query." : message
         case .notFound:
-            "Hister no longer has this page."
+            "Nogon no longer has this page."
         case .unexpectedMatchCount(let n):
             "That would have deleted \(n) pages, so nothing was deleted."
         case .server(let status, let message):
@@ -27,7 +27,7 @@ extension HisterError {
         case .rejected(let rejection):
             rejection.reason
         case .signedOut:
-            "Hister wants you to sign in: sign in again in Settings → Account (or check the access token there)."
+            "Nogon wants you to sign in: sign in again in Settings → Account (or check the access token there)."
         }
     }
 }

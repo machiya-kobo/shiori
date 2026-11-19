@@ -63,7 +63,7 @@ void RunSave(BMessenger target, Config config, std::string url, std::string titl
 
 SaveWindow::SaveWindow(const char* url, const char* title, const char* label)
 	:
-	BWindow(BRect(140, 140, 640, 300), "Save to Hister", B_TITLED_WINDOW,
+	BWindow(BRect(140, 140, 640, 300), "Save to Nogon", B_TITLED_WINDOW,
 		B_AUTO_UPDATE_SIZE_LIMITS | B_ASYNCHRONOUS_CONTROLS | B_NOT_ZOOMABLE | B_CLOSE_ON_ESCAPE)
 {
 	fURL = new BTextControl("url", "URL:", url, NULL);
@@ -111,7 +111,7 @@ void SaveWindow::Save()
 	}
 	Config config = CurrentConfig();
 	if (Trim(config.server).empty()) {
-		fStatus->SetText("Set up Hister in Settings first.");
+		fStatus->SetText("Set up Nogon in Settings first.");
 		return;
 	}
 	fSave->SetEnabled(false);
@@ -144,22 +144,22 @@ void SaveWindow::MessageReceived(BMessage* message)
 			int32 status = message->GetInt32("status", 0);
 			fSave->SetEnabled(true);
 			if (status >= 200 && status <= 299) {
-				fStatus->SetText("Saved to Hister.");
+				fStatus->SetText("Saved to Nogon.");
 				break;
 			}
 			std::string reason = RejectionReason(status);
 			bool queued = message->GetBool("queued", false);
 			if (queued && (status == 401 || status == 403))
-				reason = "Kept for later: Hister wants you signed in (or a token) in Settings.";
+				reason = "Kept for later: Nogon wants you signed in (or a token) in Settings.";
 			else if (queued && status == 0 && IsCertificateError(message->GetString("error", "")))
-				reason = "Kept for later. " + TransportProblem("Hister", message->GetString("error", ""));
+				reason = "Kept for later. " + TransportProblem("Nogon", message->GetString("error", ""));
 			else if (queued)
-				reason = "Kept for later: Hister can't take it now. It goes when Hister is back.";
+				reason = "Kept for later: Nogon can't take it now. It goes when Nogon is back.";
 			else if (message->HasString("queueError"))
-				reason = std::string("Hister can't take it now, and it couldn't be kept: ")
+				reason = std::string("Nogon can't take it now, and it couldn't be kept: ")
 					+ message->GetString("queueError", "");
 			else if (reason.empty())
-				reason = "Hister answered " + std::to_string(status) + ".";
+				reason = "Nogon answered " + std::to_string(status) + ".";
 			fStatus->SetText(reason.c_str());
 			break;
 		}

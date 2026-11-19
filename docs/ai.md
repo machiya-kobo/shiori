@@ -68,13 +68,13 @@ says so ("Summarized by Claude").
 - The style is short: one sentence of at most 25 words, then two to four
   points of at most 12 words each. A hard `tidy` keeps the on-device model
   to that.
-- Cached per page (url + Hister's `updated`) in the app's Caches, 300 at
-  most, never in Hister (its metadata is last-writer-wins).
+- Cached per page (url + Nogon's `updated`) in the app's Caches, 300 at
+  most, never in Nogon (its metadata is last-writer-wins).
 - A summary or an answer that hit the model's token cap (Anthropic's
   `max_tokens`, OpenAI's `length`) is shown marked Cut Short, with
   Regenerate, and never cached.
 - **On the web** the hosted pages can use a companion service on the
-  Hister host (`/shiori/ai/*`, same origin only): Machiya's
+  Nogon host (`/shiori/ai/*`, same origin only): Machiya's
   [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md), in the reference compose's `shiori` profile; the pages ask for it only when built with `SHIORI_AI=1`
   (web/README.md), and without it they simply don't offer Summarize or AI
   Answer (nor log a 404 for its status). Its contract: `GET /shiori/ai/status`
@@ -105,7 +105,7 @@ says so ("Summarized by Claude").
   minutes apart and wait while Low Power Mode is on or the device is warm.
   An engine that can't answer (offline, busy, a refused key, an unknown
   model) stops the run, and its pages wait for the next one. Its state
-  (labelling.json) belongs to one account: another Hister server, or
+  (labelling.json) belongs to one account: another Nogon server, or
   another user signed in, starts it over; signing out keeps it.
 - **Suggest Labels** (Settings → AI, and Suggested Labels) runs the same
   asking once, on request, with Label New Pages on or off: the newest
@@ -123,7 +123,7 @@ says so ("Summarized by Claude").
 
 ## Collections
 
-Collections are Hister's aliases: `@media: label:(film|music)`.
+Collections are Nogon's aliases: `@media: label:(film|music)`.
 Shiori edits them only through Keep Collections Current, and only:
 
 - `@`-keywords (only those are collections); a plain alias is the user's
@@ -134,7 +134,7 @@ Shiori edits them only through Keep Collections Current, and only:
 
 A label is placed automatically on the same terms as a page's label;
 otherwise it's asked. New collections are always asked. Every change goes
-through Hister's `api/add_alias` / `api/delete_alias`, logged with the
+through Nogon's `api/add_alias` / `api/delete_alias`, logged with the
 previous value for Undo.
 
 ## The AI Answer
@@ -156,7 +156,7 @@ where it went wrong.
   another vault's note; no answer means private.
   `EngineChain.eligible(for:)` enforces both by the content's kind, so no
   caller has to remember.
-- Skip-listed and sensitive pages never reach Hister, so never reach the AI.
+- Skip-listed and sensitive pages never reach Nogon, so never reach the AI.
 - Page text is quoted data in the user turn, never instructions, and the
   output is constrained to a schema.
 - Logs name counts and engines, never page text or keys.

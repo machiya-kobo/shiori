@@ -21,10 +21,10 @@ Using it: [docs/haiku.md](../docs/haiku.md). These notes are for working on it.
 ## Testing
 
 `haiku/tests/ui-run.sh`, on a Haiku test machine, drives the app with
-`hey` against `haiku/fake-services.py` (a fake Hister, sign-in helper and
+`hey` against `haiku/fake-services.py` (a fake Nogon, sign-in helper and
 Kura that log every credential they get and shout when one goes where it
 mustn't), and takes screenshots. It replaces the settings: never run it
-where Shiori is in use, and never test a save against a real Hister.
+where Shiori is in use, and never test a save against a real Nogon.
 
 Launching by signature (the Deskbar item does, with `be_roster->Launch`)
 picks the build tree's binary over the installed package's when both

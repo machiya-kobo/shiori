@@ -906,7 +906,7 @@
           `${p.content || ''}</body></html>`;
       } catch (_) {
         if (current !== url) return;
-        frame.srcdoc = `<!doctype html><meta charset="utf-8"><style>${pageCSS()}</style><p class="meta">Hister couldn't show a preview of this page.</p>`;
+        frame.srcdoc = `<!doctype html><meta charset="utf-8"><style>${pageCSS()}</style><p class="meta">Nogon couldn't show a preview of this page.</p>`;
       }
     }
     function clear() {
@@ -1166,8 +1166,8 @@
       { key: 'histerTab', label: 'Pages Tab' },
       { key: 'vaultTab', label: 'Notes Tab' },
       // This device's own (never the account's), as Kura's address is.
-      { key: 'notesSource', label: 'Notes From', options: [['kura', 'Kura'], ['hister', 'Hister']] },
-    ], () => 'From Hister: your default vault’s notes only.'],
+      { key: 'notesSource', label: 'Notes From', options: [['kura', 'Kura'], ['hister', 'Nogon']] },
+    ], () => 'From Nogon: your default vault’s notes only.'],
     ['Results', [
       { key: 'resultStyle', label: 'Result Style', options: [['tint', 'Tint'], ['solid', 'Solid'], ['bar', 'Left Bar'], ['none', 'None']] },
       { key: 'foldRepeats', label: 'Fold Repeated Sites' },
@@ -1183,7 +1183,7 @@
       { key: 'rememberOpened', label: 'Remember What You Open' },
       { key: 'showOpened', label: 'Show Opened' },
       { key: 'saveOpenedWeb', label: 'Save Web Results You Open', when: () => webSaveOffered },
-    ], () => (webSaveOffered ? 'Save Web Results You Open adds a web result you open to Hister.' : '')],
+    ], () => (webSaveOffered ? 'Save Web Results You Open adds a web result you open to Nogon.' : '')],
   ];
   const LOOK_KEYS = ['theme', 'palette', 'textSize', 'previewPane', 'pillRow'];
   // Settings → Pills: whether the pills' editor is open.
@@ -1893,7 +1893,7 @@
       } catch (_) {}
       if (!seen) return;
       refused.said = true;
-      showStatus("Sign-in is unavailable right now: Hister or its sign-in helper isn't answering.");
+      showStatus("Sign-in is unavailable right now: Nogon or its sign-in helper isn't answering.");
     }
   }
 
@@ -2017,8 +2017,8 @@
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body),
       credentials: 'same-origin', keepalive: true,
     })
-      .then((r) => (r.ok ? '' : r.status === 429 ? 'Not saved to Hister: too many saves are waiting.' : "Not saved to Hister: the gateway wouldn't take it."))
-      .catch(() => "Not saved to Hister: the gateway didn't answer.")
+      .then((r) => (r.ok ? '' : r.status === 429 ? 'Not saved to Nogon: too many saves are waiting.' : "Not saved to Nogon: the gateway wouldn't take it."))
+      .catch(() => "Not saved to Nogon: the gateway didn't answer.")
       .then((problem) => {
         if (!problem) return;
         const t = el('div', { class: 'kbd-toast', role: 'status' }, problem);
@@ -2277,7 +2277,7 @@
       urlLine(d.url, favicon),
       saved ? relativeDate(saved) : null,
       markedSnippet(d.text),
-      places(d.label ? labelChip(d.label) : null, chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister'), ...elsewhere(d.url)),
+      places(d.label ? labelChip(d.label) : null, chipLink('nogon', 'hister', histerPage(d.url), 'Open in Nogon'), ...elsewhere(d.url)),
     );
   }
 
@@ -2294,7 +2294,7 @@
       el('div', { class: 'url' }, el('span', { class: 'crumbs' }, S.localFilePath(d.url))),
       saved ? relativeDate(saved) : null,
       markedSnippet(d.text),
-      places(chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister')),
+      places(chipLink('nogon', 'hister', histerPage(d.url), 'Open in Nogon')),
     );
   }
 
@@ -2309,7 +2309,7 @@
     const code = S.codeInfo(d) || {};
     const [glyph, kindName] = CODE_GLYPHS[code.kind] || ['‹›', 'Code'];
     const saved = d.updated || d.added;
-    const where = places(chipLink('hister', 'hister', histerPage(d.url), 'Open in Hister'));
+    const where = places(chipLink('nogon', 'hister', histerPage(d.url), 'Open in Nogon'));
     const notePath = S.codeNotePath(code.repoName);
     if (notePath && kuraBase) {
       fetchJSON(`${kuraBase}api/note?path=${encodeURIComponent(notePath)}`, { timeout: 4000, room: true })
@@ -2916,7 +2916,7 @@
       if (!reply.results.length) return showStatus('Nothing on the Small Web matches.');
       // Safari's own page (not the hosted one) can't ask the gateway to save a
       // direct open: its origin isn't one the gateway accepts.
-      const unsaved = direct && !settings.smallwebAPIURL ? ["Pages opened in a Gemini app from here aren't saved to Hister."] : [];
+      const unsaved = direct && !settings.smallwebAPIURL ? ["Pages opened in a Gemini app from here aren't saved to Nogon."] : [];
       if (reply.failures.length || unsaved.length) $('timing').textContent = [...reply.failures, ...unsaved].join(' · ');
       const opened = (r, isDirect) => {
         recordOpened(r.url, r.title);
@@ -3014,11 +3014,11 @@
       const histerUI = S.histerUIBase('__SHIORI_ROOMS__', histerBase, /^https?:$/.test(location.protocol) ? location.origin : '');
       if (!vault && histerUI) {
         const words = files ? S.filesQuery(q) : code ? S.codeQuery(q, codeFiltersFromAddress()) : q;
-        controls.append(el('a', { class: 'tools-link', href: S.linkHref(`${histerUI}?q=${encodeURIComponent(words)}`, location.href) }, 'Open in Hister ›'));
+        controls.append(el('a', { class: 'tools-link', href: S.linkHref(`${histerUI}?q=${encodeURIComponent(words)}`, location.href) }, 'Open in Nogon ›'));
       }
       fadeEdges($('tools-row'));
-      if (vault && !notesBase) return showStatus(notesFromHister ? 'No Hister server is set up.' : 'No Kura address is set up (Settings → Search → Notes).');
-      if (!vault && !histerBase) return showStatus('No Hister server is set up.');
+      if (vault && !notesBase) return showStatus(notesFromHister ? 'No Nogon server is set up.' : 'No Kura address is set up (Settings → Search → Notes).');
+      if (!vault && !histerBase) return showStatus('No Nogon server is set up.');
       let result = pageState[category];
       // From Hister: the default vault's notes alone, so no vault menu.
       if (vault && !notesFromHister) {
@@ -3043,7 +3043,7 @@
           pageState[category] = result;
           saveState(run);
         } catch (_) {
-          return showStatus('Hister could not be reached.');
+          return showStatus('Nogon could not be reached.');
         }
       }
       if (!result && vault) {
@@ -3072,7 +3072,7 @@
           pageState[category] = result;
           saveState(run);
         } catch (_) {
-          return showStatus('Hister could not be reached.');
+          return showStatus('Nogon could not be reached.');
         }
       }
       // Pages is your web pages: Hister sends no notes, but an opened one
@@ -3453,7 +3453,7 @@
       mixIn();
       if (yoursFailed.length) sayYoursFailed();
       else if (!histerDocs.length && !vaultDocs.length) {
-        showStatus(settings.webResults ? 'No pages in Hister match.' : 'Nothing in your pages or notes matches.');
+        showStatus(settings.webResults ? 'No pages in Nogon match.' : 'Nothing in your pages or notes matches.');
       }
       return restoreScroll();
     }

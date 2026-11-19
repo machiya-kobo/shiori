@@ -552,9 +552,9 @@ std::string TransportProblem(const std::string& who, const std::string& error)
 std::string RejectionReason(int status)
 {
 	switch (status) {
-		case 406: return "Hister skips this site.";
-		case 413: return "The page is too large for Hister.";
-		case 422: return "Hister refused it as sensitive (it looks like it holds a secret).";
+		case 406: return "Nogon skips this site.";
+		case 413: return "The page is too large for Nogon.";
+		case 422: return "Nogon refused it as sensitive (it looks like it holds a secret).";
 	}
 	return "";
 }

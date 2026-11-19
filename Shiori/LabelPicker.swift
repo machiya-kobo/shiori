@@ -95,7 +95,7 @@ struct LabelPicker: View {
             ContentUnavailableView {
                 Label("No Labels Yet", systemImage: "tag")
             } description: {
-                Text("Labels come from your Hister server's aliases.")
+                Text("Labels come from your Nogon server's aliases.")
             } actions: {
                 Button("Try Again") { Task { await loadLabels(again: true) } }
                     .buttonStyle(.bordered)

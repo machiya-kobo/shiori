@@ -38,7 +38,7 @@ Logic shared by the apps and the web pages has twins (Swift in HisterKit,
 JavaScript in `patches/shiori/search-core.js`) with the same test cases;
 change both.
 
-**Never test a write against a real Hister.** Use the stubs in the test
+**Never test a write against a real Nogon.** Use the stubs in the test
 suites or `linux/fake-hister.py`. Read-only checks against your own server
 are fine: `HISTER_LIVE_URL` and `KURA_LIVE_URL` turn them on.
 
@@ -56,7 +56,7 @@ are fine: `HISTER_LIVE_URL` and `KURA_LIVE_URL` turn them on.
   servers the user configures (and AI providers only when the user turns AI
   on). No analytics.
 - A note from a private vault (any but the default, unless Kura marks it
-  shared) never goes to Hister, to an AI engine, a cache, an export or a
+  shared) never goes to Nogon, to an AI engine, a cache, an export or a
   feed. When Kura can't say, every other vault is private.
 - Match the surrounding code: its naming, comment density and idiom.
 

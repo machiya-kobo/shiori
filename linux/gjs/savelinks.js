@@ -50,7 +50,7 @@ export async function heldURLs(config, urls) {
     const q = S().urlLookupQuery(urls.slice(i, i + 30));
     if (!q) continue;
     const r = await requestJSON(config, `${server}search?${new URLSearchParams({ query: JSON.stringify({ text: q, limit: 100 }) })}`, { hister: true });
-    if (r.status !== 200) throw new Error(`Hister answered ${r.status}.`);
+    if (r.status !== 200) throw new Error(`Nogon answered ${r.status}.`);
     for (const d of (r.json && r.json.documents) || []) {
       held.add(d.url);
       held.add(d.url.endsWith('/') ? d.url.slice(0, -1) : d.url + '/');
@@ -66,12 +66,12 @@ export async function heldURLs(config, urls) {
  */
 export async function holds(config, url) {
   const server = withSlash(config.server);
-  if (!server) throw new Error('No Hister server is set.');
+  if (!server) throw new Error('No Nogon server is set.');
   const twin = url.endsWith('/') ? url.slice(0, -1) : url + '/';
   for (const candidate of [url, twin]) {
     const r = await requestJSON(config, `${server}api/document?${new URLSearchParams({ url: candidate })}`, { method: 'HEAD', hister: true });
     if (r.status === 200) return true;
-    if (r.status !== 404) throw new Error(`Hister answered ${r.status}.`);
+    if (r.status !== 404) throw new Error(`Nogon answered ${r.status}.`);
   }
   return false;
 }
@@ -118,7 +118,7 @@ export async function saveLink(config, row, { label = null, anyway = false, stor
     try {
       return (await holds(config, url)) ? { outcome: 'held' } : null;
     } catch (error) {
-      return { outcome: 'failed', reason: `Couldn't check whether Hister has it: ${error.message}` };
+      return { outcome: 'failed', reason: `Couldn't check whether Nogon has it: ${error.message}` };
     }
   };
   const before = await held(row.url);
@@ -151,7 +151,7 @@ export async function saveLink(config, row, { label = null, anyway = false, stor
     await outbox.enqueue(store, page);
     return { outcome: 'queued' };
   }
-  return { outcome: status === 406 ? 'skipped' : 'rejected', reason: rejectionReason(status, `Hister refused it (${status}).`) };
+  return { outcome: status === 406 ? 'skipped' : 'rejected', reason: rejectionReason(status, `Nogon refused it (${status}).`) };
 }
 
 /**
@@ -195,7 +195,7 @@ export async function labelWhenSaved(config, url, label, { tries = 6, wait = pau
 
 /** `shiori save-links`: resolves to { code, message } for the command line, printing as it goes. */
 export async function saveLinksCommand(config, { path = null, folder = null, label = null, dryRun = false }, say = print) {
-  if (!config.server) return { code: 2, message: 'No Hister server in ~/.config/shiori/config.json' };
+  if (!config.server) return { code: 2, message: 'No Nogon server in ~/.config/shiori/config.json' };
   let found;
   try {
     found = await findLinks(config, path ? { path } : { folder });
@@ -205,13 +205,13 @@ export async function saveLinksCommand(config, { path = null, folder = null, lab
   const { rows, candidates } = found;
   if (!rows.length) return { code: 0, message: `No links to other sites in ${path || folder}.` };
   const open = rows.filter((r) => !r.held && !r.file && !r.needsGateway);
-  for (const r of rows.filter((r) => r.held)) say(`in Hister  ${r.url}`);
+  for (const r of rows.filter((r) => r.held)) say(`in Nogon  ${r.url}`);
   for (const r of rows.filter((r) => r.file && !r.held)) say(`a file     ${r.url}`);
   for (const r of rows.filter((r) => r.needsGateway && !r.held)) say(`needs the small-web gateway  ${r.url}`);
   if (dryRun) {
     for (const r of open) say(`not yet    ${r.url}`);
     const hint = candidates.length ? ` Labels from the note's tags: ${candidates.join(', ')}.` : '';
-    return { code: 0, message: `${open.length} of ${rows.length} links not in Hister yet.${hint}` };
+    return { code: 0, message: `${open.length} of ${rows.length} links not in Nogon yet.${hint}` };
   }
   const store = fileStore();
   const counts = { saved: 0, queued: 0, held: 0, skipped: 0, rejected: 0, failed: 0, gateway: 0 };
@@ -220,7 +220,7 @@ export async function saveLinksCommand(config, { path = null, folder = null, lab
     const { outcome, reason, url } = await saveLink(config, r, { label, store });
     counts[outcome] += 1;
     if (outcome === 'gateway') viaGateway.push(url);
-    const word = { saved: 'saved', queued: 'queued', held: 'in Hister', skipped: 'skipped', rejected: 'refused', failed: 'failed', gateway: 'gateway' }[outcome];
+    const word = { saved: 'saved', queued: 'queued', held: 'in Nogon', skipped: 'skipped', rejected: 'refused', failed: 'failed', gateway: 'gateway' }[outcome];
     say(`${word.padEnd(10)} ${r.url}${reason ? `  (${reason}${outcome === 'skipped' ? ` To save it anyway: shiori save ${r.url}` : ''})` : ''}`);
   }
   // The gateway saves without a label: the batch's goes on once each page arrives.
@@ -234,5 +234,5 @@ export async function saveLinksCommand(config, { path = null, folder = null, lab
   if (counts.queued) parts.push(`${counts.queued} queued`);
   if (counts.skipped) parts.push(`${counts.skipped} skipped by a skip rule`);
   if (counts.rejected + counts.failed) parts.push(`${counts.rejected + counts.failed} not saved`);
-  return { code: counts.failed + counts.rejected ? 1 : 0, message: `${parts.join(', ')}; ${rows.length - open.length + counts.held} already in Hister.` };
+  return { code: counts.failed + counts.rejected ? 1 : 0, message: `${parts.join(', ')}; ${rows.length - open.length + counts.held} already in Nogon.` };
 }

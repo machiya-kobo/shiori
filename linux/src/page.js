@@ -72,5 +72,5 @@ export function capped(html) {
 
 /** Why Hister refused a page for good (HisterKit's Rejection). */
 export function rejectionReason(status, message = '') {
-  return { 406: 'Hister skips this site.', 413: 'The page is too large for Hister.', 422: 'Hister refused it as sensitive (it looks like it holds a secret).' }[status] || message;
+  return { 406: 'Nogon skips this site.', 413: 'The page is too large for Nogon.', 422: 'Nogon refused it as sensitive (it looks like it holds a secret).' }[status] || message;
 }

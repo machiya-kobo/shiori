@@ -104,7 +104,7 @@ struct SuggestedLabelsView: View {
             LabelPicker(document: Self.page(suggestion)) { failure = $0 }
         }
         .alert(
-            "Couldn't Update Hister",
+            "Couldn't Update Nogon",
             isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
         ) {
             Button("OK", role: .cancel) {}

@@ -177,7 +177,7 @@ static void TestSave()
 	CheckTrue("not javascript", !IsWebURL("javascript:alert(1)"));
 	CheckTrue("not bare scheme", !IsWebURL("https:///x"));
 	CheckTrue("not file", !IsWebURL("file:///etc/passwd"));
-	Check("rejection 422", RejectionReason(422), "Hister refused it as sensitive (it looks like it holds a secret).");
+	Check("rejection 422", RejectionReason(422), "Nogon refused it as sensitive (it looks like it holds a secret).");
 }
 
 static void TestCredentials()
@@ -286,7 +286,7 @@ static void TestSignIn()
 	CheckTrue("a helper answer without an id", !SignInFromTrade("{\"username\":\"alex\"}", session, traded));
 	CheckTrue("offered while Hister has users", SignInAvailable(200, "{\"ok\":true,\"hister\":\"ok\"}"));
 	CheckTrue("not offered otherwise", !SignInAvailable(200, "{\"ok\":false}") && !SignInAvailable(503, ""));
-	Check("401 in words", LoginProblem(401), "Hister didn't recognise that name and password.");
+	Check("401 in words", LoginProblem(401), "Nogon didn't recognise that name and password.");
 
 	// Signed in: Hister gets its session (and the token), the rooms the id, never the session.
 	Config c;

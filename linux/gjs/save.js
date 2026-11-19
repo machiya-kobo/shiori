@@ -101,7 +101,7 @@ export async function send(config, page) {
 
 /** `shiori save`: resolves to { code, message } for the command line. */
 export async function save(config, { url, label = null }) {
-  if (!config.server) return { code: 2, message: 'No Hister server in ~/.config/shiori/config.json' };
+  if (!config.server) return { code: 2, message: 'No Nogon server in ~/.config/shiori/config.json' };
   const fetched = await fetchPage(url);
   const page = newPage({ url: fetched.url || url, title: fetched.title, html: fetched.html || null, label, clientVersion: VERSION });
   const store = fileStore();
@@ -110,7 +110,7 @@ export async function save(config, { url, label = null }) {
     status = await send(config, page);
   } catch (_) {
     await outbox.enqueue(store, page);
-    return { code: 0, message: 'Hister is out of reach: queued, and sent when it’s back (shiori send).' };
+    return { code: 0, message: 'Nogon is out of reach: queued, and sent when it’s back (shiori send).' };
   }
   const result = outbox.outcome(status);
   if (result === 'sent') {
@@ -119,13 +119,13 @@ export async function save(config, { url, label = null }) {
   }
   if (result === 'retry') {
     await outbox.enqueue(store, page);
-    return { code: 0, message: `Hister answered ${status}: queued, and sent later (shiori send).` };
+    return { code: 0, message: `Nogon answered ${status}: queued, and sent later (shiori send).` };
   }
   if (result === 'hold') {
     await outbox.enqueue(store, page);
-    return { code: 1, message: `Hister wants you signed in (${status}): queued until then. Run shiori sign-in, or set "histerToken" in config.json, then shiori send.` };
+    return { code: 1, message: `Nogon wants you signed in (${status}): queued until then. Run shiori sign-in, or set "histerToken" in config.json, then shiori send.` };
   }
-  return { code: 1, message: rejectionReason(status, `Hister refused it (${status}).`) };
+  return { code: 1, message: rejectionReason(status, `Nogon refused it (${status}).`) };
 }
 
 /** `shiori send`: what's waiting, now. */
@@ -134,8 +134,8 @@ export async function sendWaiting(config) {
   const r = await outbox.drain(store, (p) => send(config, p));
   const left = (await outbox.status(store)).count;
   const why = r.signedOut
-    ? ' (Hister wants you signed in: run shiori sign-in, or set "histerToken" in config.json, then shiori send)'
-    : r.stopped ? ' (Hister is out of reach or unwell)' : '';
+    ? ' (Nogon wants you signed in: run shiori sign-in, or set "histerToken" in config.json, then shiori send)'
+    : r.stopped ? ' (Nogon is out of reach or unwell)' : '';
   return { code: r.stopped ? 1 : 0, message: `Sent ${r.sent}, dropped ${r.dropped}; ${left} waiting${why}.` };
 }
 

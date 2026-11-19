@@ -40,7 +40,7 @@ void RunSignIn(BMessenger target, Config config, std::string name, std::string p
 	HttpReply login = HttpRequestJSON(config, "POST", base + "api/login", LoginBody(name, password), true, false);
 	password.assign(password.size(), '\0');
 	if (login.status == 0) {
-		done.AddString("error", TransportProblem("Hister", login.error).c_str());
+		done.AddString("error", TransportProblem("Nogon", login.error).c_str());
 		target.SendMessage(&done);
 		return;
 	}
@@ -77,14 +77,14 @@ void RunSignIn(BMessenger target, Config config, std::string name, std::string p
 
 SignInWindow::SignInWindow(BMessenger notify)
 	:
-	BWindow(BRect(200, 200, 560, 340), "Sign in to Hister", B_TITLED_WINDOW,
+	BWindow(BRect(200, 200, 560, 340), "Sign in to Nogon", B_TITLED_WINDOW,
 		B_AUTO_UPDATE_SIZE_LIMITS | B_ASYNCHRONOUS_CONTROLS | B_NOT_ZOOMABLE | B_NOT_RESIZABLE | B_CLOSE_ON_ESCAPE),
 	fNotify(notify)
 {
 	fName = new BTextControl("name", "Name:", "", NULL);
 	fPassword = new BTextControl("password", "Password:", "", NULL);
 	fPassword->TextView()->HideTyping(true);
-	fStatus = new BStringView("status", "Your Hister user's name and password.");
+	fStatus = new BStringView("status", "Your Nogon user's name and password.");
 	fStatus->SetExplicitMaxSize(BSize(B_SIZE_UNLIMITED, B_SIZE_UNSET));
 	fSignIn = new BButton("signIn", "Sign In", new BMessage(kMsgDoSignIn));
 	BButton* cancel = new BButton("cancel", "Cancel", new BMessage(B_QUIT_REQUESTED));
@@ -110,7 +110,7 @@ void SignInWindow::SignIn()
 {
 	Config config = CurrentConfig();
 	if (OriginOf(config.server).empty()) {
-		fStatus->SetText("Set Hister's address in Settings first.");
+		fStatus->SetText("Set Nogon's address in Settings first.");
 		return;
 	}
 	std::string name = Trim(fName->Text());

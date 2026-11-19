@@ -34,7 +34,7 @@ Searched on purpose only (Return, the pill), never while typing.
 
 ## Private
 
-Media is treated like a work note. Nothing of it goes to Hister (Remember What
+Media is treated like a work note. Nothing of it goes to Nogon (Remember What
 You Open never records it), any AI engine (on-device included), a cache on the
 device, an export or a feed. The search page never keeps it in its Back copy,
 and nothing is previewed. Art is held in memory for the session only.

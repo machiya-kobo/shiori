@@ -303,7 +303,7 @@ test("Hister's token goes to the configured server only, as X-Access-Token", () 
   assert.deepEqual(plain(histerHeaders({ ...config, histerToken: 'not a token' }, 'https://hister.example/search', S)), {});
   assert.match(histerTokenStatus(CONFIG, 0o600, S), /no token/);
   assert.match(histerTokenStatus({ histerToken: 'no' }, 0o600, S), /isn’t a token/);
-  assert.equal(histerTokenStatus(config, 0o100600, S), 'Hister: a token in config.json.');
+  assert.equal(histerTokenStatus(config, 0o100600, S), 'Nogon: a token in config.json.');
   assert.match(histerTokenStatus(config, 0o100644, S), /mode 644\): chmod 600/);
   const http = readFileSync(new URL('../linux/gjs/http.js', import.meta.url), 'utf8');
   assert.match(http, /const token = hister && credentials \? histerHeaders\(config, url, globalThis\.ShioriSearch\)\['X-Access-Token'\] : undefined;/);
@@ -368,8 +368,8 @@ test("Hister's sign-in on Linux: the file, the cookie, the rooms' id, the reques
   assert.equal(h.signInAvailable(200, { ok: true, hister: 'user-handling-off' }), false);
   assert.equal(h.signInAvailable(503, null), false);
   assert.match(h.loginProblem(401), /didn't recognise/);
-  assert.equal(h.histerSignInStatus(null), 'Hister: not signed in.');
-  assert.equal(h.histerSignInStatus({ username: 'alex' }), 'Hister: signed in as alex (sign-in.json).');
+  assert.equal(h.histerSignInStatus(null), 'Nogon: not signed in.');
+  assert.equal(h.histerSignInStatus({ username: 'alex' }), 'Nogon: signed in as alex (sign-in.json).');
   // The command line, and http.js sending the cookie under the no-redirect rule.
   assert.deepEqual(plain(parseArgs(['sign-in'])), { command: 'sign-in' });
   assert.deepEqual(plain(parseArgs(['sign-out'])), { command: 'sign-out' });
@@ -446,7 +446,7 @@ test('a refused quick search says to sign in, never "Nothing matches"', () => {
   assert.equal(replyState({ status: 200, json: { documents: [] } }), 'ok');
   assert.equal(replyState({ status: 500, json: { error: 'x' } }), 'unreachable');
   assert.equal(replyState({ status: 200, json: null }), 'unreachable');
-  assert.deepEqual(quickStatus('lantern', 'signin', 'ok', 2), { message: 'Sign in to Hister to search your pages from here.', signIn: true });
+  assert.deepEqual(quickStatus('lantern', 'signin', 'ok', 2), { message: 'Sign in to Nogon to search your pages from here.', signIn: true });
   assert.deepEqual(quickStatus('lantern', 'ok', 'signin', 0), { message: 'Sign in to see your notes here.', signIn: true });
   assert.deepEqual(quickStatus('lantern', 'ok', 'signin', 3), { message: '', signIn: true });
   assert.deepEqual(quickStatus('lantern', 'ok', 'ok', 0), { message: 'Nothing matches “lantern”.', signIn: false });

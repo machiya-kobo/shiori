@@ -1512,7 +1512,7 @@
     { key: 'konbini', name: 'Konbini', tint: 'konbini' },
     { key: 'niwa', name: 'Niwa', tint: 'niwa' },
     { key: 'kura', name: 'Kura', tint: 'notes' },
-    { key: 'hister', name: 'Hister', tint: 'secondary', neighbour: true },
+    { key: 'hister', name: 'Nogon', tint: 'secondary', neighbour: true },
     { key: 'searxng', name: 'SearXNG', tint: 'secondary', neighbour: true },
     // The house itself: Machiya's landing and status page (SHIORI_ROOMS'
     // machiya=…), last, in a section of its own, as vaultkit's menu has it.
@@ -3227,7 +3227,7 @@
       return lines.join('\r\n') + '\r\n';
     }
     const rfc822 = (n) => new Date(secs(n) * 1000).toUTCString().replace('GMT', '+0000');
-    let out = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel>\n<title>${xml('Shiori – ' + title)}</title>\n<link>${xml(link)}</link>\n<description>${xml('Hister pages for ' + title)}</description>\n`;
+    let out = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel>\n<title>${xml('Shiori – ' + title)}</title>\n<link>${xml(link)}</link>\n<description>${xml('Nogon pages for ' + title)}</description>\n`;
     for (const p of pages) {
       out += `<item><title>${xml(p.title || p.url)}</title><link>${xml(p.url)}</link>`;
       out += `<guid isPermaLink="true">${xml(p.url)}</guid><pubDate>${rfc822(p.added)}</pubDate>`;
@@ -3358,7 +3358,7 @@
       case 'note':
         return 'Notes are never summarized on the web.';
       case 'not_indexed':
-        return "Hister doesn't have this page any more.";
+        return "Nogon doesn't have this page any more.";
       case 'empty':
         return 'This page has no text to summarize.';
       case 'cap':

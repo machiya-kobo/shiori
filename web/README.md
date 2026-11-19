@@ -15,7 +15,7 @@ stands in for the few extension APIs it uses.
 `OUT_DIR/_shiori/` (with `opensearch.xml`, which is the only file that needs
 the host name). Both builds also write `_shiori/status.json`,
 `{"version", "build", "built", "hister"}` (Shiori's version, the commit,
-the time in UTC, the Hister release it's built against; nothing else), for
+the time in UTC, the Nogon release it's built against; nothing else), for
 the house's status page. The optional last address is a status
 page: the search page links it in its footer, the web app in its sidebar
 and Settings. Without it there is no link. Rebuild after pulling a new
@@ -24,31 +24,31 @@ Shiori.
 ## What the host must route
 
 One host serves everything, so the page's requests are all same-origin
-(SearXNG sends no CORS headers, and Hister's writes only accept its own
+(SearXNG sends no CORS headers, and Nogon's writes only accept its own
 origin):
 
 | Path | Goes to |
 |---|---|
 | `/` (with any `?q=…`), `/_shiori/*`, and for the web app `/sw.js` and `/manifest.webmanifest` | the built files (`/` is `index.html`) |
-| `/basic` | Basic Search, for a browser without JavaScript (below). The image's nginx renders it; another host can leave it out, and it then reaches Hister |
+| `/basic` | Basic Search, for a browser without JavaScript (below). The image's nginx renders it; another host can leave it out, and it then reaches Nogon |
 | `/searx/*` | SearXNG, `/searx` removed (the page asks for `search?format=json` and `image_proxy`) |
 | `/konbini/*` | Konbini, `/konbini` removed (only `api/cards`) |
 | `/kura/api/search`, `/kura/api/recent`, `/kura/api/note`, `/kura/api/vaults`, `/kura/api/prefs`, `/kura/feed.xml` | Kura, `/kura` removed: your notes, and (signed in) your theme, appearance and text size. **Only these**: anything else under `/kura/` should be a 404, never Kura's reader (below) |
 | `/smallweb/*` | the small-web gateway, `/smallweb` removed (`api/search`, `api/save`): Gemini and Gopher, and the web app's Add Page (any http(s), gemini or gopher page; its `SMALLWEB_ORIGINS` must include this host's origin) |
 | `/jellyfin/*`, `/plex/*`, `/koito/*`, `/movary/*` | the media services ([docs/media.md](../docs/media.md)), the prefix removed, **GET only and only the read paths Shiori asks for** (configure.py's `MEDIA` lists them), with the host's own token added and the browser's cookies and `Authorization` dropped. The browser never holds a media token |
-| anything else | the Hister host as it is: Hister's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (Machiya's [shiori-feed](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-feed.md) and [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md), the reference compose's `shiori` profile; the pages ask for `/shiori/ai/*` only when built with `SHIORI_AI=1`) |
+| anything else | the Nogon host as it is: Nogon's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (Machiya's [shiori-feed](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-feed.md) and [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md), the reference compose's `shiori` profile; the pages ask for `/shiori/ai/*` only when built with `SHIORI_AI=1`) |
 
-Pass requests through **unchanged**. Do not add `Origin: hister://`: Hister
+Pass requests through **unchanged**. Do not add `Origin: hister://`: Nogon
 lets a same-origin browser write (`Sec-Fetch-Site: same-origin`) and
 refuses a cross-site one (403), and that check is what keeps other sites
 from, say, deleting pages through this host. Keep the host private (your
-network or VPN), like Hister itself.
+network or VPN), like Nogon itself.
 
-**Signing in (Hister's users).** When Hister has users (Hister's
+**Signing in (Hister's users).** When Nogon has users (Hister's
 `app.user_handling`, with Machiya's sign-in helper, hister-login, on
-Hister's own host), this host signs every Hister call in for the browser:
+Nogon's own host), this host signs every Nogon call in for the browser:
 the browser holds only the helper's opaque `machiya_sso` cookie, and nginx
-asks the helper (`auth_request`) for Hister's session on its own hop:
+asks the helper (`auth_request`) for Nogon's session on its own hop:
 
 ```nginx
 location = /_machiya_auth {
@@ -68,26 +68,26 @@ location / {                                        # Hister's routes, /shiori/a
 ```
 
 - `/v1/nginx` answers 200 with `X-Hister-Cookie: hister=<session>`, or 401.
-  The session travels only nginx → Hister, never to the browser: hence the
+  The session travels only nginx → Nogon, never to the browser: hence the
   `Cookie` replacement **and** `proxy_hide_header Set-Cookie`.
 - `/kura/` and `/konbini/` get `Cookie: machiya_sso=$cookie_machiya_sso`
   only; the rooms check it themselves.
 - The cookie's name is the helper's default. If you rename it
   (`MACHIYA_SSO_COOKIE`), nginx's variable follows the name:
   `$cookie_<name>` in both places above.
-- The pages: a 401 (nginx) or 403 (Hister) from Hister's routes sends the
+- The pages: a 401 (nginx) or 403 (Hister) from Nogon's routes sends the
   page to `<hister>/machiya/signin?return=<the page>` (the `hister` entry
   of `SHIORI_ROOMS` at build time; without it they just fail as before);
   a 500 from the check is "sign-in is unavailable", in a line. Sign-out is
   the helper's sessions page (`<hister>/machiya/sessions`), linked from
   the web app's Settings once a sign-in has been needed: the helper takes
   sign-out posts only from its own origin.
-- Without users nothing changes: Hister answers as before and the pages
+- Without users nothing changes: Nogon answers as before and the pages
   never go to the sign-in.
 
 **Kura's reader pages stay at Kura's own address.** Kura gives a work
 vault's note an address starting `/v/<vault>/n/`, and Shiori (the
-extension's capture included) keeps such a page out of Hister, AI and
+extension's capture included) keeps such a page out of Nogon, AI and
 caches by that `/v/` at the start of the path. Under `/kura/` the same
 page would read as any other, so pass only the API paths above.
 
@@ -101,7 +101,7 @@ this host too. So the host must:
   `Set-Cookie` back (a session is renewed on use);
 - take `machiya_session` out of the `Cookie` header on every other route
   (Hister, SearXNG, the gateway): only the rooms read it. The same for
-  the Hister sign-in helper's `machiya_sso` (above): on Hister's routes
+  the Nogon sign-in helper's `machiya_sso` (above): on Nogon's routes
   nginx replaces the whole `Cookie` header, and it never goes to SearXNG
   or the gateway. Two cookies, two sign-ins: `machiya_session` is the
   rooms' own (the identity file), `machiya_sso` the helper's (Hister's
@@ -124,7 +124,7 @@ on Kura's own origin).
 ## In a container
 
 `ghcr.io/machiya-kobo/shiori-web` serves the search page (port 8080) and the web app (port 8081) behind nginx, and
-proxies Hister, SearXNG and the optional services same-origin, as the table above describes. One image for every
+proxies Nogon, SearXNG and the optional services same-origin, as the table above describes. One image for every
 deployment: the settings are read **when the container starts** (nothing is baked in), checked, and stamped into the
 pages. It runs as a non-root user, works with `--read-only --tmpfs /tmp`, and logs no query string.
 
@@ -136,12 +136,12 @@ docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
 ```
 
 Without `SHIORI_HISTER_URL` and `SHIORI_SEARXNG_URL` it refuses to start and says so. The start-up log names what is on
-and off and says plainly if Hister isn't answering or SearXNG refuses JSON results; `/_shiori/config.json` on either
+and off and says plainly if Nogon isn't answering or SearXNG refuses JSON results; `/_shiori/config.json` on either
 port shows the same (the sign-in mode and which services are on), and `/healthz` answers 200.
 
 | Setting | Meaning | Default |
 |---|---|---|
-| `SHIORI_HISTER_URL` | **Required.** Hister, as this container reaches it (`http(s)://host[:port]`, no path) | none |
+| `SHIORI_HISTER_URL` | **Required.** Nogon, as this container reaches it (`http(s)://host[:port]`, no path) | none |
 | `SHIORI_SEARXNG_URL` | **Required.** SearXNG, with `formats: [html, json]` on | none |
 | `SHIORI_KURA_URL` | Kura (notes): only its API paths and feed are routed | off: the Notes tab is hidden, `/kura/` answers 404 |
 | `SHIORI_KONBINI_URL` | Konbini (project cards) | off |
@@ -150,24 +150,24 @@ port shows the same (the sign-in mode and which services are on), and `/healthz`
 | `SHIORI_AI_URL` | shiori-ai, behind Summarize and AI Answer | off |
 | `SHIORI_JELLYFIN_URL`, `SHIORI_PLEX_URL`, `SHIORI_KOITO_URL`, `SHIORI_MOVARY_URL` | The media services ([docs/media.md](../docs/media.md)): each needs its token too, `SHIORI_<NAME>_TOKEN` or a file named by `SHIORI_<NAME>_TOKEN_FILE` (a Docker secret; it must be readable by the container's user, uid 101 unless you set `user:`, say to the uid that owns 0600 secret files: the image writes only to `/tmp`, so it runs as any uid). The token goes only into nginx's request to that service (its config file is readable by its own user alone), never into a page. Give each a token of its own, read-only where the service has such a thing | off: no Media pill, the routes answer 404 |
 | `SHIORI_JELLYFIN_PUBLIC_URL`, `SHIORI_PLEX_PUBLIC_URL`, `SHIORI_KOITO_PUBLIC_URL`, `SHIORI_MOVARY_PUBLIC_URL` | Each media service's address for people's browsers ("Open in Jellyfin"). Movary's must be the address Movary itself writes into its poster links (its `APPLICATION_URL`) | the addresses above |
-| `SHIORI_LOGIN_URL` | hister-login, for one sign-in across Machiya's apps; `SHIORI_LOGIN_AUTH_URL` is its nginx auth address (default: the same host, port 8081) and `SHIORI_ROOM_COOKIE` this host's room cookie (default `__Host-machiya_sso_shiori`) | unset: Hister's own sign-in |
+| `SHIORI_LOGIN_URL` | hister-login, for one sign-in across Machiya's apps; `SHIORI_LOGIN_AUTH_URL` is its nginx auth address (default: the same host, port 8081) and `SHIORI_ROOM_COOKIE` this host's room cookie (default `__Host-machiya_sso_shiori`) | unset: Nogon's own sign-in |
 | `SHIORI_SEARCH_PORT`, `SHIORI_APP_PORT` | The ports inside the container (1024 and up) | 8080, 8081 |
 | `SHIORI_SEARCH_PAGE_URL`, `SHIORI_APP_URL` | The sites' own addresses, as a browser reaches them (OpenSearch, the room cookie's origin) | `http://localhost:8080/`, `http://localhost:8081/` |
 | `SHIORI_KURA_PUBLIC_URL`, `SHIORI_KONBINI_PUBLIC_URL`, `SHIORI_HISTER_PUBLIC_URL`, `SHIORI_SEARXNG_PUBLIC_URL`, `SHIORI_ROOMS` | Addresses people click (the Rooms menu, links to Kura and Konbini) when a browser reaches them differently from this container | the Kura and Konbini addresses above |
-| `SHIORI_HISTER_HOST` | The `Host` Hister expects, if it isn't the address above | the address above |
-| `SHIORI_HISTER_VERSION` | The Hister release `/_shiori/status.json` names, when it isn't the one the image was built against | the image's |
+| `SHIORI_HISTER_HOST` | The `Host` Nogon expects, if it isn't the address above | the address above |
+| `SHIORI_HISTER_VERSION` | The Nogon release `/_shiori/status.json` names, when it isn't the one the image was built against | the image's |
 | `SHIORI_UPSTREAM_TLS_VERIFY` | `0` to accept an https upstream's certificate unchecked | `1` |
 | `SHIORI_TIMING_LOG` | A file (for example `/tmp/timing.log`) that gets one line per request for a metrics collector: `<epoch.ms> <host> <bucket> <status> <seconds>`. The bucket is one of `/searx/search`, `/searx/autocompleter`, `/search`, `/api/search`, `/api/preview`, `/kura/api/search`, `/kura/api/note`, `/smallweb/api/search`, `/shiori/ai`, `/media`, `/basic` or `other`: never a query string, a search word or a client address. Rotate it with `mv`, then `nginx -c /opt/shiori/nginx.conf -s reopen` | off |
 | `SHIORI_OBSIDIAN_VAULT`, `SHIORI_SOURCE_URL`, `SHIORI_STATUS_URL`, `SHIORI_FRONTENDS` | As in the build configuration (CLAUDE.md) | empty |
 
-**Signing in.** Without `SHIORI_LOGIN_URL` the sign-in is Hister's own: Hister's `/auth` page is proxied on this origin,
-its `hister` cookie goes to Hister and to nothing else, and the pages open if Hister has no users. With it, hister-login's
-shared flow takes over, as in the table above. A browser's other cookies are never forwarded: Hister gets its own
+**Signing in.** Without `SHIORI_LOGIN_URL` the sign-in is Nogon's own: Nogon's `/auth` page is proxied on this origin,
+its `hister` cookie goes to Nogon and to nothing else, and the pages open if Nogon has no users. With it, hister-login's
+shared flow takes over, as in the table above. A browser's other cookies are never forwarded: Nogon gets its own
 session, Kura and Konbini the rooms' session cookie, SearXNG and the rest none. `Origin` and the `Sec-Fetch-*` headers
-pass through untouched and are never added, so Hister's same-origin check still protects it.
+pass through untouched and are never added, so Nogon's same-origin check still protects it.
 
-Over http, Hister's `base_url` doesn't have to match the address you open Shiori at. Over https it does matter: an https
-`base_url` makes Hister's cookie Secure, so Shiori must be served over https too. To make a Hister user, run
+Over http, Nogon's `base_url` doesn't have to match the address you open Shiori at. Over https it does matter: an https
+`base_url` makes Nogon's cookie Secure, so Shiori must be served over https too. To make a Nogon user, run
 `nogon user create` (Hister 0.20's `hister create-user`) on a terminal: it asks for the password there.
 
 **Verify the image** (each release is signed by its workflow, no key to fetch):
@@ -198,7 +198,7 @@ apply; the house's theme and palette cookies do.
 nginx's njs (`js_engine qjs`, [docker/shiori-web/basic-njs.mjs](../docker/shiori-web/basic-njs.mjs)),
 and its searches go back through nginx on loopback as full requests, so
 each route's sign-in and cookie rules apply as they do for the pages (a
-subrequest would skip `auth_request`). Hister's refusal links its sign-in;
+subrequest would skip `auth_request`). Nogon's refusal links its sign-in;
 Kura's links Kura's. `web/dev-server.py` renders it with Node
 (`scripts/basic-dev.mjs`).
 
@@ -241,7 +241,7 @@ is dropped at once, so a reload never shares again. Without
 - Settings: this browser's localStorage, changed in the page's gear (the
   web app's Settings). Signed in, the Shared ones (theme, appearance, text
   size, pills) and Shiori's own options follow the person through the
-  account (`/machiya/api/prefs`, the Hister sign-in helper on this host:
+  account (`/machiya/api/prefs`, the Nogon sign-in helper on this host:
   route `/machiya/` to it; machiya docs/contracts/prefs.md). Addresses,
   AI and this browser's own text size (the `machiya_textSizeDevice`
   cookie) stay here. Some start from the build, from the

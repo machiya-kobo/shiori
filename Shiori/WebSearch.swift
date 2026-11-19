@@ -412,7 +412,7 @@ struct SaveSheet: View {
             }
             .formStyle(.grouped)
             .themedBackground()
-            .navigationTitle("Save to Hister")
+            .navigationTitle("Save to Nogon")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

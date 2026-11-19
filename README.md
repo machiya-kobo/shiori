@@ -24,7 +24,7 @@ Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-c
 
 ## What it does
 
-[Nogon](https://nogon.eu/) ([source](https://github.com/asciimoo/nogon)) is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Nogon server. Shiori searches it. Nogon was called Hister until [v0.22](https://nogon.eu/posts/hister-is-now-nogon), and Shiori's settings still say Hister.
+[Nogon](https://nogon.eu/) ([source](https://github.com/asciimoo/nogon)) is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Nogon server. Shiori searches it. Nogon was called Hister until [v0.22](https://nogon.eu/posts/hister-is-now-nogon).
 
 > **Unofficial.** Shiori is not affiliated with or endorsed by the Nogon (formerly Hister) project.
 
@@ -58,7 +58,7 @@ docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
 
 Open http://localhost:8080 to search, or http://localhost:8081 for the web app. If your Nogon has users, sign in with your Nogon account.
 
-### Starting from scratch? Run Hister, SearXNG and Shiori together
+### Starting from scratch? Run Nogon, SearXNG and Shiori together
 
 `compose/shiori.yml` in [Machiya](https://github.com/machiya-kobo/machiya) brings up all three on this machine:
 

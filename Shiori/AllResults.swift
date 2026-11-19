@@ -124,7 +124,7 @@ struct AllResults: View {
     /// Any part that failed: with nothing to show, that's the answer, not
     /// "no results" (pages first, then notes, then the web).
     private var failure: (error: HisterError, service: String)? {
-        var phases = [(pages.phase, "Hister"), (notes.phase, app.notesFrom == .hister ? "Hister" : "Kura")]
+        var phases = [(pages.phase, "Nogon"), (notes.phase, app.notesFrom == .hister ? "Nogon" : "Kura")]
         if webOn { phases.append((web.phase, "SearXNG")) }
         for (phase, service) in phases {
             if case .failed(let error) = phase { return (error, service) }

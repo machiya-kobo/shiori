@@ -310,10 +310,10 @@ static Boolean AskToken(char *token, long cap, Boolean hister)
 			break;
 		}
 		if (hister)
-			ParamText("\pThat isn't a Hister token: it's 8 to 127 letters, digits or symbols, with no spaces.",
+			ParamText("\pThat isn't a Nogon token: it's 8 to 127 letters, digits or symbols, with no spaces.",
 				"\p", "\p", "\p");
 		else
-			ParamText("\pThat isn't a room token: it's mht_ and 43 more letters, digits, - or _, from Hister's "
+			ParamText("\pThat isn't a room token: it's mht_ and 43 more letters, digits, - or _, from Nogon's "
 				"sign-in helper (Sessions).", "\p", "\p", "\p");
 		StopAlert(BAD_ALERT, NULL);
 	}

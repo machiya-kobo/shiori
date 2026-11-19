@@ -231,13 +231,13 @@ struct AddPageSheet: View {
                             .autocorrectionDisabled()
                             .onSubmit(next)
                     } footer: {
-                        Text("Shiori downloads the page and saves it to Hister, as the share sheet does.")
+                        Text("Shiori downloads the page and saves it to Nogon, as the share sheet does.")
                     }
                     .listRowBackground(palette.surface)
                 }
                 .formStyle(.grouped)
                 .themedBackground()
-                .navigationTitle("Save Page in Hister")
+                .navigationTitle("Save Page in Nogon")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { dismiss() }

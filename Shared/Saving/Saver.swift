@@ -26,8 +26,8 @@ nonisolated enum Saver {
 
         var message: String {
             switch self {
-            case .saved: "Saved to Hister."
-            case .queued: "Hister is out of reach. Saved on this device; it will be sent when Hister is back."
+            case .saved: "Saved to Nogon."
+            case .queued: "Nogon is out of reach. Saved on this device; it will be sent when Nogon is back."
             case .waiting(let reason): reason
             case .rejected(let reason): reason
             case .failed(let reason): reason
@@ -50,7 +50,7 @@ nonisolated enum Saver {
         let serverURL = defaults?.string(forKey: SharedSettings.Key.serverURL) ?? ""
         // Hister's token from the Keychain, when this device has one.
         guard let client = HisterClient(serverURL: serverURL, token: HisterKeychain.token, histerSession: HisterKeychain.session) else {
-            return .failed("Set your Hister server in Shiori's Settings first.")
+            return .failed("Set your Nogon server in Shiori's Settings first.")
         }
         return await save(input, label: label, via: via, client: client, outbox: SharedSettings.outboxDirectory.map(Outbox.init))
     }
@@ -125,11 +125,11 @@ nonisolated enum Saver {
         }
     }
 
-    static let waitingForSignIn = "Hister wants you signed in. Saved on this device; it will be sent once you sign in (Settings → Account)."
+    static let waitingForSignIn = "Nogon wants you signed in. Saved on this device; it will be sent once you sign in (Settings → Account)."
 
     private static func queue(_ page: NewPage, in outbox: Outbox?) -> Outcome {
         guard let outbox else {
-            return .failed("Hister is out of reach, and the page couldn't be kept for later.")
+            return .failed("Nogon is out of reach, and the page couldn't be kept for later.")
         }
         do {
             try outbox.enqueue(page)
@@ -137,7 +137,7 @@ nonisolated enum Saver {
         } catch is Outbox.Full {
             return .failed("Too many pages are waiting to be sent, so this one wasn't kept.")
         } catch {
-            return .failed("Hister is out of reach, and the page couldn't be kept for later.")
+            return .failed("Nogon is out of reach, and the page couldn't be kept for later.")
         }
     }
 }
@@ -173,13 +173,13 @@ extension Saver {
         } catch .cancelled where Task.isCancelled {
             return .cancelled
         } catch .signedOut {
-            return .failed("Hister wants you signed in: Settings → Account.")
+            return .failed("Nogon wants you signed in: Settings → Account.")
         } catch .plainHTTP {
             return .failed(HisterError.plainHTTP.saveMessage)
         } catch .unreachable, .untrusted, .cancelled {
-            return .failed("Hister is out of reach, so this couldn't be checked: try again later.")
+            return .failed("Nogon is out of reach, so this couldn't be checked: try again later.")
         } catch {
-            return .failed("Couldn't ask Hister whether it has this page.")
+            return .failed("Couldn't ask Nogon whether it has this page.")
         }
     }
 
@@ -193,11 +193,11 @@ extension Saver {
             } catch .cancelled where Task.isCancelled {
                 return .cancelled
             } catch .signedOut {
-                return .failed("Hister wants you signed in: Settings → Account.")
+                return .failed("Nogon wants you signed in: Settings → Account.")
             } catch .unreachable, .untrusted, .cancelled {
-                return .failed("Hister is out of reach, so this couldn't be checked: try again later.")
+                return .failed("Nogon is out of reach, so this couldn't be checked: try again later.")
             } catch {
-                return .failed("Couldn't ask Hister whether it has this page.")
+                return .failed("Couldn't ask Nogon whether it has this page.")
             }
         }
         for form in forms where !HisterClient.lookupTakes(form) {
@@ -349,11 +349,11 @@ extension HisterError {
     /// `userMessage` is in ResultsList.swift, out of the extension's reach).
     fileprivate var saveMessage: String {
         switch self {
-        case .invalidQuery(let message): message.isEmpty ? "Hister couldn't read that page." : message
+        case .invalidQuery(let message): message.isEmpty ? "Nogon couldn't read that page." : message
         case .server(let status, let message): message.isEmpty ? "The server answered \(status)." : "The server answered \(status): \(message)"
         case .badResponse: "The server's reply didn't make sense."
         case .plainHTTP: "This address uses http://, and Shiori needs https://."
-        case .signedOut: "Hister wants you to sign in: sign in again in Shiori's Settings → Account."
+        case .signedOut: "Nogon wants you to sign in: sign in again in Shiori's Settings → Account."
         default: localizedDescription
         }
     }

@@ -3,7 +3,7 @@
 Three places run the app: Snow (System 6.0.8 on an emulated Mac Plus, the
 primary target), Basilisk II (System 7.6.1, for grays and color), and a
 real Mac Plus. Host tests cover the portable core and the bridge. Nothing
-here touches a real Hister or Kura: the emulators talk to the **fake
+here touches a real Nogon or Kura: the emulators talk to the **fake
 house**, which is the real bridge in front of fake services.
 
 ## Host tests (any machine)
@@ -72,11 +72,11 @@ classic/scripts/fake-house.sh status | log | stop
 This runs the real bridge (`classic/bridge/bridge.py`) on ports 8070
 (Hister) and 8071 (Kura), with:
 
-- `haiku/fake-services.py` behind it, on loopback (a fake Hister and a fake
+- `haiku/fake-services.py` behind it, on loopback (a fake Nogon and a fake
   Kura that log every credential and shout `LEAK` when one goes astray);
 - a fake hister-login that knows the one room token.
 
-The bridge swaps the Mac's room token for fake Hister's token, as the real
+The bridge swaps the Mac's room token for fake Nogon's token, as the real
 one does. Search words:
 
 - `heavy` (Hister): 20 rows shaped like a real reply, about 16 KB. Each
@@ -268,9 +268,9 @@ y = 26, 16 apart, with separators.
   over Snow's working DaynaPORT, but it needs the Macintosh II Video
   Card's ROM, which the hub doesn't have.
 
-### A real Hister over plain HTTP (direct mode)
+### A real Nogon over plain HTTP (direct mode)
 
-For *Directly (HTTP)*, a throwaway Hister from the upstream image (the
+For *Directly (HTTP)*, a throwaway Nogon from the upstream image (the
 version Shiori matches), on the VM's LAN address and loopback, its data on
 a tmpfs, holding only the sample pages. Never the live one:
 
@@ -283,7 +283,7 @@ tools/quickstart/seed-hister.py http://127.0.0.1:4440/
 
 - With a token: add `-e HISTER__APP__ACCESS_TOKEN=…` (another name and
   port) and seed with `HISTER_TOKEN=… tools/quickstart/seed-hister.py`.
-  Without it Shiori says "Hister refused this Mac (403)".
+  Without it Shiori says "Nogon refused this Mac (403)".
 - With users: `-e HISTER__APP__USER_HANDLING=true`; `nogon user create`
   (Hister 0.20's `hister create-user`; Nogon's
   [user handling](https://nogon.eu/docs/user-handling)) reads its password
@@ -293,7 +293,7 @@ tools/quickstart/seed-hister.py http://127.0.0.1:4440/
   starts selected), Tab to Kura and `key:BackSpace` to clear it, click
   *Directly (HTTP)* (`click:323,48`), OK (`click:417,315`). The radio for
   the bridge is `click:166,48`.
-- Real Hister replies differ from the fakes': no `Content-Length` on
+- Real Nogon replies differ from the fakes': no `Content-Length` on
   `/search` (read to the close), and a `page_key` holding escaped control
   characters and a NUL (Show More on an empty search under Pages checks
   it).
@@ -318,8 +318,8 @@ tools/quickstart/seed-hister.py http://127.0.0.1:4440/
   screen's bottom rows).
 
 The fake house's newest list (Return with nothing typed, as at launch) is
-50 pages as a real Hister pages them: addresses of 40, 300, 1,100 and
-1,589 bytes, and page keys past 1.6 KB with Hister's escapes. All three
+50 pages as a real Nogon pages them: addresses of 40, 300, 1,100 and
+1,589 bytes, and page keys past 1.6 KB with Nogon's escapes. All three
 pages load as you scroll, and a long address opens in the reader (the
 fake house logs each preview's address length). In Snow, click the
 scroll bar a few seconds apart: quick clicks are dropped.
@@ -355,7 +355,7 @@ bridge, and only for reads.
 
 | Reply | Bytes | Rows | Connect | Transfer | Parse |
 |---|---|---|---|---|---|
-| Hister `heavy` | 16,101 | 20 | 0.3 s | 5.8 s | 0.9 s |
+| Nogon `heavy` | 16,101 | 20 | 0.3 s | 5.8 s | 0.9 s |
 | Kura `many` | 6,200 | 20 | 0.2 s | 2.6 s | 0.5 s |
 
 Phase 2, after the switch to the non-blocking fetch (parse now decodes
@@ -363,7 +363,7 @@ every field of every row):
 
 | Reply | Bytes | Rows | Connect | Transfer | Reads | Parse |
 |---|---|---|---|---|---|---|
-| Hister `heavy` | 16,101 | 20 | 0.5 s | 5.8 s | 30 | 1.5 s |
+| Nogon `heavy` | 16,101 | 20 | 0.5 s | 5.8 s | 30 | 1.5 s |
 | Kura `many` | 6,200 | 20 | 0.2 s | 2.8 s | 11 | 0.9 s |
 
 - Free memory after both: 3.5 MB (single Finder, the whole machine).

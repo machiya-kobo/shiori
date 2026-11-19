@@ -112,7 +112,7 @@ struct LinkSaverTests {
     @Test func aSkipRuleWaitsForSaveAnyway() async throws {
         hister(add: 406)
         let outcome = await Saver.saveLink(link, label: nil, anyway: false, client: client, outbox: outbox, fetch: fetch)
-        #expect(outcome == .skipped("Hister skips this site."))
+        #expect(outcome == .skipped("Nogon skips this site."))
         hister()
         #expect(await Saver.saveLink(link, label: nil, anyway: true, client: client, outbox: outbox, fetch: fetch) == .saved)
         let metadata = try #require(adds().last?["metadata"] as? [String: Any])

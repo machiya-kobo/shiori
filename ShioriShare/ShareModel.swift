@@ -143,7 +143,7 @@ struct ShareView: View {
                 case .loading:
                     ProgressView().frame(maxWidth: .infinity)
                 case .unusable:
-                    Text("There's no web page here for Hister to save.")
+                    Text("There's no web page here for Nogon to save.")
                 default:
                     if let input = model.input {
                         Section {

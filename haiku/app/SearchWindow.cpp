@@ -103,7 +103,7 @@ SearchWindow::SearchWindow()
 	BMenu* result = new BMenu("Result");
 	result->AddItem(new BMenuItem("Open in browser", new BMessage(kMsgOpenResult), 'O'));
 	result->AddItem(new BMenuItem("Copy link", new BMessage(kMsgCopyLink), 'C', B_SHIFT_KEY));
-	result->AddItem(new BMenuItem("Save to Hister" B_UTF8_ELLIPSIS, new BMessage(kMsgSaveResult)));
+	result->AddItem(new BMenuItem("Save to Nogon" B_UTF8_ELLIPSIS, new BMessage(kMsgSaveResult)));
 	menuBar->AddItem(result);
 	// The pills and the field by keyboard: ⌘1–⌘4, ⌘L.
 	BMenu* search = new BMenu("Search");
@@ -136,7 +136,7 @@ SearchWindow::SearchWindow()
 	fList = new BListView("results");
 	fList->SetInvocationMessage(new BMessage(kMsgInvokeResult));
 	BScrollView* scroll = new BScrollView("scroll", fList, 0, false, true);
-	fStatus = new BStringView("status", "Type, then Return, to search Hister and Kura.");
+	fStatus = new BStringView("status", "Type, then Return, to search Nogon and Kura.");
 	fStatus->SetExplicitMaxSize(BSize(B_SIZE_UNLIMITED, B_SIZE_UNSET));
 	// A long error never widens the window: it's cut at the end.
 	fStatus->SetExplicitMinSize(BSize(0, B_SIZE_UNSET));
@@ -254,7 +254,7 @@ void SearchWindow::StartSearch()
 	Config config = CurrentConfig();
 	if (Trim(config.server).empty() && Trim(config.kura).empty()) {
 		ClearList();
-		fStatus->SetText("Set up Hister and Kura in Settings (File " B_UTF8_ELLIPSIS ").");
+		fStatus->SetText("Set up Nogon and Kura in Settings (File " B_UTF8_ELLIPSIS ").");
 		return;
 	}
 	// No words: the newest (Kura's recent notes, Hister's newest pages).

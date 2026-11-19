@@ -7,7 +7,7 @@ import Adw from 'gi://Adw?version=1';
 import { findLinks, saveLink, labelWhenSaved } from './savelinks.js';
 import { fileStore } from './save.js';
 
-const WORDS = { saved: 'Saved', queued: 'Waiting', held: 'In Hister', skipped: 'Skipped', rejected: 'Refused', failed: 'Failed', gateway: 'Sent to the gateway' };
+const WORDS = { saved: 'Saved', queued: 'Waiting', held: 'In Nogon', skipped: 'Skipped', rejected: 'Refused', failed: 'Failed', gateway: 'Sent to the gateway' };
 
 export class SaveLinksWindow {
   constructor(app, config, target) {
@@ -52,7 +52,7 @@ export class SaveLinksWindow {
       this.status.set_label('No links to other sites here.');
       return;
     }
-    this.status.set_label('Pages are saved one at a time. Ones Hister already holds are never sent again; sites Hister skips wait for Save Anyway.');
+    this.status.set_label('Pages are saved one at a time. Ones Nogon already holds are never sent again; sites Nogon skips wait for Save Anyway.');
     for (const link of found.rows) this.addRow(link);
     this.refresh();
   }
@@ -71,7 +71,7 @@ export class SaveLinksWindow {
     const title = new Gtk.Label({ label: link.text && link.text !== link.url ? link.text : host, xalign: 0, ellipsize: 3, hexpand: true });
     const url = new Gtk.Label({ label: link.url, xalign: 0, ellipsize: 2, css_classes: ['dim-label', 'caption'] });
     const state = new Gtk.Label({
-      label: link.held ? 'In Hister' : link.file ? 'A file, not a page' : link.needsGateway ? 'Needs the small-web gateway' : '',
+      label: link.held ? 'In Nogon' : link.file ? 'A file, not a page' : link.needsGateway ? 'Needs the small-web gateway' : '',
       css_classes: ['dim-label', 'caption'], valign: Gtk.Align.CENTER,
     });
     const anyway = new Gtk.Button({ label: 'Save Anyway', visible: false, valign: Gtk.Align.CENTER, css_classes: ['flat'] });

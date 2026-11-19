@@ -98,7 +98,7 @@ struct DocumentView: View {
                 ImageViewer(url: image.url)
             }
             .alert(
-                "Couldn't Update Hister",
+                "Couldn't Update Nogon",
                 isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
             ) {
                 Button("OK", role: .cancel) {}
@@ -201,7 +201,7 @@ struct DocumentView: View {
         }
         // Not a note: notes are Kura's (Hister may not hold one).
         if note == nil, !workNote, let url = app.client?.webPreviewURL(for: document.url) {
-            places.append(.init(name: "Hister", help: "Open in Hister", symbol: "magnifyingglass") { openURL(url) })
+            places.append(.init(name: "Nogon", help: "Open in Nogon", symbol: "magnifyingglass") { openURL(url) })
         }
         return places
     }
@@ -240,7 +240,7 @@ struct DocumentView: View {
             if let served = app.servedFile(document.url) {
                 ToolbarItem(placement: Self.pagePlacement) {
                     Button("Open", systemImage: "doc") { openURL(served) }
-                        .help("Open Hister's copy")
+                        .help("Open Nogon's copy")
                 }
             }
         } else if note == nil, let url = SafeHref.url(document.url) {
@@ -299,7 +299,7 @@ struct DocumentView: View {
                 // (Kura gives a work note none, and it's never offered), and
                 // only with a Kura address: the links are Kura's, wherever notes come from.
                 if note != nil, !workNote, app.notesKura != nil, let path = Notes.path(of: document.url, cards: app.konbiniCards) {
-                    Button("Save Links to Hister…", systemImage: "link.badge.plus") {
+                    Button("Save Links to Nogon…", systemImage: "link.badge.plus") {
                         app.saveLinksRequest = .note(path)
                     }
                     let folder = (path as NSString).deletingLastPathComponent

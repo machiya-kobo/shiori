@@ -10,11 +10,11 @@ WebKitGTK 6).
 
 - **The window** is an `AdwApplicationWindow` with a WebKitGTK view on the
   **live web app**, under a header bar (Back, Reload; Alt+← and F5).
-  Same-origin, so Hister's write protection and the service worker work as
+  Same-origin, so Nogon's write protection and the service worker work as
   in a browser, and every server rebuild updates the app with no release.
   What stays in the window (`linux/src/window.js`): the web app, the
   frames its pages make (the preview's `about:srcdoc`, `data:`, `blob:`),
-  and the sign-in pages, Hister's helper (`/machiya/` on `server`) and
+  and the sign-in pages, Nogon's helper (`/machiya/` on `server`) and
   Kura's `/signin`, whose cookies the window needs; when one of those
   sends you on to its own host, the window goes back to the web app. Other
   web, `gemini:`, `gopher:`, `mailto:` and `obsidian:` links open in the
@@ -22,13 +22,13 @@ WebKitGTK 6).
   and cookies are kept in `$XDG_DATA_HOME/shiori/web` (0700). An export
   asks where to save it.
 - **The quick-search window** is native: a search entry and a list, fed by
-  Hister and Kura directly, reusing `search-core.js` as it is (with
+  Nogon and Kura directly, reusing `search-core.js` as it is (with
   `linux/src/url.js` for `URL`, which GJS lacks). ↑/↓ or Ctrl+J/K, Return
   opens, Escape or a click outside closes. It's a full-screen, dimmed
   overlay with the search as a card: GTK 4 can't place a window on X11,
-  and the window manager put a plain one in a corner. When Hister or Kura
+  and the window manager put a plain one in a corner. When Nogon or Kura
   answers 401 or 403, it says to sign in and offers Sign In (the menu's
-  search shows a Sign in to Hister row), never "Nothing matches".
+  search shows a Sign in to Nogon row), never "Nothing matches".
 - **The command line** (`linux/src/cli.js`): `shiori`, `--quick`,
   `search <words>`, `save <url> [label]`, `send`, `status`,
   `save-links [--folder] <note or folder> [label] [--dry-run]`,
@@ -56,7 +56,7 @@ web view, same-origin.
   `client_version`, `via: "linux"`.
 - **The outbox** (`linux/src/outbox.js`) follows the iOS rules: one entry
   per URL keeping its first time; oldest first; 406/413/422 and other 4xx
-  but 401/403/429 drop the page; 401/403 (not signed in, or a token Hister
+  but 401/403/429 drop the page; 401/403 (not signed in, or a token Nogon
   no longer takes) keep it, no attempt counted, until a sign-in; 429/5xx
   count an attempt and stop the drain, 5 attempts at most; entries older than 14 days are dropped unsent. It lives
   in `$XDG_DATA_HOME/shiori/outbox/` and drains after a save and on
@@ -81,10 +81,10 @@ web view, same-origin.
   window on Xvfb in its own D-Bus session; `SHIORI_RUN="flatpak run
   io.github.machiya_kobo.Shiori"` for the Flatpak), and `linux/save-test.sh` for
   save/send/status against `linux/fake-hister.py`. Never test a write
-  against a live Hister.
+  against a live Nogon.
 - **Test in a real desktop session too**: `linux/desktop-test.sh [OUT_DIR]`
   starts Cinnamon on its own virtual display and bus and runs the installed
-  Flatpak against a local test page and the fake Hister (it swaps
+  Flatpak against a local test page and the fake Nogon (it swaps
   `~/.config/shiori/config.json` and restores it): the window's class,
   the preview's frame loading with nothing handed to the portal, an
   export's save dialog, quick search covering the screen and asking you to

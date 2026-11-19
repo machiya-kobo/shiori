@@ -148,14 +148,14 @@ private let log = Logger(subsystem: ShioriID.app, category: "ai")
         // Waiting suggestions may be applied there: not on request.
         if !onDemand { await revisitWaiting(app: app, excluded: excluded) }
         guard !labels.isEmpty else {
-            lastMessage = "No labels from Hister yet."
+            lastMessage = "No labels from Nogon yet."
             return
         }
         let candidates: [StoredPage]
         do {
             candidates = try await unlabelled(using: client, app: app)
         } catch {
-            lastMessage = "Hister didn't answer."
+            lastMessage = "Nogon didn't answer."
             return
         }
         guard !candidates.isEmpty else {
@@ -171,7 +171,7 @@ private let log = Logger(subsystem: ShioriID.app, category: "ai")
             do {
                 preview = try await client.preview(of: document.url)
             } catch {
-                lastMessage = "Hister didn't answer."
+                lastMessage = "Nogon didn't answer."
                 break
             }
             // Labelled meanwhile (by the user, or another device): theirs.
@@ -238,7 +238,7 @@ private let log = Logger(subsystem: ShioriID.app, category: "ai")
                     state.stats[label, default: LabelStat()].applied += 1
                     applied += 1
                 } catch {
-                    lastMessage = "Hister didn't take a label: \(error.userMessage)"
+                    lastMessage = "Nogon didn't take a label: \(error.userMessage)"
                     break pages
                 }
             case .suggest(let labels, let newLabel):

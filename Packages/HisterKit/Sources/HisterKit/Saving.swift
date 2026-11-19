@@ -91,9 +91,9 @@ public struct Rejection: Sendable, Equatable {
 
     public var reason: String {
         switch status {
-        case 406: "Hister skips this site."
-        case 413: "The page is too large for Hister."
-        case 422: "Hister refused it as sensitive (it looks like it holds a secret)."
+        case 406: "Nogon skips this site."
+        case 413: "The page is too large for Nogon."
+        case 422: "Nogon refused it as sensitive (it looks like it holds a secret)."
         default: message
         }
     }
@@ -409,18 +409,18 @@ public struct Outbox: Sendable {
                 drop(file, page: entry.page, reason: rejection.reason, now: now)
             } catch .invalidQuery(let message) {
                 // 400: Hister can't read this page's request; sending it again won't change that.
-                drop(file, page: entry.page, reason: message.isEmpty ? "Hister couldn't read it." : "Hister refused it: \(message.prefix(120))", now: now)
+                drop(file, page: entry.page, reason: message.isEmpty ? "Nogon couldn't read it." : "Nogon refused it: \(message.prefix(120))", now: now)
             } catch .badResponse {
-                drop(file, page: entry.page, reason: "It couldn't be put in a form Hister reads.", now: now)
+                drop(file, page: entry.page, reason: "It couldn't be put in a form Nogon reads.", now: now)
             } catch .signedOut {
                 // Kept, no try counted: it goes once this device signs in again.
                 return .signedOut(sent: sent)
             } catch .notFound {
                 // Hister always has api/add: a 404 is the way there (a proxy), so it waits, a try counted.
-                countTry(&entry, at: file, reason: "Hister answered 404 \(Self.maxAttempts) times.", now: now)
+                countTry(&entry, at: file, reason: "Nogon answered 404 \(Self.maxAttempts) times.", now: now)
                 return .stopped(sent: sent)
             } catch .server(let status, _) {
-                countTry(&entry, at: file, reason: "Hister answered \(status) \(Self.maxAttempts) times.", now: now)
+                countTry(&entry, at: file, reason: "Nogon answered \(status) \(Self.maxAttempts) times.", now: now)
                 return .stopped(sent: sent)
             } catch {
                 return .stopped(sent: sent)

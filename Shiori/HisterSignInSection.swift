@@ -52,7 +52,7 @@ struct HisterSignInSection: View {
                         .foregroundStyle(palette.secondaryText)
                 }
                 if stillSignedIn == false {
-                    Label("Hister signed this device out. Sign out here, then sign in again.", systemImage: "exclamationmark.triangle")
+                    Label("Nogon signed this device out. Sign out here, then sign in again.", systemImage: "exclamationmark.triangle")
                         .textStyle(.footnote)
                         .foregroundStyle(palette.secondaryText)
                 }
@@ -112,9 +112,9 @@ struct HisterSignInSection: View {
                     .foregroundStyle(palette.secondaryText)
             }
         } header: {
-            Text("Sign in to Hister")
+            Text("Sign in to Nogon")
         } footer: {
-            Text("Sign in once on this device for Hister, Kura and Konbini. It stays in this device's Keychain.")
+            Text("Sign in once on this device for Nogon, Kura and Konbini. It stays in this device's Keychain.")
         }
         .buttonStyle(.borderless)
     }

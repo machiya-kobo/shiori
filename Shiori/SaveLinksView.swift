@@ -136,7 +136,7 @@ final class SaveLinksModel {
                 // "not in Hister" (each save asks again anyway).
                 for row in batch where row.status == .checking {
                     guard let i = rows.firstIndex(where: { $0.id == row.id }) else { continue }
-                    rows[i].status = .failed("Hister didn't answer, so this wasn't checked.")
+                    rows[i].status = .failed("Nogon didn't answer, so this wasn't checked.")
                     rows[i].selected = false
                 }
                 continue
@@ -300,7 +300,7 @@ struct SaveLinksView: View {
                 Section {
                     labelRow
                 } footer: {
-                    Text("Pages are saved one at a time. Ones Hister already holds are never sent again, and sites Hister skips wait for Save Anyway.")
+                    Text("Pages are saved one at a time. Ones Nogon already holds are never sent again, and sites Nogon skips wait for Save Anyway.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 // One note: its links alone. A folder: a section per note.
@@ -436,7 +436,7 @@ private struct LinkRow: View {
         case .checking, .saving:
             ProgressView().controlSize(.small)
         case .inHister:
-            Label("In Hister", systemImage: "checkmark")
+            Label("In Nogon", systemImage: "checkmark")
                 .labelStyle(.titleAndIcon)
                 .textStyle(.caption, weight: .medium)
                 .foregroundStyle(palette.secondaryText)
@@ -448,7 +448,7 @@ private struct LinkRow: View {
             Label("Waiting", systemImage: "clock")
                 .textStyle(.caption, weight: .medium)
                 .foregroundStyle(palette.secondaryText)
-                .help("Hister is out of reach: it's sent when Hister is back.")
+                .help("Nogon is out of reach: it's sent when Nogon is back.")
         case .needsGateway:
             Text("Needs the small-web gateway")
                 .textStyle(.caption, weight: .medium)
@@ -458,12 +458,12 @@ private struct LinkRow: View {
             Label("Sent to the gateway", systemImage: "arrow.up.circle")
                 .textStyle(.caption, weight: .medium)
                 .foregroundStyle(palette.accent)
-                .help("The gateway saves it to Hister in a moment.")
+                .help("The gateway saves it to Nogon in a moment.")
         case .file:
             Text("A file, not a web page")
                 .textStyle(.caption, weight: .medium)
                 .foregroundStyle(palette.secondaryText)
-                .help("Not a web page: nothing for Hister to read.")
+                .help("Not a web page: nothing for Nogon to read.")
         case .notYet, .failed, .skipped, .rejected:
             EmptyView()
         }

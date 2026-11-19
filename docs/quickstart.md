@@ -4,12 +4,12 @@ The full walkthrough, with every step checked. The README's [Quickstart](../READ
 
 Two ways in:
 
-- **[A. Standalone](#a-standalone-with-sample-pages):** a Hister ([Nogon](https://nogon.eu/) since v0.22) with invented sample pages.
+- **[A. Standalone](#a-standalone-with-sample-pages):** a [Nogon](https://nogon.eu/) (formerly Hister) with invented sample pages.
 - **[B. With Machiya](#b-as-one-of-the-machiya-services):** next to Kura, Konbini, Niwa and SearXNG.
 
 ## Get the tools
 
-You need `git`, `bash`, `python3`, `curl`, and `podman` or `docker` for Hister. The Linux app needs Flatpak. Ports 4433, 8765 and 8766 must be free.
+You need `git`, `bash`, `python3`, `curl`, and `podman` or `docker` for Nogon. The Linux app needs Flatpak. Ports 4433, 8765 and 8766 must be free.
 
 *Debian or Ubuntu* (everything, the Linux app included):
 
@@ -44,7 +44,7 @@ pkg_add python313 git-base curl bash
 ln -sf /usr/pkg/bin/python3.13 /usr/pkg/bin/python3
 ```
 
-The BSDs have no podman or docker. Run Hister on another machine, or natively with [Machiya's BSD guide](https://github.com/machiya-kobo/machiya/blob/main/docs/install/bsd.md), and point step 2's `HISTER_URL` at it. Without a Hister, the results check has nothing to show.
+The BSDs have no podman or docker. Run Nogon on another machine, or natively with [Machiya's BSD guide](https://github.com/machiya-kobo/machiya/blob/main/docs/install/bsd.md), and point step 2's `HISTER_URL` at it. Without a Nogon, the results check has nothing to show.
 
 ## Get the code
 
@@ -52,11 +52,11 @@ The BSDs have no podman or docker. Run Hister on another machine, or natively wi
 git clone https://github.com/machiya-kobo/shiori && cd shiori
 ```
 
-The Mac and iOS builds also need `git submodule update --init`: the Safari extension is built from Hister's own.
+The Mac and iOS builds also need `git submodule update --init`: the Safari extension is built from Nogon's own.
 
 ## A. Standalone, with sample pages
 
-**1. Start a Hister.** It listens on this machine only.
+**1. Start a Nogon.** It listens on this machine only.
 
 *With podman:*
 
@@ -76,7 +76,7 @@ docker run -d --name shiori-hister -p 127.0.0.1:4433:4433 \
   ghcr.io/asciimoo/nogon:v0.22.0
 ```
 
-Fill it with a dozen invented pages from a paper-lantern workshop and a Kyoto trip. The script writes only to a Hister on this machine.
+Fill it with a dozen invented pages from a paper-lantern workshop and a Kyoto trip. The script writes only to a Nogon on this machine.
 
 <!-- quickstart: seed -->
 ```bash
@@ -108,7 +108,7 @@ HISTER_URL=http://127.0.0.1:4433/ web/dev-server.py demo-site
 HISTER_URL=http://127.0.0.1:4433/ PORT=8766 web/dev-server.py demo-app
 ```
 
-Check that both answer and reach Hister:
+Check that both answer and reach Nogon:
 
 <!-- quickstart: pages-check -->
 ```bash
@@ -150,7 +150,7 @@ linux/flatpak/build.sh
 
 The build also writes `~/.cache/shiori-flatpak/shiori.flatpak`, a bundle to install elsewhere.
 
-Point it at Hister and the web app, then search the way the desktop search does. This overwrites `~/.config/shiori/config.json`; back up yours first. Over SSH with no desktop, put `dbus-run-session --` in front of `flatpak run`.
+Point it at Nogon and the web app, then search the way the desktop search does. This overwrites `~/.config/shiori/config.json`; back up yours first. Over SSH with no desktop, put `dbus-run-session --` in front of `flatpak run`.
 
 <!-- quickstart: linux-check -->
 ```bash
@@ -173,7 +173,7 @@ Restoring an old paper lantern
 
 **4. Build the Mac, iPhone and iPad apps** (not machine-tested). Follow [build.md](build.md) on a Mac with Xcode 27, and set `SHIORI_SERVER_URL` to `http://<this machine's address>:4433/`. Then [turn on the extension](build.md#turn-on-the-extension).
 
-**Stop.** End the two servers (Ctrl-C), then remove Hister:
+**Stop.** End the two servers (Ctrl-C), then remove Nogon:
 
 <!-- quickstart: stop-podman -->
 ```bash
@@ -187,7 +187,7 @@ docker rm -f shiori-hister
 
 ## B. As one of the Machiya services
 
-Clone `machiya`, `kura`, `niwa`, `konbini` and `shiori` side by side. Start the stack with [Machiya's sample vault](https://github.com/machiya-kobo/machiya/blob/main/docs/install/sample-vault.md): Hister, SearXNG, Kura with the sample vault, Konbini and Niwa on this machine's ports, with no sign-in.
+Clone `machiya`, `kura`, `niwa`, `konbini` and `shiori` side by side. Start the stack with [Machiya's sample vault](https://github.com/machiya-kobo/machiya/blob/main/docs/install/sample-vault.md): Nogon, SearXNG, Kura with the sample vault, Konbini and Niwa on this machine's ports, with no sign-in.
 
 **1. Build the pages** in `shiori`, with the stack's default addresses:
 
@@ -228,7 +228,7 @@ Lantern festival kit
 
 <http://localhost:8765/?q=lantern> now has the sample vault's notes, each with its Kura page and Konbini card, and web results from SearXNG. The web app's Notes view lists the vault, and the Rooms menu moves between the apps.
 
-- **Pages too:** the stack's Hister holds only the notes. Run part A's `tools/quickstart/seed-hister.py http://127.0.0.1:4433/`.
+- **Pages too:** the stack's Nogon holds only the notes. Run part A's `tools/quickstart/seed-hister.py http://127.0.0.1:4433/`.
 - **Gemini and Gopher:** add `SHIORI_SMALLWEB_URL` to the build and a `SMALLWEB_URL` route to the server.
 - **A Source link in About:** add `SHIORI_SOURCE_URL`, your fork's address.
 

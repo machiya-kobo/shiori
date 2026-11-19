@@ -28,9 +28,9 @@ export function histerHeaders(config, url, S) {
 /** What `shiori status` says about the token: whether it's set, and who can read it too. */
 export function histerTokenStatus(config, mode, S) {
   if (!configHisterToken(config, S)) {
-    return config && config.histerToken ? 'Hister: histerToken in config.json isn’t a token (8 to 512 characters, no spaces).' : 'Hister: no token (none needed while the server has no users).';
+    return config && config.histerToken ? 'Nogon: histerToken in config.json isn’t a token (8 to 512 characters, no spaces).' : 'Nogon: no token (none needed while the server has no users).';
   }
-  const line = 'Hister: a token in config.json.';
+  const line = 'Nogon: a token in config.json.';
   if (typeof mode === 'number' && (mode & 0o077) !== 0) {
     return `${line} Others can read the file (mode ${(mode & 0o777).toString(8)}): chmod 600 ~/.config/shiori/config.json`;
   }
@@ -116,11 +116,11 @@ export function sessionFromSetCookie(values) {
 
 /** The login's answer in words, for the window. */
 export function loginProblem(status) {
-  if (status === 401) return "Hister didn't recognise that name and password.";
-  if (status === 403) return 'This Hister signs in only through its sign-in provider: sign in from the web app instead.';
-  return "Sign-in is unavailable right now: Hister or its sign-in helper isn't answering.";
+  if (status === 401) return "Nogon didn't recognise that name and password.";
+  if (status === 403) return 'This Nogon signs in only through its sign-in provider: sign in from the web app instead.';
+  return "Sign-in is unavailable right now: Nogon or its sign-in helper isn't answering.";
 }
 
 /** What `shiori status` says about the sign-in. */
 export const histerSignInStatus = (record) =>
-  record ? `Hister: signed in${record.username ? ` as ${record.username}` : ''} (sign-in.json).` : 'Hister: not signed in.';
+  record ? `Nogon: signed in${record.username ? ` as ${record.username}` : ''} (sign-in.json).` : 'Nogon: not signed in.';

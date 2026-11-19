@@ -83,8 +83,8 @@ SettingsWindow::SettingsWindow()
 		B_AUTO_UPDATE_SIZE_LIMITS | B_ASYNCHRONOUS_CONTROLS | B_NOT_ZOOMABLE | B_CLOSE_ON_ESCAPE)
 {
 	Config config = CurrentConfig();
-	fServer = new BTextControl("server", "Hister:", config.server.c_str(), NULL);
-	fHisterToken = new BTextControl("histerToken", "Hister token:", config.histerToken.c_str(), NULL);
+	fServer = new BTextControl("server", "Nogon:", config.server.c_str(), NULL);
+	fHisterToken = new BTextControl("histerToken", "Nogon token:", config.histerToken.c_str(), NULL);
 	fKura = new BTextControl("kura", "Kura:", config.kura.c_str(), NULL);
 	fRoomToken = new BTextControl("roomToken", "Room token:", config.roomToken.c_str(), NULL);
 	fHisterToken->TextView()->HideTyping(true);
@@ -105,7 +105,7 @@ SettingsWindow::SettingsWindow()
 	BPopUpMenu* notesMenu = new BPopUpMenu("notesFrom");
 	bool fromHister = NotesFromHister(config);
 	const char* const kSources[] = {"kura", "hister"};
-	const char* const kLabels[] = {"Kura", "Hister"};
+	const char* const kLabels[] = {"Kura", "Nogon"};
 	for (int i = 0; i < 2; i++) {
 		BMessage* pick = new BMessage(kMsgNotesFrom);
 		pick->AddString("source", kSources[i]);
@@ -115,9 +115,9 @@ SettingsWindow::SettingsWindow()
 	}
 	fNotesFrom = new BMenuField("notesFrom", "Notes from:", notesMenu);
 	BStringView* notesHint = new BStringView("notesHint",
-		"From Hister: your default vault's notes only.");
+		"From Nogon: your default vault's notes only.");
 	BStringView* hint = new BStringView("hint",
-		"Hister's token goes only to Hister. Kura takes the sign-in or a room token (mht_" B_UTF8_ELLIPSIS "), never Hister's.");
+		"Nogon's token goes only to Nogon. Kura takes the sign-in or a room token (mht_" B_UTF8_ELLIPSIS "), never Nogon's.");
 	fAccount = new BStringView("account", "");
 	fAccount->SetExplicitMaxSize(BSize(B_SIZE_UNLIMITED, B_SIZE_UNSET));
 	fAccountButton = new BButton("accountButton", "Sign In" B_UTF8_ELLIPSIS, new BMessage(kMsgOpenSignIn));
@@ -159,7 +159,7 @@ void SettingsWindow::ShowAccount()
 {
 	Config config = CurrentConfig();
 	if (config.signIn.IsSet()) {
-		std::string who = "Signed in to Hister";
+		std::string who = "Signed in to Nogon";
 		if (!config.signIn.username.empty())
 			who += " as " + config.signIn.username;
 		fAccount->SetText(who.c_str());
@@ -169,7 +169,7 @@ void SettingsWindow::ShowAccount()
 		SetVisible(fAccountButton, true);
 		return;
 	}
-	fAccount->SetText("Hister has users: sign in to search as yours.");
+	fAccount->SetText("Nogon has users: sign in to search as yours.");
 	fAccountButton->SetLabel("Sign In" B_UTF8_ELLIPSIS);
 	fAccountButton->SetMessage(new BMessage(kMsgOpenSignIn));
 	// Hidden until the helper says Hister has users (it's inert otherwise).
@@ -194,7 +194,7 @@ void SettingsWindow::Store()
 			config.notesSource = source;
 	}
 	if (!config.server.empty() && OriginOf(config.server).empty()) {
-		fStatus->SetText("Hister's address must start with http:// or https://.");
+		fStatus->SetText("Nogon's address must start with http:// or https://.");
 		return;
 	}
 	if (!config.kura.empty() && OriginOf(config.kura).empty()) {
@@ -202,11 +202,11 @@ void SettingsWindow::Store()
 		return;
 	}
 	if (!config.histerToken.empty() && CheckedHisterToken(config.histerToken).empty()) {
-		fStatus->SetText("That Hister token isn't one (8 to 512 characters, no spaces).");
+		fStatus->SetText("That Nogon token isn't one (8 to 512 characters, no spaces).");
 		return;
 	}
 	if (!config.roomToken.empty() && CheckedRoomToken(config.roomToken).empty()) {
-		fStatus->SetText("A room token starts with mht_ (Hister's own token never goes to Kura).");
+		fStatus->SetText("A room token starts with mht_ (Nogon's own token never goes to Kura).");
 		return;
 	}
 	// The sign-in belongs to its server: a new address leaves it behind.

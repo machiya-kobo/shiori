@@ -20,7 +20,7 @@ The submodule matters: the Safari extension is built from Nogon's (formerly Hist
 |---|---|
 | `DEVELOPMENT_TEAM` | Your team ID, from Xcode → Settings → Accounts. |
 | `SHIORI_BUNDLE_PREFIX` | A reverse-DNS prefix of your own, such as `io.github.you`. Bundle IDs are unique across Apple. The build stops until it's set. |
-| `SHIORI_SERVER_URL` | Your Hister, with the trailing slash. For the [Quickstart](quickstart.md)'s Hister: `http://<this machine's address>:4433/`. |
+| `SHIORI_SERVER_URL` | Your Nogon, with the trailing slash. For the [Quickstart](quickstart.md)'s Nogon: `http://<this machine's address>:4433/`. |
 | `SHIORI_SEARXNG_URL`, `SHIORI_KURA_URL`, `SHIORI_KONBINI_URL`, `SHIORI_SMALLWEB_URL` | Optional: your SearXNG, Kura, Konbini and small-web gateway. `SHIORI_NIWA_URL`, Kura's older name, still works. |
 
 - The prefix names everything. The app is `<prefix>.shiori` and its extensions `.Extension` and `.Share`. The App Group is `group.<prefix>.shiori` on iOS and `<TeamID>.<prefix>.shiori` on macOS.
@@ -50,7 +50,7 @@ A reinstall sets All Websites back to Ask, with no prompt. Set it to Allow again
 
 **Mac:** open Shiori, click **Open Safari Extensions Settings…**, turn on Shiori, and allow it on every website. A build signed with your team stays on. An ad-hoc build needs Develop → Allow Unsigned Extensions after every Safari restart.
 
-Use one Hister extension in Safari. If hister-safari is on, turn one of them off, or Safari sends every page twice. [extension.md](extension.md) covers what the extension does.
+Use one Nogon extension in Safari. If hister-safari is on, turn one of them off, or Safari sends every page twice. [extension.md](extension.md) covers what the extension does.
 
 ## Release files
 

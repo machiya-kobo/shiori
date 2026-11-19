@@ -192,7 +192,7 @@ test('the menu has its items, and each does its part', async () => {
   await t.click({ menuItemId: 'shiori-never-site' });
   assert.deepEqual(plain(t.commands), [['index-current-page', 4], ['disable-indexing-current-domain', 4]]);
   await t.click({ menuItemId: 'shiori-save-link', linkUrl: 'https://a.example/' });
-  assert.deepEqual(plain(t.badges.slice(0, 2)), [{ tabId: 4, text: '✓' }, { tabId: 4, title: 'Shiori · Saved to Hister' }]);
+  assert.deepEqual(plain(t.badges.slice(0, 2)), [{ tabId: 4, text: '✓' }, { tabId: 4, title: 'Shiori · Saved to Nogon' }]);
 });
 
 test("on Safari: the menu is made after a callback-only removeAll, and the answer clears through the badge's clearTab", async () => {

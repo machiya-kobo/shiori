@@ -60,7 +60,7 @@
     const name = header.querySelector('a');
     if (name && name.textContent.trim() !== 'Shiori') {
       name.textContent = 'Shiori';
-      name.title = 'Open Hister';
+      name.title = 'Open Nogon';
     }
     const gear = header.querySelector('button[aria-label="Settings"]');
     if (gear && !gear.dataset.shiori) {

@@ -589,7 +589,7 @@ static void Answered(void)
 		else
 			shiori_parse_hister(body, len, &page, AddRow, NULL);
 		if (!page.ok && !gProblem[0])
-			sprintf(gProblem, "%s's answer couldn't be read.", kura ? "Kura" : "Hister");
+			sprintf(gProblem, "%s's answer couldn't be read.", kura ? "Kura" : "Nogon");
 		if (kura) {
 			gTotalNotes = page.total;
 			gMoreOffset = (gAppending ? gMoreOffset : 0) + page.received;
@@ -605,7 +605,7 @@ static void Answered(void)
 				strcpy(gShort, "Not enough memory for more.");
 		}
 	} else if (!gProblem[0]) {
-		FetchProblem(&gFetch, kura ? "Kura" : "Hister", gProblem, (long) sizeof(gProblem));
+		FetchProblem(&gFetch, kura ? "Kura" : "Nogon", gProblem, (long) sizeof(gProblem));
 	}
 	FetchReset(&gFetch);
 	gMoreStage = STAGE_NONE;
@@ -689,7 +689,7 @@ void SearchWindowConfigChanged(void)
 	if (gWin != NULL) {
 		SetPort(gWin);
 		InvalRect(&gWin->portRect);
-		SetStatus(gConfig.roomToken[0] ? "Type, then Return, to search Hister and Kura." : "No room token yet: Preferences\311");
+		SetStatus(gConfig.roomToken[0] ? "Type, then Return, to search Nogon and Kura." : "No room token yet: Preferences\311");
 		SearchWindowNewest();
 	}
 }
@@ -726,7 +726,7 @@ void SearchWindowOpen(Prefs *prefs)
 	(**gField).crOnly = -1;
 	Layout();
 	TEActivate(gField);
-	SetStatus("Type, then Return, to search Hister and Kura.");
+	SetStatus("Type, then Return, to search Nogon and Kura.");
 	if (!config->roomToken[0])
 		SetStatus("No room token yet: Preferences\311");
 	FetchInit(&gFetch);
@@ -980,15 +980,15 @@ const char *SearchWindowBalloon(Point where, Rect *hot)
 	GlobalToLocal(&p);
 	if (PtInRect(p, &gFieldRect)) {
 		*hot = gFieldRect;
-		return "Type words, then press Return to search your pages in Hister and your notes in Kura. With nothing typed, Return shows your newest pages.";
+		return "Type words, then press Return to search your pages in Nogon and your notes in Kura. With nothing typed, Return shows your newest pages.";
 	}
 	for (i = 0; i < 4; i++)
 		if (PtInRect(p, &gPillRects[i])) {
 			static const char *const tips[4] = {
-				"All: your top notes from Kura, then your pages from Hister.",
-				"Pages: the web pages you saved in Hister.",
+				"All: your top notes from Kura, then your pages from Nogon.",
+				"Pages: the web pages you saved in Nogon.",
 				"Notes: your notes from Kura, in the vault the menu beside shows.",
-				"Code: your repositories' pages in Hister: READMEs, issues, releases."};
+				"Code: your repositories' pages in Nogon: READMEs, issues, releases."};
 			*hot = gPillRects[i];
 			return tips[i];
 		}

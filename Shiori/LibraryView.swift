@@ -385,11 +385,11 @@ struct LibraryView: View {
                 // As the iPhone's Labels tab says it: why there are none.
                 Section {
                     if app.client == nil {
-                        Text("Add your Hister server in Settings.")
+                        Text("Add your Nogon server in Settings.")
                             .foregroundStyle(palette.secondaryText)
                     } else {
                         // The server didn't answer: why, not "no labels".
-                        Text(app.rulesFailure?.userMessage ?? "No labels from Hister yet.")
+                        Text(app.rulesFailure?.userMessage ?? "No labels from Nogon yet.")
                             .foregroundStyle(palette.secondaryText)
                         Button("Try Again", systemImage: "arrow.clockwise") {
                             Task { await app.reloadRules() }
@@ -465,7 +465,7 @@ struct LibraryView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Add Page…", systemImage: "plus") { app.addPageRequests += 1 }
-                    .help("Save a page in Hister by its address")
+                    .help("Save a page in Nogon by its address")
             }
         }
         #endif

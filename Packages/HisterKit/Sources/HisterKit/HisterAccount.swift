@@ -46,9 +46,9 @@ public enum HisterAccount {
 
         public var message: String {
             switch self {
-            case .invalidCredentials: "Hister didn't recognise that name and password."
-            case .passwordOff: "This Hister signs in only through its sign-in provider: use Sign In with Saved Password."
-            case .unavailable: "Sign-in is unavailable right now: Hister or its sign-in helper isn't answering."
+            case .invalidCredentials: "Nogon didn't recognise that name and password."
+            case .passwordOff: "This Nogon signs in only through its sign-in provider: use Sign In with Saved Password."
+            case .unavailable: "Sign-in is unavailable right now: Nogon or its sign-in helper isn't answering."
             case .badCallback: "The sign-in didn't come back with a session. Try again."
             case .unreachable: "The server didn't answer. Check your network or VPN, then try again."
             }

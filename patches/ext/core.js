@@ -467,7 +467,7 @@ const shioriHisterToken = (() => {
         if (queued) reportQueue();
         if (!queued) throw err;
         if (isManual(init.body)) {
-          throw new TypeError('Hister is unreachable. Queued; it will be sent when the server is back.');
+          throw new TypeError('Nogon is unreachable. Queued; it will be sent when the server is back.');
         }
         return new Response('{}', {
           status: 201,

@@ -52,7 +52,7 @@
     if (!q) return false;
     const r = await fetch(`${base}search?format=json&query=${encodeURIComponent(JSON.stringify({ text: q, limit: 20 }))}`,
       S.histerFetchOptions(token, { headers: { Accept: 'application/json' } }));
-    if (!r.ok) throw new Error(`Hister answered ${r.status}`);
+    if (!r.ok) throw new Error(`Nogon answered ${r.status}`);
     const docs = (await r.json()).documents || [];
     const wanted = new Set(urls.flatMap((u) => [u, u.endsWith('/') ? u.slice(0, -1) : u + '/']));
     return docs.some((d) => wanted.has(d.url));
@@ -120,7 +120,7 @@
     if (S.isSmallWebLink(url)) return saveThroughGateway(url, settings, base, wait);
     if (!/^https?:\/\//i.test(url)) return { outcome: 'failed', reason: 'Not a web page' };
     if (S.linkLooksLikeFile(url)) return { outcome: 'failed', reason: 'A file, not a web page' };
-    if (!base) return { outcome: 'failed', reason: 'No Hister server set (Shiori settings)' };
+    if (!base) return { outcome: 'failed', reason: 'No Nogon server set (Shiori settings)' };
     // Notes come only from Kura: none is saved from here, another vault's
     // (shared or not) known by its address wherever Kura is.
     const isNote = (u) => S.noteVault(u) !== null || S.isNoteURL(u, settings.niwaURL || '', settings.konbiniURL || '');
@@ -137,23 +137,23 @@
     try {
       r = await fetch(`${base}api/add`, S.histerFetchOptions(token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
     } catch (_) {
-      return { outcome: 'failed', reason: 'Hister is out of reach, and its skip rules are unknown here yet' };
+      return { outcome: 'failed', reason: 'Nogon is out of reach, and its skip rules are unknown here yet' };
     }
     if (r.headers.get('X-Shiori-Queued') === '1' || r.status >= 500 || r.status === 429) return { outcome: 'queued' };
     if (r.ok) return { outcome: 'saved' };
     if (r.status === 406) return { outcome: 'skipped' };
-    if (r.status === 413) return { outcome: 'failed', reason: 'Too large for Hister' };
-    if (r.status === 422) return { outcome: 'failed', reason: 'Hister found sensitive content in it' };
-    return { outcome: 'failed', reason: `Hister answered ${r.status}` };
+    if (r.status === 413) return { outcome: 'failed', reason: 'Too large for Nogon' };
+    if (r.status === 422) return { outcome: 'failed', reason: 'Nogon found sensitive content in it' };
+    return { outcome: 'failed', reason: `Nogon answered ${r.status}` };
   }
 
   // The answer, on the tab's badge and tooltip for a moment (null: back to
   // the toolbar's own, the queue's count).
   const LOOK = {
-    saved: { text: '✓', colour: '#9ece6a', title: 'Saved to Hister' },
-    queued: { text: '…', colour: '#e0af68', title: 'Waiting to send to Hister' },
-    held: { text: '=', colour: '#7aa2f7', title: 'Hister already has this page' },
-    skipped: { text: '–', colour: '#a9b1d6', title: "Hister's rules skip this page" },
+    saved: { text: '✓', colour: '#9ece6a', title: 'Saved to Nogon' },
+    queued: { text: '…', colour: '#e0af68', title: 'Waiting to send to Nogon' },
+    held: { text: '=', colour: '#7aa2f7', title: 'Nogon already has this page' },
+    skipped: { text: '–', colour: '#a9b1d6', title: "Nogon's rules skip this page" },
     failed: { text: '!', colour: '#f7768e', title: "Couldn't save it" },
   };
   function tell(tabId, result) {
@@ -188,8 +188,8 @@
 
   const ITEMS = [
     { id: 'shiori-search', title: 'Search Shiori for “%s”', contexts: ['selection'] },
-    { id: 'shiori-save-link', title: 'Save Link to Hister', contexts: ['link'] },
-    { id: 'shiori-save-page', title: 'Save Page to Hister', contexts: ['page'] },
+    { id: 'shiori-save-link', title: 'Save Link to Nogon', contexts: ['link'] },
+    { id: 'shiori-save-page', title: 'Save Page to Nogon', contexts: ['page'] },
     { id: 'shiori-never-page', title: 'Never Save This Page', contexts: ['page'] },
     { id: 'shiori-never-site', title: 'Never Save This Site', contexts: ['page'] },
   ];

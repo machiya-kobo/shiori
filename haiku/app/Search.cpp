@@ -14,7 +14,7 @@ static std::string Problem(const char* who, const HttpReply& reply, const Result
 	if (reply.status == 0)
 		return TransportProblem(who, reply.error);
 	if ((reply.status == 401 || reply.status == 403) && !sentCredential)
-		return std::string(who) + " wants you signed in: sign in to Hister in Settings.";
+		return std::string(who) + " wants you signed in: sign in to Nogon in Settings.";
 	if (reply.status == 401 || reply.status == 403) {
 		// Hister answers 403 without a valid token or session; Kura 401 without a credential.
 		return std::string(who) + " refused this device's credential (" + std::to_string(reply.status)
@@ -65,7 +65,7 @@ void RunSearch(BMessenger target, int32 generation, SearchRequest request, Confi
 			HttpReply reply = HttpRequestJSON(config, "GET", url, std::string(), true);
 			if (reply.status >= 200 && reply.status <= 299)
 				out->notes = ParseHisterNotes(reply.body);
-			out->notesProblem = Problem("Hister", reply, out->notes, !CredentialHeaders(config, url).empty());
+			out->notesProblem = Problem("Nogon", reply, out->notes, !CredentialHeaders(config, url).empty());
 			return;
 		}
 		std::string url = KuraSearchURL(config.kura, request.query,
@@ -91,7 +91,7 @@ void RunSearch(BMessenger target, int32 generation, SearchRequest request, Confi
 		HttpReply reply = HttpRequestJSON(config, "GET", url, std::string(), true);
 		if (reply.status >= 200 && reply.status <= 299)
 			outcome->pages = ParseHister(reply.body);
-		outcome->pagesProblem = Problem("Hister", reply, outcome->pages, !CredentialHeaders(config, url).empty());
+		outcome->pagesProblem = Problem("Nogon", reply, outcome->pages, !CredentialHeaders(config, url).empty());
 	}
 	if (notesThread.joinable())
 		notesThread.join();

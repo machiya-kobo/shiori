@@ -67,7 +67,7 @@ struct SettingsView: View {
         var summary: String {
             switch self {
             case .appearance: "Theme, appearance, text size, app icon"
-            case .search: "Hister, pills, the web, Small Web and your notes"
+            case .search: "Nogon, pills, the web, Small Web and your notes"
             case .results: "How results look and open, and your history"
             case .media: "Your libraries and what you played"
             case .safari: "The extension, and Shiori's results in Safari"
@@ -138,9 +138,9 @@ struct SettingsView: View {
     /// Where the shared settings stand (the contract's state line).
     private var prefsStateLine: String {
         switch app.prefsState {
-        case .notSignedIn: "Sign in to Hister (Settings → Account) and these follow you; until then they stay on this device."
+        case .notSignedIn: "Sign in to Nogon (Settings → Account) and these follow you; until then they stay on this device."
         case .synced: "Signed in: these follow you."
-        case .signInNeeded: "Sign in to Hister again (Settings → Account) and these follow you again."
+        case .signInNeeded: "Sign in to Nogon again (Settings → Account) and these follow you again."
         case .unavailable: "Sign-in is unavailable right now: these stay on this device, and go once it answers."
         }
     }
@@ -219,7 +219,7 @@ struct SettingsView: View {
                 unencryptedNote(draft)
                 ServerStatsRow()
             } header: {
-                Text("Hister")
+                Text("Nogon")
             } footer: {
                 Text("Your pages: Shiori searches and saves them here, and the Safari extension follows this address. Sign in under Account.")
             }
@@ -258,7 +258,7 @@ struct SettingsView: View {
             } header: {
                 Text("Small Web")
             } footer: {
-                Text("Gemini and Gopher through your small-web gateway, searched when you press Return. Pages you open are saved to Hister.")
+                Text("Gemini and Gopher through your small-web gateway, searched when you press Return. Pages you open are saved to Nogon.")
             }
             .listRowBackground(palette.surface)
 
@@ -270,7 +270,7 @@ struct SettingsView: View {
                     set: { app.searchPage.notesSource = $0 }
                 )) {
                     Text("Kura").tag(NotesSource.kura.rawValue)
-                    Text("Hister").tag(NotesSource.hister.rawValue)
+                    Text("Nogon").tag(NotesSource.hister.rawValue)
                 }
                 SettingsField(label: "Kura", text: $kuraDraft, prompt: "https://kura.example/", submit: saveRooms)
                 UnencryptedNote(address: kuraDraft, carries: "your sign-in and notes")
@@ -280,7 +280,7 @@ struct SettingsView: View {
             } header: {
                 Text("Notes")
             } footer: {
-                Text("Notes open in this Obsidian vault, with their Kura page and Konbini card beside them. From Hister, only your default vault's notes.")
+                Text("Notes open in this Obsidian vault, with their Kura page and Konbini card beside them. From Nogon, only your default vault's notes.")
             }
             .listRowBackground(palette.surface)
 
@@ -331,7 +331,7 @@ struct SettingsView: View {
             } header: {
                 Text("History")
             } footer: {
-                Text("Your last \(SharedSettings.recentLimit) searches, from Shiori and Safari, kept on this device only. Remember What You Open puts what you open first next time, and Save Web Results You Open adds a web result you open to Hister.")
+                Text("Your last \(SharedSettings.recentLimit) searches, from Shiori and Safari, kept on this device only. Remember What You Open puts what you open first next time, and Save Web Results You Open adds a web result you open to Nogon.")
             }
             .listRowBackground(palette.surface)
             .onAppear { app.reloadRecentSearches() }
@@ -431,7 +431,7 @@ struct SettingsView: View {
 
             Section("About") {
                 LabeledContent("Version", value: Bundle.main.shortVersion)
-                Link("Hister by Adam Tauber", destination: URL(string: "https://github.com/asciimoo/hister")!)
+                Link("Nogon (formerly Hister) by Adam Tauber", destination: URL(string: "https://github.com/asciimoo/nogon")!)
                 Link(
                     "Based on hister-safari by Nick Burns",
                     destination: URL(string: "https://github.com/nburns/hister-safari")!)
@@ -460,7 +460,7 @@ struct SettingsView: View {
     #endif
 
     private var openingFooter: String {
-        "\(Self.clickOpensTitle) and Preview Pane stay on this device; a result's menu always has both ways to open it. Off, Images in Previews keeps previews to your Hister."
+        "\(Self.clickOpensTitle) and Preview Pane stay on this device; a result's menu always has both ways to open it. Off, Images in Previews keeps previews to your Nogon."
     }
 
     private func unencryptedNote(_ address: String) -> some View {
@@ -744,8 +744,8 @@ private struct WaitingSection: View {
                 .disabled(app.isSending)
                 if let stop = app.sendStop, !app.isSending {
                     Label(stop == .signedOut
-                          ? "Hister wants you signed in, so these are still waiting. They'll go once you sign in."
-                          : "Hister didn't answer, so these are still waiting. They'll go when it's reachable.",
+                          ? "Nogon wants you signed in, so these are still waiting. They'll go once you sign in."
+                          : "Nogon didn't answer, so these are still waiting. They'll go when it's reachable.",
                           systemImage: "exclamationmark.triangle")
                         .textStyle(.footnote)
                         .foregroundStyle(palette.secondaryText)
@@ -754,7 +754,7 @@ private struct WaitingSection: View {
         } header: {
             Text("Waiting to Send")
         } footer: {
-            Text("Pages keep the time you saved them. Safari's go out as you browse once Hister is reachable; the rest when Shiori opens.")
+            Text("Pages keep the time you saved them. Safari's go out as you browse once Nogon is reachable; the rest when Shiori opens.")
         }
         .onAppear { app.refreshWaiting() }
         if !waiting.notSaved.isEmpty {
@@ -930,7 +930,7 @@ struct ServerStatsRow: View {
     var body: some View {
         Group {
             if let stats {
-                LabeledContent("Hister Has") {
+                LabeledContent("Nogon Has") {
                     Text("\(stats.documents.formatted()) pages · \(stats.aliases) collections · \(stats.rules) rules")
                         .foregroundStyle(palette.secondaryText)
                 }

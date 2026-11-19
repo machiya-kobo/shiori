@@ -2,7 +2,7 @@
 
 Shiori is a search client for a [Nogon](https://github.com/asciimoo/nogon)
 server (formerly Hister: your own full-text search of the pages you've read;
-the code, settings and these notes still say Hister). It's one app of
+the code and these notes still say Hister; the apps say Nogon). It's one app of
 [Machiya](https://github.com/machiya-kobo/machiya), a set of small
 self-hosted apps. Read this before changing code: it holds the rules and
 the traps the code can't tell you. README has a short Quickstart; `docs/` has

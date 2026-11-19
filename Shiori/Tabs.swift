@@ -307,7 +307,7 @@ struct RecentScreen: View {
                 ResultsList(model: files, title: "Files") {
                     ContentUnavailableView(
                         "No Files", systemImage: "folder",
-                        description: Text("Files appear here once your Hister server watches a folder."))
+                        description: Text("Files appear here once your Nogon server watches a folder."))
                 }
                 .id(ObjectIdentifier(files))
             // What's playing, what you played and watched, your top lists, your watchlist, what's new.
@@ -496,7 +496,7 @@ struct LabelsScreen: View {
                     ContentUnavailableView {
                         Label("No Labels Yet", systemImage: "tag")
                     } description: {
-                        Text("Labels come from your Hister server's aliases.")
+                        Text("Labels come from your Nogon server's aliases.")
                     } actions: {
                         Button("Try Again") { Task { await app.reloadRules() } }
                             .buttonStyle(.bordered)

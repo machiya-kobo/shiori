@@ -2,25 +2,25 @@
 
 Two sign-ins can apply, each only when the server side has it on:
 
-- **Hister's users** (Hister v0.20.0+, now [Nogon](https://nogon.eu/docs/user-handling), with `app.user_handling: true`, and
-  Machiya's sign-in helper, hister-login): one sign-in for Hister and every
+- **Nogon's users** ([Nogon](https://nogon.eu/docs/user-handling), Hister v0.20.0+, with `app.user_handling: true`, and
+  Machiya's sign-in helper, hister-login): one sign-in for Nogon and every
   room. Below.
 - **Machiya's identity file**, for rooms that run with it: [Signing in to
   Machiya](#signing-in-to-machiya), further down.
 
 With neither, Shiori sends nothing more than before, and none of this shows.
 
-## Sign in to Hister
+## Sign in to Nogon
 
-No sign-in while Hister has no users (the default). When it has them (`app.user_handling`, v0.20.0+, with Machiya's sign-in helper on Hister's host), sign in once on each:
+No sign-in while Nogon has no users (the default). When it has them (`app.user_handling`, v0.20.0+, with Machiya's sign-in helper on Nogon's host), sign in once on each:
 
-- **iPhone, iPad and Mac:** Settings → Account → Sign in to Hister, shown only while Hister has users. When Hister offers its OIDC sign-in it's one button, **Sign In with Tailscale**; **Other Ways to Sign In** shows **Sign In with Saved Password** (Hister's page, where your saved password is offered) and a name and password, which are the only ways without it. The app keeps the sign-in in the Keychain.
-- **Safari's extension:** uses the app's sign-in for Kura and Konbini. For Hister itself, paste your Hister user's token into the app (Settings → Safari → Safari Extension Token, shown only while Hister has users) on each device with the extension.
-- **The hosted pages** send you to Hister's sign-in and back.
+- **iPhone, iPad and Mac:** Settings → Account → Sign in to Nogon, shown only while Nogon has users. When Nogon offers its OIDC sign-in it's one button, **Sign In with Tailscale**; **Other Ways to Sign In** shows **Sign In with Saved Password** (Hister's page, where your saved password is offered) and a name and password, which are the only ways without it. The app keeps the sign-in in the Keychain.
+- **Safari's extension:** uses the app's sign-in for Kura and Konbini. For Nogon itself, paste your Nogon user's token into the app (Settings → Safari → Safari Extension Token, shown only while Nogon has users) on each device with the extension.
+- **The hosted pages** send you to Nogon's sign-in and back.
 - **Linux:** `shiori sign-in` (a small window) and `shiori sign-out`, or `"histerToken"` in config.json.
 - **Haiku:** Settings → Sign In…, or `"histerToken"` in config.json.
 
-The session goes only to your Hister. When you're signed in, Kura and Konbini get an opaque id, else the token, so they know who's asking. [Hister's users](#histers-users) has the details.
+The session goes only to your Nogon. When you're signed in, Kura and Konbini get an opaque id, else the token, so they know who's asking. [Nogon's users](#nogons-users) has the details.
 
 ## Sign in to Machiya
 
@@ -31,58 +31,58 @@ No sign-in unless Machiya's identity file is on (off by default). Then Kura and 
 
 Where to enter it:
 
-- **iPhone, iPad and Mac:** Settings → Account → Sign in to Machiya, shown only when Kura asks for it (a 401 that doesn't name Hister's sign-in) or a token is kept. With Hister's users it never shows: that one sign-in covers the rooms. The app keeps it in the Keychain; Safari's extension asks the app.
+- **iPhone, iPad and Mac:** Settings → Account → Sign in to Machiya, shown only when Kura asks for it (a 401 that doesn't name Nogon's sign-in) or a token is kept. With Nogon's users it never shows: that one sign-in covers the rooms. The app keeps it in the Keychain; Safari's extension asks the app.
 - **Linux:** `"machiyaToken"` in `~/.config/shiori/config.json`. `shiori pair <code>` prints it.
 - **The hosted pages** use Kura's own `/signin` cookie.
 
-The token goes only to the configured Kura and Konbini, never to Hister or SearXNG. Sign Out deletes it from the device; revoke it on the server. [Signing in to Machiya](#signing-in-to-machiya) has the details, and [Machiya's identity guide](https://github.com/machiya-kobo/machiya/blob/main/docs/identity.md) sets up the server side.
+The token goes only to the configured Kura and Konbini, never to Nogon or SearXNG. Sign Out deletes it from the device; revoke it on the server. [Signing in to Machiya](#signing-in-to-machiya) has the details, and [Machiya's identity guide](https://github.com/machiya-kobo/machiya/blob/main/docs/identity.md) sets up the server side.
 
-## Hister's users
+## Nogon's users
 
-Hister keeps **one access token per user** (making a new one breaks every
+Nogon keeps **one access token per user** (making a new one breaks every
 holder at once), and sessions for browsers and apps. The sign-in helper
-sits on Hister's own host under `/machiya/` (its sign-in page, sessions
-page and app flow) and turns a Hister session into an opaque id,
+sits on Nogon's own host under `/machiya/` (its sign-in page, sessions
+page and app flow) and turns a Nogon session into an opaque id,
 `mhs_…`, that the rooms accept. Shiori uses each where it fits:
 
 | Shiori | How it signs in | What it sends |
 |---|---|---|
-| iPhone, iPad, Mac | Settings → Account → **Sign in to Hister**: first **Sign In with Saved Password** (the helper's `/machiya/signin?app=1&return=shiori://signed-in` in a private web session, back with `#sid=…&hister=…`; Safari's AutoFill offers the saved login there, which the app's own fields can't without Associated Domains, a paid team's), or a name and password (Hister's `POST /api/login`, then the helper's `POST /machiya/api/app-session` trades the session for an id). Shown only while the helper's `/machiya/healthz` says Hister has users, or while signed in. | `Cookie: hister=<session>` to Hister (HisterKit keeps cookies off and sets it itself), `Authorization: Bearer mhs_…` to the rooms. Kept in the Keychain, service `Hister` (`HisterKeychain`): this device only, shared with the share extension. |
-| Safari extension | The app's sign-in, and Settings → Safari → **Safari Extension Token** in the app (paste your Hister user's token, once per device, and again after a rotation) | To Hister, `X-Access-Token`, handed over by native messaging (`hister`; a browser extension can't set `Cookie`), kept in the background's memory a minute, never stored; the extension's own pages ask the background for it, never a content script. To the rooms, the app's own id `Authorization: Bearer mhs_…` (native messaging, `machiya`), never Hister's token. |
-| Hosted search page and web app | The helper's sign-in page: a 401 or 403 from Hister's routes sends the page to `<hister>/machiya/signin?return=<the page>` (at most once in 30 s), and back through the page's own host (`/machiya/start`, `/machiya/callback`) | Nothing of their own: the host's room cookie (`__Host-machiya_sso_shiori`, a room session `mhr_…` the helper sets for that host) goes to this host, whose nginx asks the helper and adds Hister's session on its own hop, and passes it on to `/kura/` and `/konbini/` (machiya docs/services/hister-login.md). **Sign Out** (Settings → Account) posts to `/machiya/signout` on the page's own origin; **Sessions…** is the helper's page for other devices. |
-| Linux | `shiori sign-in` (a small window, name and password) | The session and id in `$XDG_DATA_HOME/shiori/sign-in.json` (0600, tied to the server's origin); `histerToken` in config.json for Hister. Not signed in, the rooms get a room token, `"roomToken": "mht_…"` (made on the helper's sessions page), else the identity file's token. `shiori sign-out`, `shiori status`. |
+| iPhone, iPad, Mac | Settings → Account → **Sign in to Nogon**: first **Sign In with Saved Password** (the helper's `/machiya/signin?app=1&return=shiori://signed-in` in a private web session, back with `#sid=…&hister=…`; Safari's AutoFill offers the saved login there, which the app's own fields can't without Associated Domains, a paid team's), or a name and password (Hister's `POST /api/login`, then the helper's `POST /machiya/api/app-session` trades the session for an id). Shown only while the helper's `/machiya/healthz` says Nogon has users, or while signed in. | `Cookie: hister=<session>` to Nogon (HisterKit keeps cookies off and sets it itself), `Authorization: Bearer mhs_…` to the rooms. Kept in the Keychain, service `Hister` (`HisterKeychain`): this device only, shared with the share extension. |
+| Safari extension | The app's sign-in, and Settings → Safari → **Safari Extension Token** in the app (paste your Nogon user's token, once per device, and again after a rotation) | To Nogon, `X-Access-Token`, handed over by native messaging (`hister`; a browser extension can't set `Cookie`), kept in the background's memory a minute, never stored; the extension's own pages ask the background for it, never a content script. To the rooms, the app's own id `Authorization: Bearer mhs_…` (native messaging, `machiya`), never Nogon's token. |
+| Hosted search page and web app | The helper's sign-in page: a 401 or 403 from Nogon's routes sends the page to `<hister>/machiya/signin?return=<the page>` (at most once in 30 s), and back through the page's own host (`/machiya/start`, `/machiya/callback`) | Nothing of their own: the host's room cookie (`__Host-machiya_sso_shiori`, a room session `mhr_…` the helper sets for that host) goes to this host, whose nginx asks the helper and adds Nogon's session on its own hop, and passes it on to `/kura/` and `/konbini/` (machiya docs/services/hister-login.md). **Sign Out** (Settings → Account) posts to `/machiya/signout` on the page's own origin; **Sessions…** is the helper's page for other devices. |
+| Linux | `shiori sign-in` (a small window, name and password) | The session and id in `$XDG_DATA_HOME/shiori/sign-in.json` (0600, tied to the server's origin); `histerToken` in config.json for Nogon. Not signed in, the rooms get a room token, `"roomToken": "mht_…"` (made on the helper's sessions page), else the identity file's token. `shiori sign-out`, `shiori status`. |
 
-The apps send that token beside their sign-in too. Hister reads the
+The apps send that token beside their sign-in too. Nogon reads the
 session first, so a signed-in app needs no token of its own: the token is
 the Safari extension's, which can't send a session, and the app's only
 while signed out. After a token rotation, only devices with the Safari
 extension need the new one pasted.
 
-**Where they go.** The session only to the configured Hister server, by
+**Where they go.** The session only to the configured Nogon server, by
 origin. The rooms (Kura, Konbini) get the app's `mhs_` id, or on Linux a
 room token (`mht_`), under the same host rule as Machiya's token (below);
-neither ever goes to Hister. Hister's token goes to Hister alone: no
-Shiori sends it to a room. Not signed in, a room in Hister sign-in mode
+neither ever goes to Nogon. Nogon's token goes to Nogon alone: no
+Shiori sends it to a room. Not signed in, a room in Nogon sign-in mode
 answers 401 and Shiori says to sign in. Nothing
 follows a redirect to another origin with any of them, none is ever in a
 URL or a log, and the offline capture queue stores none (its replays read
 the token afresh).
 
-**Signed out.** Hister answers 403 (and nginx 401) without a valid
-credential. The apps say "Hister wants you to sign in" and never retry it;
+**Signed out.** Nogon answers 403 (and nginx 401) without a valid
+credential. The apps say "Nogon wants you to sign in" and never retry it;
 pages waiting in the outbox stay until the device signs in again. The
 hosted pages go to the sign-in. A 500 from the hosted pages' sign-in check
 means sign-in is unavailable, said in a line, never an error page.
 
 **Signing out.** In the apps Sign Out posts the id to the helper's
-`/machiya/signout`, which ends the Hister session and every id on it, then
+`/machiya/signout`, which ends the Nogon session and every id on it, then
 forgets both. A browser signs out on the helper's `/machiya/sessions` page
 (it lists every browser and app, with Sign Out for one or all). The token
-is separate: make a new one in Hister (`nogon user update <you>
+is separate: make a new one in Nogon (`nogon user update <you>
 --regen-token`, Hister 0.20's `hister update-user`) and every holder needs the new one.
 
-**Testing.** Never against a live Hister: a sign-in writes a session.
-HisterKit's `HisterUsersLiveTests` run against a throwaway Hister with
+**Testing.** Never against a live Nogon: a sign-in writes a session.
+HisterKit's `HisterUsersLiveTests` run against a throwaway Nogon with
 users (`HISTER_USERS_URL`, `HISTER_USERS_NAME`, `HISTER_USERS_PASSWORD`,
 and optionally `HISTER_USERS_TOKEN`); the stubs cover the helper.
 
@@ -105,7 +105,7 @@ Shiori proves who you are with a **token**, sent as
   spaces, dashes and case don't matter. Five wrong tries per address in
   ten minutes and the room says to wait.
 
-Each device has its own token. Hister and SearXNG never get it (Hister
+Each device has its own token. Nogon and SearXNG never get it (Hister
 has its own sign-in, above).
 
 ## Where it goes
@@ -114,7 +114,7 @@ Only to **exactly the configured Kura and Konbini** (and Niwa, where one is
 configured; Shiori fetches nothing from Niwa today), compared by origin:
 scheme, host and port. An address with a user or password in it, a
 lookalike host, another port or `http://` where `https://` is configured
-gets nothing. A room on Hister's or SearXNG's origin gets nothing either:
+gets nothing. A room on Nogon's or SearXNG's origin gets nothing either:
 give it its own. A request carrying the token never follows a redirect to
 another origin (the browsers' fetch refuses any redirect; the apps drop the
 header; Linux follows none). The rule is one function with twins:

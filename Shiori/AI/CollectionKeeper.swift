@@ -39,7 +39,7 @@ extension AutoLabeller {
     }
 
     private func planCollections(app: AppState, onDemand: Bool) async -> String {
-        guard let client = app.client else { return "Hister didn't answer." }
+        guard let client = app.client else { return "Nogon didn't answer." }
         // Asked for: the rules as they are now. Automatic: the copy from
         // coming to the foreground (each edit reads them afresh anyway).
         if onDemand { await app.reloadRules() } else { await app.loadRulesIfNeeded() }
@@ -247,7 +247,7 @@ extension AutoLabeller {
             switch AliasUndo(edit, previous: previous, current: current) {
             case .write(let value): try await client.setAlias(edit.keyword, value: value)
             case .nothing: break
-            case .cannot: throw .invalidQuery("\(CollectionIcon.title(for: edit.keyword)) has changed since; edit it in Hister.")
+            case .cannot: throw .invalidQuery("\(CollectionIcon.title(for: edit.keyword)) has changed since; edit it in Nogon.")
             }
         } else if current != nil {
             try await client.deleteAlias(edit.keyword)

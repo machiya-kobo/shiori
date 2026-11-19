@@ -108,7 +108,7 @@ private struct ResultActionsHost: ViewModifier {
                 }
             }
             .alert(
-                "Couldn't Update Hister",
+                "Couldn't Update Nogon",
                 isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })
             ) {
                 Button("OK", role: .cancel) {}
@@ -448,7 +448,7 @@ struct OpenOriginalButton: View {
 
     static func hint(for document: StoredPage, app: AppState) -> String {
         if let note = app.noteLinks(for: document) { return note.obsidian != nil ? "Opens in Obsidian" : "Opens in Kura" }
-        return LocalFiles.isLocalFile(document.url) ? "Opens Hister's copy" : "Opens the page"
+        return LocalFiles.isLocalFile(document.url) ? "Opens Nogon's copy" : "Opens the page"
     }
 
     static func symbol(for document: StoredPage, app: AppState) -> String {
@@ -485,7 +485,7 @@ struct WebItem: View {
                 .tint(palette.accent)
         }
         .contextMenu {
-            Button("Save to Hister…", systemImage: "bookmark") { actions.save(result) }
+            Button("Save to Nogon…", systemImage: "bookmark") { actions.save(result) }
             Divider()
             if let url = SafeHref.url(result.url) {
                 Link(destination: url) { Label("Open in Safari", systemImage: "safari") }
@@ -550,7 +550,7 @@ struct DocumentMenu: View {
         if app.noteLinks(for: document) != nil, Notes.otherVault(of: document.url) == nil, app.notesKura != nil,
             let path = Notes.path(of: document.url, cards: app.konbiniCards)
         {
-            Button("Save Links to Hister…", systemImage: "link.badge.plus") { app.saveLinksRequest = .note(path) }
+            Button("Save Links to Nogon…", systemImage: "link.badge.plus") { app.saveLinksRequest = .note(path) }
             let folder = (path as NSString).deletingLastPathComponent
             if !folder.isEmpty {
                 Button("Save Links in \(folder)…", systemImage: "folder.badge.plus") { app.saveLinksRequest = .folder(folder) }

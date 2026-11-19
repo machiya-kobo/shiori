@@ -83,25 +83,25 @@ export async function signOutCommand(config) {
     try {
       removeSignIn();
     } catch (_) {}
-    return { code: 0, message: 'Not signed in to Hister.' };
+    return { code: 0, message: 'Not signed in to Nogon.' };
   }
   const out = signOutRequest(config.server, record.sid);
   await requestJSON(config, out.url, { method: 'POST', headers: out.headers, signIn: false, credentials: false, redirects: false }).catch(() => {});
   removeSignIn();
-  return { code: 0, message: 'Signed out of Hister.' };
+  return { code: 0, message: 'Signed out of Nogon.' };
 }
 
 /** The sign-in window: name, password, Sign In; it says so when sign-in isn't on. */
 export class SignInWindow {
   constructor(app, config) {
     this.config = config;
-    this.window = new Adw.Window({ application: app, title: 'Sign in to Hister', default_width: 420, default_height: 300 });
+    this.window = new Adw.Window({ application: app, title: 'Sign in to Nogon', default_width: 420, default_height: 300 });
     const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 12, margin_top: 12, margin_bottom: 18, margin_start: 18, margin_end: 18 });
     const view = new Adw.ToolbarView();
     view.add_top_bar(new Adw.HeaderBar());
     view.set_content(box);
     this.window.set_content(view);
-    this.status = new Gtk.Label({ wrap: true, xalign: 0, label: 'Checking whether your Hister has users…' });
+    this.status = new Gtk.Label({ wrap: true, xalign: 0, label: 'Checking whether your Nogon has users…' });
     this.status.add_css_class('dim-label');
     const group = new Adw.PreferencesGroup();
     this.name = new Adw.EntryRow({ title: 'Name' });
@@ -127,10 +127,10 @@ export class SignInWindow {
       return;
     }
     if (!(await available(this.config))) {
-      this.status.set_label('Your Hister has no users, or its sign-in is unavailable: nothing to sign in to.');
+      this.status.set_label('Your Nogon has no users, or its sign-in is unavailable: nothing to sign in to.');
       return;
     }
-    this.status.set_label('Your Hister has users: sign in once on this computer. The session stays in your data folder (0600) and goes only to your Hister.');
+    this.status.set_label('Your Nogon has users: sign in once on this computer. The session stays in your data folder (0600) and goes only to your Nogon.');
     this.group.set_sensitive(true);
     this.button.set_sensitive(true);
   }

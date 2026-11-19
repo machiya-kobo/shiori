@@ -62,7 +62,7 @@ struct HisterTokenSection: View {
         } header: {
             Text("Safari Extension Token")
         } footer: {
-            Text("Safari's extension saves pages with your Hister token, pasted here once. It stays in this device's Keychain and goes only to your Hister.")
+            Text("Safari's extension saves pages with your Nogon token, pasted here once. It stays in this device's Keychain and goes only to your Nogon.")
         }
     }
 

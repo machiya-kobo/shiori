@@ -38,7 +38,7 @@ void RunLoad(BMessenger target, Config config, std::string url, std::string path
 	// From Hister (Settings: Notes From): its readable copy, by the note's
 	// address, and only a note it may show (the default vault's).
 	bool fromHister = NotesFromHister(config);
-	const char* who = fromHister ? "Hister" : "Kura";
+	const char* who = fromHister ? "Nogon" : "Kura";
 	HttpReply reply;
 	if (fromHister && !HisterNoteShown(url))
 		reply.status = 404;
@@ -50,7 +50,7 @@ void RunLoad(BMessenger target, Config config, std::string url, std::string path
 	if (reply.status == 0)
 		loaded->problem = TransportProblem(who, reply.error);
 	else if (reply.status == 401 || reply.status == 403)
-		loaded->problem = std::string(who) + " wants you signed in: sign in to Hister in Settings.";
+		loaded->problem = std::string(who) + " wants you signed in: sign in to Nogon in Settings.";
 	else if (reply.status == 404)
 		loaded->problem = std::string(who) + " has no such note any more.";
 	else if (reply.status < 200 || reply.status > 299)

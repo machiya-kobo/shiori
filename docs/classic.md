@@ -1,7 +1,7 @@
 # Shiori for Classic Macintosh
 
 A native Shiori for 68k Macs, from a Mac Plus on System 6 to a color Mac
-on System 7: search your pages in Hister ([Nogon](https://nogon.eu/) since v0.22) and your notes in Kura, read a
+on System 7: search your pages in [Nogon](https://nogon.eu/) (formerly Hister) and your notes in Kura, read a
 result in its own window, and quick-search from the Apple menu. Written in
 C with [Retro68](https://github.com/autc04/Retro68); the code is in
 [`classic/`](../classic).
@@ -14,24 +14,24 @@ C with [Retro68](https://github.com/autc04/Retro68); the code is in
   System 6.0.8 or System 7.x, and MacTCP 2.0.6 or later on Ethernet (a
   Mac Plus works with a BlueSCSI or other DaynaPORT-compatible SCSI
   Ethernet).
-- **A way to Hister without TLS.** MacTCP has no TLS and Shiori here looks
+- **A way to Nogon without TLS.** MacTCP has no TLS and Shiori here looks
   up no names, so it speaks plain HTTP/1.0, by IP address. Either:
-  - **Directly to Hister**, served over plain HTTP on your LAN (below).
-    The simplest setup: Shiori is then an ordinary Hister client, with or
-    without Hister's access token. Kura is optional: without it, notes come
-    from Hister.
+  - **Directly to Nogon**, served over plain HTTP on your LAN (below).
+    The simplest setup: Shiori is then an ordinary Nogon client, with or
+    without Nogon's access token. Kura is optional: without it, notes come
+    from Nogon.
   - **Through mac-bridge** ([`classic/bridge/`](../classic/bridge)), when
-    your Hister is HTTPS-only or signed in with users. It needs Machiya's
+    your Nogon is HTTPS-only or signed in with users. It needs Machiya's
     sign-in helper,
     [hister-login](https://github.com/machiya-kobo/machiya/blob/main/docs/services/hister-login.md),
     which Machiya's reference compose doesn't run yet: without it, go
     directly. The bridge listens
-    on your LAN, one port for Hister and one for Kura, passes a few
-    read-only paths on over HTTPS, and holds Hister's token itself. The Mac
+    on your LAN, one port for Nogon and one for Kura, passes a few
+    read-only paths on over HTTPS, and holds Nogon's token itself. The Mac
     holds only a **room token** (`mht_…`, from the sign-in helper's
     sessions page, with the scopes `kura` and the bridge's): the bridge
     checks it with the helper on both ports, then passes it to Kura (which
-    checks it too) or swaps in Hister's own token, which never reaches the
+    checks it too) or swaps in Nogon's own token, which never reaches the
     LAN. List your Mac's
     address in `BRIDGE_ALLOW`.
 
@@ -52,10 +52,10 @@ it). Each holds three files:
 
 ## Settings
 
-File → Preferences…: how to reach Hister (*Through mac-bridge* or
-*Directly (HTTP)*), Hister's and Kura's addresses
+File → Preferences…: how to reach Nogon (*Through mac-bridge* or
+*Directly (HTTP)*), Nogon's and Kura's addresses
 (`http://<IP address>:<port>/`; Kura's may be empty), the room token,
-Hister's token (direct only), and the reader's text size. On first launch
+Nogon's token (direct only), and the reader's text size. On first launch
 the dialog opens on its own. They're kept in *Shiori Preferences* (the
 Preferences folder on System 7, the System Folder on System 6), on this
 Mac only. The tokens are in that file in clear, since classic Mac OS has
@@ -74,12 +74,12 @@ file.
   any other; when memory runs short, the status line says the list stops
   there.
 - **Notes** come from Kura (the default vault, or a shared one from the
-  vault menu) or from Hister (the default vault only): Preferences → Notes
+  vault menu) or from Nogon (the default vault only): Preferences → Notes
   from. Until you choose, Kura when one is set up.
 - Not in this app: Files, Small Web, the web, AI and saving.
 - **Readers**: a result opens in its own window (up to three): a note from
-  Kura (never cached), or Hister's readable copy when notes come from
-  Hister; a page from Hister's readable copy. Headings, bold, italic, code, quotes, lists and links are styled.
+  Kura (never cached), or Nogon's readable copy when notes come from
+  Nogon; a page from Nogon's readable copy. Headings, bold, italic, code, quotes, lists and links are styled.
   A link to another note in the same Kura opens it there; any other link
   shows its address, and Copy Link copies it (there's no browser).
   Through mac-bridge a long page or note comes in parts of about 16 KB:
@@ -103,11 +103,11 @@ Keys: Tab moves between the field and the results, ↑ ↓ choose a result,
 Return opens it, ⌘1–⌘4 pick the pill, ⌘. stops a search. (A Mac Plus with
 the original M0110 keyboard has no arrows: use Tab and the Search menu.)
 
-## Hister over plain HTTP
+## Nogon over plain HTTP
 
 Any client without TLS (this one, or another old machine's) can talk to
-Hister directly once Hister listens on your LAN over plain HTTP. In
-Hister's `config.yml`:
+Nogon directly once Nogon listens on your LAN over plain HTTP. In
+Nogon's `config.yml`:
 
 ```yaml
 server:
@@ -121,11 +121,11 @@ app:
 `HISTER__APP__ACCESS_TOKEN` in its environment, as in a container.) A
 client sends `Origin: hister://` and, with an access token set, the token
 as `X-Access-Token` (or `Authorization: Bearer`). In Shiori's Preferences:
-*Directly (HTTP)*, Hister's address, and *Hister's token* when you set one.
+*Directly (HTTP)*, Nogon's address, and *Nogon's token* when you set one.
 
 **Know what it exposes.** Over plain HTTP everything crosses your network
 unencrypted: your searches, the pages you read and the access token.
-Hister's API also writes: whoever can reach the port (without a token)
+Nogon's API also writes: whoever can reach the port (without a token)
 or has seen the token (with one) can read your whole history, add pages
 and delete them.
 
@@ -136,7 +136,7 @@ and delete them.
 - Keep the HTTPS address for everything else (a reverse proxy can serve
   both).
 - If that's more than you want to open, use mac-bridge instead: GET only,
-  three paths, an address allow-list, and Hister's token stays off the LAN.
+  three paths, an address allow-list, and Nogon's token stays off the LAN.
 
 Tested with Hister 0.20.0: with no token, with `app.access_token`, and
 with users on (`app.user_handling`), where each user's own token works
@@ -148,7 +148,7 @@ it's `nogon user update <name> --regen-token`).
 - Each request carries one credential at most, and only to the two
   addresses you set (by origin), never across a redirect (Shiori follows
   none). Through the bridge, the room token goes to both bridge ports and
-  Hister's token is never sent. Directly, Hister's token goes to Hister
+  Nogon's token is never sent. Directly, Nogon's token goes to Nogon
   only (`X-Access-Token`) and the room token to Kura only.
 - A note's vault comes from its address. Notes searches only the default
   vault and vaults Kura marks shared; a private vault is never offered,

@@ -85,7 +85,7 @@ public enum Export {
             <rss version="2.0"><channel>
             <title>\(xml("Shiori – " + title))</title>
             <link>\(xml(link?.absoluteString ?? ""))</link>
-            <description>\(xml("Hister pages for " + title))</description>
+            <description>\(xml("Nogon pages for " + title))</description>
 
             """
         for page in pages {

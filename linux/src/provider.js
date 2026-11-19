@@ -111,15 +111,15 @@ export function replyState(reply) {
  */
 export function quickStatus(text, pages, notes, count) {
   const signIn = pages === 'signin' || notes === 'signin';
-  if (pages === 'signin') return { message: 'Sign in to Hister to search your pages from here.', signIn };
+  if (pages === 'signin') return { message: 'Sign in to Nogon to search your pages from here.', signIn };
   if (notes === 'signin' && !count) return { message: 'Sign in to see your notes here.', signIn };
   if (count) return { message: '', signIn };
-  if (pages === 'unreachable' && notes !== 'ok') return { message: "Hister didn't answer. Check your network or VPN.", signIn };
+  if (pages === 'unreachable' && notes !== 'ok') return { message: "Nogon didn't answer. Check your network or VPN.", signIn };
   if (pages === 'none' && notes === 'none') return { message: 'Add your servers to ~/.config/shiori/config.json.', signIn };
   return { message: `Nothing matches “${text}”.`, signIn };
 }
 
 /** The menu's row that opens the sign-in window. */
 export function signInRow() {
-  return { id: SIGN_IN, kind: 'signin', name: 'Sign in to Hister', description: 'Shiori: to search your pages from the menu', url: SIGN_IN };
+  return { id: SIGN_IN, kind: 'signin', name: 'Sign in to Nogon', description: 'Shiori: to search your pages from the menu', url: SIGN_IN };
 }

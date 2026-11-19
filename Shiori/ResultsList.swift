@@ -100,7 +100,7 @@ struct ResultsList<Empty: View>: View {
             loadingView
         case .failed(let error):
             FailureView(error: error, hasServer: app.client != nil,
-                        service: model.source == .notes && !model.notesFromHister ? "Kura" : "Hister") {
+                        service: model.source == .notes && !model.notesFromHister ? "Kura" : "Nogon") {
                 Task { await load() }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -343,7 +343,7 @@ struct DocumentLinks: View {
         // Not a note: notes are Kura's (Hister may not hold one).
         if let client = app.client, app.noteLinks(for: document) == nil, !Notes.isPrivateNote(document.url) {
             Link(destination: client.webPreviewURL(for: document.url)) {
-                Label("Open in Hister", systemImage: "magnifyingglass")
+                Label("Open in Nogon", systemImage: "magnifyingglass")
             }
         }
     }
@@ -564,7 +564,7 @@ struct FailureView: View {
     let error: HisterError
     let hasServer: Bool
     /// Who didn't answer, for the title: Hister, or Kura, SearXNG, the gateway.
-    var service = "Hister"
+    var service = "Nogon"
     let retry: () -> Void
     @Environment(AppState.self) private var app
 
@@ -573,7 +573,7 @@ struct FailureView: View {
             ContentUnavailableView {
                 Label("No Server Set", systemImage: "server.rack")
             } description: {
-                Text("Add your Hister server's address in Settings.")
+                Text("Add your Nogon server's address in Settings.")
             }
         } else {
             ContentUnavailableView {

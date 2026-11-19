@@ -27,10 +27,10 @@ Settings → Safari → Search with Shiori, on by default.
 - **Waiting count** on the Mac's toolbar button. Settings → Account → Waiting to Send shows it on every device.
 - **Right-click menu** (the Mac):
   - Search Shiori for the selection.
-  - Upstream's Save Page to Hister, Never Save This Page and Never Save This Site.
-  - Save Link to Hister. It never saves a file or a page Hister already has, and saves `gemini://` and `gopher://` links through the small-web gateway.
+  - Upstream's Save Page to Nogon, Never Save This Page and Never Save This Site.
+  - Save Link to Nogon. It never saves a file or a page Nogon already has, and saves `gemini://` and `gopher://` links through the small-web gateway.
 - **Sites never saved.** Safari has no containers. Turn Shiori off in a Safari profile (Safari Settings → Profiles → Extensions) and browse those sites there.
-- **Size cap.** Mobile Safari kills extensions that use too much memory, so page HTML over 2 M characters is cut at a tag boundary, never dropped. Hister reads the text from the HTML; text alone is capped at 1 M.
+- **Size cap.** Mobile Safari kills extensions that use too much memory, so page HTML over 2 M characters is cut at a tag boundary, never dropped. Nogon reads the text from the HTML; text alone is capped at 1 M.
 - **Tagged captures.** Every page carries `metadata.client: "shiori"` and `metadata.client_version`. Search `metadata.client:shiori` to find them.
 - **No cookies permission.** The popup's "Authenticate with Browser Session" won't work. Use an access token ([signing-in.md](signing-in.md)), or a server gated by your network.
 - **Touch-sized popup.** It's full width on iPhone and iPad.
@@ -46,7 +46,7 @@ The popup, skip rules, "index this page", "skip this page/domain" and PDF indexi
   - Prepended to `background.js`: `patches/safari-shims.js`, `patches/ext/host-native.js`, `patches/ext/core.js` (the offline queue, tagged captures, combined search), `patches/shiori/search-core.js`, `patches/ext/badge.js` and `patches/ext/menus.js`.
   - Prepended to `content.js`: `patches/safari-content-shim.js` (the size cap).
   - `patches/safari-popup.css` for touch screens.
-- `project.yml` ([XcodeGen](https://github.com/yonaskolb/XcodeGen)) generates one Xcode project: an iOS/iPadOS app, a macOS app, and a Safari Web Extension for each. `Packages/HisterKit` is the Hister API client, query suggestions and the themes, tested with `swift test`.
+- `project.yml` ([XcodeGen](https://github.com/yonaskolb/XcodeGen)) generates one Xcode project: an iOS/iPadOS app, a macOS app, and a Safari Web Extension for each. `Packages/HisterKit` is the Nogon API client, query suggestions and the themes, tested with `swift test`.
 
 ## Updating upstream
 

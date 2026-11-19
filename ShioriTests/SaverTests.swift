@@ -87,7 +87,7 @@ struct SaverTests {
     @Test func withNowhereToQueueItSaysSo() async {
         StubProtocol.handle(Self.host) { _ in throw URLError(.notConnectedToInternet) }
         let outcome = await Saver.save(input, label: nil, via: "share", client: client, outbox: nil)
-        #expect(outcome == .failed("Hister is out of reach, and the page couldn't be kept for later."))
+        #expect(outcome == .failed("Nogon is out of reach, and the page couldn't be kept for later."))
     }
 
     // A link shared from another app is downloaded first: the site's own

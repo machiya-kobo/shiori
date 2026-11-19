@@ -73,7 +73,7 @@ struct PageQuery: EntityStringQuery {
 /// Opens one of your pages (a Spotlight result, Siri, a shortcut): the page itself, in the browser.
 struct OpenPageIntent: OpenIntent {
     static let title: LocalizedStringResource = "Open Page"
-    static let description = IntentDescription("Opens one of your pages from Hister.")
+    static let description = IntentDescription("Opens one of your pages from Nogon.")
     static let openAppWhenRun = false
 
     @Parameter(title: "Page")

@@ -14,7 +14,7 @@ small-web gateway (TLGS, Kennedy and Veronica-2).
 - **Searched on submit only**: no autocomplete, no live search, no
   prefetch (the engines are volunteers'). A first, uncached search can
   take 10 s or more.
-- `POST <gateway>/api/save {url}` saves a page to Hister without showing
+- `POST <gateway>/api/save {url}` saves a page to Nogon without showing
   it.
 
 ## In Shiori
@@ -42,7 +42,7 @@ small-web gateway (TLGS, Kennedy and Veronica-2).
 - **Save Web Results You Open** (off by default): on the hosted pages a web
   or news result opened from a search goes to `/smallweb/api/save` with
   `only_new: true`, `via: "web-result"` and the search, so the gateway
-  never replaces a page Hister holds (`S.webSaveBody`). Offered only when
+  never replaces a page Nogon holds (`S.webSaveBody`). Offered only when
   `/api/status` says `hister.enabled` and `hister.only_new`
   (`S.webSaveReady`, smallweb 0.4.1); never on Safari's extension page,
   whose extension saves what you open anyway. The apps download the page

@@ -494,7 +494,7 @@ static void Loaded(Reader *r)
 	if (r->fetch.state != FETCH_DONE || r->fetch.head.status != 200) {
 		char problem[160];
 		long parts = 0;
-		FetchProblem(&r->fetch, r->fromKura ? "Kura" : "Hister", problem, (long) sizeof(problem));
+		FetchProblem(&r->fetch, r->fromKura ? "Kura" : "Nogon", problem, (long) sizeof(problem));
 		body = FetchBody(&r->fetch, &len);
 		if (r->fetch.head.status == 400 && r->part > 1 && shiori_json_long_member(body, len, "parts", &parts))
 			strcpy(problem, r->kind == LROW_NOTE ? "This note has changed: open it again." : "This page has changed: open it again.");
@@ -512,8 +512,8 @@ static void Loaded(Reader *r)
 	}
 	if (!shiori_json_member(body, len, r->fromKura ? "html" : "content", &raw, &rawLen)) {
 		FetchReset(&r->fetch);
-		SetStatus(r, r->fromKura ? "Kura's answer had no note." : r->kind == LROW_NOTE ? "Hister has no readable copy of this note."
-			: "Hister has no readable copy of this page.");
+		SetStatus(r, r->fromKura ? "Kura's answer had no note." : r->kind == LROW_NOTE ? "Nogon has no readable copy of this note."
+			: "Nogon has no readable copy of this page.");
 		InvalRect(&r->textRect);
 		return;
 	}
@@ -612,7 +612,7 @@ static void Loaded(Reader *r)
 		for (i = 0; i < r->textLen && (unsigned char) (*r->text)[i] <= ' '; i++)
 			;
 		if (i == r->textLen && r->parts <= 1) {
-			SetStatus(r, r->kind == LROW_NOTE ? "This note has no text." : "Hister kept no text for this page.");
+			SetStatus(r, r->kind == LROW_NOTE ? "This note has no text." : "Nogon kept no text for this page.");
 			return;
 		}
 	}
@@ -674,7 +674,7 @@ static Boolean Start(Reader *r, const char *path, const char *vault, const char 
 	r->loading = r->fetch.state != FETCH_FAILED;
 	if (!r->loading) {
 		char problem[160];
-		FetchProblem(&r->fetch, r->fromKura ? "Kura" : "Hister", problem, (long) sizeof(problem));
+		FetchProblem(&r->fetch, r->fromKura ? "Kura" : "Nogon", problem, (long) sizeof(problem));
 		strcpy(r->status, problem);
 	} else {
 		strcpy(r->status, "Loading\311");

@@ -149,10 +149,10 @@ bool SignInAvailable(int status, const std::string& body)
 std::string LoginProblem(int status)
 {
 	if (status == 401)
-		return "Hister didn't recognise that name and password.";
+		return "Nogon didn't recognise that name and password.";
 	if (status == 403)
-		return "This Hister signs in only through its sign-in provider: sign in from the web app instead.";
-	return "Sign-in is unavailable right now: Hister or its sign-in helper isn't answering.";
+		return "This Nogon signs in only through its sign-in provider: sign in from the web app instead.";
+	return "Sign-in is unavailable right now: Nogon or its sign-in helper isn't answering.";
 }
 
 bool LoadSignIn(const std::string& path, const std::string& server, SignIn& out)

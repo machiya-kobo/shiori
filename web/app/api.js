@@ -202,10 +202,10 @@ export function isPrivateNow(url) {
   return globalThis.ShioriSearch.isPrivateNoteNow(url, readVaults);
 }
 
-const PRIVATE = "A private vault's note isn't in Hister.";
+const PRIVATE = "A private vault's note isn't in Nogon.";
 // The folders Hister watches are its own to keep: their files are never
 // labelled or deleted from here.
-const FILE = 'Files stay as Hister watches them.';
+const FILE = 'Files stay as Nogon watches them.';
 
 export async function setLabel(url, label) {
   if (globalThis.ShioriSearch.isLocalFile(url)) throw new HisterError(FILE);
@@ -398,9 +398,9 @@ export async function saveOpenedWeb(url, title, q) {
     await request('smallweb/api/save', { method: 'POST', body, keepalive: true, timeout: 8000 });
     return '';
   } catch (error) {
-    if (error.status === 429) return 'Not saved to Hister: too many saves are waiting.';
-    if (error.status === 400 || error.status === 403) return "Not saved to Hister: the gateway wouldn't take it.";
-    return "Not saved to Hister: the gateway didn't answer.";
+    if (error.status === 429) return 'Not saved to Nogon: too many saves are waiting.';
+    if (error.status === 400 || error.status === 403) return "Not saved to Nogon: the gateway wouldn't take it.";
+    return "Not saved to Nogon: the gateway didn't answer.";
   }
 }
 

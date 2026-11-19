@@ -292,7 +292,7 @@ public:
 	void AboutRequested() override
 	{
 		BAlert* about = new BAlert("About", "Shiori for Haiku " SHIORI_VERSION "\n\n"
-			"Search Hister and Kura (Machiya).", "OK");
+			"Search Nogon and Kura (Machiya).", "OK");
 		about->Go(NULL);
 	}
 

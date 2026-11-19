@@ -77,7 +77,7 @@ struct SavingTests {
         #expect(first["added"] as? Int == 1)
         // The refused page is listed, with why.
         #expect(outbox.notSaved() == [Outbox.NotSaved(
-            url: "https://skip.example/", title: "T", reason: "Hister skips this site.", date: Date(timeIntervalSince1970: 3))])
+            url: "https://skip.example/", title: "T", reason: "Nogon skips this site.", date: Date(timeIntervalSince1970: 3))])
     }
 
     @Test func drainingStopsWhenUnreachableAndKeepsEverything() async throws {
@@ -97,7 +97,7 @@ struct SavingTests {
         #expect(outbox.status().count == 1)
         await outbox.drain(using: client)
         #expect(outbox.status().count == 0)
-        #expect(outbox.notSaved().map(\.reason) == ["Hister answered 502 5 times."])
+        #expect(outbox.notSaved().map(\.reason) == ["Nogon answered 502 5 times."])
     }
 
     @Test func pagesOlderThanTwoWeeksAreDroppedUnsent() async throws {
@@ -251,7 +251,7 @@ struct SavingTests {
         #expect(outbox.status().count == 2)
         #expect(await outbox.drain(using: client) == .stopped(sent: 0))
         #expect(outbox.pages.map(\.url) == ["https://b.example/"])
-        #expect(outbox.notSaved().map(\.reason) == ["Hister answered 429 5 times."])
+        #expect(outbox.notSaved().map(\.reason) == ["Nogon answered 429 5 times."])
     }
 
     @Test func aMisroutedServerIsRetriedNotDropped() async throws {
@@ -272,7 +272,7 @@ struct SavingTests {
         StubProtocol.handle(Self.host) { _ in (400, Data(#"{"error":"no url"}"#.utf8)) }
         #expect(await outbox.drain(using: client, now: Date(timeIntervalSince1970: 20)) == .sent(0))
         #expect(outbox.notSaved() == [Outbox.NotSaved(
-            url: "https://a.example/", title: "T", reason: "Hister refused it: no url", date: Date(timeIntervalSince1970: 20))])
+            url: "https://a.example/", title: "T", reason: "Nogon refused it: no url", date: Date(timeIntervalSince1970: 20))])
         outbox.clearNotSaved()
         #expect(outbox.notSaved().isEmpty)
     }
