@@ -8,7 +8,7 @@
 # non-root user and works with a read-only root filesystem and a tmpfs on /tmp. web/README.md ("In a container")
 # lists the settings. Run tools/pin-bases before a release: both bases are pinned by digest.
 
-FROM public.ecr.aws/docker/library/python:3.13-alpine@sha256:bf12ecc0bea3f171d55145dd02c78b5eeb09f30ee2ac9cc2b4c9e4e8f5e30741 AS build
+FROM public.ecr.aws/docker/library/python:3.13-alpine@sha256:9ef1a599f863231c3d91e941389bfdc4a2d6070557243d54df1a4e57015b960e AS build
 RUN apk add --no-cache bash
 WORKDIR /src
 COPY . .

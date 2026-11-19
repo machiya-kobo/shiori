@@ -5,6 +5,22 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.27.0 (2026-11-19)
+
+- Hister is now Nogon upstream (v0.22). Safari's extension is built from
+  Nogon v0.22.0, to match the server, and asks for no new permission.
+- Searches with OR keep your notes, files and code out: Nogon reads "a OR
+  b" with the rest of the query bound to b alone, so they're grouped now.
+  A lone AND, OR or NOT is searched as a word instead of failing the
+  search. Everywhere: the apps, the web pages, Linux, Haiku and Classic.
+- Safari: Open Elsewhere in Shiori's toolbar menu opens the page through
+  your front ends or an archive, and Settings → Safari → Open Sites in
+  Your Front Ends sends those sites through them.
+- Share sheet: Save to Shiori lists the page through your front ends,
+  Archive.org and Archive.is.
+- Search page: the time range lines up with the pills over a background.
+- The hosted pages run on nginx 1.30.7.
+
 ## 1.26.0 (2026-10-29)
 
 - One sign-in: Settings → Account shows Sign in to Hister, which covers
