@@ -1,7 +1,7 @@
 # Shiori for Haiku
 
 A native Shiori for [Haiku](https://www.haiku-os.org/), written in C++ on
-the Be API: search your pages in Hister and your notes in Kura, preview a
+the Be API: search your pages in Hister ([Nogon](https://nogon.eu/) since v0.22) and your notes in Kura, preview a
 note, save a web page to Hister, and quick-search from the Deskbar.
 
 ## Install

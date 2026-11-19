@@ -1,6 +1,6 @@
 # Shiori
 
-Shiori (栞, bookmark) searches everything you've read: your pages ([Hister](https://github.com/asciimoo/hister)), the web ([SearXNG](https://github.com/searxng/searxng)), your notes ([Obsidian](https://obsidian.md)) and your code ([Forgejo](https://forgejo.org) or [GitHub](https://github.com)), from an iPhone, iPad, Mac, Linux, Haiku, a Classic Macintosh or the web. It's also a Hister extension for Safari on macOS and iOS, built on Hister's own and on Nick Burns's [hister-safari](https://github.com/nburns/hister-safari). Hister's [official extensions](https://hister.org/docs/browser-extension) also work.
+Shiori (栞, bookmark) searches everything you've read: your pages ([Nogon](https://nogon.eu/), formerly Hister), the web ([SearXNG](https://github.com/searxng/searxng)), your notes ([Obsidian](https://obsidian.md)) and your code ([Forgejo](https://forgejo.org) or [GitHub](https://github.com)), from an iPhone, iPad, Mac, Linux, Haiku, a Classic Macintosh or the web. It's also a Nogon extension for Safari on macOS and iOS, built on Nogon's own and on Nick Burns's [hister-safari](https://github.com/nburns/hister-safari). Nogon's [official extensions](https://nogon.eu/docs/browser-extension) also work.
 
 Shiori is one of [Machiya](https://github.com/machiya-kobo/machiya)'s small self-hosted apps, which share one vault of notes: [Kura](https://github.com/machiya-kobo/kura) to read them, [Konbini](https://github.com/machiya-kobo/konbini) for your projects and [Niwa](https://github.com/machiya-kobo/niwa) for your digital garden.
 
@@ -24,24 +24,24 @@ Agentically coded with [Claude Code](https://docs.anthropic.com/en/docs/claude-c
 
 ## What it does
 
-[Hister](https://github.com/asciimoo/hister) is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Hister server. Shiori searches it.
+[Nogon](https://nogon.eu/) ([source](https://github.com/asciimoo/nogon)) is a self-hosted personal search engine: its browser extension sends the full text of every page you visit (except the ones you skip) to your own Nogon server. Shiori searches it. Nogon was called Hister until [v0.22](https://nogon.eu/posts/hister-is-now-nogon), and Shiori's settings still say Hister.
 
-> **Unofficial.** Shiori is not affiliated with or endorsed by the Hister project.
+> **Unofficial.** Shiori is not affiliated with or endorsed by the Nogon (formerly Hister) project.
 
-- **Search your pages** with Hister's query syntax and completions. Filter by date, site, visits, language and type. What you open ranks first next time.
+- **Search your pages** with Nogon's query syntax and completions. Filter by date, site, visits, language and type. What you open ranks first next time.
 - **Search your notes** in your Obsidian vault, through Kura. A note opens in Obsidian, its Konbini card a tap away.
 - **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in, and Gemini and Gopher through a [small-web gateway](https://github.com/machiya-kobo/machiya/tree/main/stack/smallweb).
-- **Search your code**: repos, issues, pull requests and releases from Forgejo and GitHub, imported into Hister.
+- **Search your code**: repos, issues, pull requests and releases from Forgejo and GitHub, imported into Nogon.
 - **Search your media**: your Jellyfin and Plex libraries and what you played from Koito and Movary, saying when you last played each and your rating.
-- **Search your files**: the folders Hister watches ([local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)).
-- **Browse and read** everything Hister holds, by label, collection (`@reading`) or day, as readable copies with scripts off.
+- **Search your files**: the folders Nogon watches ([local directory indexing](https://nogon.eu/docs/configuration#local-directory-indexing)).
+- **Browse and read** everything Nogon holds, by label, collection (`@reading`) or day, as readable copies with scripts off.
 - **Save pages** from the share sheet on iPhone, iPad and Mac, by address, or with Shortcuts and Siri.
 - **Offline support.** Saves wait on the device and go when you're back on The Internet.
 - **Label, share, export or delete.** Lists export as JSON, CSV or RSS.
 - **Pick a theme**: Tokyo Night, Solarized, Nord, Dracula, Catppuccin, Gruvbox, Rosé Pine, Kanagawa, Everforest or Ayu, light and dark.
-- **Take your settings along.** Signed in to Hister, your theme, text size and views follow you to every device.
+- **Take your settings along.** Signed in to Nogon, your theme, text size and views follow you to every device.
 
-[Every feature](docs/features.md). Shiori needs only a Hister; Kura, Konbini and SearXNG are optional. It talks only to the servers you set. AI is off until you pick a provider ([docs/ai.md](docs/ai.md)).
+[Every feature](docs/features.md). Shiori needs only a Nogon server; Kura, Konbini and SearXNG are optional. It talks only to the servers you set. AI is off until you pick a provider ([docs/ai.md](docs/ai.md)).
 
 ## Quickstart
 
@@ -56,7 +56,7 @@ docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
   ghcr.io/machiya-kobo/shiori-web
 ```
 
-Open http://localhost:8080 to search, or http://localhost:8081 for the web app. If your Hister has users, sign in with your Hister account.
+Open http://localhost:8080 to search, or http://localhost:8081 for the web app. If your Nogon has users, sign in with your Nogon account.
 
 ### Starting from scratch? Run Hister, SearXNG and Shiori together
 
@@ -69,7 +69,7 @@ mkdir -p data/hister
 docker compose -f shiori.yml up -d
 ```
 
-Then open http://localhost:8080 to search, or http://localhost:8081 for the web app. Save pages to Hister with its [browser extension](https://hister.org/docs/browser-extension), and they show up in Shiori.
+Then open http://localhost:8080 to search, or http://localhost:8081 for the web app. Save pages to Nogon with its [browser extension](https://nogon.eu/docs/browser-extension), and they show up in Shiori.
 
 ### Add more to Shiori
 
@@ -79,7 +79,7 @@ Each extra is its own app with a public image on ghcr.io/machiya-kobo. Run it, t
 |---|---|---|
 | Your Obsidian notes | Kura, on your vault | `SHIORI_KURA_URL` (and Shiori's name for Kura in Kura's `KURA_ALLOWED_HOSTS`) |
 | Your projects | Konbini, on the same vault | `SHIORI_KONBINI_URL` |
-| Your code on Forgejo or GitHub | [code-import](https://github.com/machiya-kobo/machiya/blob/main/docs/services/code-import.md), which copies your repos into Hister | nothing: the Code tab appears |
+| Your code on Forgejo or GitHub | [code-import](https://github.com/machiya-kobo/machiya/blob/main/docs/services/code-import.md), which copies your repos into Nogon | nothing: the Code tab appears |
 | The small web (Gemini, Gopher) | smallweb | `SHIORI_SMALLWEB_URL` |
 
 | To get | Run | Then set on Shiori |
@@ -94,7 +94,7 @@ Every setting, and how to check the image's signature, is in [In a container](we
 
 ### Try it from the source, with sample pages
 
-Run a Hister with a dozen invented pages, then Shiori's search page and web app, on this machine. You need `git`, `bash`, `python3`, `curl`, and `podman` or `docker`. Ports 4433, 8765 and 8766 must be free.
+Run a Nogon (formerly Hister) with a dozen invented pages, then Shiori's search page and web app, on this machine. You need `git`, `bash`, `python3`, `curl`, and `podman` or `docker`. Ports 4433, 8765 and 8766 must be free.
 
 **1. Get the code**
 
@@ -102,7 +102,7 @@ Run a Hister with a dozen invented pages, then Shiori's search page and web app,
 git clone https://github.com/machiya-kobo/shiori && cd shiori
 ```
 
-**2. Start Hister and add the sample pages.** Hister listens on this machine only. With Docker, type `docker` for `podman`.
+**2. Start Nogon and add the sample pages.** Nogon listens on this machine only. With Docker, type `docker` for `podman`.
 
 <!-- quickstart: hister-podman -->
 ```bash
@@ -140,7 +140,7 @@ HISTER_URL=http://127.0.0.1:4433/ PORT=8766 web/dev-server.py demo-app
 |---|---|
 | The search page | http://localhost:8765/?q=lantern |
 | The web app | http://localhost:8766/ |
-| Hister | http://localhost:4433/ |
+| Nogon (Hister) | http://localhost:4433/ |
 
 The search page finds five lantern pages, and the web app's Library holds all twelve. To stop, press Ctrl-C in both terminals, then run `podman rm -f shiori-hister`.
 
@@ -149,8 +149,8 @@ The search page finds five lantern pages, and the web app's Library holds all tw
 - **Check every step as you go,** with packages for Debian and the BSDs: [the full, tested walkthrough](docs/quickstart.md).
 - **Add your notes and the web:** [run it with Machiya](docs/quickstart.md#b-as-one-of-the-machiya-services), next to Kura, Konbini and SearXNG.
 - **Use it from your phone and laptop:** [host the pages](web/README.md) behind your own network.
-- **Sign in** to Hister and Machiya, when they have users: [signing in](docs/signing-in.md).
-- **Save pages as you browse:** [Shiori's Safari extension](docs/extension.md), or Hister's [official extensions](https://hister.org/docs/browser-extension) for Firefox and Chrome.
+- **Sign in** to Nogon and Machiya, when they have users: [signing in](docs/signing-in.md).
+- **Save pages as you browse:** [Shiori's Safari extension](docs/extension.md), or Nogon's [official extensions](https://nogon.eu/docs/browser-extension) for Firefox and Chrome.
 
 ## Get the apps
 
@@ -176,7 +176,7 @@ A native app for 68k Macs, with a quick-search desk accessory: [docs/classic.md]
 
 ## Credits and license
 
-- [Hister](https://github.com/asciimoo/hister) by Adam Tauber (asciimoo) and contributors: the search engine Shiori searches, and the extension it builds for Safari.
+- [Nogon](https://github.com/asciimoo/nogon) (formerly Hister) by Adam Tauber (asciimoo) and contributors: the search engine Shiori searches, and the extension it builds for Safari.
 - [hister-safari](https://github.com/nburns/hister-safari) by Nick Burns (AGPL-3.0): the macOS Safari port Shiori's extension started from. Its design (Hister's source pinned, Safari-only patches applied to the built bundle), build pipeline, manifest merge and Safari shims are the base of Shiori's; Shiori adds the offline queue, settings shared with the app, the search page and the iPhone and iPad build.
 
 Copyright (C) 2026 Micheal Waltz and Machiya contributors.

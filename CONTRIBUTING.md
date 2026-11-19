@@ -1,6 +1,6 @@
 # Contributing to Shiori
 
-Thanks for helping. Shiori is a client for [Hister](https://github.com/asciimoo/hister):
+Thanks for helping. Shiori is a client for [Nogon](https://github.com/asciimoo/nogon) (formerly Hister):
 native apps for iPhone, iPad and Mac with a Safari extension, a search page
 and web app, and a small Linux app. It's one of the
 [Machiya](https://github.com/machiya-kobo/machiya) services ("rooms"; README

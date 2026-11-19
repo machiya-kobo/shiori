@@ -1,7 +1,7 @@
 # Shiori for Classic Macintosh
 
 A native Shiori for 68k Macs, from a Mac Plus on System 6 to a color Mac
-on System 7: search your pages in Hister and your notes in Kura, read a
+on System 7: search your pages in Hister ([Nogon](https://nogon.eu/) since v0.22) and your notes in Kura, read a
 result in its own window, and quick-search from the Apple menu. Written in
 C with [Retro68](https://github.com/autc04/Retro68); the code is in
 [`classic/`](../classic).

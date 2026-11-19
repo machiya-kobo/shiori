@@ -1,8 +1,8 @@
 # The Safari extension
 
-Hister's [official extensions](https://hister.org/docs/browser-extension) cover Firefox and Chrome, and [hister-safari](https://github.com/nburns/hister-safari) brings Hister to Safari on the Mac. Safari on iPhone and iPad loads only extensions that ship inside a signed app, so Shiori carries Hister's own extension, built for Safari.
+[Nogon](https://nogon.eu/)'s (formerly Hister's) [official extensions](https://nogon.eu/docs/browser-extension) cover Firefox and Chrome, and [hister-safari](https://github.com/nburns/hister-safari) brings it to Safari on the Mac. Safari on iPhone and iPad loads only extensions that ship inside a signed app, so Shiori carries Nogon's own extension, built for Safari.
 
-**Where it comes from.** Shiori's Safari extension is Hister's own extension, built from Hister's source (a pinned submodule, never modified) and patched at build time. That design, the build pipeline, the manifest merge and the Safari shims (`patches/safari-shims.js`) come from [hister-safari](https://github.com/nburns/hister-safari) by Nick Burns, which Shiori started from; it's AGPL-3.0, like Shiori. What Shiori adds is the offline queue, settings shared with the app, the search page, and carrying the extension in an iPhone and iPad app.
+**Where it comes from.** Shiori's Safari extension is Nogon's own extension, built from [Nogon's source](https://github.com/asciimoo/nogon) (a pinned submodule at `vendor/hister`, never modified) and patched at build time. That design, the build pipeline, the manifest merge and the Safari shims (`patches/safari-shims.js`) come from [hister-safari](https://github.com/nburns/hister-safari) by Nick Burns, which Shiori started from; it's AGPL-3.0, like Shiori. What Shiori adds is the offline queue, settings shared with the app, the search page, and carrying the extension in an iPhone and iPad app.
 
 It runs on the Mac too. Use Shiori's or hister-safari there, not both: with both on, Safari sends every page twice.
 
@@ -59,4 +59,4 @@ scripts/build-extension.sh && node --test scripts/*.test.mjs
 git add vendor/hister
 ```
 
-The build fails if upstream asks for a new permission or moves its default server URL, so a bump can't change either unnoticed. Your Hister server should run the same version.
+The build fails if upstream asks for a new permission or moves its default server URL, so a bump can't change either unnoticed. Your Nogon server should run the same version.

@@ -2,7 +2,7 @@
 
 Two sign-ins can apply, each only when the server side has it on:
 
-- **Hister's users** (Hister v0.20.0+ with `app.user_handling: true`, and
+- **Hister's users** (Hister v0.20.0+, now [Nogon](https://nogon.eu/docs/user-handling), with `app.user_handling: true`, and
   Machiya's sign-in helper, hister-login): one sign-in for Hister and every
   room. Below.
 - **Machiya's identity file**, for rooms that run with it: [Signing in to

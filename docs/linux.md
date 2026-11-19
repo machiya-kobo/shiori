@@ -7,7 +7,7 @@ Shiori for the Linux desktop: the web app in its own window, made for Cinnamon (
 3. **Save outside the browser**: `shiori save <url> [label]`, with an offline outbox, as the iOS share extension has.
 4. **Save a note's links**: `shiori save-links <note>` saves the links in a Kura note that Hister doesn't hold yet. Kura's note view opens a window to pick them.
 
-No AI, no rule editor, nothing the web view already does. Hister's own browser extension captures what you visit.
+No AI, no rule editor, nothing the web view already does. Nogon's (formerly Hister's) own [browser extension](https://nogon.eu/docs/browser-extension) captures what you visit.
 
 ## Install
 

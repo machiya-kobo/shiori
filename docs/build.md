@@ -12,7 +12,7 @@ cp local.yml.example local.yml   # your team, bundle prefix and servers
 cp local.env.example local.env   # your device name, for deploys
 ```
 
-The submodule matters: the Safari extension is built from Hister's own. In a clone made without it, run `git submodule update --init`.
+The submodule matters: the Safari extension is built from Nogon's (formerly Hister's) own. In a clone made without it, run `git submodule update --init`.
 
 **2. Fill in `local.yml`**
 

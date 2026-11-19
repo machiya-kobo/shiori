@@ -4,14 +4,14 @@ What Shiori does on iPhone, iPad, Mac and the web app. The Linux app is the web 
 
 ## Searching and reading
 
-- **Search your pages** with Hister's query syntax, completions included. Filter by date, site, visits, language and type.
+- **Search your pages** with the query syntax of Hister ([Nogon](https://nogon.eu/docs/query-language) since v0.22), completions included. Filter by date, site, visits, language and type.
 - **Search your notes**: your Obsidian vault, through [Kura](https://github.com/machiya-kobo/kura). A note opens in Obsidian, its Kura page and [Konbini](https://github.com/machiya-kobo/konbini) card a tap away.
 - **Search the World Wide Web** through your [SearXNG](https://github.com/searxng/searxng), your own pages mixed in (one the web also found is a single entry) and the ones you've visited marked. Settings → Search → Safe Search (Off, Moderate or Strict) hides adult results where the engine allows it.
 - **Images, Videos and News** pills, as on Shiori Search: a grid of pictures with a viewer (Open Image, Visit Page, previous and next), videos with their length, news with its date. Each has an order and filters (size, shape, format; length; source) drawn from what came back, without another web search. Pictures that name a "quoted phrase" from the search come first.
 - **Search Gemini and Gopher** through a [small-web gateway](https://github.com/machiya-kobo/machiya/tree/main/stack/smallweb).
 - **Search your code** in the Code view: repos, READMEs, docs, issues, pull requests and releases imported into Hister by Machiya's [code-import](https://github.com/machiya-kobo/machiya/blob/main/docs/services/code-import.md). Filter by kind, forge, open or private; each opens at its forge.
 - **Search your media** on the Media pill: your Jellyfin and Plex libraries and what you played from Koito and Movary, one card per item, saying when you played it ("Never Played", "Played 3× · Last Mar 6, 2014") with your rating. Filter by kind, never played and rating; before a search, what's playing, your top artists and albums, your watchlist and what's new ([media.md](media.md)).
-- **Search your files** in the Files view: the folders Hister watches ([local directory indexing](https://hister.org/docs/configuration#local-directory-indexing)), opened from Hister's copy.
+- **Search your files** in the Files view: the folders Hister watches ([local directory indexing](https://nogon.eu/docs/configuration#local-directory-indexing)), opened from Hister's copy.
 - **Browse** everything Hister holds, newest first, by label and collection (Hister's `@` aliases, like `@reading`), or by day and month.
 - **Read a page** as Hister's readable copy, scripts off, no referrer. Earlier versions, Show As, full screen, and images large on tap.
 - **Search without JavaScript**: the hosted search page sends a browser with JavaScript off to Basic Search, plain HTML with your pages, your notes and the web, the search carried over. The web app links it.

@@ -4,7 +4,7 @@ The full walkthrough, with every step checked. The README's [Quickstart](../READ
 
 Two ways in:
 
-- **[A. Standalone](#a-standalone-with-sample-pages):** a Hister with invented sample pages.
+- **[A. Standalone](#a-standalone-with-sample-pages):** a Hister ([Nogon](https://nogon.eu/) since v0.22) with invented sample pages.
 - **[B. With Machiya](#b-as-one-of-the-machiya-services):** next to Kura, Konbini, Niwa and SearXNG.
 
 ## Get the tools
