@@ -5,6 +5,13 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.28.0 (2026-11-19)
+
+- Everything Shiori shows says Nogon, the engine's name since v0.22:
+  settings, menus, messages, Shortcuts, the share sheet, Safari's
+  extension, the search page, the web app, Linux, Haiku and Classic.
+  Your saved settings and sign-ins stay as they are.
+
 ## 1.27.0 (2026-11-19)
 
 - Hister is now Nogon upstream (v0.22). Safari's extension is built from
