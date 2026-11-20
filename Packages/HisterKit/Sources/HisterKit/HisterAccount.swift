@@ -97,7 +97,7 @@ public enum HisterAccount {
     /// any failure.
     public static func oauthProviders(server: URL, session: URLSession = HisterClient.defaultSession) async -> [String] {
         var request = URLRequest(url: server.appending(path: "api/config"), timeoutInterval: 6)
-        request.setValue("hister://", forHTTPHeaderField: "Origin")
+        request.setValue(HisterClient.origin, forHTTPHeaderField: "Origin")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         guard let (data, response) = try? await session.data(for: request, delegate: NoRedirects()),
             (response as? HTTPURLResponse)?.statusCode == 200,
@@ -106,8 +106,9 @@ public enum HisterAccount {
         return (reply["oauthProviders"] as? [String] ?? []).filter { !$0.isEmpty }
     }
 
-    /// The browser flow's answer, `shiori://signed-in#sid=…&hister=…`: the
-    /// id and the Hister session, both checked; nil for anything else.
+    /// The browser flow's answer, `shiori://signed-in#sid=…&nogon=…`: the
+    /// id and the Nogon session, both checked; nil for anything else. A
+    /// helper from before nogon-login 0.9.0 names the session `hister`.
     public static func callback(_ url: URL) -> (sessionID: String, session: String)? {
         guard url.scheme?.lowercased() == callbackScheme, url.host() == "signed-in", let fragment = url.fragment(percentEncoded: true)
         else { return nil }
@@ -115,7 +116,7 @@ public enum HisterAccount {
         parts.percentEncodedQuery = fragment
         let items = parts.queryItems ?? []
         guard let sid = sessionID(items.first { $0.name == "sid" }?.value),
-            let hister = session(items.first { $0.name == "hister" }?.value)
+            let hister = session((items.first { $0.name == "nogon" } ?? items.first { $0.name == "hister" })?.value)
         else { return nil }
         return (sid, hister)
     }
@@ -160,7 +161,7 @@ public enum HisterAccount {
     ) async throws(SignInError) -> String {
         var login = URLRequest(url: server.appending(path: "api/login"), timeoutInterval: 15)
         login.httpMethod = "POST"
-        login.setValue("hister://", forHTTPHeaderField: "Origin")
+        login.setValue(HisterClient.origin, forHTTPHeaderField: "Origin")
         login.setValue("application/json", forHTTPHeaderField: "Content-Type")
         login.httpBody = try? JSONSerialization.data(withJSONObject: ["username": username, "password": password])
         let (status, headers, _) = try await send(login, session)
@@ -182,7 +183,8 @@ public enum HisterAccount {
         var request = URLRequest(url: server.appending(path: "machiya/api/app-session"), timeoutInterval: 15)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: ["hister": hister, "label": String(label.prefix(80))])
+        // "nogon" (nogon-login 0.8.0 and later take it; "hister" was its old name).
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["nogon": hister, "label": String(label.prefix(80))])
         let (status, _, data) = try await send(request, session)
         guard status == 200 else { throw status == 401 ? .invalidCredentials : .unavailable }
         let reply = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
@@ -231,7 +233,7 @@ public enum HisterAccount {
     static func logout(server: URL, hister: String, session: URLSession) async {
         var request = URLRequest(url: server.appending(path: "api/logout"), timeoutInterval: 10)
         request.httpMethod = "POST"
-        request.setValue("hister://", forHTTPHeaderField: "Origin")
+        request.setValue(HisterClient.origin, forHTTPHeaderField: "Origin")
         request.setValue("\(cookieName)=\(hister)", forHTTPHeaderField: "Cookie")
         _ = try? await send(request, session)
     }

@@ -102,15 +102,15 @@ class BridgeTest(unittest.TestCase):
         tok.close()
         self.token_file = tok.name
         self.env = {
-            "BRIDGE_HISTER_URL": "http://127.0.0.1:%d" % self.servers[0].server_address[1],
+            "BRIDGE_NOGON_URL": "http://127.0.0.1:%d" % self.servers[0].server_address[1],
             "BRIDGE_KURA_URL": "http://127.0.0.1:%d" % self.servers[1].server_address[1],
             "BRIDGE_AUTH_URL": "http://127.0.0.1:%d" % self.servers[2].server_address[1],
             "BRIDGE_ALLOW_HTTP_UPSTREAM": "1",
             "BRIDGE_ALLOW": "127.0.0.1",
             "BRIDGE_DENY": "192.0.2.1",
             "BRIDGE_PUBLIC_URL": "http://bridge.example:8070",
-            "BRIDGE_HISTER_USERS": "owner",
-            "BRIDGE_HISTER_TOKEN_FILE": self.token_file,
+            "BRIDGE_NOGON_USERS": "owner",
+            "BRIDGE_NOGON_TOKEN_FILE": self.token_file,
             "BRIDGE_VAULTS": "shared",
             "BRIDGE_MAX_BYTES": "4096",
             "BRIDGE_PAGED_MAX_BYTES": "65536",
@@ -195,9 +195,9 @@ class BridgeTest(unittest.TestCase):
         self.assertTrue(self.config.admits("::ffff:127.0.0.1"))
 
     def test_settings_are_checked(self):
-        bad = [("BRIDGE_HISTER_USERS", "*"), ("BRIDGE_HISTER_USERS", ""), ("BRIDGE_VAULTS", "all"),
-               ("BRIDGE_HISTER_URL", "http://h.example/path"), ("BRIDGE_PUBLIC_URL", "bridge"),
-               ("BRIDGE_HISTER_TOKEN_FILE", ""), ("BRIDGE_PART_BYTES", "1000"), ("BRIDGE_PART_BYTES", "4000"),
+        bad = [("BRIDGE_NOGON_USERS", "*"), ("BRIDGE_NOGON_USERS", ""), ("BRIDGE_VAULTS", "all"),
+               ("BRIDGE_NOGON_URL", "http://h.example/path"), ("BRIDGE_PUBLIC_URL", "bridge"),
+               ("BRIDGE_NOGON_TOKEN_FILE", ""), ("BRIDGE_PART_BYTES", "1000"), ("BRIDGE_PART_BYTES", "4000"),
                ("BRIDGE_PAGED_MAX_BYTES", "100")]
         for key, value in bad:
             with self.assertRaises(bridge.ConfigError, msg=key):
@@ -207,15 +207,14 @@ class BridgeTest(unittest.TestCase):
         with self.assertRaises(bridge.ConfigError):
             bridge.Config(env)
 
-    def test_the_nogon_names_come_first(self):
-        # Hister is now Nogon (stage 1): BRIDGE_NOGON_… wins, even empty; BRIDGE_HISTER_… still counts.
-        old = {k: v for k, v in self.env.items() if not k.startswith("BRIDGE_HISTER_")}
-        new = dict(old, **{k.replace("HISTER", "NOGON"): v for k, v in self.env.items() if k.startswith("BRIDGE_HISTER_")})
-        self.assertEqual(bridge.Config(new).users, frozenset({"owner"}))
-        mixed = dict(self.env, BRIDGE_NOGON_USERS="reader")
-        self.assertEqual(bridge.Config(mixed).users, frozenset({"reader"}))
-        with self.assertRaises(bridge.ConfigError):
-            bridge.Config(dict(self.env, BRIDGE_NOGON_USERS=""))
+    def test_an_old_name_alone_stops_the_start(self):
+        # Hister is now Nogon: BRIDGE_HISTER_… no longer counts, and set alone it names the new name.
+        old = {k.replace("NOGON", "HISTER") if k.startswith("BRIDGE_NOGON_") else k: v for k, v in self.env.items()}
+        with self.assertRaises(bridge.ConfigError) as e:
+            bridge.Config(old)
+        self.assertIn("rename BRIDGE_HISTER_URL to BRIDGE_NOGON_URL", str(e.exception))
+        # Beside the new names, an old one is ignored.
+        self.assertEqual(bridge.Config(dict(self.env, BRIDGE_HISTER_USERS="reader")).users, frozenset({"owner"}))
 
     # -- methods and paths ------------------------------------------------------------------------------------------
 
@@ -286,9 +285,14 @@ class BridgeTest(unittest.TestCase):
                                "x-access-token"})
         self.assertEqual(self.hister_seen[0]["headers"]["X-Access-Token"], HISTER_TOKEN)
 
-    def test_origin_passes_only_as_hister(self):
+    def test_origin_passes_only_as_nogon(self):
         self.get("kura", "/api/recent", [("Origin", "https://evil.example")])
         self.assertNotIn("Origin", self.kura_seen[0]["headers"])
+        # Either of Nogon's names goes on as nogon:// (a Shiori Classic from before 1.30 sends hister://).
+        for sent in ("nogon://", "hister://"):
+            self.hister_seen.clear()
+            self.get("hister", "/search?query=%7B%7D", [("Authorization", "Bearer " + GOOD), ("Origin", sent)])
+            self.assertEqual(self.hister_seen[0]["headers"]["Origin"], "nogon://", sent)
 
     def test_only_listed_headers_come_back_and_never_set_cookie(self):
         self.answer = lambda p: (200, [("Content-Type", "application/json"), ("Set-Cookie", "a=b"), ("ETag", '"1"'),

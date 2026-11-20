@@ -7,8 +7,8 @@ upstream. `bridge.py`'s docstring is the full description and lists the
 settings.
 
 - **One credential on the Mac:** a room token (`mht_…`) issued by
-  hister-login with two scopes, `kura` and the bridge's own token
-  service. On both ports the bridge checks it with hister-login first: no
+  nogon-login with two scopes, `kura` and the bridge's own token
+  service. On both ports the bridge checks it with nogon-login first: no
   token, or one refused, is a 401, and with the helper down a 503, before
   any upstream is asked. Kura then gets it as sent and checks it too; on
   the Hister port Hister's token goes in its place. Hister's token never

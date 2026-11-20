@@ -12,10 +12,10 @@ FROM public.ecr.aws/docker/library/python:3.13-alpine@sha256:9ef1a599f863231c3d9
 RUN apk add --no-cache bash
 WORKDIR /src
 COPY . .
-# A build with no git says its commit and the Hister release it is built against itself.
+# A build with no git says its commit and the Nogon release it is built against itself.
 ARG SHIORI_BUILD_ID=unknown
-ARG SHIORI_HISTER_RELEASE=
-ENV SHIORI_BUILD_ID=$SHIORI_BUILD_ID SHIORI_HISTER_RELEASE=$SHIORI_HISTER_RELEASE
+ARG SHIORI_NOGON_RELEASE=
+ENV SHIORI_BUILD_ID=$SHIORI_BUILD_ID SHIORI_NOGON_RELEASE=$SHIORI_NOGON_RELEASE
 # Settings (and the page's own address, and the status link) are filled in when the container starts.
 RUN scripts/build-web.sh /dist/search http://shiori-web.invalid/ @runtime \
  && scripts/build-pwa.sh /dist/app @runtime

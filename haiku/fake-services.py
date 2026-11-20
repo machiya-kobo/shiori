@@ -276,7 +276,7 @@ class Hister(Base):
                 return self.reply(401, {"error": "sign in"})
             SIGNED_IN["sid"] = SIGNED_IN["session"] = False
             return self.reply(200, {"ok": True})
-        if self.headers.get("Origin") != "hister://":
+        if self.headers.get("Origin") != "nogon://":
             return self.reply(403)
         if self.path == "/api/login":
             if self.headers.get("X-Access-Token") or self.headers.get("Cookie"):

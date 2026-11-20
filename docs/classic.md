@@ -23,7 +23,7 @@ C with [Retro68](https://github.com/autc04/Retro68); the code is in
   - **Through mac-bridge** ([`classic/bridge/`](../classic/bridge)), when
     your Nogon is HTTPS-only or signed in with users. It needs Machiya's
     sign-in helper,
-    [hister-login](https://github.com/machiya-kobo/machiya/blob/main/docs/services/hister-login.md),
+    [nogon-login](https://github.com/machiya-kobo/machiya/blob/main/docs/services/nogon-login.md),
     which Machiya's reference compose doesn't run yet: without it, go
     directly. The bridge listens
     on your LAN, one port for Nogon and one for Kura, passes a few
@@ -119,7 +119,7 @@ app:
 
 (Or `HISTER__SERVER__ADDRESS`, `HISTER__SERVER__BASE_URL` and
 `HISTER__APP__ACCESS_TOKEN` in its environment, as in a container.) A
-client sends `Origin: hister://` and, with an access token set, the token
+client sends `Origin: nogon://` and, with an access token set, the token
 as `X-Access-Token` (or `Authorization: Bearer`). In Shiori's Preferences:
 *Directly (HTTP)*, Nogon's address, and *Nogon's token* when you set one.
 

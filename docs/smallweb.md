@@ -30,7 +30,7 @@ small-web gateway (TLGS, Kennedy and Veronica-2).
     page opens instead.
   - Web pages: a plain link; the browser hands it to the registered app.
 - **A direct open asks the gateway to save the page** (`POST /api/save`:
-  `Origin: hister://` from the apps, same-origin `/smallweb/api/save` from
+  `Origin: hister://` from the apps (the gateway's own name for them until smallweb 0.6.0), same-origin `/smallweb/api/save` from
   the hosted pages). Safari's extension page can't (its origin isn't
   accepted) and says so above its results when set to direct.
 - Remember What You Open records the canonical `gemini://` address.

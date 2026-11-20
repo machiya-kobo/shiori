@@ -1,7 +1,7 @@
 // Hister's token on Linux (docs/linux.md): `"histerToken": "…"` in
 // ~/.config/shiori/config.json (the file 0600), sent as `X-Access-Token`
 // only to the configured Hister server, by origin: never the small-web
-// gateway (which also gets `Origin: hister://`), the web app or Kura.
+// gateway, the web app or Kura.
 // Unset, nothing is sent. Pure: search-core (`S`) is passed in.
 
 const originOf = (url) => {
@@ -87,7 +87,8 @@ export const loginRequest = (server, username, password) => ({
 export const appSessionRequest = (server, hister, label) => ({
   method: 'POST',
   url: `${base(server)}machiya/api/app-session`,
-  body: JSON.stringify({ hister, label: String(label || '').slice(0, 80) }),
+  // `nogon` (nogon-login 0.8.0 and later take it; `hister` was its old name).
+  body: JSON.stringify({ nogon: hister, label: String(label || '').slice(0, 80) }),
 });
 
 /** The helper's sign-out for an id. */

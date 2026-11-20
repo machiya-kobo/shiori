@@ -51,7 +51,7 @@ WebKitGTK 6).
 web view, same-origin.
 
 - It downloads the page (3 MB cap, HTML or text only, `linux/src/page.js`)
-  and POSTs `api/add` with `Origin: hister://`, as a deliberate save:
+  and POSTs `api/add` with `Origin: nogon://`, as a deliberate save:
   `metadata.ignore_skip_rules`, `source: "shiori"`, `client: "shiori"`,
   `client_version`, `via: "linux"`.
 - **The outbox** (`linux/src/outbox.js`) follows the iOS rules: one entry

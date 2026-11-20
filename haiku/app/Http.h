@@ -2,7 +2,7 @@
 // (private API, linked statically). Blocking: call it from a worker thread.
 // Only the configured origins (Hister, Kura); each request gets exactly the
 // credential CredentialHeaders() allows, and one with a credential follows
-// no redirect. Hister gets Origin: hister://.
+// no redirect. Nogon gets Origin: nogon://.
 #pragma once
 
 #include <string>

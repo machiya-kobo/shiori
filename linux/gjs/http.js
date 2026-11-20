@@ -1,6 +1,7 @@
 // HTTP for Shiori for Linux (libsoup 3). Only the configured hosts:
 // Flatpak can't limit the network by host, so the app refuses any other
-// (docs/linux.md). Hister gets `Origin: hister://`, as from HisterKit.
+// (docs/linux.md). Nogon gets `Origin: nogon://`, as from HisterKit (the small-web
+// gateway still `hister://`: `origin`).
 // The Machiya sign-in (config.json's machiyaToken) goes only where
 // search-core's host rule allows (../src/machiya.js), and a request that
 // carries it follows no redirect. Hister's token (config.json's
@@ -36,7 +37,7 @@ export function allowedHosts(config) {
  */
 export function requestJSON(
   config, url,
-  { method = 'GET', body = null, hister = false, signIn = true, redirects = true, credentials = true, headers: extra = {} } = {},
+  { method = 'GET', body = null, hister = false, signIn = true, redirects = true, credentials = true, headers: extra = {}, origin = '' } = {},
 ) {
   return new Promise((resolve, reject) => {
     let host;
@@ -50,7 +51,7 @@ export function requestJSON(
     if (!message) return reject(new Error(`Not an address: ${url}`));
     const headers = message.get_request_headers();
     headers.append('Accept', 'application/json');
-    if (hister) headers.append('Origin', 'hister://');
+    if (hister) headers.append('Origin', origin || 'nogon://');
     const room = signIn && !hister ? roomHeaders(config, url, globalThis.ShioriSearch) : {};
     const auth = room.Authorization || room['X-Access-Token'];
     if (room.Authorization) headers.append('Authorization', room.Authorization);

@@ -79,7 +79,7 @@ test('search-core runs on the shim alone, as in GJS', () => {
   assert.deepEqual(run(true), run(false));
 });
 
-test('a save is a deliberate, tagged add with Origin hister://', () => {
+test('a save is a deliberate, tagged add with Origin nogon://', () => {
   const page = newPage({ url: 'https://example.com/a', title: 'A', label: 'books', added: 1790000000.7, clientVersion: '0.9' });
   assert.deepEqual(plain(page), {
     url: 'https://example.com/a', title: 'A', label: 'books', added: 1790000000,
@@ -87,7 +87,7 @@ test('a save is a deliberate, tagged add with Origin hister://', () => {
   });
   const req = addRequest('https://hister.example', page);
   assert.equal(req.url, 'https://hister.example/api/add');
-  assert.equal(req.headers.Origin, 'hister://');
+  assert.equal(req.headers.Origin, 'nogon://');
   assert.deepEqual(JSON.parse(req.body), plain(page));
   assert.throws(() => newPage({ url: 'file:///etc/passwd' }));
   assert.equal(titleIn('<html><head><TITLE> Caf&eacute; &amp; &#x2014; <b>x</b>\n </title>'), 'Caf&eacute; & — x');
@@ -363,6 +363,8 @@ test("Hister's sign-in on Linux: the file, the cookie, the rooms' id, the reques
   assert.equal(h.loginRequest('https://hister.example', 'a', 'b').url, 'https://hister.example/api/login');
   assert.equal(h.appSessionRequest('https://hister.example/', session, 'x'.repeat(100)).url, 'https://hister.example/machiya/api/app-session');
   assert.equal(JSON.parse(h.appSessionRequest('https://hister.example/', session, 'x'.repeat(100)).body).label.length, 80);
+  // The session goes as `nogon` (nogon-login 0.8.0 and later), never the old `hister`.
+  assert.deepEqual(Object.keys(JSON.parse(h.appSessionRequest('https://hister.example/', session, 'y').body)).sort(), ['label', 'nogon']);
   assert.deepEqual(plain(h.signOutRequest('https://hister.example/', sid).headers), { Authorization: `Bearer ${sid}` });
   assert.equal(h.signInAvailable(200, { ok: true, hister: 'ok' }), true);
   // nogon-login 0.8.0 names it `nogon` beside `hister`, and it wins.

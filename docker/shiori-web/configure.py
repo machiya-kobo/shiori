@@ -11,7 +11,7 @@ filled from this run's settings, so one image serves every deployment and no
 page or route holds a setting it wasn't given. The settings are in
 web/README.md ("In a container").
 
-Required: SHIORI_NOGON_URL (or its old name SHIORI_HISTER_URL) and SHIORI_SEARXNG_URL. Everything else is
+Required: SHIORI_NOGON_URL and SHIORI_SEARXNG_URL. Everything else is
 optional, and an unset service is off: its routes answer 404 and the pages
 leave its feature out.
 """
@@ -29,10 +29,8 @@ import urllib.error
 import urllib.request
 
 REQUIRED = ("SHIORI_NOGON_URL", "SHIORI_SEARXNG_URL")
-# Hister is now Nogon (Machiya's rename, stage 1): these settings are read under their new names, and the old ones
-# (SHIORI_HISTER_…) still count. A new name that is set wins, even when it's empty, as upstream Nogon does.
+# Hister is now Nogon: these settings were SHIORI_HISTER_… before. An old name alone stops the start, naming the new one.
 RENAMED = ("SHIORI_NOGON_URL", "SHIORI_NOGON_PUBLIC_URL", "SHIORI_NOGON_HOST", "SHIORI_NOGON_VERSION")
-_warned = set()
 # Upstream services the host proxies to: setting -> the route they own.
 OPTIONAL = {
     "SHIORI_KURA_URL": "Kura (notes)",
@@ -126,39 +124,33 @@ def media_token(env, name):
     return value
 
 
-def renamed(env):
-    """The environment with each RENAMED setting under its new name: SHIORI_NOGON_… when set (even empty), else its old
-    SHIORI_HISTER_… twin, which is logged once so a deployment sees what is left to rename."""
-    env = dict(env)
-    for name in RENAMED:
-        old = name.replace("NOGON", "HISTER")
-        if name not in env and old in env:
-            env[name] = env[old]
-            if old not in _warned:
-                _warned.add(old)
-                sys.stderr.write(f"shiori-web: {old} is an old name, read as {name} (Hister is now Nogon: rename it)\n")
-    return env
+def old_names(env):
+    """ConfigError for a setting set only under its old SHIORI_HISTER_… name: it no longer counts."""
+    old = [(name.replace("NOGON", "HISTER"), name) for name in RENAMED
+           if name not in env and name.replace("NOGON", "HISTER") in env]
+    if old:
+        raise ConfigError("Hister is now Nogon: rename " + ", ".join(f"{o} to {n}" for o, n in old) + " (the old names no longer count)")
 
 
 def settings(env):
     """Everything this run needs, from the environment; ConfigError says what's wrong."""
-    env = renamed(env)
+    old_names(env)
     missing = [n for n in REQUIRED if not env.get(n, "").strip()]
     if missing:
         raise ConfigError(
             "shiori-web needs " + " and ".join(missing) + ".\n"
-            "  SHIORI_NOGON_URL    where Nogon (Hister) is, from this container (for example http://hister:4433)\n"
+            "  SHIORI_NOGON_URL    where Nogon is, from this container (for example http://nogon:4433)\n"
             "  SHIORI_SEARXNG_URL  where SearXNG is (for example http://searxng:8080)\n"
             "Everything else is optional: see web/README.md, \"In a container\".")
-    s = {"hister": upstream(env, "SHIORI_NOGON_URL"), "searxng": upstream(env, "SHIORI_SEARXNG_URL")}
+    s = {"nogon": upstream(env, "SHIORI_NOGON_URL"), "searxng": upstream(env, "SHIORI_SEARXNG_URL")}
     for name in OPTIONAL:
         s[name] = upstream(env, name)
     if env.get("SHIORI_NOGON_HOST", "").strip():
         host = env["SHIORI_NOGON_HOST"].strip()
         if not HOST_RE.match(host):
             raise ConfigError(f"SHIORI_NOGON_HOST: {host!r} is not a host name")
-        s["hister"]["hostport"] = host
-    # Sign-in: Machiya's helper (hister-login) when set, else Hister's own.
+        s["nogon"]["hostport"] = host
+    # Sign-in: Machiya's helper (nogon-login) when set, else Nogon's own.
     login = upstream(env, "SHIORI_LOGIN_URL")
     s["login"] = login
     if login:
@@ -167,7 +159,7 @@ def settings(env):
             auth = {**login, "hostport": login["host"] + ":8081"}
             auth["base"] = f"{login['scheme']}://{auth['hostport']}"
         s["login_auth"] = auth
-    s["signin"] = "hister-login" if login else "hister"
+    s["signin"] = "nogon-login" if login else "nogon"
     cookie = env.get("SHIORI_ROOM_COOKIE", "__Host-machiya_sso_shiori").strip()
     if not COOKIE_RE.match(cookie):
         raise ConfigError(f"SHIORI_ROOM_COOKIE: {cookie!r} is not a cookie name")
@@ -191,7 +183,7 @@ def settings(env):
         "konbini": public(env, "SHIORI_KONBINI_PUBLIC_URL") or (s["SHIORI_KONBINI_URL"] and env["SHIORI_KONBINI_URL"].strip()) or "",
         "kura_explicit": public(env, "SHIORI_KURA_PUBLIC_URL"),
         "konbini_explicit": public(env, "SHIORI_KONBINI_PUBLIC_URL"),
-        "hister": public(env, "SHIORI_NOGON_PUBLIC_URL"),
+        "nogon": public(env, "SHIORI_NOGON_PUBLIC_URL"),
         "searxng": public(env, "SHIORI_SEARXNG_PUBLIC_URL"),
     }
     s["media"] = {}
@@ -212,14 +204,13 @@ def settings(env):
     s["status"] = public(env, "SHIORI_STATUS_URL")
     s["vault"] = env.get("SHIORI_OBSIDIAN_VAULT", "").strip()
     s["frontends"] = env.get("SHIORI_FRONTENDS", "").strip()
-    # The Hister release status.json names, when it isn't the one the image was built against.
     s["timing_log"] = env.get("SHIORI_TIMING_LOG", "").strip()
     if s["timing_log"] and (not TIMING_LOG_RE.match(s["timing_log"]) or "/../" in s["timing_log"] + "/"
                             or s["timing_log"].endswith("/")):
         raise ConfigError(f"SHIORI_TIMING_LOG: {s['timing_log']!r} is not a file's absolute path (for example /tmp/timing.log)")
-    s["hister_version"] = env.get("SHIORI_NOGON_VERSION", "").strip()
-    if s["hister_version"] and not VERSION_RE.match(s["hister_version"]):
-        raise ConfigError(f"SHIORI_NOGON_VERSION: {s['hister_version']!r} is not a version (for example v0.20.0)")
+    s["nogon_version"] = env.get("SHIORI_NOGON_VERSION", "").strip()
+    if s["nogon_version"] and not VERSION_RE.match(s["nogon_version"]):
+        raise ConfigError(f"SHIORI_NOGON_VERSION: {s['nogon_version']!r} is not a version (for example v0.20.0)")
     return s
 
 
@@ -234,7 +225,7 @@ def stamped(s):
         "SHIORI_FRONTENDS": s["frontends"],
         "SHIORI_AI": "1" if s["SHIORI_AI_URL"] else "",
         "SHIORI_FEED": "" if s["SHIORI_FEED_URL"] else "off",
-        "SHIORI_SIGNIN": "hister" if s["signin"] == "hister" else "",
+        "SHIORI_SIGNIN": "nogon" if s["signin"] == "nogon" else "",
         # Each media service's address for links; the pages reach it through this host's /<name>/.
         "SHIORI_MEDIA": ",".join(f"{name}={m['link']}" for name, m in s["media"].items()),
     }
@@ -273,8 +264,8 @@ def nginx_value(value):
 def routes(s):
     """The routes both sites share, as production's shiori-routes.inc has them (web/README.md)."""
     verify = s["tls_verify"]
-    login = s["signin"] == "hister-login"
-    h = s["hister"]
+    login = s["signin"] == "nogon-login"
+    h = s["nogon"]
     out = []
     add = out.append
     # nginx.conf includes no mime.types, so this block is every type the pages are served as (a file with none
@@ -331,10 +322,10 @@ location /machiya/ {{
 # cookie works on this origin. Only that one cookie ever goes to Hister; the feed and AI routes ask Hister's
 # /api/profile whether the cookie is good (200 signed in or open, 401/403 not). With no users, Hister is open and so is
 # this host.
-location = /_hister_auth {{
+location = /_nogon_auth {{
     internal;
-    set $hister {h["base"]};
-    proxy_pass $hister/api/profile;
+    set $nogon {h["base"]};
+    proxy_pass $nogon/api/profile;
     proxy_pass_request_body off;
     proxy_set_header Content-Length "";
     proxy_set_header Host {h["hostport"]};
@@ -344,7 +335,7 @@ location /machiya/ {{
     return 404;
 }}
 ''')
-    auth = "auth_request /_machiya_auth;" if login else "auth_request /_hister_auth;"
+    auth = "auth_request /_machiya_auth;" if login else "auth_request /_nogon_auth;"
     # The built pages.
     add('''location = /healthz {
     default_type text/plain;
@@ -373,9 +364,9 @@ location /_shiori/ {
     # Basic Search: plain HTML for a browser without JavaScript (the pages' <noscript> sends it here). njs renders it
     # (web/basic.mjs) from this site's own routes, asked again on loopback so their sign-in and cookie rules apply.
     if login:
-        hister_pub = s["public"]["hister"] or dict(
-            p.strip().partition("=")[::2] for p in s["rooms"].split(",") if "=" in p).get("hister", "").strip()
-        signin = nginx_value(hister_pub.rstrip("/") + "/machiya/signin" if hister_pub.startswith("https://") else "")
+        rooms = dict(p.strip().partition("=")[::2] for p in s["rooms"].split(",") if "=" in p)
+        nogon_pub = s["public"]["nogon"] or (rooms.get("nogon") or rooms.get("hister") or "").strip()
+        signin = nginx_value(nogon_pub.rstrip("/") + "/machiya/signin" if nogon_pub.startswith("https://") else "")
     else:
         signin = "/auth"
     kura_pub = s["public"]["kura"]
@@ -452,12 +443,12 @@ location / {
     auth_request /_machiya_auth;
     auth_request_set $nogon_cookie $upstream_http_x_nogon_cookie;
     auth_request_set $hister_cookie $upstream_http_x_hister_cookie;
-''' + proxy("hister", h, verify, cookie="$helper_cookie", hide_set_cookie=True,
+''' + proxy("nogon", h, verify, cookie="$helper_cookie", hide_set_cookie=True,
             extra="    proxy_set_header Connection $http_connection;\n    proxy_set_header Upgrade $http_upgrade;\n") + "}\n")
     else:
         add('''# Everything else is Hister, with its own session cookie (and nothing else of the browser's).
 location / {
-''' + proxy("hister", h, verify, cookie="$hister_cookie_own",
+''' + proxy("nogon", h, verify, cookie="$hister_cookie_own",
             extra="    proxy_set_header Connection $http_connection;\n    proxy_set_header Upgrade $http_upgrade;\n") + "}\n")
     return "\n".join(out)
 
@@ -542,7 +533,7 @@ map $http_cookie $machiya_session_cookie {
 
 def sites(s, resolver, root):
     maps = MAPS.format(resolver=resolver, signin_maps=(
-        LOGIN_MAPS.format(cookie=s["room_cookie"]) if s["signin"] == "hister-login" else OWN_MAPS))
+        LOGIN_MAPS.format(cookie=s["room_cookie"]) if s["signin"] == "nogon-login" else OWN_MAPS))
     if s["timing_log"]:
         maps += TIMING
     body = routes(s)
@@ -599,7 +590,7 @@ def stamp_pages(s, dist, out, scripts):
         "SHIORI_ROOMS": s["rooms"],
         "SHIORI_KURA_URL": s["public"]["kura_explicit"],
         "SHIORI_KONBINI_URL": s["public"]["konbini_explicit"],
-        "SHIORI_SERVER_URL": s["public"]["hister"],
+        "SHIORI_SERVER_URL": s["public"]["nogon"],
         "SHIORI_SEARXNG_URL": s["public"]["searxng"],
     }.items() if v}
     files = {"search": ["index.html", "_shiori/web-shim.js", "_shiori/search.js", "_shiori/search-core.js"],
@@ -655,12 +646,13 @@ def stamp_pages(s, dist, out, scripts):
         with open(os.path.join(www, key, "_shiori", "config.json"), "w", encoding="utf-8") as f:
             json.dump(report(s), f, indent=2)
             f.write("\n")
-        # status.json (scripts/status-json.py): the Hister release this run names, when one is set.
+        # status.json (scripts/status-json.py): the Nogon release this run names, when one is set.
         status = os.path.join(www, key, "_shiori", "status.json")
-        if s["hister_version"] and os.path.exists(status):
+        if s["nogon_version"] and os.path.exists(status):
             with open(status, encoding="utf-8") as f:
                 doc = json.load(f)
-            doc["hister"] = doc["nogon"] = s["hister_version"]
+            doc.pop("hister", None)
+            doc["nogon"] = s["nogon_version"]
             with open(status, "w", encoding="utf-8") as f:
                 json.dump(doc, f)
                 f.write("\n")
@@ -671,7 +663,7 @@ def report(s):
     addresses the pages link. No upstream address that isn't already in the page, no secret."""
     return {
         "signin": s["signin"],
-        "services": {"hister": True, "searxng": True,
+        "services": {"nogon": True, "searxng": True,
                      **{name.removeprefix("SHIORI_").removesuffix("_URL").lower(): bool(s[name]) for name in OPTIONAL}},
         "sites": {"search": s["search"]["url"], "app": s["app"]["url"]},
         "links": {k: v for k, v in {"kura": s["public"]["kura"], "konbini": s["public"]["konbini"],
@@ -694,11 +686,11 @@ def resolver_from(path="/etc/resolv.conf"):
 def startup_line(s):
     on = [label for name, label in OPTIONAL.items() if s[name]]
     off = [label for name, label in OPTIONAL.items() if not s[name]]
-    signin = ("Machiya's sign-in helper" if s["signin"] == "hister-login"
-              else "Hister's own (the pages open while Hister has no users)")
+    signin = ("Machiya's sign-in helper" if s["signin"] == "nogon-login"
+              else "Nogon's own (the pages open while Nogon has no users)")
     return "\n".join([
         f"shiori-web: search page :{s['search']['port']}, web app :{s['app']['port']}",
-        f"  Hister {s['hister']['base']}, SearXNG {s['searxng']['base']}",
+        f"  Nogon {s['nogon']['base']}, SearXNG {s['searxng']['base']}",
         f"  on:  {', '.join(on) or 'nothing else'}",
         f"  off: {', '.join(off) or 'nothing'}",
         f"  sign-in: {signin}",
@@ -737,12 +729,12 @@ def json_answer(ctype, body):
 
 
 def probe(s):
-    """Says plainly what's wrong with Hister or SearXNG, once, at start. Never stops the start: they may still be
+    """Says plainly what's wrong with Nogon or SearXNG, once, at start. Never stops the start: they may still be
     coming up, and the pages say the same thing (and recover) when they're asked."""
     lines = []
-    status, _, _ = fetch(s["hister"], "/", s["tls_verify"])
+    status, _, _ = fetch(s["nogon"], "/", s["tls_verify"])
     if status is None:
-        lines.append(f"  ! Hister isn't answering at {s['hister']['base']} yet: check SHIORI_NOGON_URL, and that Nogon is running.")
+        lines.append(f"  ! Nogon isn't answering at {s['nogon']['base']} yet: check SHIORI_NOGON_URL, and that it's running.")
     status, ctype, body = fetch(s["searxng"], "/search?q=shiori&format=json", s["tls_verify"])
     if status is None:
         lines.append(f"  ! SearXNG isn't answering at {s['searxng']['base']} yet: check SHIORI_SEARXNG_URL, and that SearXNG is running.")
@@ -753,7 +745,7 @@ def probe(s):
         lines.append(f"  ! SearXNG answered {status} to a JSON search: check its settings.")
     elif not json_answer(ctype, body):
         lines.append("  ! SearXNG's answer to a JSON search wasn't JSON: check `formats` in its settings.yml.")
-    return lines or ["  Hister and SearXNG answer."]
+    return lines or ["  Nogon and SearXNG answer."]
 
 
 def main():

@@ -168,7 +168,8 @@ export async function saveThroughGateway(config, row, { wait = pause } = {}) {
   for (let attempt = 0; attempt < 4; attempt++) {
     let r;
     try {
-      r = await requestJSON(config, `${gateway}api/save`, { method: 'POST', body: { url: row.url }, hister: true });
+      // The gateway takes only hister:// from the native apps until smallweb 0.6.0.
+      r = await requestJSON(config, `${gateway}api/save`, { method: 'POST', body: { url: row.url }, hister: true, origin: 'hister://' });
     } catch (_) {
       return { outcome: 'failed', reason: 'The small-web gateway is out of reach.' };
     }

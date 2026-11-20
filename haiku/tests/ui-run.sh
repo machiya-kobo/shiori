@@ -93,8 +93,8 @@ settext "Save to Hister" label "haiku"
 shot 08-save-filled 0.5
 msg Sdsv of Window "Save to Hister"
 shot 09-saved 1.5
-grep 'hister POST /api/add' "$LOG" | grep "'origin': 'hister://'" | grep -q '"url": "https://www.haiku-os.org/blog/"' \
-	&& ok "saved with Origin: hister://" || bad "save not seen"
+grep 'hister POST /api/add' "$LOG" | grep "'origin': 'nogon://'" | grep -q '"url": "https://www.haiku-os.org/blog/"' \
+	&& ok "saved with Origin: nogon://" || bad "save not seen"
 grep -q '"via": "haiku", "ignore_skip_rules": true' "$LOG" && ok "newPage metadata" || bad "newPage metadata"
 cleartext "Save to Hister" url
 settext "Save to Hister" url "https://example.com/secret-token-page"

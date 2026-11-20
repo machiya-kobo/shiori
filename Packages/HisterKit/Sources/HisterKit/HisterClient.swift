@@ -46,7 +46,7 @@ public enum SearchSort: String, Sendable, CaseIterable {
 
 /// A client for one Hister server's HTTP API.
 ///
-/// Every request carries `Origin: hister://`, which Hister's CSRF check
+/// Every request carries `Origin: nogon://` (`origin`), which Nogon's CSRF check
 /// requires of a non-browser client's writes (403 without it); searches
 /// ask for JSON (`Accept: application/json`), which Hister answers from any
 /// origin. With a token (`HisterToken`) every request also carries
@@ -282,6 +282,9 @@ public struct HisterClient: Sendable {
         try await send(makeRequest("api/add", method: "POST", body: body))
     }
 
+    /// The native apps' Origin. Nogon v0.22 also takes `hister://`, its old name.
+    public static let origin = "nogon://"
+
     func makeRequest(
         _ path: String, query: [URLQueryItem] = [], method: String = "GET", body: Data? = nil,
         accept: String? = nil
@@ -290,7 +293,7 @@ public struct HisterClient: Sendable {
         if !query.isEmpty { components.setQueryItems(query) }
         var request = URLRequest(url: components.url!)
         request.httpMethod = method
-        request.setValue("hister://", forHTTPHeaderField: "Origin")
+        request.setValue(Self.origin, forHTTPHeaderField: "Origin")
         if let token { request.setValue(token, forHTTPHeaderField: HisterToken.header) }
         if let histerSession { request.setValue("\(HisterAccount.cookieName)=\(histerSession)", forHTTPHeaderField: "Cookie") }
         if let accept { request.setValue(accept, forHTTPHeaderField: "Accept") }

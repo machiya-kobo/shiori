@@ -1,5 +1,12 @@
 # mac-bridge changelog
 
+## 0.4.0 (2026-11-20)
+
+- The old BRIDGE_HISTER_ settings no longer count. One set without its
+  BRIDGE_NOGON_ name stops the start and names the new one.
+- The apps' Origin goes to Nogon and Kura as `nogon://`, whichever of
+  `nogon://` and `hister://` the app sent (Nogon v0.22 takes both).
+
 ## 0.3.0 (2026-11-19)
 
 - Hister is now Nogon: the settings are BRIDGE_NOGON_URL, BRIDGE_NOGON_PORT,

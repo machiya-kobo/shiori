@@ -40,6 +40,10 @@ struct HisterAccountTests {
         #expect(HisterAccount.callback(URL(string: "shiori://signed-in?sid=\(Self.sid)&hister=\(Self.S)")!) == nil)
         #expect(HisterAccount.callback(URL(string: "evil://signed-in#sid=\(Self.sid)&hister=\(Self.S)")!) == nil)
         #expect(HisterAccount.callback(URL(string: "shiori://signed-in#sid=nope&hister=\(Self.S)")!) == nil)
+        // nogon-login 0.9.0 names the session "nogon"; it wins over the old "hister", which a helper before it sends alone.
+        let other = String(repeating: "N", count: 43)
+        #expect(HisterAccount.callback(URL(string: "shiori://signed-in#sid=\(Self.sid)&nogon=\(Self.S)")!)?.session == Self.S)
+        #expect(HisterAccount.callback(URL(string: "shiori://signed-in#sid=\(Self.sid)&hister=\(other)&nogon=\(Self.S)")!)?.session == Self.S)
         let start = HisterAccount.browserSignInURL(server: Self.server).absoluteString
         #expect(start == "https://account.example/machiya/signin?app=1&return=shiori://signed-in")
         #expect(HisterAccount.browserSignInURL(server: Self.server, provider: "oidc").absoluteString
@@ -75,11 +79,11 @@ struct HisterAccountTests {
         let signedIn = try await HisterAccount.signIn(server: Self.server, username: "alex", password: "pw", label: "iPhone", session: session)
         #expect(signedIn == HisterAccount.SignedIn(session: Self.S, sessionID: Self.sid, username: "alex"))
         let login = try #require(requests.first)
-        #expect(login.value(forHTTPHeaderField: "Origin") == "hister://")
+        #expect(login.value(forHTTPHeaderField: "Origin") == "nogon://")
         #expect(login.httpMethod == "POST")
         let trade = try #require(requests.last)
         let body = try JSONSerialization.jsonObject(with: trade.httpBody ?? Data()) as? [String: String]
-        #expect(body == ["hister": Self.S, "label": "iPhone"])
+        #expect(body == ["nogon": Self.S, "label": "iPhone"])
         #expect(trade.value(forHTTPHeaderField: "Cookie") == nil)
     }
 

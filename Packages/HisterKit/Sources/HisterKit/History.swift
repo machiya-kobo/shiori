@@ -2,8 +2,8 @@ import Foundation
 
 // Hister's history: what it indexed when, what you opened from a search
 // (which it ranks first the next time), and the counts per day and month
-// behind the Library's By Date view. All with `Origin: hister://`, which
-// Hister's CSRF check lets through.
+// behind the Library's By Date view. All with `Origin: nogon://`, which
+// Nogon's CSRF check lets through.
 
 /// One page you opened from a search.
 public struct OpenedEntry: Sendable, Equatable, Hashable, Identifiable, Decodable {

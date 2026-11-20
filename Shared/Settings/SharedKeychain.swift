@@ -61,7 +61,7 @@ nonisolated enum SharedKeychain {
     }
 }
 
-/// Hister's credentials, in the Keychain under the service "Hister":
+/// Nogon's (formerly Hister's) credentials, in the Keychain under the service "Nogon":
 /// - the access token (Settings → Safari → Safari Extension Token): your Hister user's
 ///   one token, entered once per device, sent as `X-Access-Token` by
 ///   the app, the share extension and (through the `hister` native
@@ -71,9 +71,18 @@ nonisolated enum SharedKeychain {
 ///   extension only), the sign-in helper's id (`Bearer mhs_…` to the
 ///   rooms) and who it is.
 /// Empty: nothing is sent.
+///
+/// Before Nogon the service was "Hister". An item still there is read from
+/// it, and the app (never an extension: on the Mac an item belongs to the
+/// program that made it) carries it over the first time: written under
+/// "Nogon", then removed from "Hister". A save or a sign-out removes the old
+/// item too, so nothing forgotten comes back from it.
 nonisolated enum HisterKeychain {
-    static let service = "Hister"
+    static let service = "Nogon"
+    static let oldService = "Hister"
     static let account = "token"
+    /// The app itself, not one of its extensions (an `.appex`).
+    static let isApp = Bundle.main.bundleURL.pathExtension == "app"
 
     enum Account: String {
         case token, session, sessionID, username
@@ -86,21 +95,41 @@ nonisolated enum HisterKeychain {
     static var username: String { read(.username) }
 
     static func read(_ account: Account) -> String {
-        SharedKeychain.read(service: service, account: account.rawValue)
+        read(account.rawValue, service: service, oldService: oldService, carryOver: isApp)
+    }
+
+    /// The item under `service`, else the one under `oldService`, carried over (`carryOver`): the old item goes only
+    /// after the new one is kept. The services are arguments so a test can use its own.
+    static func read(_ account: String, service: String, oldService: String, carryOver: Bool) -> String {
+        let value = SharedKeychain.read(service: service, account: account)
+        guard value.isEmpty else { return value }
+        let old = SharedKeychain.read(service: oldService, account: account)
+        if !old.isEmpty, carryOver, SharedKeychain.save(old, service: service, account: account) {
+            SharedKeychain.save("", service: oldService, account: account)
+        }
+        return old
+    }
+
+    /// Keeps one item under `service` (removed when empty), and removes any left under `oldService`.
+    static func save(_ value: String, _ account: String, service: String, oldService: String) -> Bool {
+        let kept = SharedKeychain.save(value, service: service, account: account)
+        return SharedKeychain.save("", service: oldService, account: account) && kept
+    }
+
+    private static func save(_ value: String, _ account: Account) -> Bool {
+        save(value, account.rawValue, service: service, oldService: oldService)
     }
 
     /// Keeps a token, or removes it when empty. False when the Keychain refused.
     @discardableResult
     static func save(_ token: String) -> Bool {
-        SharedKeychain.save(token, service: service, account: Account.token.rawValue)
+        save(token, .token)
     }
 
     /// Keeps a sign-in (all three or none). False when the Keychain refused.
     @discardableResult
     static func saveSignIn(session: String, sessionID: String, username: String) -> Bool {
-        let kept = SharedKeychain.save(session, service: service, account: Account.session.rawValue)
-            && SharedKeychain.save(sessionID, service: service, account: Account.sessionID.rawValue)
-            && SharedKeychain.save(username, service: service, account: Account.username.rawValue)
+        let kept = save(session, .session) && save(sessionID, .sessionID) && save(username, .username)
         if !kept { signOut() }
         return kept
     }
@@ -109,7 +138,7 @@ nonisolated enum HisterKeychain {
     @discardableResult
     static func signOut() -> Bool {
         [Account.session, .sessionID, .username]
-            .map { SharedKeychain.save("", service: service, account: $0.rawValue) }
+            .map { save("", $0) }
             .allSatisfy { $0 }
     }
 }

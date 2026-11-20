@@ -30,13 +30,13 @@ export function newPage({
   return page;
 }
 
-/** The request that adds `page`: `Origin: hister://` passes Hister's check, as HisterKit sends. */
+/** The request that adds `page`: `Origin: nogon://` passes Nogon's check, as HisterKit sends. */
 export function addRequest(server, page) {
   const base = String(server).endsWith('/') ? String(server) : String(server) + '/';
   return {
     method: 'POST',
     url: `${base}api/add`,
-    headers: { 'Content-Type': 'application/json', Origin: 'hister://' },
+    headers: { 'Content-Type': 'application/json', Origin: 'nogon://' },
     body: JSON.stringify(page),
   };
 }

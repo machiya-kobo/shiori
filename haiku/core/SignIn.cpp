@@ -116,7 +116,7 @@ std::string LoginBody(const std::string& username, const std::string& password)
 std::string AppSessionBody(const std::string& session, const std::string& label)
 {
 	json::Value body = json::Value::MakeObject();
-	body.Set("hister", json::Value::MakeString(session));
+	body.Set("nogon", json::Value::MakeString(session));   // nogon-login 0.8.0 and later; "hister" before
 	body.Set("label", json::Value::MakeString(label.substr(0, 80)));
 	return json::Write(body);
 }

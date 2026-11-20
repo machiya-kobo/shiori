@@ -38,14 +38,14 @@ origin):
 | `/jellyfin/*`, `/plex/*`, `/koito/*`, `/movary/*` | the media services ([docs/media.md](../docs/media.md)), the prefix removed, **GET only and only the read paths Shiori asks for** (configure.py's `MEDIA` lists them), with the host's own token added and the browser's cookies and `Authorization` dropped. The browser never holds a media token |
 | anything else | the Nogon host as it is: Nogon's API (`/search`, `/api/*`, `/preview`), and the optional `/shiori/feed` and `/shiori/ai/*` (Machiya's [shiori-feed](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-feed.md) and [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md), the reference compose's `shiori` profile; the pages ask for `/shiori/ai/*` only when built with `SHIORI_AI=1`) |
 
-Pass requests through **unchanged**. Do not add `Origin: hister://`: Nogon
+Pass requests through **unchanged**. Do not add `Origin: nogon://` (or its old name, `hister://`): Nogon
 lets a same-origin browser write (`Sec-Fetch-Site: same-origin`) and
 refuses a cross-site one (403), and that check is what keeps other sites
 from, say, deleting pages through this host. Keep the host private (your
 network or VPN), like Nogon itself.
 
 **Signing in (Hister's users).** When Nogon has users (Hister's
-`app.user_handling`, with Machiya's sign-in helper, hister-login, on
+`app.user_handling`, with Machiya's sign-in helper, nogon-login, on
 Nogon's own host), this host signs every Nogon call in for the browser:
 the browser holds only the helper's opaque `machiya_sso` cookie, and nginx
 asks the helper (`auth_request`) for Nogon's session on its own hop:
@@ -53,7 +53,7 @@ asks the helper (`auth_request`) for Nogon's session on its own hop:
 ```nginx
 location = /_machiya_auth {
     internal;
-    proxy_pass http://hister-login:8081/v1/nginx;   # the helper's internal port
+    proxy_pass http://nogon-login:8081/v1/nginx;   # the helper's internal port
     proxy_pass_request_body off;
     proxy_set_header Content-Length "";
     proxy_set_header X-Machiya-Session $cookie_machiya_sso;
@@ -139,7 +139,7 @@ docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
   ghcr.io/machiya-kobo/shiori-web
 ```
 
-Without `SHIORI_NOGON_URL` and `SHIORI_SEARXNG_URL` it refuses to start and says so. Each `SHIORI_NOGON_…` setting still answers to its old name, `SHIORI_HISTER_…` (logged once at start-up); a `SHIORI_NOGON_…` that is set wins, even empty. The start-up log names what is on
+Without `SHIORI_NOGON_URL` and `SHIORI_SEARXNG_URL` it refuses to start and says so. The `SHIORI_NOGON_…` settings were `SHIORI_HISTER_…` before Nogon; an old name set alone stops the start and names the new one. The start-up log names what is on
 and off and says plainly if Nogon isn't answering or SearXNG refuses JSON results; `/_shiori/config.json` on either
 port shows the same (the sign-in mode and which services are on), and `/healthz` answers 200.
 
@@ -154,7 +154,7 @@ port shows the same (the sign-in mode and which services are on), and `/healthz`
 | `SHIORI_AI_URL` | shiori-ai, behind Summarize and AI Answer | off |
 | `SHIORI_JELLYFIN_URL`, `SHIORI_PLEX_URL`, `SHIORI_KOITO_URL`, `SHIORI_MOVARY_URL` | The media services ([docs/media.md](../docs/media.md)): each needs its token too, `SHIORI_<NAME>_TOKEN` or a file named by `SHIORI_<NAME>_TOKEN_FILE` (a Docker secret; it must be readable by the container's user, uid 101 unless you set `user:`, say to the uid that owns 0600 secret files: the image writes only to `/tmp`, so it runs as any uid). The token goes only into nginx's request to that service (its config file is readable by its own user alone), never into a page. Give each a token of its own, read-only where the service has such a thing | off: no Media pill, the routes answer 404 |
 | `SHIORI_JELLYFIN_PUBLIC_URL`, `SHIORI_PLEX_PUBLIC_URL`, `SHIORI_KOITO_PUBLIC_URL`, `SHIORI_MOVARY_PUBLIC_URL` | Each media service's address for people's browsers ("Open in Jellyfin"). Movary's must be the address Movary itself writes into its poster links (its `APPLICATION_URL`) | the addresses above |
-| `SHIORI_LOGIN_URL` | hister-login, for one sign-in across Machiya's apps; `SHIORI_LOGIN_AUTH_URL` is its nginx auth address (default: the same host, port 8081) and `SHIORI_ROOM_COOKIE` this host's room cookie (default `__Host-machiya_sso_shiori`) | unset: Nogon's own sign-in |
+| `SHIORI_LOGIN_URL` | nogon-login, for one sign-in across Machiya's apps; `SHIORI_LOGIN_AUTH_URL` is its nginx auth address (default: the same host, port 8081) and `SHIORI_ROOM_COOKIE` this host's room cookie (default `__Host-machiya_sso_shiori`) | unset: Nogon's own sign-in |
 | `SHIORI_SEARCH_PORT`, `SHIORI_APP_PORT` | The ports inside the container (1024 and up) | 8080, 8081 |
 | `SHIORI_SEARCH_PAGE_URL`, `SHIORI_APP_URL` | The sites' own addresses, as a browser reaches them (OpenSearch, the room cookie's origin) | `http://localhost:8080/`, `http://localhost:8081/` |
 | `SHIORI_KURA_PUBLIC_URL`, `SHIORI_KONBINI_PUBLIC_URL`, `SHIORI_NOGON_PUBLIC_URL`, `SHIORI_SEARXNG_PUBLIC_URL`, `SHIORI_ROOMS` | Addresses people click (the Rooms menu, links to Kura and Konbini) when a browser reaches them differently from this container. In `SHIORI_ROOMS` Nogon's room is `nogon=` (or `hister=`) | the Kura and Konbini addresses above |
@@ -165,7 +165,7 @@ port shows the same (the sign-in mode and which services are on), and `/healthz`
 | `SHIORI_OBSIDIAN_VAULT`, `SHIORI_SOURCE_URL`, `SHIORI_STATUS_URL`, `SHIORI_FRONTENDS` | As in the build configuration (CLAUDE.md) | empty |
 
 **Signing in.** Without `SHIORI_LOGIN_URL` the sign-in is Nogon's own: Nogon's `/auth` page is proxied on this origin,
-its `hister` cookie goes to Nogon and to nothing else, and the pages open if Nogon has no users. With it, hister-login's
+its `hister` cookie goes to Nogon and to nothing else, and the pages open if Nogon has no users. With it, nogon-login's
 shared flow takes over, as in the table above. A browser's other cookies are never forwarded: Nogon gets its own
 session, Kura and Konbini the rooms' session cookie, SearXNG and the rest none. `Origin` and the `Sec-Fetch-*` headers
 pass through untouched and are never added, so Nogon's same-origin check still protects it.

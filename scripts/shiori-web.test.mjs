@@ -24,7 +24,7 @@ if (python) {
 }
 test.after(() => rmSync(dist, { recursive: true, force: true }));
 
-const BASE = { SHIORI_HISTER_URL: 'http://hister:4433', SHIORI_SEARXNG_URL: 'http://searxng:8080' };
+const BASE = { SHIORI_NOGON_URL: 'http://nogon:4433', SHIORI_SEARXNG_URL: 'http://searxng:8080' };
 
 function run(env, extra = []) {
   const out = mkdtempSync(join(tmpdir(), 'shiori-web-out-'));
@@ -97,11 +97,11 @@ test("every file the pages ship has a Content-Type: nginx has no mime.types, so 
 });
 
 test('Hister and SearXNG are required, and the message says how to set them', { skip }, () => {
-  for (const env of [{}, { SHIORI_HISTER_URL: 'http://hister:4433' }, { SHIORI_SEARXNG_URL: 'http://searxng:8080' }]) {
+  for (const env of [{}, { SHIORI_NOGON_URL: 'http://nogon:4433' }, { SHIORI_SEARXNG_URL: 'http://searxng:8080' }]) {
     const x = run(env);
     assert.equal(x.r.status, 2);
     assert.match(x.r.stderr, /shiori-web needs/);
-    assert.match(x.r.stderr, /SHIORI_NOGON_URL.*where Nogon \(Hister\) is/s);
+    assert.match(x.r.stderr, /SHIORI_NOGON_URL.*where Nogon is/s);
     assert.match(x.r.stderr, /SHIORI_SEARXNG_URL.*where SearXNG is/s);
     assert.equal(existsSync(join(x.out, 'sites.conf')), false);
     x.cleanup();
@@ -110,11 +110,11 @@ test('Hister and SearXNG are required, and the message says how to set them', { 
 
 test('settings that could break the config or a page are refused, by name', { skip }, () => {
   const bad = [
-    ['SHIORI_HISTER_URL', 'http://hister:4433/path'], ['SHIORI_HISTER_URL', 'ftp://hister'], ['SHIORI_HISTER_URL', 'http://hister;x'],
-    ['SHIORI_HISTER_URL', 'http://hister:4433 {'], ['SHIORI_KURA_URL', 'http://kura/\n}'], ['SHIORI_AI_URL', 'http://ai:99999'],
-    ['SHIORI_HISTER_HOST', 'bad host'], ['SHIORI_ROOM_COOKIE', 'a;b'], ['SHIORI_SEARCH_PORT', '80'], ['SHIORI_APP_PORT', '8080'],
+    ['SHIORI_NOGON_URL', 'http://nogon:4433/path'], ['SHIORI_NOGON_URL', 'ftp://nogon'], ['SHIORI_NOGON_URL', 'http://nogon;x'],
+    ['SHIORI_NOGON_URL', 'http://nogon:4433 {'], ['SHIORI_KURA_URL', 'http://kura/\n}'], ['SHIORI_AI_URL', 'http://ai:99999'],
+    ['SHIORI_NOGON_HOST', 'bad host'], ['SHIORI_ROOM_COOKIE', 'a;b'], ['SHIORI_SEARCH_PORT', '80'], ['SHIORI_APP_PORT', '8080'],
     ['SHIORI_SOURCE_URL', "https://x.example/'+alert(1)+'"], ['SHIORI_KURA_PUBLIC_URL', 'https://x.example/\\'],
-    ['SHIORI_APP_URL', 'https://app.example/path'], ['SHIORI_HISTER_VERSION', 'v0.20.0 (abc)'],
+    ['SHIORI_APP_URL', 'https://app.example/path'], ['SHIORI_NOGON_VERSION', 'v0.20.0 (abc)'],
   ];
   for (const [name, value] of bad) {
     const x = run({ ...BASE, [name]: value });
@@ -134,19 +134,19 @@ test('with only Hister and SearXNG: both pages, SearXNG and Hister proxied, ever
   try {
     assert.equal(x.r.status, 0, x.r.stderr);
     assert.match(x.r.stdout, /search page :8080, web app :8081/);
-    assert.match(x.r.stdout, /sign-in: Hister's own/);
+    assert.match(x.r.stdout, /sign-in: Nogon's own/);
     const conf = x.sites();
     assert.match(conf, /listen 8080;/);
     assert.match(conf, /listen 8081;/);
     assert.match(conf, /location \/searx\/ \{[^}]*set \$searx http:\/\/searxng:8080;/s);
-    assert.match(conf, /location \/ \{[^}]*set \$hister http:\/\/hister:4433;/s);
+    assert.match(conf, /location \/ \{[^}]*set \$nogon http:\/\/nogon:4433;/s);
     // Off: their routes answer 404, never fall through to Hister (whose UI answers any path 200).
     for (const route of ['/kura/', '/konbini/', '/smallweb/', '/shiori/ai/', '/shiori/', '/machiya/', '/jellyfin/', '/plex/', '/koito/', '/movary/']) {
       assert.match(conf, new RegExp(`location ${route.replace(/\//g, '\\/')} \\{[^}]*return 404`), route);
     }
     assert.doesNotMatch(conf, /set \$(kura|konbini|smallweb|ai|feed) /);
     assert.doesNotMatch(conf, /_machiya_auth/);
-    assert.match(conf, /location = \/_hister_auth/);
+    assert.match(conf, /location = \/_nogon_auth/);
     // Never Origin: Hister's CSRF check depends on it passing through untouched.
     assert.doesNotMatch(conf, /Origin\b/i.test(conf) ? /^$/ : /(?!)/);
     for (const line of conf.split('\n')) assert.ok(!/proxy_set_header\s+Origin/i.test(line), line);
@@ -159,13 +159,13 @@ test('with only Hister and SearXNG: both pages, SearXNG and Hister proxied, ever
     const app = x.read('www/app/_shiori/app.js');
     assert.doesNotMatch(app, /__SHIORI_FEED__/);
     assert.match(app, /fromBuild\('off'\) !== 'off'/);
-    assert.match(x.read('www/search/_shiori/search-core.js'), /roomKey\(fromBuild\('hister'\)\)/);
+    assert.match(x.read('www/search/_shiori/search-core.js'), /roomKey\(fromBuild\('nogon'\)\)/);
     assert.match(app, /__SHIORI_KURA_URL__/, 'unset: left for the page to read as empty');
     assert.doesNotMatch(x.read('www/search/index.html'), /__SHIORI_STATUS_URL__|data-shiori-status/);
     const cfg = JSON.parse(x.read('www/search/_shiori/config.json'));
-    assert.deepEqual(cfg.services, { hister: true, searxng: true, kura: false, konbini: false, smallweb: false, feed: false, ai: false,
+    assert.deepEqual(cfg.services, { nogon: true, searxng: true, kura: false, konbini: false, smallweb: false, feed: false, ai: false,
       jellyfin: false, plex: false, koito: false, movary: false });
-    assert.equal(cfg.signin, 'hister');
+    assert.equal(cfg.signin, 'nogon');
   } finally {
     x.cleanup();
   }
@@ -185,8 +185,8 @@ test('every optional service set: routed, stamped, and the status link and rooms
     assert.match(conf, /proxy_ssl_server_name on;\n\s+proxy_ssl_name kura\.example;\n\s+proxy_ssl_verify on;/);
     assert.match(conf, /set \$konbini http:\/\/konbini:8081;/);
     assert.match(conf, /location \/smallweb\/api\/ \{[^}]*set \$smallweb http:\/\/smallweb:8080;/s);
-    assert.match(conf, /location \/shiori\/ai\/ \{\s+auth_request \/_hister_auth;/);
-    assert.match(conf, /location \/shiori\/ \{\s+auth_request \/_hister_auth;[^}]*set \$feed http:\/\/feed:8080;/s);
+    assert.match(conf, /location \/shiori\/ai\/ \{\s+auth_request \/_nogon_auth;/);
+    assert.match(conf, /location \/shiori\/ \{\s+auth_request \/_nogon_auth;[^}]*set \$feed http:\/\/feed:8080;/s);
     assert.match(conf, /return 503 '\{"error":"unavailable"/);
     // Kura's reader pages are never passed under /kura/.
     assert.match(conf, /location \/kura\/ \{\n\s+return 404;/);
@@ -204,7 +204,7 @@ test('every optional service set: routed, stamped, and the status link and rooms
     assert.doesNotMatch(x.read('www/app/_shiori/app.js'), /__SHIORI_(AI|SMALLWEB_URL|SOURCE_URL)__/);
     assert.match(x.read('www/app/_shiori/app.js'), /fromBuild\('__SHIORI_FEED__'\) !== 'off'/);   // a feed service: left unstamped, so on
     const cfg = JSON.parse(x.read('www/app/_shiori/config.json'));
-    assert.deepEqual(cfg.services, { hister: true, searxng: true, kura: true, konbini: true, smallweb: true, feed: true, ai: true,
+    assert.deepEqual(cfg.services, { nogon: true, searxng: true, kura: true, konbini: true, smallweb: true, feed: true, ai: true,
       jellyfin: false, plex: false, koito: false, movary: false });
     assert.equal(cfg.links.status, 'https://status.example/');
   } finally {
@@ -232,7 +232,7 @@ test('Media: each service needs its address and token; its read API only, GET on
       const b = block(name);
       assert.ok(b, name);
       assert.match(b[2], /limit_except GET \{ deny all; \}/, name);
-      assert.match(b[2], /auth_request \/_hister_auth;/, name);
+      assert.match(b[2], /auth_request \/_nogon_auth;/, name);
       assert.match(b[2], new RegExp(`rewrite \\^/${name}/\\(\\.\\*\\)\\$ /\\$1 break;`), name);
       assert.ok(b[2].includes(`proxy_set_header ${header};`), name);
       assert.match(b[2], /proxy_set_header Cookie "";/, name);
@@ -296,17 +296,17 @@ test('Media: each service needs its address and token; its read API only, GET on
 });
 
 test("Machiya's sign-in helper takes over when SHIORI_LOGIN_URL is set: the auth request, one cookie per service", { skip }, () => {
-  const x = run({ ...BASE, SHIORI_LOGIN_URL: 'http://hister-login:8080', SHIORI_KURA_URL: 'http://kura:8080', SHIORI_KONBINI_URL: 'http://konbini:8081',
+  const x = run({ ...BASE, SHIORI_LOGIN_URL: 'http://nogon-login:8080', SHIORI_KURA_URL: 'http://kura:8080', SHIORI_KONBINI_URL: 'http://konbini:8081',
     SHIORI_FEED_URL: 'http://feed:8080', SHIORI_APP_URL: 'https://app.example' });
   try {
     assert.equal(x.r.status, 0, x.r.stderr);
     assert.match(x.r.stdout, /sign-in: Machiya's sign-in helper/);
     const conf = x.sites();
-    assert.match(conf, /location = \/_machiya_auth \{\s+internal;\s+set \$helper http:\/\/hister-login:8081;\s+proxy_pass \$helper\/v1\/nginx;/);
+    assert.match(conf, /location = \/_machiya_auth \{\s+internal;\s+set \$helper http:\/\/nogon-login:8081;\s+proxy_pass \$helper\/v1\/nginx;/);
     assert.match(conf, /proxy_set_header X-Machiya-Session \$machiya_room_sid;/);
     assert.match(conf, /proxy_set_header X-Machiya-Room \$site_origin;/);
     assert.match(conf, /set \$site_origin https:\/\/app\.example;/);
-    assert.match(conf, /location ~ \^\/machiya\/\(start\|callback\|signed-out\|signout\|api\/prefs\)\$ \{\s+set \$helper_pub http:\/\/hister-login:8080;/);
+    assert.match(conf, /location ~ \^\/machiya\/\(start\|callback\|signed-out\|signout\|api\/prefs\)\$ \{\s+set \$helper_pub http:\/\/nogon-login:8080;/);
     assert.match(conf, /\(\?:\^\|;\\s\*\)__Host-machiya_sso_shiori=\(\?<v>mhr_\[A-Za-z0-9_-\]\{43\}\)/);
     assert.match(conf, /location \/ \{\s+auth_request \/_machiya_auth;\s+auth_request_set \$nogon_cookie \$upstream_http_x_nogon_cookie;\s+auth_request_set \$hister_cookie \$upstream_http_x_hister_cookie;/);
     // X-Nogon-Cookie first, X-Hister-Cookie (the helper's old name) when it's empty.
@@ -314,10 +314,10 @@ test("Machiya's sign-in helper takes over when SHIORI_LOGIN_URL is set: the auth
     assert.match(conf, /proxy_set_header Cookie \$helper_cookie;[\s\S]*?proxy_hide_header Set-Cookie;/);
     assert.match(conf, /proxy_set_header Cookie "__Host-machiya_sso_kura=\$machiya_room_sid";/);
     assert.match(conf, /proxy_set_header Cookie "__Host-machiya_sso_konbini=\$machiya_room_sid";/);
-    assert.doesNotMatch(conf, /_hister_auth|hister_cookie_own/);
+    assert.doesNotMatch(conf, /_nogon_auth|hister_cookie_own/);
     // The pages keep the helper's sign-in (not Hister's own page).
-    assert.doesNotMatch(x.read('www/search/_shiori/search-core.js'), /fromBuild\('hister'\)/);
-    assert.equal(JSON.parse(x.read('www/search/_shiori/config.json')).signin, 'hister-login');
+    assert.doesNotMatch(x.read('www/search/_shiori/search-core.js'), /fromBuild\('(hister|nogon)'\)/);
+    assert.equal(JSON.parse(x.read('www/search/_shiori/config.json')).signin, 'nogon-login');
   } finally {
     x.cleanup();
   }
@@ -354,18 +354,18 @@ test('Basic Search: /basic on both sites, njs, never cached, no script; its sign
   } finally {
     own.cleanup();
   }
-  const helper = run({ ...BASE, SHIORI_LOGIN_URL: 'http://hister-login:8080', SHIORI_ROOMS: 'hister=https://hister.example/,kura=https://kura.example/' });
+  const helper = run({ ...BASE, SHIORI_LOGIN_URL: 'http://nogon-login:8080', SHIORI_ROOMS: 'nogon=https://nogon.example/,kura=https://kura.example/' });
   try {
     assert.equal(helper.r.status, 0, helper.r.stderr);
     const conf = helper.sites();
-    assert.match(conf, /set \$basic_signin "https:\/\/hister\.example\/machiya\/signin";/);
+    assert.match(conf, /set \$basic_signin "https:\/\/nogon\.example\/machiya\/signin";/);
     assert.match(conf, /set \$basic_kura "";/);
     assert.match(conf, /set \$basic_kura_signin "";/);
   } finally {
     helper.cleanup();
   }
   // An address nginx would read as a variable is left out, never written into the config.
-  const odd = run({ ...BASE, SHIORI_LOGIN_URL: 'http://hister-login:8080', SHIORI_HISTER_PUBLIC_URL: 'https://hister.example/$host' });
+  const odd = run({ ...BASE, SHIORI_LOGIN_URL: 'http://nogon-login:8080', SHIORI_NOGON_PUBLIC_URL: 'https://nogon.example/$host' });
   try {
     assert.equal(odd.r.status, 0, odd.r.stderr);
     assert.match(odd.sites(), /set \$basic_signin "";/);
@@ -395,41 +395,38 @@ test("the page's address carries the settings, so a page never runs with another
 });
 
 test('an https upstream is verified unless told not to; the start-up line names what is on and off', { skip }, () => {
-  const x = run({ ...BASE, SHIORI_HISTER_URL: 'https://hister.example:8443', SHIORI_UPSTREAM_TLS_VERIFY: '0' });
+  const x = run({ ...BASE, SHIORI_NOGON_URL: 'https://nogon.example:8443', SHIORI_UPSTREAM_TLS_VERIFY: '0' });
   try {
     const conf = x.sites();
-    assert.match(conf, /proxy_ssl_name hister\.example;/);
+    assert.match(conf, /proxy_ssl_name nogon\.example;/);
     assert.doesNotMatch(conf, /proxy_ssl_verify on/);
-    assert.match(conf, /set \$hister https:\/\/hister\.example:8443;/);
-    assert.match(conf, /proxy_set_header Host hister\.example:8443;/);
+    assert.match(conf, /set \$nogon https:\/\/nogon\.example:8443;/);
+    assert.match(conf, /proxy_set_header Host nogon\.example:8443;/);
     assert.match(x.r.stdout, /off: Kura \(notes\), Konbini \(cards\)/);
   } finally {
     x.cleanup();
   }
-  const y = run({ ...BASE, SHIORI_HISTER_URL: 'https://hister.example', SHIORI_HISTER_HOST: 'hister.internal' });
-  assert.match(y.sites(), /proxy_set_header Host hister\.internal;/);
+  const y = run({ ...BASE, SHIORI_NOGON_URL: 'https://nogon.example', SHIORI_NOGON_HOST: 'nogon.internal' });
+  assert.match(y.sites(), /proxy_set_header Host nogon\.internal;/);
   y.cleanup();
 });
 
-test('the SHIORI_NOGON_… names (Hister is now Nogon): read first, even empty; the old ones still count, logged once', { skip }, () => {
+test('the SHIORI_NOGON_… names (Hister is now Nogon): an old SHIORI_HISTER_… name alone stops the start, naming the new one', { skip }, () => {
   const renamed = run({ SHIORI_NOGON_URL: 'http://nogon:4433', SHIORI_SEARXNG_URL: 'http://searxng:8080', SHIORI_NOGON_VERSION: 'v0.22.0' });
-  const old = run({ ...BASE, SHIORI_HISTER_VERSION: 'v0.21.0' });
-  const both = run({ ...BASE, SHIORI_NOGON_URL: 'http://nogon:4433' });
-  const empty = run({ ...BASE, SHIORI_NOGON_URL: '' });
+  const old = run({ SHIORI_HISTER_URL: 'http://hister:4433', SHIORI_SEARXNG_URL: 'http://searxng:8080', SHIORI_HISTER_VERSION: 'v0.21.0' });
+  const both = run({ ...BASE, SHIORI_HISTER_URL: 'http://hister:4433' });
+  const empty = run({ ...BASE, SHIORI_NOGON_URL: '', SHIORI_HISTER_URL: 'http://hister:4433' });
   try {
     assert.equal(renamed.r.status, 0, renamed.r.stderr);
-    assert.doesNotMatch(renamed.r.stderr, /old name/);
     assert.match(renamed.read('sites.conf'), /nogon:4433/);
     assert.equal(JSON.parse(renamed.read('www/search/_shiori/status.json')).nogon, 'v0.22.0');
-    assert.equal(old.r.status, 0, old.r.stderr);
-    assert.equal(old.r.stderr.match(/SHIORI_HISTER_URL is an old name, read as SHIORI_NOGON_URL/g).length, 1);
-    assert.match(old.r.stderr, /SHIORI_HISTER_VERSION is an old name/);
-    assert.equal(JSON.parse(old.read('www/app/_shiori/status.json')).hister, 'v0.21.0');
-    // Both: the new one wins and nothing is logged for the old.
+    assert.equal(old.r.status, 2);
+    assert.match(old.r.stderr, /rename SHIORI_HISTER_URL to SHIORI_NOGON_URL, SHIORI_HISTER_VERSION to SHIORI_NOGON_VERSION/);
+    // Both: the new one counts and the old is ignored.
+    assert.equal(both.r.status, 0, both.r.stderr);
     assert.match(both.read('sites.conf'), /nogon:4433/);
     assert.doesNotMatch(both.read('sites.conf'), /hister:4433/);
-    assert.doesNotMatch(both.r.stderr, /SHIORI_HISTER_URL is an old name/);
-    // Set but empty, the new name still wins: Nogon is missing.
+    // Set but empty, the new name still counts: Nogon is missing.
     assert.equal(empty.r.status, 2);
     assert.match(empty.r.stderr, /shiori-web needs SHIORI_NOGON_URL/);
   } finally {
@@ -437,14 +434,14 @@ test('the SHIORI_NOGON_… names (Hister is now Nogon): read first, even empty; 
   }
 });
 
-test("status.json names the Hister release: the build's, or SHIORI_HISTER_VERSION's", { skip }, () => {
+test("status.json names the Nogon release: the build's, or SHIORI_NOGON_VERSION's", { skip }, () => {
   const a = run(BASE);
-  const b = run({ ...BASE, SHIORI_HISTER_VERSION: 'v0.20.0' });
+  const b = run({ ...BASE, SHIORI_NOGON_VERSION: 'v0.20.0' });
   try {
     for (const key of ['search', 'app']) {
       const built = JSON.parse(readFileSync(join(dist, key, '_shiori', 'status.json'), 'utf8'));
       assert.deepEqual(JSON.parse(a.read(`www/${key}/_shiori/status.json`)), built);
-      assert.deepEqual(JSON.parse(b.read(`www/${key}/_shiori/status.json`)), { ...built, hister: 'v0.20.0', nogon: 'v0.20.0' });
+      assert.deepEqual(JSON.parse(b.read(`www/${key}/_shiori/status.json`)), { ...built, nogon: 'v0.20.0' });
     }
   } finally {
     a.cleanup();
@@ -463,7 +460,7 @@ async function probe(answer) {
   const up = `http://127.0.0.1:${server.address().port}`;
   try {
     const child = spawn(python, ['docker/shiori-web/configure.py', '--check'],
-      { cwd: repo, env: { ...env0, SHIORI_HISTER_URL: up, SHIORI_SEARXNG_URL: up } });
+      { cwd: repo, env: { ...env0, SHIORI_NOGON_URL: up, SHIORI_SEARXNG_URL: up } });
     let stdout = '';
     child.stdout.on('data', (d) => { stdout += d; });
     const code = await new Promise((resolve) => child.on('close', resolve));
@@ -479,11 +476,11 @@ test("the probe reads SearXNG's whole JSON answer, however long, and says when i
   assert.ok(big.length > 1 << 16);
   let p = await probe({ body: big });
   assert.equal(p.code, 0);
-  assert.match(p.stdout, /Hister and SearXNG answer\./);
+  assert.match(p.stdout, /Nogon and SearXNG answer\./);
   assert.doesNotMatch(p.stdout, /wasn't JSON/);
   // Past the cap, the content type says it.
   p = await probe({ body: JSON.stringify({ results: [{ content: 'x'.repeat(3 << 20) }] }) });
-  assert.match(p.stdout, /Hister and SearXNG answer\./);
+  assert.match(p.stdout, /Nogon and SearXNG answer\./);
   p = await probe({ body: '<!doctype html><title>SearXNG</title>', type: 'text/html' });
   assert.match(p.stdout, /SearXNG's answer to a JSON search wasn't JSON/);
   p = await probe({ status: 403, body: 'Forbidden', type: 'text/plain' });

@@ -86,7 +86,7 @@ HttpReply HttpRequestJSON(const shiori::Config& config, const char* method,
 		fields.AddField("Accept", "application/json");
 		fields.AddField("User-Agent", "Shiori-Haiku/" SHIORI_VERSION);
 		if (hister)
-			fields.AddField("Origin", "hister://");
+			fields.AddField("Origin", "nogon://");
 		shiori::Headers carried = credentials ? shiori::CredentialHeaders(config, url) : shiori::Headers();
 		for (const auto& header : extra)
 			carried.push_back(header);

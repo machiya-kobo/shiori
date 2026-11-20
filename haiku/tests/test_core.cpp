@@ -280,7 +280,7 @@ static void TestSignIn()
 
 	// The bodies, as JSON.stringify writes them.
 	Check("login body", LoginBody("alex", "p\"w"), "{\"username\":\"alex\",\"password\":\"p\\\"w\"}");
-	Check("trade body", AppSessionBody(session, "Shiori on haiku"), "{\"hister\":\"" + session + "\",\"label\":\"Shiori on haiku\"}");
+	Check("trade body", AppSessionBody(session, "Shiori on haiku"), "{\"nogon\":\"" + session + "\",\"label\":\"Shiori on haiku\"}");
 	SignIn traded;
 	CheckTrue("the helper's answer", SignInFromTrade("{\"sid\":\"" + sid + "\",\"username\":\"alex\"}", session, traded) && traded.IsSet());
 	CheckTrue("a helper answer without an id", !SignInFromTrade("{\"username\":\"alex\"}", session, traded));

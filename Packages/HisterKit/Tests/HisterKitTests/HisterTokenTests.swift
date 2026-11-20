@@ -33,7 +33,7 @@ struct HisterTokenTests {
         _ = try await client.search("x")
         let request = try #require(StubProtocol.requests(Self.host).first)
         #expect(request.value(forHTTPHeaderField: "X-Access-Token") == "ABCDEFGHJKLMNPQRSTUVWXYZ23")
-        #expect(request.value(forHTTPHeaderField: "Origin") == "hister://")
+        #expect(request.value(forHTTPHeaderField: "Origin") == "nogon://")
         #expect(!(request.url?.absoluteString.contains("ABCDEFGH") ?? true))
     }
 

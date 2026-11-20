@@ -118,7 +118,7 @@ enum Hister {
         // until they were escaped).
         components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
         var request = URLRequest(url: components.url!)
-        request.setValue("hister://", forHTTPHeaderField: "Origin")
+        request.setValue("nogon://", forHTTPHeaderField: "Origin")
         if !token.isEmpty { request.setValue(token, forHTTPHeaderField: "X-Access-Token") }
         request.timeoutInterval = 30
         let (data, _) = try await URLSession.shared.data(for: request)

@@ -86,7 +86,7 @@ Each extra is its own app with a public image on ghcr.io/machiya-kobo. Run it, t
 |---|---|---|
 | Subscribe to a search as RSS | [shiori-feed](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-feed.md) | `SHIORI_FEED_URL` |
 | AI Answer and Summarize | [shiori-ai](https://github.com/machiya-kobo/machiya/blob/main/docs/services/shiori-ai.md), with an Anthropic API key | `SHIORI_AI_URL` |
-| One sign-in for every app | [hister-login](https://github.com/machiya-kobo/machiya/blob/main/docs/services/hister-login.md) | `SHIORI_LOGIN_URL` |
+| One sign-in for every app | [nogon-login](https://github.com/machiya-kobo/machiya/blob/main/docs/services/nogon-login.md) | `SHIORI_LOGIN_URL` |
 
 For Media, point Shiori at your own Jellyfin, Plex, Koito or Movary, each with a token of its own ([docs/media.md](docs/media.md)).
 

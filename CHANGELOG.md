@@ -5,6 +5,22 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.30.0 (2026-11-20)
+
+- Hister is now Nogon in what Shiori sends. The apps, Shiori for Linux,
+  Haiku and Classic send `Origin: nogon://`, and the app's sign-in names
+  Nogon's session `nogon`. Saves to the small-web gateway still send
+  `Origin: hister://` until smallweb 0.6.0.
+- On iPhone, iPad and Mac, Nogon's token and sign-in move in the Keychain
+  from the service "Hister" to "Nogon" the first time the app reads them.
+  Nothing to sign in again.
+- For hosts: the shiori-web image no longer reads the SHIORI_HISTER_
+  settings. One set without its SHIORI_NOGON_ name stops the start and
+  names the new one. status.json names the Nogon release as `nogon`
+  only, and the build argument is SHIORI_NOGON_RELEASE.
+- mac-bridge 0.4.0: the BRIDGE_HISTER_ settings no longer count, and the
+  apps' Origin goes on as `nogon://`.
+
 ## 1.29.1 (2026-11-19)
 
 - For hosts: with Machiya's sign-in helper, the shiori-web image takes

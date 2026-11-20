@@ -76,7 +76,7 @@ void FetchStart(Fetch *f, const ShioriConfig *config, const char *base, const ch
 	}
 	shiori_credential_header(config, base, credential, (long) sizeof(credential));
 	headers[n++] = "Accept: application/json";
-	headers[n++] = "Origin: hister://";
+	headers[n++] = "Origin: nogon://";
 	if (credential[0])
 		headers[n++] = credential;
 	headers[n] = NULL;

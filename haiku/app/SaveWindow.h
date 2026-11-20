@@ -1,4 +1,4 @@
-// Save a web address to Hister (POST /api/add, Origin: hister://).
+// Save a web address to Hister (POST /api/add, Origin: nogon://).
 #pragma once
 
 #include <Window.h>

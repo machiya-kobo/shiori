@@ -31,7 +31,7 @@ reply always gives the same parts; a part past the end is a 400 that says how ma
 `/healthz` on either port answers locally, to any source, for the container's healthcheck and the blackbox probe.
 
 Standard library only. Settings (environment):
-    (Each BRIDGE_NOGON_… setting is also read under its old name, BRIDGE_HISTER_…, until the old names go.)
+    (The BRIDGE_NOGON_… settings were BRIDGE_HISTER_… before Nogon; an old name set alone stops the start.)
     BRIDGE_NOGON_URL, BRIDGE_KURA_URL    the upstreams, https://… (http only with BRIDGE_ALLOW_HTTP_UPSTREAM=1: tests)
     BRIDGE_NOGON_PORT, BRIDGE_KURA_PORT  the ports (8070, 8071); BRIDGE_BIND the address (0.0.0.0)
     BRIDGE_ALLOW        the source addresses or networks admitted (required); the tailnet's 100.64.0.0/10 and
@@ -61,7 +61,7 @@ import threading
 import time
 from urllib.parse import parse_qsl, urljoin, urlsplit
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 HISTER_PATHS = frozenset({"/search", "/api/preview", "/api/config"})
 KURA_PATHS = frozenset({"/api/search", "/api/recent", "/api/note", "/api/vaults"})
@@ -293,29 +293,22 @@ def _upstream(url, what, allow_http):
     return u.scheme, u.hostname, u.port or (443 if u.scheme == "https" else 80)
 
 
-# Hister is now Nogon (Machiya's rename, stage 1): each BRIDGE_HISTER_… setting is read as BRIDGE_NOGON_… first. A
-# new name that is set wins, even when it's empty, as upstream Nogon does; an old name still counts, logged once.
+# Hister is now Nogon: these settings were BRIDGE_HISTER_… before. An old name set alone stops the start, naming the new one.
 RENAMED = ("BRIDGE_NOGON_URL", "BRIDGE_NOGON_PORT", "BRIDGE_NOGON_USERS", "BRIDGE_NOGON_TOKEN_FILE")
-_warned = set()
 
 
-def renamed(env):
-    """The environment with each RENAMED setting under its new name, from its old twin when only that is set."""
-    env = dict(env)
-    for name in RENAMED:
-        old = name.replace("NOGON", "HISTER")
-        if name not in env and old in env:
-            env[name] = env[old]
-            if old not in _warned:
-                _warned.add(old)
-                sys.stderr.write(f"mac-bridge: {old} is an old name, read as {name} (Hister is now Nogon: rename it)\n")
-                sys.stderr.flush()
-    return env
+def old_names(env):
+    """ConfigError for a setting set only under its old BRIDGE_HISTER_… name: it no longer counts."""
+    old = [(name.replace("NOGON", "HISTER"), name) for name in RENAMED
+           if name not in env and name.replace("NOGON", "HISTER") in env]
+    if old:
+        raise ConfigError("Hister is now Nogon: rename " + ", ".join("%s to %s" % pair for pair in old)
+                          + " (the old names no longer count)")
 
 
 class Config:
     def __init__(self, env):
-        env = renamed(env)
+        old_names(env)
         allow_http = (env.get("BRIDGE_ALLOW_HTTP_UPSTREAM") or "") == "1"
         self.hister = _upstream(env.get("BRIDGE_NOGON_URL"), "BRIDGE_NOGON_URL", allow_http)
         self.kura = _upstream(env.get("BRIDGE_KURA_URL"), "BRIDGE_KURA_URL", allow_http)
@@ -527,8 +520,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         etag = self._one("If-None-Match")
         if etag and not paged:
             headers.append(("If-None-Match", etag))
-        if self._one("Origin") == "hister://":
-            headers.append(("Origin", "hister://"))
+        # The native apps' Origin, under either of Nogon's names (Shiori Classic before 1.30 sends hister://): it goes on
+        # as nogon://, which Nogon v0.22 takes. Any other Origin is dropped.
+        if self._one("Origin") in ("nogon://", "hister://"):
+            headers.append(("Origin", "nogon://"))
 
         if self.service == "kura":
             refusal = self._vault_refusal(pairs)

@@ -31,7 +31,7 @@ struct HistoryTests {
         let request = try #require(StubProtocol.requests(Self.host).first)
         #expect(request.httpMethod == "POST")
         #expect(request.url?.path() == "/api/history")
-        #expect(request.value(forHTTPHeaderField: "Origin") == "hister://")
+        #expect(request.value(forHTTPHeaderField: "Origin") == "nogon://")
         let sent = try body(request)
         #expect(sent["url"] as? String == "https://a.example/")
         // As the search was sent (Hister matches the exact text).

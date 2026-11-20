@@ -74,7 +74,7 @@ This runs the real bridge (`classic/bridge/bridge.py`) on ports 8070
 
 - `haiku/fake-services.py` behind it, on loopback (a fake Nogon and a fake
   Kura that log every credential and shout `LEAK` when one goes astray);
-- a fake hister-login that knows the one room token.
+- a fake nogon-login that knows the one room token.
 
 The bridge swaps the Mac's room token for fake Nogon's token, as the real
 one does. Search words:

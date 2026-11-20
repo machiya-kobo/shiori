@@ -6,7 +6,7 @@
 
 Builds docker/shiori-web/Dockerfile (or uses --image), then runs it the way it is meant to run (a non-root user, a
 read-only root filesystem, a tmpfs on /tmp) beside a fake house (docker/shiori-web/test/fake-upstream.py: Hister,
-SearXNG, Kura, Konbini, shiori-feed, shiori-ai, the small-web gateway and hister-login, each echoing what it was asked)
+SearXNG, Kura, Konbini, shiori-feed, shiori-ai, the small-web gateway and nogon-login, each echoing what it was asked)
 and checks:
 
   - it refuses to start without Hister and SearXNG, and says what to set;
@@ -15,7 +15,7 @@ and checks:
   - a proxied route reaches its own service, and `Origin` (and Sec-Fetch-*) pass through untouched, never added;
   - a browser's cookies reach only their own service (Hister's session to Hister; nothing to SearXNG);
   - Hister's own sign-in: the feed and AI routes ask Hister whether the session is good;
-  - with hister-login: the auth request, the room cookie, Hister's session swapped in (X-Nogon-Cookie, else
+  - with nogon-login: the auth request, the room cookie, Hister's session swapped in (X-Nogon-Cookie, else
     X-Hister-Cookie) and its Set-Cookie dropped;
   - Basic Search (/basic, for a browser without JavaScript): plain HTML from njs, escaped, its searches through the
     routes' own sign-in and cookie rules, and the search page's address carried over;
@@ -151,7 +151,7 @@ def main():
                 volumes=[f"{ROOT}/docker/shiori-web/test/fake-upstream.py:/fake.py:ro"], cmd=["/fake.py"])
         time.sleep(1.5)
         house = {
-            "SHIORI_HISTER_URL": f"http://{FAKE}:9001", "SHIORI_SEARXNG_URL": f"http://{FAKE}:9002",
+            "SHIORI_NOGON_URL": f"http://{FAKE}:9001", "SHIORI_SEARXNG_URL": f"http://{FAKE}:9002",
         }
         full = {**house, "SHIORI_KURA_URL": f"http://{FAKE}:9003", "SHIORI_KONBINI_URL": f"http://{FAKE}:9004",
                 "SHIORI_FEED_URL": f"http://{FAKE}:9005", "SHIORI_AI_URL": f"http://{FAKE}:9006",
@@ -168,7 +168,7 @@ def main():
         state = e.run("inspect", "-f", "{{.State.Status}} {{.State.ExitCode}}", "shiori-web-bare").stdout.strip()
         log = e.logs("shiori-web-bare")
         check(state.startswith("exited") and not state.endswith(" 0"), "it exits, not zero", state)
-        check("SHIORI_NOGON_URL" in log and "SHIORI_SEARXNG_URL" in log and "where Nogon (Hister) is" in log, "and says what to set", log[:200])
+        check("SHIORI_NOGON_URL" in log and "SHIORI_SEARXNG_URL" in log and "where Nogon is" in log, "and says what to set", log[:200])
 
         print("== with only Hister and SearXNG")
         e.start("shiori-web-min", image, env=house, ports=[8080, 8081])
@@ -190,8 +190,8 @@ def main():
             s_, h_, _ = get(port, path)
             check(s_ == 200 and h_.get("content-type", "").split(";")[0] == want, f"{path} is served as {want}", f"{s_} {h_.get('content-type')}")
         cfg = get(p1, "/_shiori/config.json")[2]
-        check(isinstance(cfg, dict) and cfg["signin"] == "hister" and cfg["services"]["kura"] is False
-              and cfg["services"]["searxng"] is True, "config.json says Hister's own sign-in, Kura off", str(cfg)[:120])
+        check(isinstance(cfg, dict) and cfg["signin"] == "nogon" and cfg["services"]["kura"] is False
+              and cfg["services"]["searxng"] is True, "config.json says Nogon's own sign-in, Kura off", str(cfg)[:120])
         s, h, body = get(p2, "/_shiori/app.js")
         check(s == 200 and "__SHIORI_FEED__" not in body and "fromBuild('off')" in body, "the pages carry this run's settings (feed off)")
         s, h, body = get(p1, "/")
@@ -343,13 +343,13 @@ def main():
             e.rm("shiori-web-secret")
         shutil.rmtree(secrets, ignore_errors=True)
 
-        print("== with hister-login")
+        print("== with nogon-login")
         e.start("shiori-web-login", image, env={**full, "SHIORI_LOGIN_URL": f"http://{FAKE}:9008", "SHIORI_LOGIN_AUTH_URL": f"http://{FAKE}:9009"},
                 ports=[8080, 8081])
         started.append("shiori-web-login")
         p1 = e.port("shiori-web-login", 8080)
         check(wait(p1), "it comes up")
-        check(get(p1, "/_shiori/config.json")[2]["signin"] == "hister-login", "config.json says hister-login")
+        check(get(p1, "/_shiori/config.json")[2]["signin"] == "nogon-login", "config.json says nogon-login")
         check(get(p1, "/search?query=%7B%7D")[0] == 401, "a Hister route without a room cookie: 401 (the page sends the person to sign in)")
         room = "mhr_" + "A" * 43
         s, h, echo = get(p1, "/search?query=%7B%7D", {"Cookie": f"a=b; __Host-machiya_sso_shiori={room}; hister=browsers-own"})
@@ -381,7 +381,7 @@ def main():
         time.sleep(3)
         log = e.logs("shiori-web-403")
         check("SearXNG doesn't allow JSON results" in log and "formats: [html, json]" in log, "the start-up log says so plainly", log[-300:])
-        check("Hister and SearXNG answer" not in log, "and doesn't claim all is well")
+        check("Nogon and SearXNG answer" not in log, "and doesn't claim all is well")
     finally:
         if not a.keep:
             e.rm(FAKE, *started)

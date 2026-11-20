@@ -1,6 +1,6 @@
 // `shiori save <url> [label]`, `shiori send`, `shiori status` (docs/linux.md):
 // the one native write. The page is downloaded (3 MB cap, as the iOS
-// share extension does), saved to Hister with `Origin: hister://`, and
+// share extension does), saved to Nogon with `Origin: nogon://`, and
 // queued in the outbox when Hister can't be reached or is unwell; the
 // queue follows the iOS rules (../src/outbox.js).
 
@@ -11,7 +11,7 @@ import { newPage, addRequest, titleIn, capped, rejectionReason, MAX_BYTES } from
 import * as outbox from '../src/outbox.js';
 import { requestJSON } from './http.js';
 
-export const VERSION = '1.29.1';
+export const VERSION = '1.30.0';
 
 /** The outbox: one JSON file per page in $XDG_DATA_HOME/shiori/outbox. */
 export function fileStore(dir = GLib.build_filenamev([GLib.get_user_data_dir(), 'shiori', 'outbox'])) {

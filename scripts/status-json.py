@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Writes OUT_DIR/_shiori/status.json for a hosted build (the house's status
-page reads it): {"version", "build", "built", "hister"}. Shiori's version
+page reads it): {"version", "build", "built", "nogon"}. Shiori's version
 is project.yml's MARKETING_VERSION, the build the commit's short hash (with
-"-dirty" when the tree has changes), built the time in UTC, hister the
-Hister release Shiori is built against (vendor/hister's tag, or the pinned
+"-dirty" when the tree has changes), built the time in UTC, nogon the
+Nogon release Shiori is built against (vendor/hister's tag, or the pinned
 commit's short hash when the submodule isn't checked out). Nothing else:
 no addresses, no settings.
 
@@ -31,19 +31,18 @@ def git(*args):
         return ""
 
 
-# A build with no git (a container's) says the commit and the Hister release itself.
+# A build with no git (a container's) says the commit and the Nogon release itself.
 build = os.environ.get("SHIORI_BUILD_ID") or git("rev-parse", "--short", "HEAD")
 if build and not os.environ.get("SHIORI_BUILD_ID") and git("status", "--porcelain", "--untracked-files=no"):
     build += "-dirty"
 # The tag when the submodule is checked out, else the commit the superproject pins.
-hister = os.environ.get("SHIORI_HISTER_RELEASE") or git("-C", "vendor/hister", "describe", "--tags", "--exact-match")
-if not hister:
+nogon = os.environ.get("SHIORI_NOGON_RELEASE") or git("-C", "vendor/hister", "describe", "--tags", "--exact-match")
+if not nogon:
     pinned = git("ls-tree", "HEAD", "vendor/hister").split()
-    hister = pinned[2][:7] if len(pinned) > 2 else ""
+    nogon = pinned[2][:7] if len(pinned) > 2 else ""
 built = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 os.makedirs(os.path.join(out, "_shiori"), exist_ok=True)
 with open(os.path.join(out, "_shiori", "status.json"), "w", encoding="utf-8") as f:
-    # "nogon" beside "hister" (Hister is now Nogon; the status page may read either until the old name goes).
-    json.dump({"version": version, "build": build, "built": built, "hister": hister, "nogon": hister}, f)
+    json.dump({"version": version, "build": build, "built": built, "nogon": nogon}, f)
     f.write("\n")
