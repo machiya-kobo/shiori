@@ -15,7 +15,8 @@ and checks:
   - a proxied route reaches its own service, and `Origin` (and Sec-Fetch-*) pass through untouched, never added;
   - a browser's cookies reach only their own service (Hister's session to Hister; nothing to SearXNG);
   - Hister's own sign-in: the feed and AI routes ask Hister whether the session is good;
-  - with hister-login: the auth request, the room cookie, Hister's session swapped in and its Set-Cookie dropped;
+  - with hister-login: the auth request, the room cookie, Hister's session swapped in (X-Nogon-Cookie, else
+    X-Hister-Cookie) and its Set-Cookie dropped;
   - Basic Search (/basic, for a browser without JavaScript): plain HTML from njs, escaped, its searches through the
     routes' own sign-in and cookie rules, and the search page's address carried over;
   - a SearXNG that refuses JSON is said so in the start-up log.
@@ -167,7 +168,7 @@ def main():
         state = e.run("inspect", "-f", "{{.State.Status}} {{.State.ExitCode}}", "shiori-web-bare").stdout.strip()
         log = e.logs("shiori-web-bare")
         check(state.startswith("exited") and not state.endswith(" 0"), "it exits, not zero", state)
-        check("SHIORI_HISTER_URL" in log and "SHIORI_SEARXNG_URL" in log and "where Hister is" in log, "and says what to set", log[:200])
+        check("SHIORI_NOGON_URL" in log and "SHIORI_SEARXNG_URL" in log and "where Nogon (Hister) is" in log, "and says what to set", log[:200])
 
         print("== with only Hister and SearXNG")
         e.start("shiori-web-min", image, env=house, ports=[8080, 8081])
@@ -353,8 +354,13 @@ def main():
         room = "mhr_" + "A" * 43
         s, h, echo = get(p1, "/search?query=%7B%7D", {"Cookie": f"a=b; __Host-machiya_sso_shiori={room}; hister=browsers-own"})
         hd = echo.get("headers", {}) if isinstance(echo, dict) else {}
-        check(s == 200 and hd.get("cookie") == "hister=sessionfromhelper", "Hister gets the session the helper returned, replacing the browser's whole Cookie", str(hd.get("cookie")))
+        check(s == 200 and hd.get("cookie") == "hister=sessionfromhelper", "Hister gets the session the helper returned (X-Nogon-Cookie over X-Hister-Cookie), replacing the browser's whole Cookie", str(hd.get("cookie")))
         check("set-cookie" not in h, "and Hister's Set-Cookie never reaches the browser")
+        for who, sid, want in (("X-Nogon-Cookie alone", "mhr_N" + "A" * 42, "hister=sessionfromnogon"),
+                               ("X-Hister-Cookie alone", "mhr_H" + "A" * 42, "hister=sessionfromold")):
+            s, h, echo = get(p1, "/search?query=%7B%7D", {"Cookie": f"__Host-machiya_sso_shiori={sid}"})
+            got = (echo.get("headers", {}) if isinstance(echo, dict) else {}).get("cookie")
+            check(s == 200 and got == want, f"a helper sending {who}: Hister still gets that session", str(got))
         s, h, echo = get(p1, "/kura/api/search?q=x", {"Cookie": f"__Host-machiya_sso_shiori={room}"})
         check(echo.get("headers", {}).get("cookie") == f"__Host-machiya_sso_kura={room}", "Kura gets this host's session under its own cookie name", str(echo)[:140])
         s, h, body = get(p1, "/basic?q=rust")

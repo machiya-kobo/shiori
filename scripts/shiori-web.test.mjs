@@ -308,8 +308,10 @@ test("Machiya's sign-in helper takes over when SHIORI_LOGIN_URL is set: the auth
     assert.match(conf, /set \$site_origin https:\/\/app\.example;/);
     assert.match(conf, /location ~ \^\/machiya\/\(start\|callback\|signed-out\|signout\|api\/prefs\)\$ \{\s+set \$helper_pub http:\/\/hister-login:8080;/);
     assert.match(conf, /\(\?:\^\|;\\s\*\)__Host-machiya_sso_shiori=\(\?<v>mhr_\[A-Za-z0-9_-\]\{43\}\)/);
-    assert.match(conf, /location \/ \{\s+auth_request \/_machiya_auth;\s+auth_request_set \$hister_cookie \$upstream_http_x_hister_cookie;/);
-    assert.match(conf, /proxy_set_header Cookie \$hister_cookie;[\s\S]*?proxy_hide_header Set-Cookie;/);
+    assert.match(conf, /location \/ \{\s+auth_request \/_machiya_auth;\s+auth_request_set \$nogon_cookie \$upstream_http_x_nogon_cookie;\s+auth_request_set \$hister_cookie \$upstream_http_x_hister_cookie;/);
+    // X-Nogon-Cookie first, X-Hister-Cookie (the helper's old name) when it's empty.
+    assert.match(conf, /map \$nogon_cookie \$helper_cookie \{\s+volatile;\s+"" \$hister_cookie;\s+default \$nogon_cookie;\s+\}/);
+    assert.match(conf, /proxy_set_header Cookie \$helper_cookie;[\s\S]*?proxy_hide_header Set-Cookie;/);
     assert.match(conf, /proxy_set_header Cookie "__Host-machiya_sso_kura=\$machiya_room_sid";/);
     assert.match(conf, /proxy_set_header Cookie "__Host-machiya_sso_konbini=\$machiya_room_sid";/);
     assert.doesNotMatch(conf, /_hister_auth|hister_cookie_own/);

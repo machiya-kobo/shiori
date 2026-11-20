@@ -60,14 +60,18 @@ location = /_machiya_auth {
 }
 location / {                                        # Hister's routes, /shiori/ai/ and /shiori/ too
     auth_request /_machiya_auth;
-    auth_request_set $hister_cookie $upstream_http_x_hister_cookie;
-    proxy_set_header Cookie $hister_cookie;         # replaces the browser's whole Cookie header
+    auth_request_set $nogon_cookie $upstream_http_x_nogon_cookie;
+    auth_request_set $hister_cookie $upstream_http_x_hister_cookie;   # the old name
+    proxy_set_header Cookie $helper_cookie;         # replaces the browser's whole Cookie header
     proxy_hide_header Set-Cookie;                   # Hister re-sends its session on every answer
     # … the existing proxy_pass and websocket lines
 }
 ```
 
-- `/v1/nginx` answers 200 with `X-Hister-Cookie: hister=<session>`, or 401.
+- `/v1/nginx` answers 200 with `X-Nogon-Cookie: hister=<session>`, or 401.
+  A helper from before Nogon sends it as `X-Hister-Cookie`, and nogon-login
+  0.8 sends both, so take the first that isn't empty (in the `http` block):
+  `map $nogon_cookie $helper_cookie { volatile; "" $hister_cookie; default $nogon_cookie; }`.
   The session travels only nginx → Nogon, never to the browser: hence the
   `Cookie` replacement **and** `proxy_hide_header Set-Cookie`.
 - `/kura/` and `/konbini/` get `Cookie: machiya_sso=$cookie_machiya_sso`

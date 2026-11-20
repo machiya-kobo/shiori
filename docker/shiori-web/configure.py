@@ -450,8 +450,9 @@ location = /basic {{
         add('''# Everything else is Hister, signed in by the helper.
 location / {
     auth_request /_machiya_auth;
+    auth_request_set $nogon_cookie $upstream_http_x_nogon_cookie;
     auth_request_set $hister_cookie $upstream_http_x_hister_cookie;
-''' + proxy("hister", h, verify, cookie="$hister_cookie", hide_set_cookie=True,
+''' + proxy("hister", h, verify, cookie="$helper_cookie", hide_set_cookie=True,
             extra="    proxy_set_header Connection $http_connection;\n    proxy_set_header Upgrade $http_upgrade;\n") + "}\n")
     else:
         add('''# Everything else is Hister, with its own session cookie (and nothing else of the browser's).
@@ -494,6 +495,13 @@ LOGIN_MAPS = '''
 map $http_cookie $machiya_room_sid {{
     "~(?:^|;\\s*){cookie}=(?<v>mhr_[A-Za-z0-9_-]{{43}})" $v;
     default "";
+}}
+# The session the helper returned: X-Nogon-Cookie, else X-Hister-Cookie (its old name, which a helper from before Nogon
+# sends alone). Read after the auth request, never cached.
+map $nogon_cookie $helper_cookie {{
+    volatile;
+    "" $hister_cookie;
+    default $nogon_cookie;
 }}
 '''
 

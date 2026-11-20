@@ -54,9 +54,16 @@ class Handler(BaseHTTPRequestHandler):
         if service == "kura" and self.path.startswith("/api/search"):
             return self.reply(200, {**echo, "total": 1, "results": [{"url": "https://kura.example/n/a-note", "title": f"A note, cookie [{cookie}]",
                                                                      "path": "Notes/a-note.md", "snippet": "a <mark>note</mark>"}]})
-        if service == "helper-auth":                              # hister-login's /v1/nginx
-            ok = seen.get("x-machiya-session", "").startswith("mhr_")
-            return self.reply(200 if ok else 401, echo, [("X-Hister-Cookie", "hister=sessionfromhelper")] if ok else [])
+        if service == "helper-auth":                              # nogon-login's /v1/nginx
+            sid = seen.get("x-machiya-session", "")
+            if not sid.startswith("mhr_"):
+                return self.reply(401, echo)
+            if sid.startswith("mhr_N"):                           # a helper after stage 3: the new name only
+                return self.reply(200, echo, [("X-Nogon-Cookie", "hister=sessionfromnogon")])
+            if sid.startswith("mhr_H"):                           # a helper from before Nogon: the old name only
+                return self.reply(200, echo, [("X-Hister-Cookie", "hister=sessionfromold")])
+            return self.reply(200, echo, [("X-Nogon-Cookie", "hister=sessionfromhelper"),   # both, as nogon-login 0.8
+                                          ("X-Hister-Cookie", "hister=sessionfromold")])
         if service == "ai" and self.path == "/status":
             return self.reply(200, {"enabled": True, **echo})
         self.reply(200, echo)
