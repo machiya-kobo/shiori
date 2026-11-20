@@ -61,7 +61,7 @@ import threading
 import time
 from urllib.parse import parse_qsl, urljoin, urlsplit
 
-VERSION = "0.2.1"
+VERSION = "0.3.0"
 
 HISTER_PATHS = frozenset({"/search", "/api/preview", "/api/config"})
 KURA_PATHS = frozenset({"/api/search", "/api/recent", "/api/note", "/api/vaults"})

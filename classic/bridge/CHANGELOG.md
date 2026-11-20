@@ -1,5 +1,12 @@
 # mac-bridge changelog
 
+## 0.3.0 (2026-11-19)
+
+- Hister is now Nogon: the settings are BRIDGE_NOGON_URL, BRIDGE_NOGON_PORT,
+  BRIDGE_NOGON_USERS and BRIDGE_NOGON_TOKEN_FILE. Each old BRIDGE_HISTER_
+  name still works and is logged once at start; a new one that is set wins,
+  even empty.
+
 ## 0.2.1 (2026-10-16)
 
 - Paging: an element whose content is dropped (an `svg`, a `button`, a

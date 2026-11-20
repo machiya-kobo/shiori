@@ -5,6 +5,15 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.29.0 (2026-11-19)
+
+- For hosts: the shiori-web image takes SHIORI_NOGON_URL, _PUBLIC_URL,
+  _HOST and _VERSION (the SHIORI_HISTER_ names still work, logged once),
+  `nogon=` in SHIORI_ROOMS and SHIORI_SIGNIN=nogon. status.json adds
+  `nogon` beside `hister`. mac-bridge 0.3.0 takes BRIDGE_NOGON_ settings.
+- Sign-in and Save Web Results read Machiya's renamed sign-in helper and
+  small-web gateway under either name.
+
 ## 1.28.0 (2026-11-19)
 
 - Everything Shiori shows says Nogon, the engine's name since v0.22:
