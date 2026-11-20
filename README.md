@@ -51,7 +51,7 @@ Turn on SearXNG's JSON results (`formats: [html, json]` under `search:` in its `
 
 ```bash
 docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
-  -e SHIORI_HISTER_URL=http://hister.example:4433 \
+  -e SHIORI_NOGON_URL=http://nogon.example:4433 \
   -e SHIORI_SEARXNG_URL=http://searxng.example:8080 \
   ghcr.io/machiya-kobo/shiori-web
 ```

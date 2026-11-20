@@ -18,10 +18,19 @@ import os
 import sys
 
 rooms = {}
+renamed = set()
 for pair in os.environ.get("SHIORI_ROOMS", "").split(","):
     key, _, url = pair.partition("=")
-    if key.strip() and url.strip():
-        rooms[key.strip().lower()] = url.strip()
+    key = key.strip().lower()
+    if not key or not url.strip():
+        continue
+    # Hister is now Nogon (stage 1): the room `nogon` is kept as `hister`, and the new name wins.
+    if key == "nogon":
+        key = "hister"
+        renamed.add(key)
+    elif key in renamed:
+        continue
+    rooms[key] = url.strip()
 if not os.environ.get("SHIORI_KURA_URL", "").strip() and os.environ.get("SHIORI_NIWA_URL", "").strip():
     os.environ["SHIORI_KURA_URL"] = os.environ["SHIORI_NIWA_URL"]
 for key, name in (

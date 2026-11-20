@@ -101,7 +101,7 @@ test('Hister and SearXNG are required, and the message says how to set them', { 
     const x = run(env);
     assert.equal(x.r.status, 2);
     assert.match(x.r.stderr, /shiori-web needs/);
-    assert.match(x.r.stderr, /SHIORI_HISTER_URL.*where Hister is/s);
+    assert.match(x.r.stderr, /SHIORI_NOGON_URL.*where Nogon \(Hister\) is/s);
     assert.match(x.r.stderr, /SHIORI_SEARXNG_URL.*where SearXNG is/s);
     assert.equal(existsSync(join(x.out, 'sites.conf')), false);
     x.cleanup();
@@ -159,7 +159,7 @@ test('with only Hister and SearXNG: both pages, SearXNG and Hister proxied, ever
     const app = x.read('www/app/_shiori/app.js');
     assert.doesNotMatch(app, /__SHIORI_FEED__/);
     assert.match(app, /fromBuild\('off'\) !== 'off'/);
-    assert.match(x.read('www/search/_shiori/search-core.js'), /fromBuild\('hister'\) === 'hister'/);
+    assert.match(x.read('www/search/_shiori/search-core.js'), /roomKey\(fromBuild\('hister'\)\)/);
     assert.match(app, /__SHIORI_KURA_URL__/, 'unset: left for the page to read as empty');
     assert.doesNotMatch(x.read('www/search/index.html'), /__SHIORI_STATUS_URL__|data-shiori-status/);
     const cfg = JSON.parse(x.read('www/search/_shiori/config.json'));
@@ -409,6 +409,32 @@ test('an https upstream is verified unless told not to; the start-up line names 
   y.cleanup();
 });
 
+test('the SHIORI_NOGON_… names (Hister is now Nogon): read first, even empty; the old ones still count, logged once', { skip }, () => {
+  const renamed = run({ SHIORI_NOGON_URL: 'http://nogon:4433', SHIORI_SEARXNG_URL: 'http://searxng:8080', SHIORI_NOGON_VERSION: 'v0.22.0' });
+  const old = run({ ...BASE, SHIORI_HISTER_VERSION: 'v0.21.0' });
+  const both = run({ ...BASE, SHIORI_NOGON_URL: 'http://nogon:4433' });
+  const empty = run({ ...BASE, SHIORI_NOGON_URL: '' });
+  try {
+    assert.equal(renamed.r.status, 0, renamed.r.stderr);
+    assert.doesNotMatch(renamed.r.stderr, /old name/);
+    assert.match(renamed.read('sites.conf'), /nogon:4433/);
+    assert.equal(JSON.parse(renamed.read('www/search/_shiori/status.json')).nogon, 'v0.22.0');
+    assert.equal(old.r.status, 0, old.r.stderr);
+    assert.equal(old.r.stderr.match(/SHIORI_HISTER_URL is an old name, read as SHIORI_NOGON_URL/g).length, 1);
+    assert.match(old.r.stderr, /SHIORI_HISTER_VERSION is an old name/);
+    assert.equal(JSON.parse(old.read('www/app/_shiori/status.json')).hister, 'v0.21.0');
+    // Both: the new one wins and nothing is logged for the old.
+    assert.match(both.read('sites.conf'), /nogon:4433/);
+    assert.doesNotMatch(both.read('sites.conf'), /hister:4433/);
+    assert.doesNotMatch(both.r.stderr, /SHIORI_HISTER_URL is an old name/);
+    // Set but empty, the new name still wins: Nogon is missing.
+    assert.equal(empty.r.status, 2);
+    assert.match(empty.r.stderr, /shiori-web needs SHIORI_NOGON_URL/);
+  } finally {
+    for (const x of [renamed, old, both, empty]) x.cleanup?.();
+  }
+});
+
 test("status.json names the Hister release: the build's, or SHIORI_HISTER_VERSION's", { skip }, () => {
   const a = run(BASE);
   const b = run({ ...BASE, SHIORI_HISTER_VERSION: 'v0.20.0' });
@@ -416,7 +442,7 @@ test("status.json names the Hister release: the build's, or SHIORI_HISTER_VERSIO
     for (const key of ['search', 'app']) {
       const built = JSON.parse(readFileSync(join(dist, key, '_shiori', 'status.json'), 'utf8'));
       assert.deepEqual(JSON.parse(a.read(`www/${key}/_shiori/status.json`)), built);
-      assert.deepEqual(JSON.parse(b.read(`www/${key}/_shiori/status.json`)), { ...built, hister: 'v0.20.0' });
+      assert.deepEqual(JSON.parse(b.read(`www/${key}/_shiori/status.json`)), { ...built, hister: 'v0.20.0', nogon: 'v0.20.0' });
     }
   } finally {
     a.cleanup();

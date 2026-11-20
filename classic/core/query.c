@@ -581,7 +581,8 @@ static void json_string_to(Buf *b, const char *s)
 
 const char *shiori_notes_source(const char *choice, int kuraConfigured)
 {
-	if (choice != NULL && strcmp(choice, "hister") == 0)
+	/* "nogon" is "hister" (Hister is now Nogon; the stored value stays "hister") */
+	if (choice != NULL && (strcmp(choice, "hister") == 0 || strcmp(choice, "nogon") == 0))
 		return "hister";
 	return kuraConfigured ? "kura" : "hister";
 }

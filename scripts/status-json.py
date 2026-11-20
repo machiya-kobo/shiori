@@ -44,5 +44,6 @@ built = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isof
 
 os.makedirs(os.path.join(out, "_shiori"), exist_ok=True)
 with open(os.path.join(out, "_shiori", "status.json"), "w", encoding="utf-8") as f:
-    json.dump({"version": version, "build": build, "built": built, "hister": hister}, f)
+    # "nogon" beside "hister" (Hister is now Nogon; the status page may read either until the old name goes).
+    json.dump({"version": version, "build": build, "built": built, "hister": hister, "nogon": hister}, f)
     f.write("\n")

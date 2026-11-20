@@ -207,6 +207,16 @@ class BridgeTest(unittest.TestCase):
         with self.assertRaises(bridge.ConfigError):
             bridge.Config(env)
 
+    def test_the_nogon_names_come_first(self):
+        # Hister is now Nogon (stage 1): BRIDGE_NOGON_… wins, even empty; BRIDGE_HISTER_… still counts.
+        old = {k: v for k, v in self.env.items() if not k.startswith("BRIDGE_HISTER_")}
+        new = dict(old, **{k.replace("HISTER", "NOGON"): v for k, v in self.env.items() if k.startswith("BRIDGE_HISTER_")})
+        self.assertEqual(bridge.Config(new).users, frozenset({"owner"}))
+        mixed = dict(self.env, BRIDGE_NOGON_USERS="reader")
+        self.assertEqual(bridge.Config(mixed).users, frozenset({"reader"}))
+        with self.assertRaises(bridge.ConfigError):
+            bridge.Config(dict(self.env, BRIDGE_NOGON_USERS=""))
+
     # -- methods and paths ------------------------------------------------------------------------------------------
 
     def test_only_get(self):

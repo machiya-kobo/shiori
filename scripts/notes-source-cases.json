@@ -40,6 +40,16 @@
       "choice": "something else",
       "kura": false,
       "want": "hister"
+    },
+    {
+      "choice": "nogon",
+      "kura": true,
+      "want": "hister"
+    },
+    {
+      "choice": "nogon",
+      "kura": false,
+      "want": "hister"
     }
   ],
   "text": [

@@ -99,7 +99,8 @@ export const signOutRequest = (server, sid) => ({
 
 /** The helper's health: sign-in is offered only when it says Hister has users. */
 export const availabilityURL = (server) => `${base(server)}machiya/healthz`;
-export const signInAvailable = (status, json) => status === 200 && !!json && json.ok === true && json.hister === 'ok';
+// nogon-login 0.8.0 names the field `nogon` beside `hister`: either.
+export const signInAvailable = (status, json) => status === 200 && !!json && json.ok === true && (json.nogon ?? json.hister) === 'ok';
 
 /** The `hister` session Hister set, from its Set-Cookie values, else ''. */
 export function sessionFromSetCookie(values) {

@@ -63,11 +63,11 @@ def main():
     token.write(HISTER_TOKEN)
     token.close()
     env = {
-        "BRIDGE_HISTER_URL": "http://127.0.0.1:%d" % fh, "BRIDGE_KURA_URL": "http://127.0.0.1:%d" % fk,
+        "BRIDGE_NOGON_URL": "http://127.0.0.1:%d" % fh, "BRIDGE_KURA_URL": "http://127.0.0.1:%d" % fk,
         "BRIDGE_ALLOW_HTTP_UPSTREAM": "1", "BRIDGE_ALLOW": args.allow,
         "BRIDGE_AUTH_URL": "http://127.0.0.1:%d" % fl, "BRIDGE_PUBLIC_URL": public,
-        "BRIDGE_HISTER_USERS": "alex", "BRIDGE_HISTER_TOKEN_FILE": token.name,
-        "BRIDGE_HISTER_PORT": str(args.hister_port), "BRIDGE_KURA_PORT": str(args.kura_port),
+        "BRIDGE_NOGON_USERS": "alex", "BRIDGE_NOGON_TOKEN_FILE": token.name,
+        "BRIDGE_NOGON_PORT": str(args.hister_port), "BRIDGE_KURA_PORT": str(args.kura_port),
         "BRIDGE_VAULTS": "shared",       # fake Kura's shared vault (its "work" is private: refused)
     }
     try:

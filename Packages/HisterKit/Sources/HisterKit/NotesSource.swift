@@ -13,7 +13,8 @@ public enum NotesSource: String, Sendable, CaseIterable {
     /// The source in use: `choice` is the setting ("" until chosen).
     /// Hister when chosen, or when there's no Kura to use.
     public static func effective(choice: String, kuraConfigured: Bool) -> NotesSource {
-        if choice == NotesSource.hister.rawValue { return .hister }
+        // "nogon" is "hister" (Hister is now Nogon; the stored value stays "hister").
+        if choice == NotesSource.hister.rawValue || choice == "nogon" { return .hister }
         return kuraConfigured ? .kura : .hister
     }
 }

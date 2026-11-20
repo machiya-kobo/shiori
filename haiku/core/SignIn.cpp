@@ -143,7 +143,9 @@ bool SignInAvailable(int status, const std::string& body)
 	json::Value v;
 	if (!json::Parse(body, v) || !v.IsObject())
 		return false;
-	return v["ok"].type == json::Value::Bool && v["ok"].boolean && v["hister"].Str() == "ok";
+	// nogon-login 0.8.0 names the field "nogon" beside "hister": either.
+	const json::Value& state = v["nogon"].IsNull() ? v["hister"] : v["nogon"];
+	return v["ok"].type == json::Value::Bool && v["ok"].boolean && state.Str() == "ok";
 }
 
 std::string LoginProblem(int status)

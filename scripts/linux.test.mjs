@@ -365,6 +365,9 @@ test("Hister's sign-in on Linux: the file, the cookie, the rooms' id, the reques
   assert.equal(JSON.parse(h.appSessionRequest('https://hister.example/', session, 'x'.repeat(100)).body).label.length, 80);
   assert.deepEqual(plain(h.signOutRequest('https://hister.example/', sid).headers), { Authorization: `Bearer ${sid}` });
   assert.equal(h.signInAvailable(200, { ok: true, hister: 'ok' }), true);
+  // nogon-login 0.8.0 names it `nogon` beside `hister`, and it wins.
+  assert.equal(h.signInAvailable(200, { ok: true, nogon: 'ok' }), true);
+  assert.equal(h.signInAvailable(200, { ok: true, nogon: 'down', hister: 'ok' }), false);
   assert.equal(h.signInAvailable(200, { ok: true, hister: 'user-handling-off' }), false);
   assert.equal(h.signInAvailable(503, null), false);
   assert.match(h.loginProblem(401), /didn't recognise/);

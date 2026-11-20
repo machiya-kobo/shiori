@@ -1682,6 +1682,21 @@
     return wrap;
   }
 
+  // --- Hister is now Nogon (Machiya's rename, stage 1) -----------------------------------------
+  // The new names are read beside the old ones, and nothing written changes: the room
+  // id `nogon` and `SHIORI_SIGNIN=nogon` mean `hister`, the name still kept. HisterKit,
+  // the Haiku and classic cores and mac-bridge read the same.
+  const RENAMED = { nogon: 'hister' };
+  /** A room, sign-in or notes-source name as Shiori keeps it: `nogon` is `hister`. */
+  function roomKey(key) {
+    const k = String(key || '').trim().toLowerCase();
+    return RENAMED[k] || k;
+  }
+  /** This build's sign-in (`__SHIORI_SIGNIN__`): "hister" (Nogon's own page, also when stamped "nogon"), else ''. */
+  function signinMode() {
+    return roomKey(fromBuild('__SHIORI_SIGNIN__'));
+  }
+
   /**
    * The rooms this build knows the addresses of, in the switcher's order:
    * `stamped` is "key=url,key=url" (SHIORI_ROOMS, stamped in by the build;
@@ -1693,9 +1708,16 @@
     const urls = {};
     const text = String(stamped || '');
     if (!text.startsWith('__')) {
+      const named = new Set();
       for (const pair of text.split(',')) {
         const i = pair.indexOf('=');
-        if (i > 0) urls[pair.slice(0, i).trim().toLowerCase()] = pair.slice(i + 1).trim();
+        if (i <= 0) continue;
+        const said = pair.slice(0, i).trim().toLowerCase();
+        const key = roomKey(said);
+        // The new name wins over the old one, whichever comes first.
+        if (named.has(key) && said !== 'nogon') continue;
+        if (said === 'nogon') named.add(key);
+        urls[key] = pair.slice(i + 1).trim();
       }
     }
     if (!urls.shiori && here) urls.shiori = here.endsWith('/') ? here : here + '/';
@@ -1764,7 +1786,8 @@
    * could replace a stored page's metadata, so nothing is sent.
    */
   function webSaveReady(status) {
-    const hister = status && status.hister;
+    // smallweb 0.5.0 names it `nogon` beside `hister`.
+    const hister = status && (status.nogon || status.hister);
     return !!hister && hister.enabled === true && hister.only_new === true;
   }
 
@@ -3067,7 +3090,7 @@
 
   /** Where notes come from: the person's choice, else Kura when one is set up; Hister when Kura can't be. */
   function notesSource(choice, kuraConfigured) {
-    if (choice === 'hister') return 'hister';
+    if (choice === 'hister' || choice === 'nogon') return 'hister';
     return kuraConfigured ? 'kura' : 'hister';
   }
 
@@ -3891,7 +3914,7 @@
    * Hister's `/auth` page on this origin, which the host proxies and which returns to the page.
    */
   function histerSignInURL(stamped, here, back) {
-    if (fromBuild('__SHIORI_SIGNIN__') === 'hister') return '/auth';
+    if (signinMode() === 'hister') return '/auth';
     const hister = rooms(stamped, here).find((r) => r.key === 'hister');
     if (!hister || !/^https:\/\//i.test(hister.url)) return '';
     const base = hister.url.replace(/\/?$/, '/');
@@ -3900,14 +3923,14 @@
 
   /** The helper's sessions page (where a browser signs out), or ''; Hister's own profile page (it has Sign Out) in its own sign-in. */
   function histerSessionsURL(stamped, here) {
-    if (fromBuild('__SHIORI_SIGNIN__') === 'hister') return '/profile';
+    if (signinMode() === 'hister') return '/profile';
     const url = histerSignInURL(stamped, here, '');
     return url ? url.replace(/signin\?.*$/, 'sessions') : '';
   }
 
   /** Whether this host keeps settings in an account (the helper's /machiya/api/prefs): not with Hister's own sign-in. */
   function accountSync() {
-    return fromBuild('__SHIORI_SIGNIN__') !== 'hister';
+    return signinMode() !== 'hister';
   }
 
   /** Whether the Notes tab shows: Kura is set up, or Notes From Hister was chosen (an unset Kura hides it). */
@@ -4227,6 +4250,8 @@
     markRuns,
     smallwebOpen,
     rooms,
+    roomKey,
+    signinMode,
     houseSettings,
     PREFS_SHARED,
     PREFS_DEFAULTS,

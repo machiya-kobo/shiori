@@ -441,7 +441,8 @@ std::string WithSlash(const std::string& base)
 
 std::string NotesSource(const std::string& choice, bool kuraConfigured)
 {
-	if (choice == "hister")
+	// "nogon" is "hister" (Hister is now Nogon; the stored value stays "hister").
+	if (choice == "hister" || choice == "nogon")
 		return "hister";
 	return kuraConfigured ? "kura" : "hister";
 }

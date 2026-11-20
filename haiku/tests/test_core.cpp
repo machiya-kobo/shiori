@@ -285,6 +285,8 @@ static void TestSignIn()
 	CheckTrue("the helper's answer", SignInFromTrade("{\"sid\":\"" + sid + "\",\"username\":\"alex\"}", session, traded) && traded.IsSet());
 	CheckTrue("a helper answer without an id", !SignInFromTrade("{\"username\":\"alex\"}", session, traded));
 	CheckTrue("offered while Hister has users", SignInAvailable(200, "{\"ok\":true,\"hister\":\"ok\"}"));
+	CheckTrue("nogon-login's own field", SignInAvailable(200, "{\"ok\":true,\"nogon\":\"ok\"}"));
+	CheckTrue("nogon wins over hister", !SignInAvailable(200, "{\"ok\":true,\"nogon\":\"down\",\"hister\":\"ok\"}"));
 	CheckTrue("not offered otherwise", !SignInAvailable(200, "{\"ok\":false}") && !SignInAvailable(503, ""));
 	Check("401 in words", LoginProblem(401), "Nogon didn't recognise that name and password.");
 

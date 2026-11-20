@@ -132,7 +132,8 @@ public enum HisterAccount {
             (response as? HTTPURLResponse)?.statusCode == 200,
             let reply = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return false }
-        return reply["ok"] as? Bool == true && reply["hister"] as? String == "ok"
+        // nogon-login 0.8.0 names the field "nogon" beside "hister": either.
+        return reply["ok"] as? Bool == true && (reply["nogon"] ?? reply["hister"]) as? String == "ok"
     }
 
     /// Signs in with a name and password: Hister's own login, then the

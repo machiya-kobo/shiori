@@ -11,7 +11,7 @@ filled from this run's settings, so one image serves every deployment and no
 page or route holds a setting it wasn't given. The settings are in
 web/README.md ("In a container").
 
-Required: SHIORI_HISTER_URL and SHIORI_SEARXNG_URL. Everything else is
+Required: SHIORI_NOGON_URL (or its old name SHIORI_HISTER_URL) and SHIORI_SEARXNG_URL. Everything else is
 optional, and an unset service is off: its routes answer 404 and the pages
 leave its feature out.
 """
@@ -28,7 +28,11 @@ import sys
 import urllib.error
 import urllib.request
 
-REQUIRED = ("SHIORI_HISTER_URL", "SHIORI_SEARXNG_URL")
+REQUIRED = ("SHIORI_NOGON_URL", "SHIORI_SEARXNG_URL")
+# Hister is now Nogon (Machiya's rename, stage 1): these settings are read under their new names, and the old ones
+# (SHIORI_HISTER_…) still count. A new name that is set wins, even when it's empty, as upstream Nogon does.
+RENAMED = ("SHIORI_NOGON_URL", "SHIORI_NOGON_PUBLIC_URL", "SHIORI_NOGON_HOST", "SHIORI_NOGON_VERSION")
+_warned = set()
 # Upstream services the host proxies to: setting -> the route they own.
 OPTIONAL = {
     "SHIORI_KURA_URL": "Kura (notes)",
@@ -122,22 +126,37 @@ def media_token(env, name):
     return value
 
 
+def renamed(env):
+    """The environment with each RENAMED setting under its new name: SHIORI_NOGON_… when set (even empty), else its old
+    SHIORI_HISTER_… twin, which is logged once so a deployment sees what is left to rename."""
+    env = dict(env)
+    for name in RENAMED:
+        old = name.replace("NOGON", "HISTER")
+        if name not in env and old in env:
+            env[name] = env[old]
+            if old not in _warned:
+                _warned.add(old)
+                sys.stderr.write(f"shiori-web: {old} is an old name, read as {name} (Hister is now Nogon: rename it)\n")
+    return env
+
+
 def settings(env):
     """Everything this run needs, from the environment; ConfigError says what's wrong."""
+    env = renamed(env)
     missing = [n for n in REQUIRED if not env.get(n, "").strip()]
     if missing:
         raise ConfigError(
             "shiori-web needs " + " and ".join(missing) + ".\n"
-            "  SHIORI_HISTER_URL   where Hister is, from this container (for example http://hister:4433)\n"
+            "  SHIORI_NOGON_URL    where Nogon (Hister) is, from this container (for example http://hister:4433)\n"
             "  SHIORI_SEARXNG_URL  where SearXNG is (for example http://searxng:8080)\n"
             "Everything else is optional: see web/README.md, \"In a container\".")
-    s = {"hister": upstream(env, "SHIORI_HISTER_URL"), "searxng": upstream(env, "SHIORI_SEARXNG_URL")}
+    s = {"hister": upstream(env, "SHIORI_NOGON_URL"), "searxng": upstream(env, "SHIORI_SEARXNG_URL")}
     for name in OPTIONAL:
         s[name] = upstream(env, name)
-    if env.get("SHIORI_HISTER_HOST", "").strip():
-        host = env["SHIORI_HISTER_HOST"].strip()
+    if env.get("SHIORI_NOGON_HOST", "").strip():
+        host = env["SHIORI_NOGON_HOST"].strip()
         if not HOST_RE.match(host):
-            raise ConfigError(f"SHIORI_HISTER_HOST: {host!r} is not a host name")
+            raise ConfigError(f"SHIORI_NOGON_HOST: {host!r} is not a host name")
         s["hister"]["hostport"] = host
     # Sign-in: Machiya's helper (hister-login) when set, else Hister's own.
     login = upstream(env, "SHIORI_LOGIN_URL")
@@ -172,7 +191,7 @@ def settings(env):
         "konbini": public(env, "SHIORI_KONBINI_PUBLIC_URL") or (s["SHIORI_KONBINI_URL"] and env["SHIORI_KONBINI_URL"].strip()) or "",
         "kura_explicit": public(env, "SHIORI_KURA_PUBLIC_URL"),
         "konbini_explicit": public(env, "SHIORI_KONBINI_PUBLIC_URL"),
-        "hister": public(env, "SHIORI_HISTER_PUBLIC_URL"),
+        "hister": public(env, "SHIORI_NOGON_PUBLIC_URL"),
         "searxng": public(env, "SHIORI_SEARXNG_PUBLIC_URL"),
     }
     s["media"] = {}
@@ -198,9 +217,9 @@ def settings(env):
     if s["timing_log"] and (not TIMING_LOG_RE.match(s["timing_log"]) or "/../" in s["timing_log"] + "/"
                             or s["timing_log"].endswith("/")):
         raise ConfigError(f"SHIORI_TIMING_LOG: {s['timing_log']!r} is not a file's absolute path (for example /tmp/timing.log)")
-    s["hister_version"] = env.get("SHIORI_HISTER_VERSION", "").strip()
+    s["hister_version"] = env.get("SHIORI_NOGON_VERSION", "").strip()
     if s["hister_version"] and not VERSION_RE.match(s["hister_version"]):
-        raise ConfigError(f"SHIORI_HISTER_VERSION: {s['hister_version']!r} is not a version (for example v0.20.0)")
+        raise ConfigError(f"SHIORI_NOGON_VERSION: {s['hister_version']!r} is not a version (for example v0.20.0)")
     return s
 
 
@@ -633,7 +652,7 @@ def stamp_pages(s, dist, out, scripts):
         if s["hister_version"] and os.path.exists(status):
             with open(status, encoding="utf-8") as f:
                 doc = json.load(f)
-            doc["hister"] = s["hister_version"]
+            doc["hister"] = doc["nogon"] = s["hister_version"]
             with open(status, "w", encoding="utf-8") as f:
                 json.dump(doc, f)
                 f.write("\n")
@@ -715,7 +734,7 @@ def probe(s):
     lines = []
     status, _, _ = fetch(s["hister"], "/", s["tls_verify"])
     if status is None:
-        lines.append(f"  ! Hister isn't answering at {s['hister']['base']} yet: check SHIORI_HISTER_URL, and that Hister is running.")
+        lines.append(f"  ! Hister isn't answering at {s['hister']['base']} yet: check SHIORI_NOGON_URL, and that Nogon is running.")
     status, ctype, body = fetch(s["searxng"], "/search?q=shiori&format=json", s["tls_verify"])
     if status is None:
         lines.append(f"  ! SearXNG isn't answering at {s['searxng']['base']} yet: check SHIORI_SEARXNG_URL, and that SearXNG is running.")

@@ -857,4 +857,6 @@ static const struct Vec kVectors[] = {
   {"notesSource", "kura|0", "hister"},
   {"notesSource", "something else|1", "kura"},
   {"notesSource", "something else|0", "hister"},
+  {"notesSource", "nogon|1", "hister"},
+  {"notesSource", "nogon|0", "hister"},
 };

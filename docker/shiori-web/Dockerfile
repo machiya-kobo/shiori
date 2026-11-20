@@ -3,7 +3,7 @@
 #   docker build -f docker/shiori-web/Dockerfile -t shiori-web .          (from the repository root)
 #
 # The pages are built once, here, with their settings left as placeholders. When the container starts,
-# configure.py checks the settings it is given (SHIORI_HISTER_URL and SHIORI_SEARXNG_URL are required, the rest
+# configure.py checks the settings it is given (SHIORI_NOGON_URL, or its old name SHIORI_HISTER_URL, and SHIORI_SEARXNG_URL are required, the rest
 # optional), stamps them into a copy of the pages and writes nginx's config, so nothing is baked in. It runs as a
 # non-root user and works with a read-only root filesystem and a tmpfs on /tmp. web/README.md ("In a container")
 # lists the settings. Run tools/pin-bases before a release: both bases are pinned by digest.

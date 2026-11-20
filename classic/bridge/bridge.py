@@ -3,7 +3,7 @@
 A Mac Plus speaks MacTCP and has no TLS, and the house's services are HTTPS on the tailnet. This small proxy listens on
 the LAN in plain HTTP/1.0, one port per service, and passes a short list of read-only requests to a fixed upstream:
 
-    port BRIDGE_HISTER_PORT (8070)  ->  BRIDGE_HISTER_URL   GET /search, /api/preview, /api/config
+    port BRIDGE_NOGON_PORT (8070)   ->  BRIDGE_NOGON_URL    GET /search, /api/preview, /api/config
     port BRIDGE_KURA_PORT   (8071)  ->  BRIDGE_KURA_URL     GET /api/search, /api/recent, /api/note, /api/vaults
 
 The Mac holds one credential, a room token (`Authorization: Bearer mht_…`) with two scopes. On both ports the bridge
@@ -11,7 +11,7 @@ first asks hister-login (`GET /v1/check`, as vaultkit's TokenGate does) whether 
 token service; a request without one is refused before any upstream is asked, and with the helper down it's a 503.
   - on the Kura port it then goes to Kura as sent, and Kura checks it too (the bridge reaches Kura as its host's own
     tailnet node, so a request Kura couldn't check must never get there);
-  - on the Hister port it's dropped and Hister's own token (read from BRIDGE_HISTER_TOKEN_FILE) goes in its place.
+  - on the Hister port it's dropped and Hister's own token (read from BRIDGE_NOGON_TOKEN_FILE) goes in its place.
     Hister's token never reaches the LAN.
 
 Everything else is refused: another method, another path (matched exactly, before any decoding), a source address off
@@ -31,15 +31,16 @@ reply always gives the same parts; a part past the end is a 400 that says how ma
 `/healthz` on either port answers locally, to any source, for the container's healthcheck and the blackbox probe.
 
 Standard library only. Settings (environment):
-    BRIDGE_HISTER_URL, BRIDGE_KURA_URL   the upstreams, https://… (http only with BRIDGE_ALLOW_HTTP_UPSTREAM=1: tests)
-    BRIDGE_HISTER_PORT, BRIDGE_KURA_PORT the ports (8070, 8071); BRIDGE_BIND the address (0.0.0.0)
+    (Each BRIDGE_NOGON_… setting is also read under its old name, BRIDGE_HISTER_…, until the old names go.)
+    BRIDGE_NOGON_URL, BRIDGE_KURA_URL    the upstreams, https://… (http only with BRIDGE_ALLOW_HTTP_UPSTREAM=1: tests)
+    BRIDGE_NOGON_PORT, BRIDGE_KURA_PORT  the ports (8070, 8071); BRIDGE_BIND the address (0.0.0.0)
     BRIDGE_ALLOW        the source addresses or networks admitted (required); the tailnet's 100.64.0.0/10 and
                         fd7a:115c:a1e0::/48 are never admitted
     BRIDGE_DENY         addresses or networks never admitted (the host's own LAN address)
     BRIDGE_AUTH_URL     hister-login's internal address (http://hister-login:8081)
     BRIDGE_PUBLIC_URL   the origin this bridge's token service is registered under in HISTER_LOGIN_TOKEN_SERVICES
-    BRIDGE_HISTER_USERS the Hister usernames whose room tokens are admitted (never *)
-    BRIDGE_HISTER_TOKEN_FILE  Hister's token (a stack secret on tmpfs)
+    BRIDGE_NOGON_USERS the Nogon (Hister) usernames whose room tokens are admitted (never *)
+    BRIDGE_NOGON_TOKEN_FILE   Nogon's (Hister's) token (a stack secret on tmpfs)
     BRIDGE_VAULTS       Kura vaults a request may name with vault= (besides none: the default vault)
     BRIDGE_MAX_BYTES    the largest reply passed on (524288); BRIDGE_TIMEOUT the upstream timeout in seconds (20)
     BRIDGE_PAGED_MAX_BYTES  the largest upstream reply read for paging (8388608); BRIDGE_PART_BYTES a part (16384)
@@ -292,14 +293,35 @@ def _upstream(url, what, allow_http):
     return u.scheme, u.hostname, u.port or (443 if u.scheme == "https" else 80)
 
 
+# Hister is now Nogon (Machiya's rename, stage 1): each BRIDGE_HISTER_… setting is read as BRIDGE_NOGON_… first. A
+# new name that is set wins, even when it's empty, as upstream Nogon does; an old name still counts, logged once.
+RENAMED = ("BRIDGE_NOGON_URL", "BRIDGE_NOGON_PORT", "BRIDGE_NOGON_USERS", "BRIDGE_NOGON_TOKEN_FILE")
+_warned = set()
+
+
+def renamed(env):
+    """The environment with each RENAMED setting under its new name, from its old twin when only that is set."""
+    env = dict(env)
+    for name in RENAMED:
+        old = name.replace("NOGON", "HISTER")
+        if name not in env and old in env:
+            env[name] = env[old]
+            if old not in _warned:
+                _warned.add(old)
+                sys.stderr.write(f"mac-bridge: {old} is an old name, read as {name} (Hister is now Nogon: rename it)\n")
+                sys.stderr.flush()
+    return env
+
+
 class Config:
     def __init__(self, env):
+        env = renamed(env)
         allow_http = (env.get("BRIDGE_ALLOW_HTTP_UPSTREAM") or "") == "1"
-        self.hister = _upstream(env.get("BRIDGE_HISTER_URL"), "BRIDGE_HISTER_URL", allow_http)
+        self.hister = _upstream(env.get("BRIDGE_NOGON_URL"), "BRIDGE_NOGON_URL", allow_http)
         self.kura = _upstream(env.get("BRIDGE_KURA_URL"), "BRIDGE_KURA_URL", allow_http)
         self.bind = env.get("BRIDGE_BIND") or "0.0.0.0"
         try:
-            self.hister_port = int(env.get("BRIDGE_HISTER_PORT") or 8070)
+            self.hister_port = int(env.get("BRIDGE_NOGON_PORT") or 8070)
             self.kura_port = int(env.get("BRIDGE_KURA_PORT") or 8071)
             self.max_bytes = int(env.get("BRIDGE_MAX_BYTES") or 524288)
             self.paged_max_bytes = int(env.get("BRIDGE_PAGED_MAX_BYTES") or 8388608)
@@ -324,12 +346,12 @@ class Config:
         self.public = (env.get("BRIDGE_PUBLIC_URL") or "").strip().rstrip("/")
         if not re.match(r"https?://[a-z0-9.-]+(:[0-9]{1,5})?\Z", self.public):
             raise ConfigError("BRIDGE_PUBLIC_URL: the origin registered for this bridge's token service")
-        self.users = frozenset(_list(env.get("BRIDGE_HISTER_USERS")))
+        self.users = frozenset(_list(env.get("BRIDGE_NOGON_USERS")))
         if not self.users or "*" in self.users:
-            raise ConfigError("BRIDGE_HISTER_USERS: the Hister usernames admitted (never *)")
-        self.token_file = env.get("BRIDGE_HISTER_TOKEN_FILE") or ""
+            raise ConfigError("BRIDGE_NOGON_USERS: the Nogon (Hister) usernames admitted (never *)")
+        self.token_file = env.get("BRIDGE_NOGON_TOKEN_FILE") or ""
         if not self.token_file:
-            raise ConfigError("BRIDGE_HISTER_TOKEN_FILE: where Hister's token is")
+            raise ConfigError("BRIDGE_NOGON_TOKEN_FILE: where Nogon's (Hister's) token is")
         self.vaults = frozenset(_list(env.get("BRIDGE_VAULTS")))
         for v in self.vaults:
             if v == "all" or not VAULT_RE.match(v):

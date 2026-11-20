@@ -398,6 +398,14 @@ test("Hister's own sign-in (the shiori-web image without the helper): its /auth 
   assert.equal(O.histerSignInURL(rooms, 'https://shiori.example/', 'https://shiori.example/?q=x'), '/auth');
   assert.equal(O.histerSignInURL('', 'https://shiori.example/', ''), '/auth');
   assert.equal(O.histerSessionsURL(rooms, 'https://shiori.example/'), '/profile');
+  // SHIORI_SIGNIN=nogon is the same (Hister is now Nogon, stage 1).
+  const renamed = {};
+  renamed.globalThis = renamed;
+  vm.createContext(renamed);
+  vm.runInContext(source.replace(/__SHIORI_SIGNIN__/g, 'nogon'), renamed);
+  assert.equal(renamed.ShioriSearch.histerSignInURL(rooms, 'https://shiori.example/', ''), '/auth');
+  assert.equal(renamed.ShioriSearch.signinMode(), 'hister');
+  assert.equal(renamed.ShioriSearch.accountSync(), false);
 });
 
 test('vi keys: j/k, h/l, open, preview, copy, help, search, label', () => {
@@ -702,6 +710,19 @@ test('the rooms switcher: known addresses, in the house order', () => {
   assert.equal(r[1].tint, 'notes');
   assert.equal(S.rooms('__SHIORI_ROOMS__').length, 0);
   assert.equal(S.rooms('shiori=https://s.example/').length, 1);
+});
+
+test("the room `nogon` is Hister's (stage 1 of the rename), and its address wins over `hister=`", () => {
+  assert.equal(S.roomKey('nogon'), 'hister');
+  assert.equal(S.roomKey(' Nogon '), 'hister');
+  assert.equal(S.roomKey('kura'), 'kura');
+  const pairs = (stamped) => JSON.parse(JSON.stringify(S.rooms(stamped).map((x) => [x.key, x.url])));
+  assert.deepEqual(pairs('nogon=https://nogon.example/'), [['hister', 'https://nogon.example/']]);
+  for (const both of ['hister=https://old.example/,nogon=https://nogon.example/', 'nogon=https://nogon.example/,hister=https://old.example/']) {
+    assert.deepEqual(pairs(both), [['hister', 'https://nogon.example/']], both);
+  }
+  assert.equal(S.histerUIBase('nogon=https://nogon.example/', '/', 'https://search.example'), 'https://nogon.example/');
+  assert.equal(S.notesSource('nogon', true), 'hister');
 });
 
 test("the house's shared settings: cookies in Shiori's terms", () => {
@@ -1604,6 +1625,9 @@ test('Save Web Results You Open: only a gateway that never replaces a held page,
   assert.equal(S.webSaveReady({ hister: { enabled: true } }), false);
   assert.equal(S.webSaveReady({ hister: { enabled: false, only_new: true } }), false);
   assert.equal(S.webSaveReady(null), false);
+  // smallweb 0.5.0 names it `nogon` beside `hister`; the new name wins.
+  assert.equal(S.webSaveReady({ nogon: { enabled: true, only_new: true } }), true);
+  assert.equal(S.webSaveReady({ nogon: { enabled: false }, hister: { enabled: true, only_new: true } }), false);
   assert.deepEqual(JSON.parse(JSON.stringify(S.webSaveBody('https://example.com/a', 'A &amp; B', ' penne '))),
     { url: 'https://example.com/a', only_new: true, via: 'web-result', title: 'A & B', query: 'penne' });
   assert.deepEqual(JSON.parse(JSON.stringify(S.webSaveBody('https://example.com/a', '', ''))),

@@ -52,6 +52,10 @@ struct HisterAccountTests {
             (200, #"{"ok":true,"hister":"ok"}"#, true),
             (200, #"{"ok":true,"hister":"user-handling-off"}"#, false),
             (200, #"{"ok":true,"hister":"down"}"#, false),
+            // nogon-login 0.8.0 names it "nogon" beside "hister", and it wins.
+            (200, #"{"ok":true,"nogon":"ok","hister":"ok"}"#, true),
+            (200, #"{"ok":true,"nogon":"ok"}"#, true),
+            (200, #"{"ok":true,"nogon":"down","hister":"ok"}"#, false),
             (404, "not found", false),
         ] {
             StubProtocol.handle(Self.host) { _ in (status, Data(body.utf8)) }

@@ -130,18 +130,18 @@ pages. It runs as a non-root user, works with `--read-only --tmpfs /tmp`, and lo
 
 ```bash
 docker run -d --name shiori -p 8080:8080 -p 8081:8081 \
-  -e SHIORI_HISTER_URL=http://hister.example:4433 \
+  -e SHIORI_NOGON_URL=http://nogon.example:4433 \
   -e SHIORI_SEARXNG_URL=http://searxng.example:8080 \
   ghcr.io/machiya-kobo/shiori-web
 ```
 
-Without `SHIORI_HISTER_URL` and `SHIORI_SEARXNG_URL` it refuses to start and says so. The start-up log names what is on
+Without `SHIORI_NOGON_URL` and `SHIORI_SEARXNG_URL` it refuses to start and says so. Each `SHIORI_NOGON_…` setting still answers to its old name, `SHIORI_HISTER_…` (logged once at start-up); a `SHIORI_NOGON_…` that is set wins, even empty. The start-up log names what is on
 and off and says plainly if Nogon isn't answering or SearXNG refuses JSON results; `/_shiori/config.json` on either
 port shows the same (the sign-in mode and which services are on), and `/healthz` answers 200.
 
 | Setting | Meaning | Default |
 |---|---|---|
-| `SHIORI_HISTER_URL` | **Required.** Nogon, as this container reaches it (`http(s)://host[:port]`, no path) | none |
+| `SHIORI_NOGON_URL` | **Required.** Nogon, as this container reaches it (`http(s)://host[:port]`, no path) | none |
 | `SHIORI_SEARXNG_URL` | **Required.** SearXNG, with `formats: [html, json]` on | none |
 | `SHIORI_KURA_URL` | Kura (notes): only its API paths and feed are routed | off: the Notes tab is hidden, `/kura/` answers 404 |
 | `SHIORI_KONBINI_URL` | Konbini (project cards) | off |
@@ -153,9 +153,9 @@ port shows the same (the sign-in mode and which services are on), and `/healthz`
 | `SHIORI_LOGIN_URL` | hister-login, for one sign-in across Machiya's apps; `SHIORI_LOGIN_AUTH_URL` is its nginx auth address (default: the same host, port 8081) and `SHIORI_ROOM_COOKIE` this host's room cookie (default `__Host-machiya_sso_shiori`) | unset: Nogon's own sign-in |
 | `SHIORI_SEARCH_PORT`, `SHIORI_APP_PORT` | The ports inside the container (1024 and up) | 8080, 8081 |
 | `SHIORI_SEARCH_PAGE_URL`, `SHIORI_APP_URL` | The sites' own addresses, as a browser reaches them (OpenSearch, the room cookie's origin) | `http://localhost:8080/`, `http://localhost:8081/` |
-| `SHIORI_KURA_PUBLIC_URL`, `SHIORI_KONBINI_PUBLIC_URL`, `SHIORI_HISTER_PUBLIC_URL`, `SHIORI_SEARXNG_PUBLIC_URL`, `SHIORI_ROOMS` | Addresses people click (the Rooms menu, links to Kura and Konbini) when a browser reaches them differently from this container | the Kura and Konbini addresses above |
-| `SHIORI_HISTER_HOST` | The `Host` Nogon expects, if it isn't the address above | the address above |
-| `SHIORI_HISTER_VERSION` | The Nogon release `/_shiori/status.json` names, when it isn't the one the image was built against | the image's |
+| `SHIORI_KURA_PUBLIC_URL`, `SHIORI_KONBINI_PUBLIC_URL`, `SHIORI_NOGON_PUBLIC_URL`, `SHIORI_SEARXNG_PUBLIC_URL`, `SHIORI_ROOMS` | Addresses people click (the Rooms menu, links to Kura and Konbini) when a browser reaches them differently from this container. In `SHIORI_ROOMS` Nogon's room is `nogon=` (or `hister=`) | the Kura and Konbini addresses above |
+| `SHIORI_NOGON_HOST` | The `Host` Nogon expects, if it isn't the address above | the address above |
+| `SHIORI_NOGON_VERSION` | The Nogon release `/_shiori/status.json` names (as `nogon`, and `hister` beside it), when it isn't the one the image was built against | the image's |
 | `SHIORI_UPSTREAM_TLS_VERIFY` | `0` to accept an https upstream's certificate unchecked | `1` |
 | `SHIORI_TIMING_LOG` | A file (for example `/tmp/timing.log`) that gets one line per request for a metrics collector: `<epoch.ms> <host> <bucket> <status> <seconds>`. The bucket is one of `/searx/search`, `/searx/autocompleter`, `/search`, `/api/search`, `/api/preview`, `/kura/api/search`, `/kura/api/note`, `/smallweb/api/search`, `/shiori/ai`, `/media`, `/basic` or `other`: never a query string, a search word or a client address. Rotate it with `mv`, then `nginx -c /opt/shiori/nginx.conf -s reopen` | off |
 | `SHIORI_OBSIDIAN_VAULT`, `SHIORI_SOURCE_URL`, `SHIORI_STATUS_URL`, `SHIORI_FRONTENDS` | As in the build configuration (CLAUDE.md) | empty |
