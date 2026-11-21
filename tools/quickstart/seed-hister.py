@@ -34,7 +34,7 @@ COLLECTIONS = {"@crafts": "label:(lanterns|paper|workshop)", "@travel": "label:t
 
 
 def call(path, body=None, content_type="application/json"):
-    headers = {"Origin": "hister://", "Content-Type": content_type}
+    headers = {"Origin": "nogon://", "Content-Type": content_type}
     if os.environ.get("HISTER_TOKEN"):          # a test Hister with app.access_token set
         headers["X-Access-Token"] = os.environ["HISTER_TOKEN"]
     request = urllib.request.Request(URL + path, data=body, headers=headers)

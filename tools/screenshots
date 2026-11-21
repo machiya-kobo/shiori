@@ -81,7 +81,7 @@ def add_code(hister):
                             "code_repo": repo, "code_repo_name": name, "code_kind": "issue", "code_private": private,
                             "code_state": "open", "code_number": "1", "code_updated": now - days * 86400}}
         request = urllib.request.Request(hister + "api/add", data=json.dumps(doc).encode(),
-                                         headers={"Origin": "hister://", "Content-Type": "application/json"})
+                                         headers={"Origin": "nogon://", "Content-Type": "application/json"})
         with urllib.request.urlopen(request, timeout=10) as reply:
             if reply.status >= 300:
                 sys.exit("screenshots: %s answered %d" % (url, reply.status))
