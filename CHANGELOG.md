@@ -5,6 +5,12 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.30.2 (2026-11-20)
+
+- For hosts: with Machiya's sign-in helper, the shiori-web image reads
+  Nogon's session from X-Nogon-Cookie only. X-Hister-Cookie, its old name,
+  is no longer read (nogon-login 0.9.0 and later send only the new one).
+
 ## 1.30.1 (2026-11-20)
 
 - Saves through the small-web gateway send `Origin: nogon://` too, now

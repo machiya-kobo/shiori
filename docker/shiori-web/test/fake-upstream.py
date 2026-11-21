@@ -62,8 +62,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, echo, [("X-Nogon-Cookie", "hister=sessionfromnogon")])
             if sid.startswith("mhr_H"):                           # a helper from before Nogon: the old name only
                 return self.reply(200, echo, [("X-Hister-Cookie", "hister=sessionfromold")])
-            return self.reply(200, echo, [("X-Nogon-Cookie", "hister=sessionfromhelper"),   # both, as nogon-login 0.8
-                                          ("X-Hister-Cookie", "hister=sessionfromold")])
+            return self.reply(200, echo, [("X-Nogon-Cookie", "hister=sessionfromhelper")])   # as nogon-login 0.9
         if service == "ai" and self.path == "/status":
             return self.reply(200, {"enabled": True, **echo})
         self.reply(200, echo)
