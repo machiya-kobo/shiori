@@ -8,17 +8,6 @@ import Foundation
 public struct SmallWebClient: Sendable {
     let http: HisterClient
 
-    /// The Origin the gateway takes from the native apps: still `hister://`
-    /// (smallweb 0.5.0 takes no other; 0.6.0 adds `nogon://`).
-    static let origin = "hister://"
-
-    /// The request, with the gateway's Origin.
-    func request(_ path: String, query: [URLQueryItem] = [], method: String = "GET", body: Data? = nil, accept: String? = nil) -> URLRequest {
-        var request = http.makeRequest(path, query: query, method: method, body: body, accept: accept)
-        request.setValue(Self.origin, forHTTPHeaderField: "Origin")
-        return request
-    }
-
     /// Nil unless `serverURL` is an absolute http(s) address.
     public init?(serverURL: String, session: URLSession = HisterClient.defaultSession) {
         guard let http = HisterClient(serverURL: serverURL, session: session) else { return nil }
@@ -31,7 +20,7 @@ public struct SmallWebClient: Sendable {
     public func search(_ text: String, page: Int = 1) async throws(HisterError) -> SmallWebPage {
         let q = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
         guard !q.isEmpty else { return SmallWebPage(results: [], engines: [:], errors: [:]) }
-        let request = self.request(
+        let request = http.makeRequest(
             "api/search",
             query: [URLQueryItem(name: "q", value: String(q.prefix(300))), URLQueryItem(name: "page", value: String(max(1, min(page, 50))))],
             accept: "application/json")
@@ -41,8 +30,8 @@ public struct SmallWebClient: Sendable {
     /// Asks the gateway to fetch and save a page opened directly in a
     /// Gemini app (it never passes through the gateway then). Best effort:
     /// the gateway answers 202 at once and saves in the background, under
-    /// the same rules as a page read through it, with the Origin it
-    /// accepts from the native apps (`origin`).
+    /// the same rules as a page read through it, with the native apps'
+    /// Origin (`nogon://`, which smallweb takes from 0.6.0).
     /// The answer is `202 {"queued": true, "url": "<canonical>"}`: the URL
     /// Hister will hold the page under, returned (else the one asked for).
     /// 429 when 20 saves already wait; 400 for any other scheme.
@@ -50,7 +39,7 @@ public struct SmallWebClient: Sendable {
     public func save(_ url: String) async throws(HisterError) -> String {
         struct Reply: Decodable { var url: String? }
         let body = try http.encodeJSON(["url": url])
-        let data = try await http.send(request("api/save", method: "POST", body: body))
+        let data = try await http.send(http.makeRequest("api/save", method: "POST", body: body))
         return DecodeLog.decode(Reply.self, from: data, what: "Small-web save reply")?.url.flatMap { $0.isEmpty ? nil : $0 } ?? url
     }
 }

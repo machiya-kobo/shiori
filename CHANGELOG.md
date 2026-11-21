@@ -5,6 +5,11 @@ Every deploy of Shiori is a release: a version here, the same as
 features, patch for fixes). The
 hosted pages serve this file as `/_shiori/CHANGELOG.md`.
 
+## 1.30.1 (2026-11-20)
+
+- Saves through the small-web gateway send `Origin: nogon://` too, now
+  that smallweb 0.6.0 takes it (the apps and Shiori for Linux).
+
 ## 1.30.0 (2026-11-20)
 
 - Hister is now Nogon in what Shiori sends. The apps, Shiori for Linux,

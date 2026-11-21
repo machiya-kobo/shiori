@@ -166,7 +166,7 @@ struct LinkSaverTests {
         let queue = Answers(answers)
         StubProtocol.handle(Self.gateway) { request in
             #expect(request.url?.path() == "/api/save")
-            #expect(request.value(forHTTPHeaderField: "Origin") == "hister://")
+            #expect(request.value(forHTTPHeaderField: "Origin") == "nogon://")
             let (status, body) = queue.next()
             return (status, Data(body.utf8))
         }

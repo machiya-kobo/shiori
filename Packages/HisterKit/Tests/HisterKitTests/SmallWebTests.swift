@@ -69,7 +69,7 @@ struct SmallWebTests {
         let request = try #require(StubProtocol.requests(Self.host).first)
         #expect(request.httpMethod == "POST")
         #expect(request.url?.path() == "/api/save")
-        #expect(request.value(forHTTPHeaderField: "Origin") == "hister://")
+        #expect(request.value(forHTTPHeaderField: "Origin") == "nogon://")
         let body = try JSONSerialization.jsonObject(with: try #require(request.httpBody)) as? [String: String]
         #expect(body == ["url": "gemini://a.example/x"])
     }

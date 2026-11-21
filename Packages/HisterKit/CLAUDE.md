@@ -4,9 +4,8 @@ Loaded when you work in `Packages/HisterKit`. The same logic lives in JavaScript
 
 ## Hister API quirks
 
-- Every request needs `Origin: nogon://` (`HisterClient.origin`; Nogon v0.22 also
-  takes `hister://`, which the small-web gateway still wants until smallweb 0.6.0:
-  `SmallWebClient.origin`). `limit`, `sort` and `highlight`
+- Every request needs `Origin: nogon://` (`HisterClient.origin`; Nogon v0.22 and
+  smallweb 0.6.0 also take `hister://`). `limit`, `sort` and `highlight`
   only work inside the JSON `query=` parameter. `*` with sort `date` is
   "recent". Snippets are HTML with `<mark>`. A malformed regexp returns zero
   results; a malformed query (an operator with no term, an unclosed group) is
